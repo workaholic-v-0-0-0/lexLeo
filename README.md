@@ -26,20 +26,42 @@ cd lexLeo
 
 Ensure you have the following installed on your system:
 
-    GCC (or any preferred C compiler)
-    Make
+- GCC (or any preferred C compiler)
+- CMake
+- Make (optional, used for certain CMake generators)
 
-## Building the Project
+## Building the Project with CMake
 
-To build the compiler and interpreter, run:
+To build the compiler and interpreter using CMake, follow these steps:
 
-```bash
-make
-```
+1. Create a build directory and navigate to it:
+   ```bash
+   mkdir build && cd build
+   ```
+2. Generate the makefile and build files with CMake:
+   ```bash
+   cmake ..
+   ```
+3. Compile the project:
+   ```bash
+   cmake --build .
+   ```
+
+
+## Running the Project
+
+After building the project, you can run the executable directly from the build
+directory:
+   ```bash
+   ./build/lexLeo
+   ```
 
 ## Contributing
 
-Contributions to the Leo project are welcome! Whether it involves fixing bugs, adding new features, or improving documentation, your help is appreciated. Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests to us.
+Contributions to the Leo project are welcome! Whether it involves 
+fixing bugs, adding new features, or improving documentation, your 
+help is appreciated. Please read CONTRIBUTING.md for details on our 
+code of conduct and the process for submitting pull requests to us.
 
 ## License
 

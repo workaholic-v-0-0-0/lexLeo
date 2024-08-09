@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/lexLeo.dir/src/data_structures/list.c.o CMakeFiles/lexLeo.dir/src/main.c.o CMakeFiles/lexLeo.dir/src/parser/lexer.yy.c.o CMakeFiles/lexLeo.dir/src/parser/parser.tab.c.o -o lexLeo 
