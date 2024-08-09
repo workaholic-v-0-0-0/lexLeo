@@ -1,0 +1,5 @@
+/home/workaholic/env/clion/workspace/lexLeo/build/CMakeFiles/PostProcessParser.dir
+/home/workaholic/env/clion/workspace/lexLeo/build/CMakeFiles/lexLeo.dir
+/home/workaholic/env/clion/workspace/lexLeo/build/CMakeFiles/clean-custom.dir
+/home/workaholic/env/clion/workspace/lexLeo/build/CMakeFiles/edit_cache.dir
+/home/workaholic/env/clion/workspace/lexLeo/build/CMakeFiles/rebuild_cache.dir
