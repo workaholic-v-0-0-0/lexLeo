@@ -47,14 +47,29 @@ To build the compiler and interpreter using CMake, follow these steps:
    cmake --build .
    ```
 
+## Generating Documentation with Doxygen
 
-## Running the Project
-
-After building the project, you can run the executable directly from the build
-directory:
+To generate the project documentation, run:
    ```bash
-   ./build/lexLeo
+   doxygen Doxyfile
    ```
+
+The HTML documentation will be located in the docs/html/ directory.
+You can open the index.html file in a web browser to view the documentation.
+
+## Running the lexLeo interpreter
+
+   ```bash
+   ./build/interpreter/lexLeo_interpreter
+   ```
+
+## Running the lexLeo compiler
+
+   ```bash
+   ./build/compiler/lexLeo_compiler
+   ```
+
+## Running the lexLeo compiler
 
 ## Contributing
 
