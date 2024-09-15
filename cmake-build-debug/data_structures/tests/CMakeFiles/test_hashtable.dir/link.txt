@@ -1,0 +1,1 @@
+/usr/bin/gcc -g CMakeFiles/test_hashtable.dir/test_hashtable.c.o -o test_hashtable  ../liblexLeo_data_structures.a /usr/lib/x86_64-linux-gnu/libcheck_pic.a /usr/lib/x86_64-linux-gnu/librt.a -lm /usr/lib/x86_64-linux-gnu/libsubunit.so ../../logger/liblexLeo_logger.a 

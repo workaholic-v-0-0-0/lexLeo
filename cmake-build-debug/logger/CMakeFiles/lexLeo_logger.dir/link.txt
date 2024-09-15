@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexLeo_logger.a CMakeFiles/lexLeo_logger.dir/src/logger.c.o
+/usr/bin/ranlib liblexLeo_logger.a

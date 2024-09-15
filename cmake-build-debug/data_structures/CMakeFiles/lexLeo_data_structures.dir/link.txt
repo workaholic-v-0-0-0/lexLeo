@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexLeo_data_structures.a CMakeFiles/lexLeo_data_structures.dir/src/hashtable.c.o CMakeFiles/lexLeo_data_structures.dir/src/list.c.o CMakeFiles/lexLeo_data_structures.dir/src/tree.c.o
+/usr/bin/ranlib liblexLeo_data_structures.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexLeo_lexer.a CMakeFiles/lexLeo_lexer.dir/src/lexer.yy.c.o
+/usr/bin/ranlib liblexLeo_lexer.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexLeo_parser.a CMakeFiles/lexLeo_parser.dir/src/parser.tab.c.o
+/usr/bin/ranlib liblexLeo_parser.a

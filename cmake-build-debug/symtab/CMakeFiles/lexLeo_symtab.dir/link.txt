@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexLeo_symtab.a CMakeFiles/lexLeo_symtab.dir/src/symtab.c.o
+/usr/bin/ranlib liblexLeo_symtab.a

@@ -1,0 +1,23 @@
+/usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/usr/bin/make -DCMAKE_C_COMPILER=/usr/bin/gcc -G "Unix Makefiles" -S /home/workaholic/env/clion/workspace/lexLeo -B /home/workaholic/env/clion/workspace/lexLeo/cmake-build-debug
+-- The C compiler identification is GNU 13.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- The CXX compiler identification is GNU 13.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.1") 
+-- Checking for module 'check'
+--   Found check, version 0.15.2
+-- Found FLEX: /usr/bin/flex (found version "2.6.4") 
+-- Found BISON: /usr/bin/bison (found version "3.8.2") 
+BISON_OUTPUTS: /home/workaholic/env/clion/workspace/lexLeo/parser/src/parser.tab.c;/home/workaholic/env/clion/workspace/lexLeo/parser/include/parser/parser.tab.h
+-- Found Doxygen: /usr/bin/doxygen (found version "1.9.8") found components: doxygen dot 
+-- Configuring done (0.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: /home/workaholic/env/clion/workspace/lexLeo/cmake-build-debug

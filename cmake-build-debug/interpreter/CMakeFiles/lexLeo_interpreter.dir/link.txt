@@ -1,0 +1,1 @@
+/usr/bin/gcc -g CMakeFiles/lexLeo_interpreter.dir/main.c.o -o lexLeo_interpreter  ../parser/liblexLeo_parser.a ../lexer/liblexLeo_lexer.a ../data_structures/liblexLeo_data_structures.a ../logger/liblexLeo_logger.a 

@@ -1,0 +1,1 @@
+/usr/bin/gcc -g CMakeFiles/test_symtab.dir/test_symtab.c.o -o test_symtab  ../liblexLeo_symtab.a ../../data_structures/liblexLeo_data_structures.a /usr/lib/x86_64-linux-gnu/libcheck_pic.a /usr/lib/x86_64-linux-gnu/librt.a -lm /usr/lib/x86_64-linux-gnu/libsubunit.so ../../logger/liblexLeo_logger.a 
