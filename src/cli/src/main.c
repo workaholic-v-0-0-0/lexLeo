@@ -1,3 +1,8 @@
 // src/cli/src/main.c
 
-int main() {return 0;}
+#include "osal.h"
+
+int main() {
+    osal_sleep(1000);
+    return 0;
+}
