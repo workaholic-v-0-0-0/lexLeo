@@ -1,0 +1,18 @@
+# binary artifacts
+*.o
+*.obj
+*.exe
+*.out
+*.so
+*.dll
+
+# build artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+
+# IDE artifacts
+.idea/
+
+#z backup artifacts
+*~
