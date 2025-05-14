@@ -30,32 +30,44 @@ Ensure you have the following installed on your system:
 
 - GCC (or any preferred C compiler)
 - CMake
-- Make (optional, used for certain CMake generators)
+- A generator as Make or Visual Studio 2022 17
 
 ## Building the Project with CMake
 
 To build the compiler and interpreter using CMake, follow these steps:
 
-1. Create a build directory and navigate to it:
+### For Linux:
    ```bash
-   mkdir build && cd build
+   cmake -B build
+   cmake --build build
    ```
-2. Generate the makefile and build files with CMake:
+### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
    ```bash
-   cmake ..
+   cmake -B build -G "Visual Studio 2022 17" -A x64
+   cmake --build build --config Release
    ```
-3. Compile the project:
+### For MacOS (using the default “Unix Makefiles” generator):
    ```bash
-   cmake --build .
+   cmake -B build -DCMAKE_BUILD_TYPE=Release
+   cmake --build build
    ```
-
 
 ## Running the Project
 
-After building the project, you can run the executable directly from the build
+After building the project, you can run the executable directly from the project
 directory:
+
+### For Linux:
    ```bash
-   ./build/lexLeo
+   ./build/lexLeo_cli
+   ```
+### For Windows:
+   ```bash
+   .\build\Release\lexLeo_cli.exe
+   ```
+### For MacOS:
+   ```bash
+   ./build/lexLeo_cli
    ```
 
 ## Contributing

@@ -14,5 +14,5 @@ CMakeCache.txt
 # IDE artifacts
 .idea/
 
-#z backup artifacts
+# backup artifacts
 *~
