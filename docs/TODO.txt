@@ -1,0 +1,3 @@
+implement release and debug build types
+implement logger interface, related placeholders and related CMake management
+implement one first test for a logger function and update the latter so that it passes the test
