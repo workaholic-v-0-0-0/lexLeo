@@ -38,7 +38,7 @@ To build the compiler and interpreter using CMake, follow these steps:
 
 ### For Linux:
    ```bash
-   cmake -B build
+   cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
    cmake --build build
    ```
 ### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
