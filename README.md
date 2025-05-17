@@ -43,7 +43,7 @@ To build the compiler and interpreter using CMake, follow these steps:
    ```
 ### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
    ```bash
-   cmake -B build -G "Visual Studio 2022 17" -A x64
+   cmake -B build -G "Visual Studio 17 2022" -A x64
    cmake --build build --config Release
    ```
 ### For MacOS (using the default “Unix Makefiles” generator):
