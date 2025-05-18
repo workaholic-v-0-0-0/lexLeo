@@ -1,3 +1,2 @@
-implement release and debug build types
-implement logger interface, related placeholders and related CMake management
-implement one first test for a logger function and update the latter so that it passes the test
+Integrate CTest and CMocka; implement an initial test to start the TDD-based development of init_logger
+Finish and validate init_logger through TDD
