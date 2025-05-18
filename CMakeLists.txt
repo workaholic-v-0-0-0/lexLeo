@@ -3,6 +3,11 @@
 cmake_minimum_required(VERSION 3.27)
 project(lexLeo LANGUAGES C)
 
+
+#------------------------------------------------------------------------------
+# BUILD TYPE MANAGEMENT
+#------------------------------------------------------------------------------
+
 message(STATUS "CMake generator: ${CMAKE_GENERATOR}")
 # Detect if we are using a multi-config generator (Visual Studio, Xcode, etc.)
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -31,11 +36,79 @@ else()
     message(STATUS "CMAKE_BUILD_TYPE is set to ${CMAKE_BUILD_TYPE}") #debug
 endif()
 
+
+
+#------------------------------------------------------------------------------
+# TESTS MANAGEMENT
+#------------------------------------------------------------------------------
+
+# The include(CTest) command loads the CTest module from CMake's standard
+# module directory. This module provides functions to manage and run tests
+# as part of the build process. CTest manages test case registration and
+# execution, integrating seamlessly with CMake to enable commands like
+# add_test(). It searches for the CTest.cmake script in the default CMake
+# Modules directory, pre-packaged with the CMake installation. This setup
+# facilitates creating, managing, and running tests across different
+# platforms and configurations, ensuring consistent test behavior.
+include(CTest)
+
+# Enable the testing functionality so CMake can prepare a test driver
+# This command must be called in the root tests.cmake to enable integration
+# of test cases defined in any subdirectory of the project.
+enable_testing()
+
+# Add the 'tests' subdirectory which contains only a tests.cmake.
+# It configures the Check and CMocka testing libraries for unit and mock
+# testing.
+# Then it defines targets to check all tests with verbose output and
+# to run specific groups of tests using labels.
+include(tests/tests.cmake)
+
+
+#------------------------------------------------------------------------------
+# PORTABILITY MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/osal)
+
+
+#------------------------------------------------------------------------------
+# LOGGER MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/logger)
+
+
+#------------------------------------------------------------------------------
+# OTHER LIBRARIES
+#------------------------------------------------------------------------------
+
+# TO BE IMPLEMENTED
+# add_subdirectory(src/data_structures)
+# add_subdirectory(src/symtab)
+# add_subdirectory(src/ast)
+# add_subdirectory(src/parser)
+# add_subdirectory(src/lexer)
+# add_subdirectory(src/compiler)
+
+
+#------------------------------------------------------------------------------
+# CLI
+#------------------------------------------------------------------------------
+
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     add_executable(lexLeo_cli src/cli/src/main.c)
 endif ()
+target_link_libraries(lexLeo_cli
+    PRIVATE osal
+    # PRIVATE logger
+)
 
-# define macro usefull in sources
+
+#------------------------------------------------------------------------------
+# CLI COMPILE OPTIONS & DEFINITIONS
+#------------------------------------------------------------------------------
+
 target_compile_definitions(lexLeo_cli
     PRIVATE
     $<$<CONFIG:Debug>:DEBUG_BUILD>
@@ -48,7 +121,3 @@ target_compile_options(lexLeo_cli
     $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:MSVC>>:/Zi>
     $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/O2>
 )
-
-# portability
-add_subdirectory(src/osal)
-target_link_libraries(lexLeo_cli PRIVATE osal)

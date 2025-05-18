@@ -26,25 +26,22 @@
 #include <time.h>
 
 /**
- * \var log_file
- * \brief The file pointer for the log file.
- *
- * This external variable holds the file pointer for the log file. It is used
- * by the logging functions to write messages. The file is opened during
- * `init_logger()` and closed during `close_logger()`. It should not be
- * accessed directly by the user.
- */
-extern FILE *log_file;
-
-/**
- * \brief Initializes the logger by opening the specified log file.
- *
+ * @brief Initializes the logger by opening the specified log file.
+*
  * This function opens the file at the specified path for appending log messages.
- * If the file cannot be opened, the program will exit with an error.
  *
- * \param log_path The path to the log file.
+ * @param log_path The path to the log file.
+ * @return 0 on success, error code otherwise.
+ *
+ * Preconditions:
+ *   - log_path != NULL
+ *   - The function must not be called more than once without a call to deinit_logger in between.
+ *
+ * Postconditions:
+ *   - If the return value is 0, the logger is ready to use.
+ *   - On failure, the logger remains uninitialized.
  */
-void init_logger(const char *log_path);
+int init_logger(const char *log_path);
 
 /**
  * \brief Logs an informational message to the log file.

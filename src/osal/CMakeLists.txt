@@ -1,4 +1,4 @@
-# src/osal/CMakeLists.txt
+# src/osal/tests.cmake
 
 set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

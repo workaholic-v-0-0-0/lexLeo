@@ -1,2 +1,1 @@
-Integrate CTest and CMocka; implement an initial test to start the TDD-based development of init_logger
 Finish and validate init_logger through TDD
