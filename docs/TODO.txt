@@ -1,1 +1,5 @@
-Finish and validate init_logger through TDD
+- Finish and validate init_logger through TDD
+
+- Configure Doxygen for automated code documentation generation
+
+- Document all existing modules, functions, and code structure using Doxygen comments
