@@ -10,6 +10,7 @@
 build/
 CMakeFiles/
 CMakeCache.txt
+Testing/
 
 # IDE artifacts
 .idea/
