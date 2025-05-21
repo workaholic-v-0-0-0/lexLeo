@@ -21,36 +21,73 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+// make testable
+#ifdef DEBUG
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+FILE * get_log_file();
+void set_log_file(FILE * log_file_for_test);
+#endif // DEBUG
+
+// if  RELEASE
+//   - get_log_file() is not declared even with file scope
+//   - log_file is declared with file scope
+// log_file is not NULL only when fopen succeds when called by init_logger
 
 /**
  * @brief Initializes the logger by opening the specified log file.
-*
- * This function opens the file at the specified path for appending log messages.
+ *
+ * Description :
+ *   - Attempts to open the file specified by log_path using fopen(log_path, "a").
+ *   - If the logger is already initialized (log_file != NULL), the function does nothing and returns -1.
  *
  * @param log_path The path to the log file.
- * @return 0 on success, error code otherwise.
+ * @return 0 on success, -1 otherwise.
  *
  * Preconditions:
- *   - log_path != NULL
- *   - The function must not be called more than once without a call to deinit_logger in between.
+ * None. The function accepts any value for log_path (including NULL).
  *
  * Postconditions:
- *   - If the return value is 0, the logger is ready to use.
- *   - On failure, the logger remains uninitialized.
+ *   - If log_path == NULL or log_file != NULL
+ *       - The function returns -1.
+ *       - log_file is not modified.
+ *   - Otherwise:
+ *       - If the file can be opened in append mode ('a'):
+ *           - The function returns 0.
+ *           - The logger is initialized (log_file points to the opened file).
+ *       - Otherwise (open error, invalid path, permissions, etc.):
+ *           - The function returns -1.
+ *           - The logger remains uninitialized (log_file stays NULL).
+ *
+ * Side effects:
+ *   - May create the log_path file if it does not exist.
+ *   - Allocates a system resource (the FILE*) if successful. It must be freed via close_logger.
+ *   - Does nothing if already log_file is not NULL or log_path file exists.
+ *
+ * Note:
+ *   - The user is responsible for calling a close_logger() function to release the resource when logging is complete.
  */
 int init_logger(const char *log_path);
 
 /**
- * \brief Logs an informational message to the log file.
+ * @brief Logs an informational message to the log file.
  *
- * This function writes an informational message to the log file. The format
- * and arguments follow the same syntax as `printf()`.
+ * Description :
+ *     This function writes an informational message to the log file. The format
+ *     and arguments follow the same syntax as `printf()`.
  *
- * \param format A format string as used by `printf()`.
- * \param ... The values to format and write.
+ * @param format A format string as used by `printf()`.
+ * @param  ... The values to format and write.
+ * @return 0 on success, -1 otherwise.
+ *
+ * Preconditions:
+ * None.
+ *
+ * Postconditions:
+ *   - If log_file == NULL or fprintf return -1 or ???
+ *
+ * Side effects:
+ *   - Modify the file pointed to by log_file.
+ *   - Does nothing if no success.
  */
 void log_info(const char *format, ...);
 

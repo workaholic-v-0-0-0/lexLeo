@@ -111,8 +111,8 @@ target_link_libraries(lexLeo_cli
 
 target_compile_definitions(lexLeo_cli
     PRIVATE
-    $<$<CONFIG:Debug>:DEBUG_BUILD>
-    $<$<CONFIG:Release>:RELEASE_BUILD>
+    $<$<CONFIG:Debug>:DEBUG>
+    $<$<CONFIG:Release>:RELEASE>
 )
 target_compile_options(lexLeo_cli
     PRIVATE
