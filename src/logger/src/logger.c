@@ -15,7 +15,7 @@
 static FILE *log_file = NULL;
 
 int init_logger(const char *log_path) {
-    if (log_file == NULL) {
+    if (log_path == NULL) {
         return -1;
     }
     return 0;
