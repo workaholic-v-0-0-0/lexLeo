@@ -1,7 +1,5 @@
 # src/logger/tests/tests.cmake
 
-message(STATUS ">>> src/logger/tests/tests.cmake inclus")
-
 add_executable(
     test_init_logger
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_init_logger.c
