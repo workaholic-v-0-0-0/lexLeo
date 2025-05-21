@@ -4,10 +4,10 @@
 #include <stdio.h>
 
 int main() {
-#ifdef DEBUG_BUILD
+#ifdef DEBUG
     osal_sleep(1000);
     printf("Hello World from debug build!\n");
-#elif RELEASE_BUILD
+#elif RELEASE
     printf("Hello World from release build!\n");
 #endif
     return 0;

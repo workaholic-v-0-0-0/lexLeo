@@ -25,6 +25,48 @@
 #include <stdlib.h>
 #include <time.h>
 
+// make testable
+#ifdef DEBUG
+FILE * get_log_file();
+void set_log_file(FILE * log_file_for_test);
+#endif // DEBUG
+
+/*
+ * int init_logger(const char *log_path);
+ *
+ * Specification:
+ *
+ * Preconditions:
+ *   - None. The function accepts any value for log_path (including NULL).
+ *
+* Description (How):
+ *   - Attempts to open the file specified by log_path using fopen(log_path, "a").
+ *   - If the logger is already initialized (log_file != NULL), the function does nothing and returns -1.
+ *
+ * Postconditions:
+ *   - If log_path == NULL:
+ *       - The function returns -1.
+ *       - The logger remains uninitialized (log_file stays NULL).
+ *   - If the logger is already initialized (log_file != NULL):
+ *       - The function returns -1.
+ *       - The logger remains unchanged.
+ *   - If log_path is not NULL:
+ *       - If the file can be opened in append mode ('a'):
+ *           - The function returns 0.
+ *           - The logger is initialized (log_file points to the opened file).
+ *       - Otherwise (open error, invalid path, permissions, etc.):
+ *           - The function returns -1.
+ *           - The logger remains uninitialized (log_file stays NULL).
+ *
+ * Side effects:
+ *   - May create the log_path file if it does not exist.
+ *   - Allocates a system resource (the FILE*) if successful.
+ *   - Does nothing if already initialized.
+ *
+ * Note:
+ *   - The user is responsible for calling a close_logger() function to release the resource when logging is complete.
+ */
+
 /**
  * @brief Initializes the logger by opening the specified log file.
 *
