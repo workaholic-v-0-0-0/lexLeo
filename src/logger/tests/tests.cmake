@@ -1,13 +1,14 @@
 # src/logger/tests/tests.cmake
 
 add_executable(
-    test_init_logger
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_init_logger.c
+    test_logger
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_logger.c
 )
 target_include_directories(
-    test_init_logger
+    test_logger
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
-target_link_libraries(test_init_logger PRIVATE logger ${CMOCKA_LIBRARY})
-add_test(NAME test_init_logger COMMAND test_init_logger)
+target_link_libraries(test_logger PRIVATE logger ${CMOCKA_LIBRARY})
+add_test(NAME test_logger COMMAND test_logger)
+target_compile_definitions(test_logger PRIVATE $<$<CONFIG:Debug>:DEBUG>)
