@@ -29,8 +29,12 @@ void set_log_file(FILE * log_file_for_test) {
 #endif // DEBUG
 
 int init_logger(const char *log_path) {
-    if ((log_path != NULL) && (log_file == NULL) && (log_file = fopen(log_path, "a"))) {
-        return 0;
-    }
-    return -1;
+    if ((log_path == NULL) || (log_file != NULL))
+        return -1;
+
+    log_file = fopen(log_path, "a");
+    if (!log_file)
+        return -1;
+
+    return 0;
 }

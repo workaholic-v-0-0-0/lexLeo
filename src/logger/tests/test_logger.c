@@ -7,10 +7,11 @@
 #include <time.h>
 #include "logger.h"
 
-/* init_logger test list
-if ((log_path != NULL) && (log_file == NULL)) and fopen returns NULL, init_logger returns -1 and log_file is NULL
-if ((log_path != NULL) && (log_file == NULL)) and fopen succeed, init_logger return 0 and log_file valued is the pointer returned by fopen
-*/
+
+
+//-----------------------------------------------------------------------------
+// init_logger TESTS
+//-----------------------------------------------------------------------------
 
 
 
@@ -114,7 +115,7 @@ static logger_test_params_t logPathNotNull_logFileNull_FopenFail = {
     .expected_log_file_after_init_logger_call = NULL
 };
 static logger_test_params_t logPathNotNull_logFileNull_FopenSuccess = {
-    .label = "log_path != NULL, log_file != NULL, fopen success",
+    .label = "log_path != NULL, log_file == NULL, fopen success",
     .log_path = "example/path",
     .log_file_init = NULL,
     .expected_result = SUCCESS,
@@ -124,7 +125,7 @@ static logger_test_params_t logPathNotNull_logFileNull_FopenSuccess = {
 
 
 //-----------------------------------------------------------------------------
-// TESTS : init_logger
+// TESTS
 //-----------------------------------------------------------------------------
 
 // Given: log_path == NULL and log_file == NULL
@@ -193,22 +194,12 @@ static void initLogger_SucessAndLogfileInitialized_WhenLogPathIsNotNull_AndLogfi
 }
 
 
-// Given: log_file == NULL, lop_path != NULL and fopen fails
-// Expected : the function returns -1 and log_file remains NULL.
-/*
-static void initLogger_ErrorAndLogfileRemainsNull_WhenFopenFails(void **state) {
-    logger_test_params_t *params = (logger_test_params_t *)(*state);
-    expect_string(fopen, path, params->log_path);
-    expect_string(fopen, mode, "a");
-    will_return(fopen, NULL);
 
-    FILE *log_file_before = get_log_file();
-    int result = init_logger(params->log_path);
-    FILE *log_file_after = get_log_file();
-    assert_int_equal(result, -1);
-    assert_ptr_equal(log_file_after, log_file_before); // toujours NULL
-}
-*/
+//-----------------------------------------------------------------------------
+// log_message TESTS
+//-----------------------------------------------------------------------------
+
+// TO DO
 
 
 
@@ -239,14 +230,6 @@ int main(void) {
         cmocka_unit_test_prestate_setup_teardown(
             initLogger_SucessAndLogfileInitialized_WhenLogPathIsNotNull_AndLogfileIsNull_AndFopenSuccess,
             setup, teardown, &logPathNotNull_logFileNull_FopenSuccess),
-/*
-        cmocka_unit_test_prestate_setup_teardown(
-            initLogger_SuccessAndInitializesLogfile_WhenFopenSucceeds,
-            setup, teardown, &case_valid_null_success),
-        cmocka_unit_test_prestate_setup_teardown(
-            initLogger_ErrorAndLogfileRemainsNull_WhenFopenFails,
-            setup, teardown, &case_valid_null_fail),
-*/
     };
     return cmocka_run_group_tests(init_logger_tests, NULL, NULL);
 }
