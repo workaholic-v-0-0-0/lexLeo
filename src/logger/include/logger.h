@@ -36,37 +36,76 @@ void set_log_file(FILE * log_file_for_test);
 /**
  * @brief Initializes the logger by opening the specified log file.
  *
- * Description :
+ * Description:
  *   - Attempts to open the file specified by log_path using fopen(log_path, "a").
  *   - If the logger is already initialized (log_file != NULL), the function does nothing and returns -1.
+ *   - If log_path is NULL, the function does nothing and returns -1.
+ *   - On success, the logger is initialized and ready for use.
  *
- * @param log_path The path to the log file.
- * @return 0 on success, -1 otherwise.
+ * @param log_path The path to the log file to open (may be NULL).
+ * @return 0 on success, -1 on error (including already initialized, invalid path, or open failure).
  *
  * Preconditions:
- * None. The function accepts any value for log_path (including NULL).
+ *   - None. The function accepts any value for log_path (including NULL).
  *
  * Postconditions:
- *   - If log_path == NULL or log_file != NULL
+ *   - If log_path == NULL or log_file != NULL:
  *       - The function returns -1.
  *       - log_file is not modified.
  *   - Otherwise:
- *       - If the file can be opened in append mode ('a'):
+ *       - If the file can be opened in append mode ("a"):
  *           - The function returns 0.
- *           - The logger is initialized (log_file points to the opened file).
+ *           - log_file points to the opened file.
  *       - Otherwise (open error, invalid path, permissions, etc.):
  *           - The function returns -1.
- *           - The logger remains uninitialized (log_file stays NULL).
+ *           - log_file remains NULL.
  *
  * Side effects:
- *   - May create the log_path file if it does not exist.
- *   - Allocates a system resource (the FILE*) if successful. It must be freed via close_logger.
- *   - Does nothing if already log_file is not NULL or log_path file exists.
+ *   - May create the file at log_path if it does not exist.
+ *   - Allocates a system resource (the FILE*) on success; must later be released with close_logger().
+ *   - No effect if already initialized (log_file != NULL).
  *
  * Note:
- *   - The user is responsible for calling a close_logger() function to release the resource when logging is complete.
+ *   - The user is responsible for calling close_logger() to release the resource when logging is complete.
+ *   - The function is not thread-safe.
  */
 int init_logger(const char *log_path);
+
+/**
+ * \brief Closes the log file.
+ *
+ * Description:
+ *   - Attempts to close the file pointed to by log_file using fclose(log_file).
+ *   - If the logger is not initialized (log_file == NULL), close_logger does nothing and returns -1.
+ *   - If fclose(log_file) returns EOF (error), log_file is left unchanged, and close_logger returns -1.
+ *   - If fclose succeeds, the resource pointed to by log_file is released, log_file is set to NULL, and close_logger returns 0.
+ *
+ * Preconditions:
+ *   - None.
+ *
+ * Postconditions:
+ *   - If log_file == NULL:
+ *       - The function returns -1.
+ *       - log_file remains NULL.
+ *   - If log_file != NULL:
+ *       - If fclose(log_file) returns EOF:
+ *           - The function returns -1.
+ *           - log_file still points to the open file (not closed).
+ *       - Otherwise (fclose succeeds):
+ *           - The function returns 0.
+ *           - log_file is set to NULL.
+ *           - The log file is properly closed and its resources are released.
+ *
+ * Side effects:
+ *   - May flush buffered output to the log file before closing.
+ *   - Closes the underlying file descriptor and releases resources associated with the log file.
+ *   - Sets log_file to NULL if the closure is successful.
+ *
+ * Note:
+ *   - The user is responsible for calling close_logger() to release the log file resource when logging is complete.
+ *   - After a successful call, log_file is set to NULL and cannot be used until re-initialized.
+ */
+int close_logger();
 
 /**
  * @brief Logs an informational message to the log file.
@@ -101,13 +140,5 @@ void log_info(const char *format, ...);
  * \param ... The values to format and write.
  */
 void log_error(const char *format, ...);
-
-/**
- * \brief Closes the log file.
- *
- * This function closes the log file if it was opened. It is important to call
- * this function to release resources after logging is done.
- */
-void close_logger();
 
 #endif // LOGGER_H

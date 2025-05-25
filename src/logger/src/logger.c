@@ -38,3 +38,11 @@ int init_logger(const char *log_path) {
 
     return 0;
 }
+
+int close_logger() {
+    if ((log_file == NULL) || (fclose(log_file) == EOF))
+        return -1;
+
+    log_file = NULL;
+    return 0;
+}
