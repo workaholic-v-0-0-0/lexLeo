@@ -128,7 +128,7 @@ int close_logger();
  *   - Modify the file pointed to by log_file.
  *   - Does nothing if no success.
  */
-void log_info(const char *format, ...);
+int log_info(const char *format, ...);
 
 /**
  * \brief Logs an error message to the log file.
@@ -139,6 +139,6 @@ void log_info(const char *format, ...);
  * \param format A format string as used by `printf()`.
  * \param ... The values to format and write.
  */
-void log_error(const char *format, ...);
+int log_error(const char *format, ...);
 
 #endif // LOGGER_H

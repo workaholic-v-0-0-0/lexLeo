@@ -4,7 +4,11 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <cmocka.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <errno.h>
+
 #include "logger.h"
 
 
@@ -13,16 +17,20 @@
 // CONSTANTS
 //-----------------------------------------------------------------------------
 
-enum {SUCCESS = 0, FAILURE = -1};
+enum {
+    SUCCESS = 0,
+    FAILURE = -1,
+    EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION = 123456789,
+};
 #define APPEND_MODE "a"
 
 
 
 //-----------------------------------------------------------------------------
-// MOCKS, STUBS, FAKES
+// MOCKS, STUBS, FAKES, DUMMIES
 //-----------------------------------------------------------------------------
 
-static FILE fake_file;
+static FILE dummy_log_file;
 
 FILE *fopen(const char *path, const char *mode) {
     check_expected_ptr(path);
@@ -34,6 +42,35 @@ int fclose(FILE *file) {
     check_expected_ptr(file);
     return mock_type(int);
 }
+
+#define LOGGER_LINE_MAX_LENGTH 1024
+#define LOGGER_FILE_MAX_LENGTH (10 * LOGGER_LINE_MAX_LENGTH)
+static char fake_log_file_address[LOGGER_FILE_MAX_LENGTH];
+FILE *fake_log_file; // defined in setup via fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE);
+
+time_t time(time_t *t) {
+    check_expected_ptr(t);
+    return mock_type(time_t);
+}
+struct tm *localtime(const time_t *timep) {
+    assert_non_null(timep);
+    assert_int_equal(*timep, EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION);
+    return mock_type(struct tm *);
+}
+size_t strftime(char *s, size_t max,
+       const char * format,
+       const struct tm *tm) {
+    check_expected_ptr(s);
+    check_expected(max);
+    check_expected_ptr(format);
+    check_expected_ptr(tm);
+    return mock_type(size_t);
+}
+#define TIME_MEMBERS_DUMMY NULL
+
+#define MAX_TIME_STR_LENGTH 20
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -100,16 +137,16 @@ static init_logger_test_params_t logPathNull_logFileNull = {
 static init_logger_test_params_t logPathNull_logFileNotNull = {
     .label = "log_path == NULL, log_file != NULL",
     .log_path = NULL,
-    .log_file_init = &fake_file,
+    .log_file_init = &dummy_log_file,
     .expected_result = FAILURE,
-    .expected_log_file_after_init_logger_call = &fake_file
+    .expected_log_file_after_init_logger_call = &dummy_log_file
 };
 static init_logger_test_params_t logPathNotNull_logFileNotNull = {
     .label = "log_path != NULL, log_file != NULL",
     .log_path = "example/path",
-    .log_file_init = &fake_file,
+    .log_file_init = &dummy_log_file,
     .expected_result = FAILURE,
-    .expected_log_file_after_init_logger_call = &fake_file
+    .expected_log_file_after_init_logger_call = &dummy_log_file
 };
 static init_logger_test_params_t logPathNotNull_logFileNull_FopenFail = {
     .label = "log_path != NULL, log_file == NULL, fopen fail",
@@ -123,7 +160,7 @@ static init_logger_test_params_t logPathNotNull_logFileNull_FopenSuccess = {
     .log_path = "example/path",
     .log_file_init = NULL,
     .expected_result = SUCCESS,
-    .expected_log_file_after_init_logger_call = &fake_file
+    .expected_log_file_after_init_logger_call = &dummy_log_file
 };
 
 
@@ -189,7 +226,7 @@ static void initLogger_SucessAndLogfileInitialized_WhenLogPathIsNotNull_AndLogfi
     init_logger_test_params_t *params = (init_logger_test_params_t *)(*state);
     expect_string(fopen, path, params->log_path);
     expect_string(fopen, mode, APPEND_MODE);
-    will_return(fopen, &fake_file);
+    will_return(fopen, &dummy_log_file);
     expect_init_logger_result_and_effect_on_logfile(params);
 }
 
@@ -257,14 +294,14 @@ static close_logger_test_params_t logFileNull = {
 
 static close_logger_test_params_t logFileNotNull_FcloseFail = {
     .label = "log_file != NULL, fclose fail",
-    .log_file_init = &fake_file,
+    .log_file_init = &dummy_log_file,
     .expected_result = FAILURE,
-    .expected_log_file_after_close_logger_call = &fake_file
+    .expected_log_file_after_close_logger_call = &dummy_log_file
 };
 
 static close_logger_test_params_t logFileNotNull_FcloseSuccess = {
     .label = "log_file != NULL, fclose success",
-    .log_file_init = &fake_file,
+    .log_file_init = &dummy_log_file,
     .expected_result = SUCCESS,
     .expected_log_file_after_close_logger_call = NULL
 };
@@ -315,6 +352,130 @@ static void close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseRe
 
 
 //-----------------------------------------------------------------------------
+// log_info TESTS
+//-----------------------------------------------------------------------------
+
+/* draft
+tests list:
+if log_file != NULL and format != NULL, log_info calls strftime with arguments MAX_TIME_STR_LENGTH, "%Y-%m-%d %H:%M:%S", the returned value of localtime
+if log_file != NULL and format != NULL and *format == '0' and time
+if log_file != NULL and format != NULL and format == "no format operation" and no format operation,
+if log_file != NULL and format != NULL and format == "a string: %s" and one optionnal argument == "a string",
+if log_file != NULL and format != NULL and format == "an int: %i" and one optionnal argument == 1234,
+if log_file != NULL and format != NULL and format == "a string and an int: %s and %i" and two optionnal arguments == "a string" and 1234,
+...
+
+fake time
+buffer
+"<time with format [%Y-%m-%d %H:%M:%S]> <level>: ", time_str, <the string the client code wants to print>
+
+#define LOGGER_LINE_MAX_LENGTH 1024
+#define LOGGER_FILE_MAX_LENGTH (10 * LOGGER_LINE_MAX_LENGTH)
+static char fake_log_file_address[LOGGER_FILE_MAX_LENGTH];
+fake_log_file = fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE);
+
+set_log_file(fake_log_file);
+*/
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+static int log_info_setup(void **state) {
+    if ((fake_log_file = fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE)) == NULL)
+        return errno;
+    memset(fake_log_file_address, 0, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    return 0;
+}
+
+static int log_info_teardown(void **state) {
+    fflush(fake_log_file);
+    memset(fake_log_file_address, 0, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    set_log_file(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// Given: log_file == NULL
+// Expected: log_info returns -1, log_file remains NULL
+static void log_info_ErrorAndNoLogfileChange_WhenLogfileIsNull(void **state) {
+    (void) *state; // unused
+    set_log_file(NULL);
+    int result = log_info("dummy format", "dummy optionnal argument");
+    assert_int_equal(result, FAILURE);
+    assert_ptr_equal(get_log_file(), NULL);
+}
+
+// Given: log_file != NULL, format == NULL
+// Expected: log_info returns -1 and log_file is not changed
+static void log_info_ErrorAndNoLogfileChange_WhenFormatIsNull(void **state) {
+    (void) *state; // unused
+    set_log_file(fake_log_file);
+    memset(fake_log_file_address, 0xaa, LOGGER_FILE_MAX_LENGTH);
+    unsigned char *fake_log_file_save = malloc(LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    assert_non_null(fake_log_file_save);
+    memcpy(fake_log_file_save, fake_log_file_address, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    const char *format = NULL;
+    int result = log_info(format, "dummy optionnal argument");
+    assert_int_equal(result, FAILURE);
+    assert_ptr_equal(get_log_file(), fake_log_file);
+    assert_memory_equal(fake_log_file_address, fake_log_file_save, LOGGER_FILE_MAX_LENGTH);
+    free(fake_log_file_save);
+}
+
+// Given: log_file != NULL, format != NULL, time call fail
+// Expected: log_info calls time(NULL)
+static void log_info_CallsTimeWithRightParams_WithValidParameters(void **state) {
+    (void) *state; // unused
+    set_log_file(&dummy_log_file);
+    expect_value(time, t, NULL);
+    will_return(time, FAILURE);
+    log_info("", "dummy optionnal argument");
+}
+
+// Given: log_file != NULL, format != NULL, time call fail
+// Expected: log_info returns -1 and log_file is not changed
+static void log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeFail(void **state) {
+    (void) *state; // unused
+    set_log_file(fake_log_file);
+    memset(fake_log_file_address, 0xaa, LOGGER_FILE_MAX_LENGTH);
+    unsigned char *fake_log_file_save = malloc(LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    assert_non_null(fake_log_file_save);
+    memcpy(fake_log_file_save, fake_log_file_address, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    expect_value(time, t, NULL);
+    will_return(time, FAILURE);
+    int result = log_info("valid dummy format", "valid dummy optionnal argument");
+    assert_int_equal(result, FAILURE);
+    assert_ptr_equal(get_log_file(), fake_log_file);
+    assert_memory_equal(fake_log_file_address, fake_log_file_save, LOGGER_FILE_MAX_LENGTH);
+    free(fake_log_file_save);
+}
+
+// Given: log_file != NULL, format != NULL, and time() returns successfully
+// Expected: log_info calls localtime() with a pointer to the returned value of time()
+// Note: We do not test the address passed to localtime() because log_info
+// creates a local time_t variable whose address cannot be predicted or controlled
+// from the test. Instead, we check that the value passed is correct.
+static void log_info_CallsLocaltimeWithRightParams_WhenValidParameters_AndTimeCallSuccess(void **state) {
+    (void) *state; // unused
+    set_log_file(&dummy_log_file);
+    expect_value(time, t, NULL);
+    time_t time_returned_value = EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION;
+    will_return(time, time_returned_value);
+    will_return(localtime, TIME_MEMBERS_DUMMY);
+    log_info("valid dummy format", "valid dummy optionnal argument");
+}
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -357,8 +518,28 @@ int main(void) {
             close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseReturns0,
             close_logger_setup, close_logger_teardown, &logFileNotNull_FcloseSuccess),
     };
+
+    const struct CMUnitTest log_info_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            log_info_ErrorAndNoLogfileChange_WhenLogfileIsNull,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_ErrorAndNoLogfileChange_WhenFormatIsNull,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_CallsTimeWithRightParams_WithValidParameters,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeFail,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_CallsLocaltimeWithRightParams_WhenValidParameters_AndTimeCallSuccess,
+            log_info_setup, log_info_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(init_logger_tests, NULL, NULL);
     failed += cmocka_run_group_tests(close_logger_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(log_info_tests, NULL, NULL);
     return failed;
 }

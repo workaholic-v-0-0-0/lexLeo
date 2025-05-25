@@ -1,4 +1,4 @@
-- Finish and validate init_logger through TDD
+- Finish and validate logger implementation through TDD
 
 - Configure Doxygen for automated code documentation generation
 

@@ -46,3 +46,15 @@ int close_logger() {
     log_file = NULL;
     return 0;
 }
+
+int log_info(const char *format, ...) {
+    if ((log_file == NULL) || (format == NULL))
+        return -1;
+
+    time_t time_now = time(NULL);
+    if (time_now == -1)
+        return -1;
+
+    localtime(&time_now);
+    return -2;
+}
