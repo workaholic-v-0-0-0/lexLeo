@@ -57,19 +57,19 @@ struct tm *localtime(const time_t *timep) {
     assert_int_equal(*timep, EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION);
     return mock_type(struct tm *);
 }
+
 size_t strftime(char *s, size_t max,
        const char * format,
        const struct tm *tm) {
-    check_expected_ptr(s);
     check_expected(max);
     check_expected_ptr(format);
     check_expected_ptr(tm);
     return mock_type(size_t);
 }
-#define TIME_MEMBERS_DUMMY NULL
 
-#define MAX_TIME_STR_LENGTH 20
+struct tm TIME_MEMBERS_DUMMY;
 
+#define TIME_STR_LENGTH 20
 
 
 
@@ -357,26 +357,14 @@ static void close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseRe
 
 /* draft
 tests list:
-if log_file != NULL and format != NULL, log_info calls strftime with arguments MAX_TIME_STR_LENGTH, "%Y-%m-%d %H:%M:%S", the returned value of localtime
-if log_file != NULL and format != NULL and *format == '0' and time
-if log_file != NULL and format != NULL and format == "no format operation" and no format operation,
-if log_file != NULL and format != NULL and format == "a string: %s" and one optionnal argument == "a string",
-if log_file != NULL and format != NULL and format == "an int: %i" and one optionnal argument == 1234,
-if log_file != NULL and format != NULL and format == "a string and an int: %s and %i" and two optionnal arguments == "a string" and 1234,
+if log_file != NULL and format != NULL, log_info calls strftime with arguments TIME_STR_LENGTH, "%Y-%m-%d %H:%M:%S", the returned value of localtime...
+if log_file != NULL and format != NULL and *format == '0' and time...
+if log_file != NULL and format != NULL and format == "no format operation" and no format operation,...
+if log_file != NULL and format != NULL and format == "a string: %s" and one optionnal argument == "a string",...
+if log_file != NULL and format != NULL and format == "an int: %i" and one optionnal argument == 1234,...
+if log_file != NULL and format != NULL and format == "a string and an int: %s and %i" and two optionnal arguments == "a string" and 1234,...
 ...
-
-fake time
-buffer
-"<time with format [%Y-%m-%d %H:%M:%S]> <level>: ", time_str, <the string the client code wants to print>
-
-#define LOGGER_LINE_MAX_LENGTH 1024
-#define LOGGER_FILE_MAX_LENGTH (10 * LOGGER_LINE_MAX_LENGTH)
-static char fake_log_file_address[LOGGER_FILE_MAX_LENGTH];
-fake_log_file = fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE);
-
-set_log_file(fake_log_file);
 */
-
 
 //-----------------------------------------------------------------------------
 // FIXTURES
@@ -457,7 +445,7 @@ static void log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeFail(void
     free(fake_log_file_save);
 }
 
-// Given: log_file != NULL, format != NULL, and time() returns successfully
+// Given: log_file != NULL, format != NULL, time returns successfully
 // Expected: log_info calls localtime() with a pointer to the returned value of time()
 // Note: We do not test the address passed to localtime() because log_info
 // creates a local time_t variable whose address cannot be predicted or controlled
@@ -468,10 +456,74 @@ static void log_info_CallsLocaltimeWithRightParams_WhenValidParameters_AndTimeCa
     expect_value(time, t, NULL);
     time_t time_returned_value = EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION;
     will_return(time, time_returned_value);
-    will_return(localtime, TIME_MEMBERS_DUMMY);
+    will_return(localtime, NULL); // localtime fail to avoid error with mocks
     log_info("valid dummy format", "valid dummy optionnal argument");
 }
 
+// Given: log_file != NULL, format != NULL, time success, localtime fail
+// Expected: log_info returns -1 and log_file is not changed
+static void log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeSuccess_AndLocaltimeFail(void **state) {
+    (void) *state; // unused
+    set_log_file(fake_log_file);
+    memset(fake_log_file_address, 0xaa, LOGGER_FILE_MAX_LENGTH);
+    unsigned char *fake_log_file_save = malloc(LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    assert_non_null(fake_log_file_save);
+    memcpy(fake_log_file_save, fake_log_file_address, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    expect_value(time, t, NULL);
+    will_return(time, EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION);
+    will_return(localtime, NULL); // localtime fail
+    int result = log_info("valid dummy format", "valid dummy optionnal argument");
+    assert_int_equal(result, FAILURE);
+    assert_ptr_equal(get_log_file(), fake_log_file);
+    assert_memory_equal(fake_log_file_address, fake_log_file_save, LOGGER_FILE_MAX_LENGTH);
+    free(fake_log_file_save);
+}
+
+// Given: log_file != NULL, format != NULL, time success, localtime success
+// Expected: log_info calls strftime with arguments TIME_STR_LENGTH, "%Y-%m-%d %H:%M:%S", the returned value of localtime
+static void log_info_CallsStrftimeWithRightParams_WhenValidParameters_AndTimeCallSuccess_AndLocaltimeCallSuccess(void **state) {
+    (void) *state; // unused
+    set_log_file(&dummy_log_file);
+    expect_value(time, t, NULL);
+    time_t time_returned_value = EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION;
+    will_return(time, time_returned_value);
+    will_return(localtime, &TIME_MEMBERS_DUMMY);
+    expect_value(strftime, max, TIME_STR_LENGTH);
+    expect_string(strftime, format, "%Y-%m-%d %H:%M:%S");
+    expect_value(strftime, tm, &TIME_MEMBERS_DUMMY);
+    will_return(strftime, 0);
+    log_info("valid dummy format", "valid dummy optionnal argument");
+}
+
+// Given: log_file != NULL, format != NULL, time success, localtime success, strftime fail
+// Expected: log_info returns -1 and log_file is not changed
+static void
+log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeSuccess_AndLocaltimeSuccess_AndStrftimeFail
+        (void **state) {
+    (void) *state; // unused
+    set_log_file(fake_log_file);
+    memset(fake_log_file_address, 0xaa, LOGGER_FILE_MAX_LENGTH);
+    unsigned char *fake_log_file_save = malloc(LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    assert_non_null(fake_log_file_save);
+    memcpy(fake_log_file_save, fake_log_file_address, LOGGER_FILE_MAX_LENGTH * sizeof(char));
+    expect_value(time, t, NULL);
+    will_return(time, EXAMPLE_OF_A_time_t_VALUE_RETURNED_BY_time_FUNCTION);
+    will_return(localtime, &TIME_MEMBERS_DUMMY);
+    expect_value(strftime, max, TIME_STR_LENGTH);
+    expect_string(strftime, format, "%Y-%m-%d %H:%M:%S");
+    expect_value(strftime, tm, &TIME_MEMBERS_DUMMY);
+    will_return(strftime, 0); // strftime fail
+    int result = log_info("valid dummy format", "valid dummy optionnal argument");
+    assert_int_equal(result, FAILURE);
+    assert_ptr_equal(get_log_file(), fake_log_file);
+    assert_memory_equal(fake_log_file_address, fake_log_file_save, LOGGER_FILE_MAX_LENGTH);
+    free(fake_log_file_save);
+}
+
+// Given: log_file != NULL, format == "no format operation", time success, localtime success, strftime success
+// Expected: ??? Should I check interaction with fprintf, vfprintf, fflush,...
+
+// SOUNDS LIKE THIS TDD STRATEGY IS WRONG!
 
 
 
@@ -534,6 +586,15 @@ int main(void) {
             log_info_setup, log_info_teardown),
         cmocka_unit_test_setup_teardown(
             log_info_CallsLocaltimeWithRightParams_WhenValidParameters_AndTimeCallSuccess,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeSuccess_AndLocaltimeFail,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_CallsStrftimeWithRightParams_WhenValidParameters_AndTimeCallSuccess_AndLocaltimeCallSuccess,
+            log_info_setup, log_info_teardown),
+        cmocka_unit_test_setup_teardown(
+            log_info_ErrorAndNoLogfileChange_WithValidParametersAndTimeSuccess_AndLocaltimeSuccess_AndStrftimeFail,
             log_info_setup, log_info_teardown),
     };
 

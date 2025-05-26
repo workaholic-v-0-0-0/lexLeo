@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define TIME_STR_LENGTH 20
+
 /**
  * \var log_file
  * \brief The file pointer for the log file.
@@ -55,6 +57,13 @@ int log_info(const char *format, ...) {
     if (time_now == -1)
         return -1;
 
-    localtime(&time_now);
+    struct tm *time_members=localtime(&time_now); // memory area handled by time.h
+    if (!time_members)
+        return -1;
+
+    char time_str[TIME_STR_LENGTH];
+    if (!strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", time_members))
+        return -1;
+
     return -2;
 }
