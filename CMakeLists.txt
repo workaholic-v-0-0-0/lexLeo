@@ -121,3 +121,20 @@ target_compile_options(lexLeo_cli
     $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:MSVC>>:/Zi>
     $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/O2>
 )
+
+
+
+#------------------------------------------------------------------------------
+# DOCUMENTATION GENERATION MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(doxygen_management)
+
+# needed because custom targets defined in doxygen_management/CMakeLists.txt
+# are not build when make command is executed even with the ALL keyword
+add_custom_target(build_all ALL)
+add_dependencies(
+    build_all
+    copy_doc_into_sources_directory
+    remove_doc_to_fetch_links_tmp
+)
