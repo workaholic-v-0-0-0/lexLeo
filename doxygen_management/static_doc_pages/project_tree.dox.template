@@ -1,0 +1,91 @@
+/**
+@page project_tree Project tree
+@ingroup project_tree_root
+@htmlonly
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+
+<script type="text/javascript">
+
+    var projectTreeData = @PROJECT_TREE_JSON@;
+    var tree;
+
+    jQuery(document).ready(initializeTree);
+
+    function initializeTree() {
+        jQuery('#tree-container').jstree({
+            'core': {
+                'data': projectTreeData
+            },
+            'types': {
+                'folder': {
+                    'icon': 'fa fa-folder'
+                },
+                'file': {
+                    'icon': 'fa fa-file'
+                }
+            },
+            'plugins': ['types']
+        })
+        .on("select_node.jstree", function (e, data) {
+                var href = data.node.a_attr.href;
+                if (href) {
+                    window.location.href = href;
+                }
+            })
+        .on('ready.jstree', function () {
+            tree = $('#tree-container').jstree(true);
+            createDepthButtons();
+        });
+    }
+
+    function createDepthButtons() {
+        var deepest = getMaxDepth('lexLeo', 0);
+        var controls = $('#tree-controls');
+        controls.empty();
+        for (var i = 1; i <= deepest; i++) {
+            controls.append(
+                '<button onclick="expandToLevel('
+                + i
+                + ')">Level ' + i + '</button>'
+            );
+        }
+        controls.append('<button onclick="tree.open_all()">Expand All</button>');
+    }
+
+    function getMaxDepth(nodeId, currentDepth) {
+        var node = tree.get_node(nodeId);
+        if (!node.children.length) return currentDepth;
+
+        var depths = node.children.map(childId => getMaxDepth(childId, currentDepth + 1));
+        return Math.max.apply(null, depths);
+    }
+
+    function expandToLevel(level) {
+        tree.close_all();
+        expandRecursive('lexLeo', 0, level);
+    }
+
+    function expandRecursive(nodeId, currentLevel, maxLevel) {
+        if (currentLevel >= maxLevel) return;
+        tree.open_node(
+            nodeId,
+            function() {
+                var children = tree.get_node(nodeId).children;
+                for (var i = 0; i < children.length; i++) {
+                    expandRecursive(children[i], currentLevel + 1, maxLevel);
+                }
+            },
+            false
+        );
+    }
+
+</script>
+
+<div id="tree-controls"></div>
+<div id="tree-container"></div>
+
+@endhtmlonly
+*/

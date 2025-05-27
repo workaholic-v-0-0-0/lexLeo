@@ -12,6 +12,10 @@ cmake-build-debug/
 CMakeFiles/
 CMakeCache.txt
 Testing/
+doxygen_management/doc_to_fetch_links_tmp/
+docs/
+Doxyfile
+Doxyfile_to_fetch_links
 
 # IDE artifacts
 .idea/
