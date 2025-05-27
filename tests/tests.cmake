@@ -76,7 +76,7 @@ set(
 # Create a custom target to run all tests with verbose output. This allows for
 # detailed test result logging during the build process.
 add_custom_target(check
-    COMMAND ${CMAKE_CTEST_COMMAND} --verbose
+    COMMAND ${CMAKE_CTEST_COMMAND} --verbose --output-on-failure
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
