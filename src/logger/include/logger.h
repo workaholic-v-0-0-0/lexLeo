@@ -26,6 +26,8 @@
 #include <stdio.h>
 FILE * get_log_file();
 void set_log_file(FILE * log_file_for_test);
+extern int (*logger_fclose)(FILE *);
+void set_logger_fclose(int (*logger_fclose_for_test)(FILE *));
 #endif // DEBUG
 
 // if  RELEASE
@@ -110,35 +112,64 @@ int close_logger();
 /**
  * @brief Logs an informational message to the log file.
  *
- * Description :
- *     This function writes an informational message to the log file. The format
- *     and arguments follow the same syntax as `printf()`.
+ * Description:
+ *     Writes an informational message to the log file. The message is
+ *     prepended with the current date and time in the format
+ *     "[YYYY-MM-DD HH:MM:SS] INFO: ". Formatting is as in printf().
+ *     A newline is appended.
  *
- * @param format A format string as used by `printf()`.
- * @param  ... The values to format and write.
- * @return 0 on success, -1 otherwise.
+ *     Example:
+ *         [2025-06-10 12:00:00] INFO: no format operation
+ *
+ * @param format A format string as used by printf(). Must not be NULL.
+ * @param ...    Values to format and write.
+ * @return 0 on success, -1 if log_file is NULL, format is NULL,
+ *         or if a write error occurs.
  *
  * Preconditions:
- * None.
+ *   - None.
  *
  * Postconditions:
- *   - If log_file == NULL or fprintf return -1 or ???
+ *     - Returns -1 and does not modify the file if log_file or format is NULL,
+ *       or if writing fails.
+ *     - Appends a formatted informational line to the log file and returns 0
+ *       otherwise.
  *
  * Side effects:
- *   - Modify the file pointed to by log_file.
- *   - Does nothing if no success.
+ *     - May append a line to the file pointed to by log_file.
+ *     - No modification occurs if an error is encountered.
  */
-void log_info(const char *format, ...);
+int log_info(const char *format, ...);
 
 /**
- * \brief Logs an error message to the log file.
+ * @brief Logs an error message to the log file.
  *
- * This function writes an error message to the log file. The format and
- * arguments follow the same syntax as `printf()`.
+ * Description:
+ *     Writes an error message to the log file. The message is prepended with
+ *     the current date and time in the format
+ *     "[YYYY-MM-DD HH:MM:SS] ERROR: ". Formatting is as in printf().
+ *     A newline is appended.
  *
- * \param format A format string as used by `printf()`.
- * \param ... The values to format and write.
+ *     Example:
+ *         [2025-05-07 17:55:00] ERROR: no format operation
+ *
+ * @param format A format string as used by printf(). Must not be NULL.
+ * @param ...    Values to format and write.
+ * @return 0 on success, -1 if log_file is NULL, format is NULL,
+ *         or if a write error occurs.
+ *
+ * Preconditions:
+ *   - None.
+ *
+ * Postconditions:
+ *     - Returns -1 and does not modify the file if log_file or format is NULL,
+ *       or if writing fails.
+ *     - Appends a formatted error line to log file and returns 0 otherwise.
+ *
+ * Side effects:
+ *     - May append a line to the file pointed to by log_file.
+ *     - No modification occurs if an error is encountered.
  */
-void log_error(const char *format, ...);
+int log_error(const char *format, ...);
 
 #endif // LOGGER_H
