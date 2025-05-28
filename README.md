@@ -36,20 +36,51 @@ Ensure you have the following installed on your system:
 
 To build the compiler and interpreter using CMake, follow these steps:
 
-### For Linux:
+### For Production Builds (Tests disabled)
+
+#### For Linux:
    ```bash
-   cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+   cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
    cmake --build build
    ```
-### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
+#### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
    ```bash
-   cmake -B build -G "Visual Studio 17 2022" -A x64
+   cmake -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=OFF
    cmake --build build --config Release
    ```
-### For MacOS (using the default “Unix Makefiles” generator):
+#### For MacOS (using the default “Unix Makefiles” generator):
    ```bash
-   cmake -B build -DCMAKE_BUILD_TYPE=Release
+   cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
    cmake --build build
+   ```
+
+### For Development/Testing Builds (Tests enabled)
+
+By default, BUILD_TESTING is ON, but you can specify it explicitly for clarity.
+
+#### For Linux:
+   ```bash
+  rm -r build
+  cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+  cmake --build build
+  cmake --build build --target check
+  cmake --build build --target check_memory
+   ```
+#### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
+   ```bash
+  rm -r build
+  cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+  cmake --build build --config Debug
+  cmake --build build --target check
+  cmake --build build --target check_memory
+   ```
+#### For MacOS (using the default “Unix Makefiles” generator):
+   ```bash
+    rm -r build
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+    cmake --build build
+    cmake --build build --target check
+    cmake --build build --target check_memory
    ```
 
 ## Running the Project

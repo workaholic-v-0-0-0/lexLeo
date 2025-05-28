@@ -42,6 +42,8 @@ endif()
 # TESTS MANAGEMENT
 #------------------------------------------------------------------------------
 
+if(BUILD_TESTING)
+
 # The include(CTest) command loads the CTest module from CMake's standard
 # module directory. This module provides functions to manage and run tests
 # as part of the build process. CTest manages test case registration and
@@ -64,6 +66,9 @@ enable_testing()
 # to run specific groups of tests using labels.
 include(tests/tests.cmake)
 
+endif()
+
+
 
 #------------------------------------------------------------------------------
 # PORTABILITY MANAGEMENT
@@ -78,13 +83,47 @@ add_subdirectory(src/osal)
 
 add_subdirectory(src/logger)
 
+# configure CACHE VARIABLES for logger dependency injection into sub-projects:
+set(
+    USE_LOGGER ON
+    CACHE BOOL
+    "Enable logger support in brother subprojects"
+)
+set(
+    LOGGER_TARGET logger
+    CACHE STRING
+    "CMake target to use for logger"
+)
+set(
+    LOGGER_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/logger/include
+    CACHE PATH "Path to logger header directory"
+)
+# logger library dependency injection ("at cmake scope") will be automatically
+# done by convention in other subprojects that uses the mechanism of the
+# following kind:
+#
+# if (USE_LOGGER)
+#     target_compile_definitions(list PRIVATE USE_LOGGER)
+#     target_include_directories(list PUBLIC ${LOGGER_HEADER_DIR})
+#     target_link_libraries(list PUBLIC ${LOGGER_TARGET})
+# endif()
+#
+# and in C sources:
+# #ifdef USE_LOGGER
+# init_logger("log_file_name")
+# log_info("blabla")
+# log_error("bad blabla")
+# close_logger()
+# #endif
+
 
 #------------------------------------------------------------------------------
 # OTHER LIBRARIES
 #------------------------------------------------------------------------------
 
+add_subdirectory(src/data_structures)
+
 # TO BE IMPLEMENTED
-# add_subdirectory(src/data_structures)
 # add_subdirectory(src/symtab)
 # add_subdirectory(src/ast)
 # add_subdirectory(src/parser)
@@ -106,18 +145,30 @@ target_link_libraries(lexLeo_cli
 
 
 #------------------------------------------------------------------------------
-# CLI COMPILE OPTIONS & DEFINITIONS
+# COMPILE OPTIONS & DEFINITIONS
 #------------------------------------------------------------------------------
 
-target_compile_definitions(lexLeo_cli
-    PRIVATE
-    $<$<CONFIG:Debug>:DEBUG>
-    $<$<CONFIG:Release>:RELEASE>
+function(enable_DEBUG_and_RELEASE_definitions target)
+    target_compile_definitions(${target}
+        PRIVATE
+        $<$<CONFIG:Debug>:DEBUG>
+        $<$<CONFIG:Release>:RELEASE>
+    )
+endfunction()
+
+enable_DEBUG_and_RELEASE_definitions(lexLeo_cli)
+enable_DEBUG_and_RELEASE_definitions(data_structures)
+
+# Central build options for all project targets
+add_library(project_build_options INTERFACE)
+target_compile_options(project_build_options INTERFACE
+    $<$<AND:$<CONFIG:Debug>,$<C_COMPILER_ID:GNU,Clang>>:-g>
+    $<$<AND:$<CONFIG:Release>,$<C_COMPILER_ID:GNU,Clang>>:-O3>
+    $<$<AND:$<CONFIG:Debug>,$<C_COMPILER_ID:MSVC>>:/Zi>
+    $<$<AND:$<CONFIG:Release>,$<C_COMPILER_ID:MSVC>>:/O2>
 )
-target_compile_options(lexLeo_cli
-    PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:GNU,Clang>>:-g>
-    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:GNU,Clang>>:-O3>
-    $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:MSVC>>:/Zi>
-    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/O2>
-)
+
+target_link_libraries(lexLeo_cli PRIVATE project_build_options)
+target_link_libraries(data_structures PRIVATE project_build_options)
+
+# TO DO : NEED TO BE REFACTORED SO THAT EVERY SUB-PROJECT COULD BE STANDALONE

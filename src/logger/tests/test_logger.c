@@ -411,6 +411,7 @@ static void log_info_ErrorAndNoLogfileChange_WhenFormatIsNull(void **state) {
     assert_int_equal(result, FAILURE);
     assert_ptr_equal(get_log_file(), fake_log_file);
     assert_memory_equal(fake_log_file_address, fake_log_file_save, LOGGER_FILE_MAX_LENGTH);
+    free(fake_log_file_save);
 }
 
 // Given: log_file != NULL, format == "no format operation", fake_log_file is empty
