@@ -1,27 +1,37 @@
-# doxygen_management/CMakeLists.txt
-
 #------------------------------------------------------------------------------
 # doxygen_management/CMakeLists.txt
 #
-# This CMakeLists.txt is dedicated to the configuration and execution of
-# Doxygen within the project. It manages both dynamic and static documentation
-# tasks, ensuring all necessary files and directories are processed and
-# updated accordingly.
+# CMake configuration for managing Doxygen documentation in the lexLeo project.
 #
-# Files not directly parsable by Doxygen are managed by creating a .dox copy
-# that encapsulates the original content between @htmlonly and @endhtmlonly
-# tags to ensure proper inclusion in the generated documentation pages. These
-# .dox files are stored within ${FOR_UNPARSABLE_IN_SOURCE_DIR}, maintaining the
-# original directory structure. Each .dox file is assigned a unique identifier
-# through a @page tag based on its relative path to this directory. Identifiers
-# replace '/' with '_2' and '.' with '_8', ensuring compatibility with
-# Doxygen's file handling. The copying and tagging are managed by the script
-# scripts/make_parsable_not_source_files.cmake.
+# This file sets up and orchestrates all documentation-related tasks,
+# including both static and dynamic documentation generation. It ensures that
+# **all project files tracked by git** are processed and wrapped as .dox files,
+# not just those that are not directly parsable by Doxygen.
+#
+# For every git-tracked file, a corresponding .dox file is generated that
+# encapsulates its content for verbatim inclusion in the documentation. This
+# allows every file (source, configuration, static doc page etc.) to be browsed
+# directly in the Doxygen-generated docs, regardless of whether Doxygen can
+# parse the file natively.
+#
+# Each .dox file is assigned a unique @page tag derived from its relative
+# path (using '_2' for '/' and '_8' for '.') to ensure compatibility with
+# Doxygen's file handling. These generated .dox files are stored within
+# ${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}, preserving the original project
+# structure. The process is automated by the script
+# scripts/verbinclude_all_git_tracked_files.cmake
+#
+# The configuration supports:
+#   - Wrapping and verbatim inclusion of all git-tracked files in the docs,
+#     even those already parsable by Doxygen.
+#   - Standard static documentation generation for source files.
+#   - Dynamic documentation targets for link fetching and cross-referencing.
+#   - Automated project tree visualization (JSON & Doxygen page).
+#   - Synchronization of generated documentation into the source tree.
 #
 # author: Sylvain Labopin
-# date: 2025-05-27
+# date: 2025-06-19
 #------------------------------------------------------------------------------
-
 
 
 #------------------------------------------------------------------------------
@@ -47,30 +57,24 @@ set(
 set(
     DYNAMIC_DOC_PAGES_DIR
     "${CMAKE_BINARY_DIR}/doxygen_management/dynamic_doc_pages"
-    CACHE PATH "Dynamic doc pages dir"
-)
-
-file(
-    MAKE_DIRECTORY
-    "${DYNAMIC_DOC_PAGES_DIR}"
 )
 
 set(DOXYGEN_EXAMPLE_PATH "${CMAKE_SOURCE_DIR}")
 
 # temporary documentation generation to fetch links
 set(
-    FOR_UNPARSABLE_IN_SOURCE_DIR
-    "${DYNAMIC_DOC_PAGES_DIR}/for_unparsable_in_source_dir"
+    DOXYGEN_TEMPLATE
+    "${DOXYGEN_DIR}/Doxyfile_to_fetch_links.template"
+)
+
+set(
+    VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR
+    "${DYNAMIC_DOC_PAGES_DIR}/verbinclude_wrapped_project_files"
 )
 
 file(
     MAKE_DIRECTORY
-    "${FOR_UNPARSABLE_IN_SOURCE_DIR}"
-)
-
-set(
-    DOXYGEN_TEMPLATE
-    "${DOXYGEN_DIR}/Doxyfile_to_fetch_links.template"
+    "${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}"
 )
 
 set(
@@ -85,7 +89,7 @@ file(
 
 set(
     DOXYGEN_INPUT_DIR
-    ${FOR_UNPARSABLE_IN_SOURCE_DIR}
+    ${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}
 )
 
 set(
@@ -99,13 +103,13 @@ set(
 )
 
 set(
-    DOXYGEN_CONFIG_TO_MAKE_PARSABLE_ALL_FILES
+    DOXYGEN_CONFIG_TO_VERBINCLUDE_GIT_TRACKED_FILES
     "${CMAKE_SOURCE_DIR}/Doxyfile_to_fetch_links"
 )
 
 configure_file(
     ${DOXYGEN_TEMPLATE}
-    ${DOXYGEN_CONFIG_TO_MAKE_PARSABLE_ALL_FILES}
+    ${DOXYGEN_CONFIG_TO_VERBINCLUDE_GIT_TRACKED_FILES}
     @ONLY
 )
 
@@ -114,11 +118,12 @@ set(
     DOXYGEN_TEMPLATE
     "${DOXYGEN_DIR}/Doxyfile.template"
 )
+
 set(
     DOXYGEN_INPUT_DIR
     "${CMAKE_SOURCE_DIR}"
-    #"${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/build/doxygen_management/dynamic_doc_pages ${CMAKE_SOURCE_DIR}/doxygen_management/static_doc_pages"
 )
+
 set(
     DOXYGEN_EXAMPLE_PATH
     "${CMAKE_SOURCE_DIR}"
@@ -143,7 +148,7 @@ find_package(Doxygen)
 
 
 #------------------------------------------------------------------------------
-# DOXYGEN DOCUMENTATION PAGES GENERATION FOR NOT SOURCE FILES
+# VERBINCLUDE WRAPPED PROJECT FILE PAGES GENERATION
 #------------------------------------------------------------------------------
 
 file(
@@ -154,13 +159,13 @@ file(
 # all files found in source directory except those which are
 # already parsable by Doxygen
 add_custom_target(
-    make_parsable_not_source_files
+    verbinclude_all_git_tracked_files
     ALL
     COMMAND ${CMAKE_COMMAND}
     -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-    -DOUTPUT_DIR="${FOR_UNPARSABLE_IN_SOURCE_DIR}"
-    -P ${DOXYGEN_DIR}/scripts/make_parsable_not_source_files.cmake
-    COMMENT "Generating doc pages in ${FOR_UNPARSABLE_IN_SOURCE_DIR} for \
+    -DOUTPUT_DIR="${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}"
+    -P ${DOXYGEN_DIR}/scripts/verbinclude_all_git_tracked_files.cmake
+    COMMENT "Generating doc pages in ${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR} for \
 Doxygen unparsable files of the source directory"
 )
 
@@ -172,12 +177,12 @@ Doxygen unparsable files of the source directory"
 add_custom_target(
     dynamic_doc
     ALL
-    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_CONFIG_TO_MAKE_PARSABLE_ALL_FILES}
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_CONFIG_TO_VERBINCLUDE_GIT_TRACKED_FILES}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating dynamic documentation pages with Doxygen"
     VERBATIM
 )
-add_dependencies(dynamic_doc make_parsable_not_source_files)
+add_dependencies(dynamic_doc verbinclude_all_git_tracked_files)
 
 
 #------------------------------------------------------------------------------
@@ -193,7 +198,7 @@ add_custom_target(
     map_dox_to_html
     ALL
     COMMAND ${CMAKE_COMMAND}
-    -DFOR_UNPARSABLE_IN_SOURCE_DIR="${FOR_UNPARSABLE_IN_SOURCE_DIR}"
+    -DVERBINCLUDE_WRAPPED_PROJECT_FILES_DIR="${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}"
     -DHTML_DIR=${DOC_TO_FETCH_LINKS_TMP}/docs
     -DDOX_TO_HTML_MAP_JSON_FILE=${DOX_TO_HTML_MAP_JSON_FILE}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/map_dox_to_html.cmake
@@ -209,6 +214,11 @@ add_dependencies(map_dox_to_html dynamic_doc)
 set(
     PROJECT_TREE_JSON_FILE
     "${DYNAMIC_DOC_PAGES_DIR}/project_tree.json"
+)
+
+file(
+    MAKE_DIRECTORY
+    "${DYNAMIC_DOC_PAGES_DIR}"
 )
 
 # project_tree.json generation
@@ -286,5 +296,13 @@ add_custom_target(
     COMMENT "Copying documentation from build to source directory."
 )
 add_dependencies(copy_doc_into_sources_directory static-doc)
-add_dependencies(static-doc make_parsable_not_source_files)
+add_dependencies(static-doc verbinclude_all_git_tracked_files)
 add_dependencies(copy_doc_into_sources_directory map_dox_to_html)
+
+# open documentation in a new web browser window
+add_custom_target(open_doc
+    COMMAND ${CMAKE_COMMAND} -E echo "Opening documentation via Firefox..."
+    COMMAND $<TARGET_FILE:open_doc_executable> "${CMAKE_BINARY_DIR}/docs/html/index.html"
+    DEPENDS open_doc static-doc
+    COMMENT "Opening documentation via Firefox."
+)

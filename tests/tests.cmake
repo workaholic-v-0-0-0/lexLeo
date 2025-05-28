@@ -49,10 +49,10 @@ find_package_handle_standard_args(
 )
 
 # Stop configuration if CMocka is not found.
-if(NOT CMocka_FOUND)
+if (NOT CMocka_FOUND)
     message(FATAL_ERROR "CMocka required but not found! Ensure it is \
     installed correctly.")
-endif()
+endif ()
 
 # Make variables accessible in submodules by caching them.
 set(
