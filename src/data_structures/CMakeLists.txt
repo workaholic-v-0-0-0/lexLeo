@@ -7,7 +7,7 @@ add_library(
     data_structures
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/list_malloc.c # malloc wrapper to afford
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/list_std_wrappers.c # malloc wrapper to afford
         # mocking while keeping real malloc
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/hashtable.c
     # others

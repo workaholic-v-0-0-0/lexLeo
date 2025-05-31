@@ -29,29 +29,29 @@ set_tests_properties(test_list_memory PROPERTIES LABELS "memory")
 # quasi-unit test (integrating standard library)
 
 add_executable(
-    test_list_with_real_malloc
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_list_with_real_malloc.c
+    test_list_with_stdlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_list_with_stdlib.c
 )
 target_include_directories(
-    test_list_with_real_malloc
+    test_list_with_stdlib
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
 target_link_libraries(
-    test_list_with_real_malloc
+    test_list_with_stdlib
     PRIVATE data_structures ${CMOCKA_LIBRARY})
 target_compile_definitions(test_list PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
-add_test(NAME test_list_with_real_malloc COMMAND test_list_with_real_malloc)
+add_test(NAME test_list_with_stdlib COMMAND test_list_with_stdlib)
 
 add_test(
-    NAME test_list_with_real_malloc_memory
+    NAME test_list_with_stdlib_memory
     COMMAND valgrind
     --leak-check=full
     --error-exitcode=1
-    $<TARGET_FILE:test_list_with_real_malloc>
+    $<TARGET_FILE:test_list_with_stdlib>
 )
 set_tests_properties(
-    test_list_with_real_malloc_memory
+    test_list_with_stdlib_memory
     PROPERTIES LABELS "memory"
 )

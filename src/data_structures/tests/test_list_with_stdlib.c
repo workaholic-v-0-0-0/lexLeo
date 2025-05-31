@@ -1,4 +1,4 @@
-// src/data_structures/tests/test_list.c
+// src/data_structures/tests/test_list_real_malloc.c
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -38,7 +38,7 @@ static char dummy;
 
 
 //-----------------------------------------------------------------------------
-// push_list TESTS
+// list_push TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -48,7 +48,7 @@ static char dummy;
 //-----------------------------------------------------------------------------
 
 
-static int push_list_setup(void **state) {
+static int list_push_setup(void **state) {
     (void) *state;  // unused
     INT_1 = 1;
     INT_2 = 2;
@@ -59,7 +59,7 @@ static int push_list_setup(void **state) {
     return 0;
 }
 
-static int push_list_teardown(void **state) {
+static int list_push_teardown(void **state) {
     free(A_LIST_WITH_2_ELEMENTS);
     return 0;
 }
@@ -72,8 +72,8 @@ static int push_list_teardown(void **state) {
 
 
 // Given: e == &INT_1, l == NULL, malloc success
-// Expected: push_list returns a valid initialized list pointer
-static void push_list_ReturnsAValidPointer_WhenLNull_AndENotNull(void **state) {
+// Expected: list_push returns a valid initialized list pointer
+static void list_push_ReturnsAValidPointer_WhenLNull_AndENotNull(void **state) {
     (void) *state; // unused
     list ret = list_push(NULL, &INT_1);
     assert_non_null(ret);
@@ -81,8 +81,8 @@ static void push_list_ReturnsAValidPointer_WhenLNull_AndENotNull(void **state) {
 }
 
 // Given: e == &INT_1, l == A_LIST_WITH_1_ELEMENT, malloc success
-// Expected: push_list returns a valid initialized list pointer
-static void push_list_ReturnsAValidPointer_WhenLNotNull_AndENotNull(void **state) {
+// Expected: list_push returns a valid initialized list pointer
+static void list_push_ReturnsAValidPointer_WhenLNotNull_AndENotNull(void **state) {
     (void) *state; // unused
     list ret = list_push(A_LIST_WITH_1_ELEMENT, &INT_1);
     assert_non_null(ret);
@@ -91,7 +91,7 @@ static void push_list_ReturnsAValidPointer_WhenLNotNull_AndENotNull(void **state
 
 // Given: e == &INT_1, l == A_LIST_WITH_2_ELEMENTS
 // Expected : the value pointed by l does not change
-static void push_list_NoChangeValueAtL_WhenLNotNull_AndENotNull(void **state) {
+static void list_push_NoChangeValueAtL_WhenLNotNull_AndENotNull(void **state) {
     (void) *state; // unused
     cons save = *A_LIST_WITH_2_ELEMENTS;
     list ret = list_push(A_LIST_WITH_2_ELEMENTS, &INT_1);
@@ -101,7 +101,7 @@ static void push_list_NoChangeValueAtL_WhenLNotNull_AndENotNull(void **state) {
 
 // Given: e == &INT_1, l == NULL
 // Expected : the value pointed by e does not change
-static void push_list_NoChangeValueAtE_WhenLNull_AndENotNull(void **state) {
+static void list_push_NoChangeValueAtE_WhenLNull_AndENotNull(void **state) {
     (void) *state; // unused
     int save = INT_1;
     list ret = list_push(NULL, &INT_1);
@@ -111,7 +111,7 @@ static void push_list_NoChangeValueAtE_WhenLNull_AndENotNull(void **state) {
 
 // Given: e == &INT_1, l == A_LIST_WITH_2_ELEMENTS
 // Expected : the value pointed by e does not change
-static void push_list_NoChangeValueAtE_WhenLNotNull_AndENotNull(void **state) {
+static void list_push_NoChangeValueAtE_WhenLNotNull_AndENotNull(void **state) {
     (void) *state; // unused
     list ret = list_push(A_LIST_WITH_2_ELEMENTS, &INT_1);
     assert_int_equal(INT_1, * (int *) &INT_1);
@@ -120,7 +120,7 @@ static void push_list_NoChangeValueAtE_WhenLNotNull_AndENotNull(void **state) {
 
 // Given: e == &INT_1, l == NULL
 // Expected : ret->car == &INT_1, ret->cdr == NULL
-static void push_list_ReturnConsWithRightValues_WhenLNull_AndENotNull(void **state) {
+static void list_push_ReturnConsWithRightValues_WhenLNull_AndENotNull(void **state) {
     (void) *state;  // unused
     list ret = list_push(NULL, &INT_1);
     assert_ptr_equal(ret->car, &INT_1);
@@ -130,7 +130,7 @@ static void push_list_ReturnConsWithRightValues_WhenLNull_AndENotNull(void **sta
 
 // Given: e == &INT_1, l == A_LIST_WITH_2_ELEMENTS
 // Expected : ret->car == &INT_1, ret->cdr == NULL
-static void push_list_ReturnConsWithRightValues_WhenLNotNull_AndENotNull(void **state) {
+static void list_push_ReturnConsWithRightValues_WhenLNotNull_AndENotNull(void **state) {
     (void) *state;  // unused
     list ret = list_push(A_LIST_WITH_2_ELEMENTS, &INT_1);
     assert_ptr_equal(ret->car, &INT_1);
@@ -149,29 +149,29 @@ static void push_list_ReturnConsWithRightValues_WhenLNotNull_AndENotNull(void **
 int main(void) {
     const struct CMUnitTest list_push_tests[] = {
         cmocka_unit_test_setup_teardown(
-            push_list_ReturnsAValidPointer_WhenLNotNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_ReturnsAValidPointer_WhenLNotNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_ReturnsAValidPointer_WhenLNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_ReturnsAValidPointer_WhenLNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_ReturnsAValidPointer_WhenLNotNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_ReturnsAValidPointer_WhenLNotNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_NoChangeValueAtL_WhenLNotNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_NoChangeValueAtL_WhenLNotNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_NoChangeValueAtE_WhenLNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_NoChangeValueAtE_WhenLNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_NoChangeValueAtE_WhenLNotNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_NoChangeValueAtE_WhenLNotNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_ReturnConsWithRightValues_WhenLNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_ReturnConsWithRightValues_WhenLNull_AndENotNull,
+            list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
-            push_list_ReturnConsWithRightValues_WhenLNotNull_AndENotNull,
-            push_list_setup, push_list_teardown),
+            list_push_ReturnConsWithRightValues_WhenLNotNull_AndENotNull,
+            list_push_setup, list_push_teardown),
     };
     int failed = 0;
     failed += cmocka_run_group_tests(list_push_tests, NULL, NULL);
