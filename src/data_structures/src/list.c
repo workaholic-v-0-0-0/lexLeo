@@ -8,10 +8,10 @@
 #include "list.h"
 
 list list_push(list l, void * e) {
-    if (!e)
-        return NULL;
-    list ret = list_malloc(sizeof(cons));
+	if (!e)
+		return (list) NULL;
 
+	list ret = list_malloc(sizeof(cons));
     if (!ret)
         return (list) NULL;
 

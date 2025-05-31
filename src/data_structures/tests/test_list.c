@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <setjmp.h>
 #include <cmocka.h>
+#include <string.h>
 
 #include "logger.h"
 
@@ -13,32 +14,23 @@
 
 
 //-----------------------------------------------------------------------------
-// GLOBALS
+// CONSTS
 //-----------------------------------------------------------------------------
 
+typedef unsigned char boolean;
+#define TRUE 1
+#define FALSE 0
 
-static list l;
-static size_t list_length;
-static char **ptrs_on_static_chars;
-static char **ptrs_on_dynamic_chars;
+static const char dummy;
+static const list LIST_DEFINED_IN_SETUP = (list) &dummy;
+static const void* ELEMENT_DEFINED_IN_SETUP = (void *) &dummy;
+#define EMPTY_LIST NULL
+#define LIST_LENGTH 2
 static const char STATIC_CHAR_A = 'A';
 static const char STATIC_CHAR_B = 'B';
 static const char STATIC_CHAR_C = 'C';
-
-#define EMPTY_LIST NULL
-
-
-/*
-static int INT_1 = 1;
-static int INT_2 = 2;
-static cons A_CONS_WITH_1_ELEMENT = {
-    (void *) &INT_1,
-    NULL
-};
-static list A_LIST_WITH_1_ELEMENT = &A_CONS_WITH_1_ELEMENT;
-static list A_LIST_WITH_2_ELEMENTS; // must be initialized in setup
-*/
-
+#define MALLOC_ERROR_CODE NULL
+static const void *DUMMY_NOT_APPLICABLE = (void *) &dummy;
 
 
 
@@ -46,13 +38,16 @@ static list A_LIST_WITH_2_ELEMENTS; // must be initialized in setup
 // MOCKS, STUBS, FAKES, DUMMIES
 //-----------------------------------------------------------------------------
 
-static char dummy;
-static char *dummy_ptr; // must be initialized in setup
+static cons fake_cons[3];
+static char *fake_char_ptr[3];
+static char fake_char[3];
 
 void * list_malloc(size_t size) {
-    check_expected_ptr(size);
+    check_expected(size);
     return mock_type(void *);
 }
+
+static void * FAKE_MALLOC_RETURNED_PTR;
 
 void list_free(void *ptr) {
     check_expected_ptr(ptr);
@@ -65,7 +60,7 @@ void dummy_destroy(void *ptr) {
 
 
 //-----------------------------------------------------------------------------
-// HELPERS
+// GENERAL HELPERS
 //-----------------------------------------------------------------------------
 
 list make_list_n(void **ptrs, size_t n) {
@@ -130,7 +125,60 @@ char **create_static_char_ptr_array_n(size_t size,...) {
 //-----------------------------------------------------------------------------
 
 
-// HERE NOW
+typedef struct {
+    const char *label;
+    boolean chars_are_dynamically_allocated;
+	char **char_ptrs;
+    list l;
+    void *e;
+} list_push_test_params_t;
+
+
+
+//-----------------------------------------------------------------------------
+// HELPERS
+//-----------------------------------------------------------------------------
+
+
+static list list_push_param_l(void **state) {
+    return ((list_push_test_params_t *) *state)->l;
+}
+
+static list list_push_param_e(void **state) {
+    return ((list_push_test_params_t *) *state)->e;
+}
+
+static void list_push_expect_no_side_effect(void **state, boolean malloc_is_called, void *malloc_returned_value) {
+	list l = list_push_param_l(state);
+	void *e = list_push_param_e(state);
+	if (l) {
+		memcpy(&fake_cons[0], l, sizeof(cons));
+		memcpy(&fake_cons[1], l->cdr, sizeof(cons));
+		memcpy(&fake_char_ptr[0], &(l->car), sizeof(char *));
+		memcpy(&fake_char_ptr[1], &((l->cdr)->car), sizeof(char *));
+		memcpy(&(fake_char[0]), l->car, sizeof(char));
+		memcpy(&(fake_char[1]), (l->cdr)->car, sizeof(char));
+	}
+	if (e) {
+		memcpy(&(fake_char[2]), e, sizeof(char));
+	}
+	if (malloc_is_called) {
+		expect_value(list_malloc, size, sizeof(cons));
+	    will_return(list_malloc, malloc_returned_value);
+	}
+    list_push(list_push_param_l(state), list_push_param_e(state));
+	if (l) {
+		assert_memory_equal(&fake_cons[0], l, sizeof(cons));
+		assert_memory_equal(&fake_cons[1], l->cdr, sizeof(cons));
+		assert_memory_equal(&fake_char_ptr[0], &(l->car), sizeof(char *));
+		assert_memory_equal(&fake_char_ptr[1], &((l->cdr)->car), sizeof(char *));
+		assert_memory_equal(&(fake_char[0]), l->car, sizeof(char));
+		assert_memory_equal(&(fake_char[1]), (l->cdr)->car, sizeof(char));
+	}
+	if (e) {
+		assert_memory_equal(&(fake_char[2]), e, sizeof(char));
+	}
+}
 
 
 
@@ -139,7 +187,53 @@ char **create_static_char_ptr_array_n(size_t size,...) {
 //-----------------------------------------------------------------------------
 
 
-// HERE NOW
+static list_push_test_params_t l_null_e_null = {
+    .label = "l == NULL, e == NULL",
+    .l = NULL,
+    .e = NULL,
+};
+
+static list_push_test_params_t l_not_null_e_null_statically_allocated = {
+    .label = "l != NULL, e == NULL, chars are statically allocated",
+	.chars_are_dynamically_allocated = FALSE,
+    .l = LIST_DEFINED_IN_SETUP,
+    .e = NULL,
+};
+
+static list_push_test_params_t l_not_null_e_null_dynamically_allocated = {
+    .label = "l != NULL, e == NULL, chars are dynamically allocated",
+	.chars_are_dynamically_allocated = TRUE,
+    .l = LIST_DEFINED_IN_SETUP,
+    .e = NULL,
+};
+
+static list_push_test_params_t l_null_e_not_null_statically_allocated = {
+    .label = "l == NULL, e != NULL, chars are statically allocated",
+	.chars_are_dynamically_allocated = FALSE,
+    .l = NULL,
+    .e = (void *) &STATIC_CHAR_C,
+};
+
+static list_push_test_params_t l_null_e_not_null_dynamically_allocated = {
+    .label = "l == NULL, e != NULL, chars are dynamically allocated",
+	.chars_are_dynamically_allocated = TRUE,
+    .l = NULL,
+    .e = (void *) &STATIC_CHAR_C,
+};
+
+static list_push_test_params_t l_not_null_e_not_null_statically_allocated = {
+    .label = "l == NULL, e != NULL, chars are statically allocated",
+	.chars_are_dynamically_allocated = FALSE,
+    .l = LIST_DEFINED_IN_SETUP,
+    .e = (void *) &STATIC_CHAR_C,
+};
+
+static list_push_test_params_t l_not_null_e_not_null_dynamically_allocated = {
+    .label = "l == NULL, e != NULL, chars are dynamically allocated",
+	.chars_are_dynamically_allocated = TRUE,
+    .l = LIST_DEFINED_IN_SETUP,
+    .e = (void *) &STATIC_CHAR_C,
+};
 
 
 
@@ -149,27 +243,45 @@ char **create_static_char_ptr_array_n(size_t size,...) {
 
 
 static int list_push_setup(void **state) {
-    (void) *state;  // unused
-    list_length = 3;
-    ptrs_on_static_chars =
-        create_static_char_ptr_array_n(
-            list_length,
-            &STATIC_CHAR_A,
-            &STATIC_CHAR_B,
-            &STATIC_CHAR_C);
-    l = make_list_n((void **) ptrs_on_static_chars, list_length);
+    list_push_test_params_t *params = (list_push_test_params_t *) *state;
+    if (params->l == LIST_DEFINED_IN_SETUP) {
+        if (params->chars_are_dynamically_allocated) {
+			params->char_ptrs = create_dynamic_char_ptr_array_n(LIST_LENGTH, 'A', 'B');
+        }
+		else {
+            params->char_ptrs = create_static_char_ptr_array_n(LIST_LENGTH, &STATIC_CHAR_A, &STATIC_CHAR_B);
+        }
+        assert_non_null(params->char_ptrs);
+        params->l = make_list_n((void **) params->char_ptrs, LIST_LENGTH);
+	}
+    if (params->e == ELEMENT_DEFINED_IN_SETUP) {
+        if (params->chars_are_dynamically_allocated) {
+            params->e = malloc(sizeof(char));
+            assert_non_null(params->e);
+        }
+    }
+	FAKE_MALLOC_RETURNED_PTR = malloc(sizeof(cons));
+	memset(FAKE_MALLOC_RETURNED_PTR, 0, sizeof(cons));
     return 0;
 }
 
 static int list_push_teardown(void **state) {
-    (void) *state;
-    list next = NULL;
-    while (l) {
-        next = l->cdr;
-        free(l);
-        l = next;
+    list_push_test_params_t *params = (list_push_test_params_t *) *state;
+    if (params->l == LIST_DEFINED_IN_SETUP) {
+        list next = NULL;
+        while (params->l) {
+            next = (params->l)->cdr;
+            free(params->l);
+            params->l = next;
+        }
+        if (params->chars_are_dynamically_allocated)
+            destroy_dynamic_char_ptr_array_n(params->char_ptrs, LIST_LENGTH);
+        else
+            free(params->char_ptrs);
+			params->char_ptrs = NULL;
     }
-    free(ptrs_on_static_chars);
+	free(FAKE_MALLOC_RETURNED_PTR);
+	FAKE_MALLOC_RETURNED_PTR = NULL;
     return 0;
 }
 
@@ -180,76 +292,111 @@ static int list_push_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-/*
-
-// Given: e == NULL, l == NULL
-// Expected : list_push returns NULL
-static void list_push_Error_WhenLNull_AndENull(void **state) {
-    (void) *state; // unused
-    list ret = list_push(NULL, NULL);
-    assert_null(ret);
+// Given: e == NULL
+// Expected: returns NULL
+// param:
+//	- l_null_e_null
+//	- l_not_null_e_null_statically_allocated
+//	- l_not_null_e_null_dynamically_allocated
+static void list_push_returns_null_when_e_null(void **state) {
+    assert_null(list_push(list_push_param_l(state), list_push_param_e(state)));
 }
 
-// Given: e == NULL, l == A_LIST_WITH_1_ELEMENT
-// Expected : list_push returns NULL
-static void list_push_Error_WhenLNotNull_AndENull(void **state) {
-    (void) *state; // unused
-    list ret = list_push(A_LIST_WITH_1_ELEMENT, NULL);
-    assert_null(ret);
+// Given: e == NULL
+// Expected : do not call malloc
+// param:
+//	- l_null_e_null
+//	- l_not_null_e_null_statically_allocated
+//	- l_not_null_e_null_dynamically_allocated
+static void list_push_do_not_call_malloc_when_e_null(void **state) {
+    list_push(list_push_param_l(state), list_push_param_e(state));
 }
 
-// Given: e == NULL, l == NULL
-// Expected : malloc is not called
-static void list_push_DoNotCallMalloc_WhenLNull_AndENull(void **state) {
-    (void) *state; // unused
-    list_push(NULL, NULL);
-}
-
-// Given: e == NULL, l == A_LIST_WITH_1_ELEMENT
-// Expected : malloc is not called
-static void list_push_DoNotCallMalloc_WhenLNotNull_AndENull(void **state) {
-    (void) *state; // unused
-    list_push(A_LIST_WITH_1_ELEMENT, NULL);
-}
-
-// Given: e == &INT_1, l == NULL
-// Expected : malloc is called with sizeof(cons)
-static void list_push_CallMalloc_WhenLNull_AndENotNull(void **state) {
-    (void) *state; // unused
+// Given: e != 0
+// Expected : call malloc(sizeof(cons))
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_call_malloc_when_e_not_null(void **state) {
     expect_value(list_malloc, size, sizeof(cons));
-    will_return(list_malloc, &dummy);
-    list_push(NULL, &INT_1);
+    will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+    list_push(list_push_param_l(state), list_push_param_e(state));
 }
 
-// Given: e == &INT_1, l == A_LIST_WITH_1_ELEMENT
-// Expected : malloc is called with sizeof(cons)
-static void list_push_CallMalloc_WhenLNotNull_AndENotNull(void **state) {
-    (void) *state; // unused
+// Given: malloc fail
+// Expected: returns NULL
+// param:
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_returns_null_when_malloc_fail(void **state) {
     expect_value(list_malloc, size, sizeof(cons));
-    will_return(list_malloc, &dummy);
-    list_push(A_LIST_WITH_1_ELEMENT, &INT_1);
+    will_return(list_malloc, MALLOC_ERROR_CODE);
+    assert_null(list_push(list_push_param_l(state), list_push_param_e(state)));
 }
 
-// Given: e == &INT_1, l == A_LIST_WITH_1_ELEMENT, malloc fail
-// Expected : ret is NULL
-static void list_push_Error_WhenMallocFail(void **state) {
-    (void) *state; // unused
-    expect_value(list_malloc, size, sizeof(cons));
-    will_return(list_malloc, NULL);
-    list ret = list_push(A_LIST_WITH_1_ELEMENT, &INT_1);
-    assert_int_equal(ret, NULL);
+// Given: do not call malloc
+// Expected: no side effect
+// param:
+//	- l_null_e_null
+//	- l_not_null_e_null_statically_allocated
+//	- l_not_null_e_null_dynamically_allocated
+static void list_push_no_side_effect_when_do_not_call_malloc(void **state) {
+	list_push_expect_no_side_effect(state, FALSE, (void *) DUMMY_NOT_APPLICABLE);
 }
 
-// Given: e == NULL, l == A_LIST_WITH_2_ELEMENTS
-// Expected : the value pointed by l does not change
-static void list_push_NoChangeValueAtL_WhenLNotNull_AndENull(void **state) {
-    (void) *state; // unused
-    cons save = *A_LIST_WITH_2_ELEMENTS;
-    list_push(A_LIST_WITH_2_ELEMENTS, NULL);
-    assert_memory_equal(A_LIST_WITH_2_ELEMENTS, &save, sizeof(cons));
+// Given: malloc fail
+// Expected: no side effect
+// param:
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_no_side_effect_when_malloc_fail(void **state) {
+	list_push_expect_no_side_effect(state, TRUE, MALLOC_ERROR_CODE);
 }
 
-*/
+// Given: malloc success
+// Expected: no side effect
+// param:
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_no_side_effect_when_malloc_success(void **state) {
+	list_push_expect_no_side_effect(state, TRUE, FAKE_MALLOC_RETURNED_PTR);
+}
+
+// Given: malloc success
+// Expected: returns the address returned by malloc
+// param:
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_returns_expected_value_when_malloc_success(void **state) {
+	expect_value(list_malloc, size, sizeof(cons));
+	will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+	list ret = list_push(list_push_param_l(state), list_push_param_e(state));
+	assert_ptr_equal(ret, FAKE_MALLOC_RETURNED_PTR);
+}
+
+// Given: malloc success
+// Expected: writes {e, l} at the address returned by malloc
+// param:
+//	- l_null_e_not_null_statically_allocated
+//	- l_null_e_not_null_dynamically_allocated
+//	- l_not_null_e_not_null_statically_allocated
+//	- l_not_null_e_not_null_dynamically_allocated
+static void list_push_makes_expected_side_effect_when_malloc_success(void **state) {
+	expect_value(list_malloc, size, sizeof(cons));
+	will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+	cons expected_memory_state = {list_push_param_e(state), list_push_param_l(state)};
+	list_push(list_push_param_l(state), list_push_param_e(state));
+	assert_memory_equal(FAKE_MALLOC_RETURNED_PTR, &expected_memory_state, sizeof(cons));
+}
 
 
 
@@ -263,6 +410,7 @@ static void list_push_NoChangeValueAtL_WhenLNotNull_AndENull(void **state) {
 // FIXTURES
 //-----------------------------------------------------------------------------
 
+/*
 static int list_free_list_setup(void **state) {
     (void) *state;  // unused
     list_length = 3;
@@ -287,6 +435,7 @@ static int list_free_list_teardown(void **state) {
     free(ptrs_on_static_chars);
     return 0;
 }
+*/
 
 /*
 static int list_free_list_setup(void **state) {
@@ -354,32 +503,105 @@ static void list_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDes
 
 int main(void) {
     const struct CMUnitTest list_push_tests[] = {
-
-/*
-        cmocka_unit_test(
-            list_push_Error_WhenLNull_AndENull),
-        cmocka_unit_test_setup_teardown(
-            list_push_Error_WhenLNotNull_AndENull,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_DoNotCallMalloc_WhenLNull_AndENull,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_DoNotCallMalloc_WhenLNotNull_AndENull,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_CallMalloc_WhenLNull_AndENotNull,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_CallMalloc_WhenLNotNull_AndENotNull,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_Error_WhenMallocFail,
-            list_push_setup, list_push_teardown),
-        cmocka_unit_test_setup_teardown(
-            list_push_NoChangeValueAtL_WhenLNotNull_AndENull,
-            list_push_setup, list_push_teardown),
-*/
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_e_null,
+            list_push_setup, list_push_teardown, &l_null_e_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_e_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_e_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_do_not_call_malloc_when_e_null,
+            list_push_setup, list_push_teardown, &l_null_e_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_do_not_call_malloc_when_e_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_do_not_call_malloc_when_e_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_call_malloc_when_e_not_null,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_call_malloc_when_e_not_null,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_call_malloc_when_e_not_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_call_malloc_when_e_not_null,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+			list_push_returns_null_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_null_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_do_not_call_malloc,
+            list_push_setup, list_push_teardown, &l_null_e_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_do_not_call_malloc,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_do_not_call_malloc,
+            list_push_setup, list_push_teardown, &l_not_null_e_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_fail,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_no_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_expected_value_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_expected_value_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_expected_value_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_returns_expected_value_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_makes_expected_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_makes_expected_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_null_e_not_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_makes_expected_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_push_makes_expected_side_effect_when_malloc_success,
+            list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
     };
 
     const struct CMUnitTest list_free_list_tests[] = {
