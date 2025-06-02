@@ -42,14 +42,14 @@ static cons fake_cons[3];
 static char *fake_char_ptr[3];
 static char fake_char[3];
 
-void * list_malloc(size_t size) {
+void * mock_malloc(size_t size) {
     check_expected(size);
     return mock_type(void *);
 }
 
 static void * FAKE_MALLOC_RETURNED_PTR;
 
-void list_free(void *ptr) {
+void mock_free(void *ptr) {
     check_expected_ptr(ptr);
 }
 
@@ -163,8 +163,8 @@ static void list_push_expect_no_side_effect(void **state, boolean malloc_is_call
 		memcpy(&(fake_char[2]), e, sizeof(char));
 	}
 	if (malloc_is_called) {
-		expect_value(list_malloc, size, sizeof(cons));
-	    will_return(list_malloc, malloc_returned_value);
+		expect_value(mock_malloc, size, sizeof(cons));
+	    will_return(mock_malloc, malloc_returned_value);
 	}
     list_push(list_push_param_l(state), list_push_param_e(state));
 	if (l) {
@@ -243,6 +243,7 @@ static list_push_test_params_t l_not_null_e_not_null_dynamically_allocated = {
 
 
 static int list_push_setup(void **state) {
+	set_allocators(mock_malloc, mock_free);
     list_push_test_params_t *params = (list_push_test_params_t *) *state;
     if (params->l == LIST_DEFINED_IN_SETUP) {
         if (params->chars_are_dynamically_allocated) {
@@ -319,8 +320,8 @@ static void list_push_do_not_call_malloc_when_e_null(void **state) {
 //	- l_not_null_e_not_null_statically_allocated
 //	- l_not_null_e_not_null_dynamically_allocated
 static void list_push_call_malloc_when_e_not_null(void **state) {
-    expect_value(list_malloc, size, sizeof(cons));
-    will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+    expect_value(mock_malloc, size, sizeof(cons));
+    will_return(mock_malloc, FAKE_MALLOC_RETURNED_PTR);
     list_push(list_push_param_l(state), list_push_param_e(state));
 }
 
@@ -332,8 +333,8 @@ static void list_push_call_malloc_when_e_not_null(void **state) {
 //	- l_not_null_e_not_null_statically_allocated
 //	- l_not_null_e_not_null_dynamically_allocated
 static void list_push_returns_null_when_malloc_fail(void **state) {
-    expect_value(list_malloc, size, sizeof(cons));
-    will_return(list_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_malloc, size, sizeof(cons));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
     assert_null(list_push(list_push_param_l(state), list_push_param_e(state)));
 }
 
@@ -377,8 +378,8 @@ static void list_push_no_side_effect_when_malloc_success(void **state) {
 //	- l_not_null_e_not_null_statically_allocated
 //	- l_not_null_e_not_null_dynamically_allocated
 static void list_push_returns_expected_value_when_malloc_success(void **state) {
-	expect_value(list_malloc, size, sizeof(cons));
-	will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+	expect_value(mock_malloc, size, sizeof(cons));
+	will_return(mock_malloc, FAKE_MALLOC_RETURNED_PTR);
 	list ret = list_push(list_push_param_l(state), list_push_param_e(state));
 	assert_ptr_equal(ret, FAKE_MALLOC_RETURNED_PTR);
 }
@@ -391,8 +392,8 @@ static void list_push_returns_expected_value_when_malloc_success(void **state) {
 //	- l_not_null_e_not_null_statically_allocated
 //	- l_not_null_e_not_null_dynamically_allocated
 static void list_push_makes_expected_side_effect_when_malloc_success(void **state) {
-	expect_value(list_malloc, size, sizeof(cons));
-	will_return(list_malloc, FAKE_MALLOC_RETURNED_PTR);
+	expect_value(mock_malloc, size, sizeof(cons));
+	will_return(mock_malloc, FAKE_MALLOC_RETURNED_PTR);
 	cons expected_memory_state = {list_push_param_e(state), list_push_param_l(state)};
 	list_push(list_push_param_l(state), list_push_param_e(state));
 	assert_memory_equal(FAKE_MALLOC_RETURNED_PTR, &expected_memory_state, sizeof(cons));
@@ -401,7 +402,7 @@ static void list_push_makes_expected_side_effect_when_malloc_success(void **stat
 
 
 //-----------------------------------------------------------------------------
-// list_free TESTS
+// mock_free TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -411,7 +412,7 @@ static void list_push_makes_expected_side_effect_when_malloc_success(void **stat
 //-----------------------------------------------------------------------------
 
 /*
-static int list_free_list_setup(void **state) {
+static int mock_free_list_setup(void **state) {
     (void) *state;  // unused
     list_length = 3;
     ptrs_on_static_chars =
@@ -424,7 +425,7 @@ static int list_free_list_setup(void **state) {
     return 0;
 }
 
-static int list_free_list_teardown(void **state) {
+static int mock_free_list_teardown(void **state) {
     (void) *state;
     list next = NULL;
     while (l) {
@@ -438,7 +439,7 @@ static int list_free_list_teardown(void **state) {
 */
 
 /*
-static int list_free_list_setup(void **state) {
+static int mock_free_list_setup(void **state) {
     (void) *state;  // unused
     INT_1 = 1;
     dummy_ptr = malloc(sizeof(char));
@@ -449,7 +450,7 @@ static int list_free_list_setup(void **state) {
     return 0;
 }
 
-static int list_free_list_teardown(void **state) {
+static int mock_free_list_teardown(void **state) {
     free(A_LIST_WITH_2_ELEMENTS);
     free(dummy_ptr);
     return 0;
@@ -468,29 +469,29 @@ static int list_free_list_teardown(void **state) {
 /*
 
 // Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == NULL
-// Expected : list_free is called with l
-static void list_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull(void **state) {
+// Expected : mock_free is called with l
+static void mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull(void **state) {
     (void) *state; // unused
-    expect_value(list_free, ptr, A_LIST_WITH_2_ELEMENTS);
-    list_free_list(A_LIST_WITH_2_ELEMENTS, NULL);
+    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
+    mock_free_list(A_LIST_WITH_2_ELEMENTS, NULL);
 }
 
 // Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == dummy_destroy
-// Expected : list_free is called with l
-static void list_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
+// Expected : mock_free is called with l
+static void mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
     (void) *state; // unused
-    expect_value(list_free, ptr, A_LIST_WITH_2_ELEMENTS);
+    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
     expect_value(dummy_destroy, ptr, A_LIST_WITH_2_ELEMENTS->car);
-    list_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
+    mock_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
 }
 
 // Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == dummy_destroy
 // Expected : dummy_destroy is called with l->car
-static void list_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
+static void mock_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
     (void) *state; // unused
-    expect_value(list_free, ptr, A_LIST_WITH_2_ELEMENTS);
+    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
     expect_value(dummy_destroy, ptr, A_LIST_WITH_2_ELEMENTS->car);
-    list_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
+    mock_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
 }
 
 */
@@ -604,23 +605,23 @@ int main(void) {
             list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
     };
 
-    const struct CMUnitTest list_free_list_tests[] = {
+    const struct CMUnitTest mock_free_list_tests[] = {
 
 /*
         cmocka_unit_test_setup_teardown(
-            list_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull,
-            list_free_list_setup, list_free_list_teardown),
+            mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull,
+            mock_free_list_setup, mock_free_list_teardown),
         cmocka_unit_test_setup_teardown(
-            list_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
-            list_free_list_setup, list_free_list_teardown),
+            mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
+            mock_free_list_setup, mock_free_list_teardown),
         cmocka_unit_test_setup_teardown(
-            list_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
-            list_free_list_setup, list_free_list_teardown),
+            mock_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
+            mock_free_list_setup, mock_free_list_teardown),
 */
     };
 
     int failed = 0;
     failed += cmocka_run_group_tests(list_push_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(list_free_list_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(mock_free_list_tests, NULL, NULL);
     return failed;
 }
