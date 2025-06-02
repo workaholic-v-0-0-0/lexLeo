@@ -7,10 +7,6 @@ add_library(
     data_structures
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/list_std_wrappers.c # malloc wrapper to afford
-        # mocking while keeping real malloc
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/hashtable.c
-    # others
 )
 target_include_directories(
     data_structures
@@ -29,8 +25,8 @@ if (USE_LOGGER)
     target_compile_definitions(data_structures PRIVATE USE_LOGGER)
     target_include_directories(data_structures PUBLIC ${LOGGER_HEADER_DIR})
     target_link_libraries(data_structures PUBLIC ${LOGGER_TARGET})
-endif()
+endif ()
 
-if(BUILD_TESTING)
+if (BUILD_TESTING)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
-endif()
+endif ()

@@ -1,5 +1,7 @@
 // src/data_structures/tests/test_list_real_malloc.c
 
+// TODO FROM SCRATCH
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>

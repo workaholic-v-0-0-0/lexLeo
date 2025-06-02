@@ -20,6 +20,7 @@
 typedef unsigned char boolean;
 #define TRUE 1
 #define FALSE 0
+#define DUMMY_BOOLEAN_VALUE 0
 
 static const char dummy;
 static const list LIST_DEFINED_IN_SETUP = (list) &dummy;
@@ -62,6 +63,7 @@ void dummy_destroy(void *ptr) {
 //-----------------------------------------------------------------------------
 // GENERAL HELPERS
 //-----------------------------------------------------------------------------
+
 
 list make_list_n(void **ptrs, size_t n) {
     list head = NULL, prev = NULL;
@@ -189,6 +191,8 @@ static void list_push_expect_no_side_effect(void **state, boolean malloc_is_call
 
 static list_push_test_params_t l_null_e_null = {
     .label = "l == NULL, e == NULL",
+	.chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
+	.char_ptrs = NULL,
     .l = NULL,
     .e = NULL,
 };
@@ -196,6 +200,7 @@ static list_push_test_params_t l_null_e_null = {
 static list_push_test_params_t l_not_null_e_null_statically_allocated = {
     .label = "l != NULL, e == NULL, chars are statically allocated",
 	.chars_are_dynamically_allocated = FALSE,
+	.char_ptrs = NULL,
     .l = LIST_DEFINED_IN_SETUP,
     .e = NULL,
 };
@@ -203,6 +208,7 @@ static list_push_test_params_t l_not_null_e_null_statically_allocated = {
 static list_push_test_params_t l_not_null_e_null_dynamically_allocated = {
     .label = "l != NULL, e == NULL, chars are dynamically allocated",
 	.chars_are_dynamically_allocated = TRUE,
+	.char_ptrs = NULL,
     .l = LIST_DEFINED_IN_SETUP,
     .e = NULL,
 };
@@ -210,6 +216,7 @@ static list_push_test_params_t l_not_null_e_null_dynamically_allocated = {
 static list_push_test_params_t l_null_e_not_null_statically_allocated = {
     .label = "l == NULL, e != NULL, chars are statically allocated",
 	.chars_are_dynamically_allocated = FALSE,
+	.char_ptrs = NULL,
     .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -217,6 +224,7 @@ static list_push_test_params_t l_null_e_not_null_statically_allocated = {
 static list_push_test_params_t l_null_e_not_null_dynamically_allocated = {
     .label = "l == NULL, e != NULL, chars are dynamically allocated",
 	.chars_are_dynamically_allocated = TRUE,
+	.char_ptrs = NULL,
     .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -224,6 +232,7 @@ static list_push_test_params_t l_null_e_not_null_dynamically_allocated = {
 static list_push_test_params_t l_not_null_e_not_null_statically_allocated = {
     .label = "l == NULL, e != NULL, chars are statically allocated",
 	.chars_are_dynamically_allocated = FALSE,
+	.char_ptrs = NULL,
     .l = LIST_DEFINED_IN_SETUP,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -231,6 +240,7 @@ static list_push_test_params_t l_not_null_e_not_null_statically_allocated = {
 static list_push_test_params_t l_not_null_e_not_null_dynamically_allocated = {
     .label = "l == NULL, e != NULL, chars are dynamically allocated",
 	.chars_are_dynamically_allocated = TRUE,
+	.char_ptrs = NULL,
     .l = LIST_DEFINED_IN_SETUP,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -277,9 +287,10 @@ static int list_push_teardown(void **state) {
         }
         if (params->chars_are_dynamically_allocated)
             destroy_dynamic_char_ptr_array_n(params->char_ptrs, LIST_LENGTH);
-        else
+        else {
             free(params->char_ptrs);
 			params->char_ptrs = NULL;
+		}
     }
 	free(FAKE_MALLOC_RETURNED_PTR);
 	FAKE_MALLOC_RETURNED_PTR = NULL;
@@ -402,8 +413,60 @@ static void list_push_makes_expected_side_effect_when_malloc_success(void **stat
 
 
 //-----------------------------------------------------------------------------
-// mock_free TESTS
+// list_free_list TESTS
 //-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST STRUCTURE
+//-----------------------------------------------------------------------------
+
+
+typedef struct {
+    const char *label;
+    boolean chars_are_dynamically_allocated;
+	char **char_ptrs;
+    list l;
+    void (*f)(void *);
+} list_free_list_test_params_t;
+
+
+
+//-----------------------------------------------------------------------------
+// HELPERS
+//-----------------------------------------------------------------------------
+
+
+static list list_free_list_param_l(void **state) {
+    return ((list_free_list_test_params_t *) *state)->l;
+}
+
+static void *list_free_list_param_f(void **state) {
+    return ((list_free_list_test_params_t *) *state)->f;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMS (CASES)
+//-----------------------------------------------------------------------------
+
+static list_free_list_test_params_t l_null_f_null = {
+    .label = "l == NULL, destroy_fn == NULL",
+	.chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
+	.char_ptrs = NULL,
+    .l = NULL,
+    .f = NULL,
+};
+
+static list_free_list_test_params_t l_null_f_not_null = {
+    .label = "l == NULL, destroy_fn != NULL",
+	.chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
+	.char_ptrs = NULL,
+    .l = NULL,
+    .f = mock_free,
+};
 
 
 
@@ -411,57 +474,59 @@ static void list_push_makes_expected_side_effect_when_malloc_success(void **stat
 // FIXTURES
 //-----------------------------------------------------------------------------
 
-/*
-static int mock_free_list_setup(void **state) {
-    (void) *state;  // unused
-    list_length = 3;
-    ptrs_on_static_chars =
-        create_static_char_ptr_array_n(
-            list_length,
-            &STATIC_CHAR_A,
-            &STATIC_CHAR_B,
-            &STATIC_CHAR_C);
-    l = make_list_n((void **) ptrs_on_static_chars, list_length);
-    return 0;
+
+static int list_free_list_setup(void **state) {
+	set_allocators(mock_malloc, mock_free);
+    list_free_list_test_params_t *params = (list_free_list_test_params_t *) *state;
+    if (params->l == LIST_DEFINED_IN_SETUP) {
+        if (params->chars_are_dynamically_allocated) {
+			params->char_ptrs = create_dynamic_char_ptr_array_n(LIST_LENGTH, 'A', 'B');
+        }
+		else {
+            params->char_ptrs = create_static_char_ptr_array_n(LIST_LENGTH, &STATIC_CHAR_A, &STATIC_CHAR_B);
+        }
+        assert_non_null(params->char_ptrs);
+        params->l = make_list_n((void **) params->char_ptrs, LIST_LENGTH);
+	}
+
+	return 0;
 }
 
-static int mock_free_list_teardown(void **state) {
-    (void) *state;
-    list next = NULL;
-    while (l) {
-        next = l->cdr;
-        free(l);
-        l = next;
+static int list_free_list_teardown(void **state) {
+    list_free_list_test_params_t *params = (list_free_list_test_params_t *) *state;
+    if (params->l == LIST_DEFINED_IN_SETUP) {
+        list next = NULL;
+        while (params->l) {
+            next = (params->l)->cdr;
+            free(params->l);
+            params->l = next;
+        }
+        if (params->chars_are_dynamically_allocated)
+            destroy_dynamic_char_ptr_array_n(params->char_ptrs, LIST_LENGTH);
+        else {
+            free(params->char_ptrs);
+			params->char_ptrs = NULL;
+		}
     }
-    free(ptrs_on_static_chars);
-    return 0;
-}
-*/
 
-/*
-static int mock_free_list_setup(void **state) {
-    (void) *state;  // unused
-    INT_1 = 1;
-    dummy_ptr = malloc(sizeof(char));
-    A_LIST_WITH_2_ELEMENTS = malloc(sizeof(cons));
-    assert_non_null(A_LIST_WITH_2_ELEMENTS);
-    A_LIST_WITH_2_ELEMENTS->car = &dummy_ptr;
-    A_LIST_WITH_2_ELEMENTS->cdr = (list) &A_LIST_WITH_1_ELEMENT;
     return 0;
 }
-
-static int mock_free_list_teardown(void **state) {
-    free(A_LIST_WITH_2_ELEMENTS);
-    free(dummy_ptr);
-    return 0;
-}
-*/
 
 
 
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
+
+
+// Given: l == NULL
+// Expected: no side effect
+// param:
+//	- l_null_f_null
+//	- l_null_f_not_null
+static void list_free_list_no_side_effect_when_l_null(void **state) {
+    list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
+}
 
 
 
@@ -606,6 +671,12 @@ int main(void) {
     };
 
     const struct CMUnitTest mock_free_list_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            list_free_list_no_side_effect_when_l_null,
+            list_free_list_setup, list_free_list_teardown, &l_null_f_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_free_list_no_side_effect_when_l_null,
+            list_free_list_setup, list_free_list_teardown, &l_null_f_not_null),
 
 /*
         cmocka_unit_test_setup_teardown(

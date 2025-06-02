@@ -32,7 +32,11 @@ list list_push(list l, void * e) {
 void list_free_list(list l, void (*destroy_fn_t)(void *)) {
     if (!l)
         return;
+
+/*
     if (destroy_fn_t) destroy_fn_t(l->car);
     current_free(l);
     return;
+*/
 }
+
