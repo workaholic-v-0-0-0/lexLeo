@@ -121,12 +121,6 @@ set(
 
 add_subdirectory(src/memory_allocator)
 
-#------------------------------------------------------------------------------
-# MEMORY ALLOCATOR MANAGEMENT
-#------------------------------------------------------------------------------
-
-add_subdirectory(src/memory_allocator)
-
 set(
     USE_MEMORY_ALLOCATOR ON
     CACHE BOOL
