@@ -1,5 +1,19 @@
 // src/data_structures/tests/test_list.c
 
+
+// ============================================================================
+//  Test suite for linked list implementation: memory management and safety
+//  ------------------------------------------------------------------------
+//  * Covers all legitimate behaviors (NULL, malloc fail, static/dynamic data).
+//  * Includes anti-examples (invalid free, memory leak) as commented blocks,
+//    with detailed explanations (NOT to be activated).
+//  * Follows best practices for test and documentation in C (cmocka).
+//  * All behaviors not enforceable at runtime (e.g. "never free static memory")
+//    are explicitly documented as preconditions.
+// ============================================================================
+
+
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -31,7 +45,8 @@ static const char STATIC_CHAR_A = 'A';
 static const char STATIC_CHAR_B = 'B';
 static const char STATIC_CHAR_C = 'C';
 #define MALLOC_ERROR_CODE NULL
-static const void *DUMMY_NOT_APPLICABLE = (void *) &dummy;
+static const void *const DUMMY_NOT_APPLICABLE = (void *) &dummy;
+static const void *const CURRENT_FREE_DEFINED_IN_SETUP = (void *) &dummy;
 
 
 
@@ -453,7 +468,7 @@ static void *list_free_list_param_f(void **state) {
 //-----------------------------------------------------------------------------
 
 static list_free_list_test_params_t l_null_f_null = {
-    .label = "l == NULL, destroy_fn == NULL",
+    .label = "l == NULL, f == NULL",
 	.chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
 	.char_ptrs = NULL,
     .l = NULL,
@@ -461,11 +476,43 @@ static list_free_list_test_params_t l_null_f_null = {
 };
 
 static list_free_list_test_params_t l_null_f_not_null = {
-    .label = "l == NULL, destroy_fn != NULL",
+    .label = "l == NULL, f != NULL",
 	.chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
 	.char_ptrs = NULL,
     .l = NULL,
     .f = mock_free,
+};
+
+static list_free_list_test_params_t l_not_null_f_null_statically_allocated = {
+    .label = "l != NULL, f == NULL, chars are statically allocated",
+	.chars_are_dynamically_allocated = FALSE,
+	.char_ptrs = NULL,
+    .l = LIST_DEFINED_IN_SETUP,
+    .f = NULL,
+};
+
+static list_free_list_test_params_t l_not_null_f_null_dynamically_allocated = {
+    .label = "l != NULL, f == NULL, chars are dynamically allocated",
+	.chars_are_dynamically_allocated = TRUE,
+	.char_ptrs = NULL,
+    .l = LIST_DEFINED_IN_SETUP,
+    .f = NULL,
+};
+
+static list_free_list_test_params_t l_not_null_f_current_free_statically_allocated = {
+    .label = "l != NULL, f == current_free, chars are statically allocated",
+	.chars_are_dynamically_allocated = FALSE,
+	.char_ptrs = NULL,
+    .l = LIST_DEFINED_IN_SETUP,
+    .f = CURRENT_FREE_DEFINED_IN_SETUP,
+};
+
+static list_free_list_test_params_t l_not_null_f_current_free_dynamically_allocated = {
+    .label = "l != NULL, f == current_free, chars are dynamically allocated",
+	.chars_are_dynamically_allocated = TRUE,
+	.char_ptrs = NULL,
+    .l = LIST_DEFINED_IN_SETUP,
+    .f = CURRENT_FREE_DEFINED_IN_SETUP,
 };
 
 
@@ -488,7 +535,9 @@ static int list_free_list_setup(void **state) {
         assert_non_null(params->char_ptrs);
         params->l = make_list_n((void **) params->char_ptrs, LIST_LENGTH);
 	}
-
+	if (params->f == CURRENT_FREE_DEFINED_IN_SETUP) {
+		params->f = get_current_free();
+	}
 	return 0;
 }
 
@@ -528,37 +577,90 @@ static void list_free_list_no_side_effect_when_l_null(void **state) {
     list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
 }
 
+// Given: l != NULL, f == null
+// Expected: l and its cdrs are freed
+// param:
+//	- l_not_null_f_null_statically_allocated
+//	- l_not_null_f_null_dynamically_allocated
+static void list_free_list_free_l_when_l_not_null_f_null(void **state) {
+	list l = list_free_list_param_l(state);
+	expect_value(mock_free, ptr, l);
+	expect_value(mock_free, ptr, l->cdr);
+    list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
+}
 
+// Given: l != NULL, f == current_free, chars are dynamically allocated
+// Expected: frees l's cars
+// param:
+//	- l_not_null_f_current_free_dynamically_allocated
+static void list_free_list_free_l_when_l_not_null_f_current_free_dynamically_allocated(void **state) {
+	list l = list_free_list_param_l(state);
+	expect_value(mock_free, ptr, l->car);
+	expect_value(mock_free, ptr, l);
+	expect_value(mock_free, ptr, (l->cdr)->car);
+	expect_value(mock_free, ptr, l->cdr);
+    list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
+}
 
-
+// EXAMPLES OF TESTS THAT DO NOT RESPECT BEST PRACTICES (DO NOT USE!)
+//
+// The following tests illustrate *incorrect* approaches in C memory management
+// and are COMMENTED OUT or should NOT be included in a professional test suite.
+//
+// 1. Testing/expecting invalid frees (undefined behavior).
+// 2. Testing/validating a memory leak as an expected outcome.
+//
+// Both are poor practices: one encourages dangerous code, the other
+// encourages not managing memory properly. The right approach is to
+// document/prevent these cases, not test them as “expected” behavior.
+// -----------------------------------------------------------------------------
+//
+// 1. BAD PRACTICE: Test that expects invalid free of statically-allocated memory
+//
+// In C, calling free() on a static/global/stack variable is undefined behavior.
+// A test should NEVER expect or require this.
+// Purpose: Example of what NOT to do.
+//
+// Given: l != NULL, f == current_free, cars are statically allocated
+// Expected: (INCORRECT) invalid free of l's cars
+// param:
+//	- l_not_null_f_current_free_statically_allocated
 /*
-
-// Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == NULL
-// Expected : mock_free is called with l
-static void mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull(void **state) {
-    (void) *state; // unused
-    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
-    mock_free_list(A_LIST_WITH_2_ELEMENTS, NULL);
+static void list_free_list_invalid_free_of_cars_when_l_not_null_f_current_free(void **state) {
+    list l = list_free_list_param_l(state);
+    expect_value(mock_free, ptr, &STATIC_CHAR_A); // invalid free! BAD PRACTICE
+    expect_value(mock_free, ptr, l);
+    expect_value(mock_free, ptr, &STATIC_CHAR_B); // invalid free! BAD PRACTICE
+    expect_value(mock_free, ptr, l->cdr);
+    list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
 }
-
-// Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == dummy_destroy
-// Expected : mock_free is called with l
-static void mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
-    (void) *state; // unused
-    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
-    expect_value(dummy_destroy, ptr, A_LIST_WITH_2_ELEMENTS->car);
-    mock_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
+*/
+//
+// 2. BAD PRACTICE: Test that validates a memory leak as “success”
+//
+// In C, a memory leak is always a sign that memory management is not handled.
+// You can document that a function will leak if used incorrectly, but you
+// should NOT write a test to “validate” a leak.
+//
+// Given: l != NULL, f == NULL, chars are dynamically allocated
+// Expected: (INCORRECT) memory leaks due to not freeing l's cars
+// param:
+//	- l_not_null_f_null_dynamically_allocated
+/*
+static void list_free_list_memory_leaks_at_cars_when_l_not_null_f_null_dynamically_allocated(void **state) {
+    list l = list_free_list_param_l(state);
+    char *element_1 = (char *)l->car;
+    char *element_2 = (char *)(l->cdr)->car;
+    expect_value(mock_free, ptr, l);
+    expect_value(mock_free, ptr, l->cdr);
+    list_free_list(list_free_list_param_l(state), list_free_list_param_f(state));
+    // The following does not "prove" a leak; it just means memory was not freed.
+    // BAD PRACTICE: Validating a leak is not the job of a unit test.
+    assert_non_null(element_1);
+    assert_non_null(element_2);
+    *element_1 = dummy;
+    *element_2 = dummy;
 }
-
-// Given: l == A_LIST_WITH_2_ELEMENTS, destroy_fn_t == dummy_destroy
-// Expected : dummy_destroy is called with l->car
-static void mock_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy(void **state) {
-    (void) *state; // unused
-    expect_value(mock_free, ptr, A_LIST_WITH_2_ELEMENTS);
-    expect_value(dummy_destroy, ptr, A_LIST_WITH_2_ELEMENTS->car);
-    mock_free_list(A_LIST_WITH_2_ELEMENTS, dummy_destroy);
-}
-
 */
 
 
@@ -677,18 +779,34 @@ int main(void) {
         cmocka_unit_test_prestate_setup_teardown(
             list_free_list_no_side_effect_when_l_null,
             list_free_list_setup, list_free_list_teardown, &l_null_f_not_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_free_list_free_l_when_l_not_null_f_null,
+            list_free_list_setup, list_free_list_teardown, &l_not_null_f_null_statically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_free_list_free_l_when_l_not_null_f_null,
+            list_free_list_setup, list_free_list_teardown, &l_not_null_f_null_dynamically_allocated),
+        cmocka_unit_test_prestate_setup_teardown(
+            list_free_list_free_l_when_l_not_null_f_current_free_dynamically_allocated,
+            list_free_list_setup, list_free_list_teardown, &l_not_null_f_current_free_dynamically_allocated),
 
+    // -------------------------------------------------------------------------
+    // EXAMPLES OF TESTS THAT DO NOT RESPECT BEST PRACTICES (DO NOT USE!)
+    // -------------------------------------------------------------------------
+    // 1. This test expects invalid frees of statically-allocated memory,
+    //    which is undefined behavior in C. Kept commented as a pedagogical anti-example.
+    // 2. The next test validates a memory leak as an expected outcome,
+    //    which is also not a proper use of unit tests.
+    // -------------------------------------------------------------------------
 /*
-        cmocka_unit_test_setup_teardown(
-            mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyNull,
-            mock_free_list_setup, mock_free_list_teardown),
-        cmocka_unit_test_setup_teardown(
-            mock_free_list_CallFreeWithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
-            mock_free_list_setup, mock_free_list_teardown),
-        cmocka_unit_test_setup_teardown(
-            mock_free_list_Call_dummy_destroy_WithRightParam_WhenLNotNull_AndDestroyIs_dummy_destroy,
-            mock_free_list_setup, mock_free_list_teardown),
+    cmocka_unit_test_prestate_setup_teardown(
+        list_free_list_invalid_free_of_cars_when_l_not_null_f_current_free,
+        list_free_list_setup, list_free_list_teardown, &l_not_null_f_current_free_statically_allocated),
+
+    cmocka_unit_test_prestate_setup_teardown(
+        list_free_list_memory_leaks_at_cars_when_l_not_null_f_null_dynamically_allocated,
+        list_free_list_setup, list_free_list_teardown, &l_not_null_f_null_dynamically_allocated),
 */
+
     };
 
     int failed = 0;

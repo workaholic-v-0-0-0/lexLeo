@@ -52,7 +52,7 @@ FILE *fake_log_file; // defined in setup via fmemopen(fake_log_file_address, LOG
 
 #define TIME_STR_LENGTH 20
 
-// time if faked via fake_time.h
+// time is faked via fake_time.h
 
 
 
