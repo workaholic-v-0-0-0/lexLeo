@@ -34,4 +34,3 @@ set_tests_properties(
     test_logger_memory
     PROPERTIES ENVIRONMENT "${FAKE_TIME_ZONE}"
 )
-
