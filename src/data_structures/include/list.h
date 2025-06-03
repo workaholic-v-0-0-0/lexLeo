@@ -5,8 +5,10 @@
 
 typedef struct cons {void *car; struct cons *cdr;} cons, *list;
 
+/*
 void set_allocators(void *(*alloc)(size_t), void (*fr)(void *));
 void *get_current_free();
+*/
 
 //returns NULL on error
 list list_push(list l, void * e);

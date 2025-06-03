@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "logger.h"
+#include "memory_allocator.h"
 
 #include "list.h"
 
@@ -292,6 +293,7 @@ static int list_push_setup(void **state) {
 }
 
 static int list_push_teardown(void **state) {
+    set_allocators(NULL, NULL);
     list_push_test_params_t *params = (list_push_test_params_t *) *state;
     if (params->l == LIST_DEFINED_IN_SETUP) {
         list next = NULL;
@@ -542,6 +544,7 @@ static int list_free_list_setup(void **state) {
 }
 
 static int list_free_list_teardown(void **state) {
+    set_allocators(NULL,NULL);
     list_free_list_test_params_t *params = (list_free_list_test_params_t *) *state;
     if (params->l == LIST_DEFINED_IN_SETUP) {
         list next = NULL;

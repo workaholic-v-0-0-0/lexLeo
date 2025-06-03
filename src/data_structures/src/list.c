@@ -1,13 +1,15 @@
 // src/data_structures/src/list.c
 
+#include "list.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "internal/data_structure_memory_allocator.h"
 #include "logger.h"
 
-#include "list.h"
-
 // make testable with dependency injection
+/*
 static void *(*current_malloc)(size_t) = malloc;
 static void (*current_free)(void *) = free;
 void set_allocators(void *(*alloc)(size_t), void (*fr)(void *)) {
@@ -17,12 +19,13 @@ void set_allocators(void *(*alloc)(size_t), void (*fr)(void *)) {
 void *get_current_free() {
 	return current_free;
 }
+*/
 
 list list_push(list l, void * e) {
 	if (!e)
 		return (list) NULL;
 
-	list ret = current_malloc(sizeof(cons));
+	list ret = DATA_STRUCTURE_MALLOC(sizeof(cons));
     if (!ret)
         return (list) NULL;
 
@@ -40,7 +43,7 @@ void list_free_list(list l, void (*destroy_fn_t)(void *)) {
 			l->car = NULL;
 		}
 		next = l->cdr;
-		current_free(l);
+		DATA_STRUCTURE_FREE(l);
 		l = NULL;
 		l = next;
 	}

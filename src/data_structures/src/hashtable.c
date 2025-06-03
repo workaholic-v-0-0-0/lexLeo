@@ -2,6 +2,8 @@
 
 #include "hashtable.h"
 
+#include "internal/data_structure_memory_allocator.h"
+
 typedef struct entry {
     char *key;
     void *value;
