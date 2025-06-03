@@ -32,7 +32,7 @@
 
 
 //-----------------------------------------------------------------------------
-// hash TESTS
+// hashtable_create TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -45,7 +45,7 @@
 typedef struct {
     const char *label;
 
-} hash_test_params_t;
+} hashtable_create_test_params_t;
 
 
 
@@ -66,12 +66,14 @@ typedef struct {
 //-----------------------------------------------------------------------------
 
 
-static int hash_setup(void **state) {
+static int hashtable_create_setup(void **state) {
+
 
     return 0;
 }
 
-static int hash_teardown(void **state) {
+static int hashtable_create_teardown(void **state) {
+
 
     return 0;
 }
@@ -82,6 +84,21 @@ static int hash_teardown(void **state) {
 // TESTS
 //-----------------------------------------------------------------------------
 
+/* tests list
+hashtable *hashtable_create(
+    size_t size,
+    hashtable_destroy_value
+);
+hashtable_create(0, NULL) returns NULL
+hashtable_create(1, NULL) returns non null pointer
+*/
+
+// Given: s == 0, f == NULL
+// Expected: returns NULL
+// param: N/A yet
+static void hashtable_create_returns_null_when_s_0_f_null(void **state) {
+    assert_null(hashtable_create(0, NULL));
+}
 
 
 //-----------------------------------------------------------------------------
@@ -89,12 +106,12 @@ static int hash_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest hash_tests[] = {
-
+    const struct CMUnitTest hashtable_create_tests[] = {
+        cmocka_unit_test(hashtable_create_returns_null_when_s_0_f_null),
     };
 
     int failed = 0;
-    failed += cmocka_run_group_tests(hash_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(hashtable_create_tests, NULL, NULL);
 
     return failed;
 }
