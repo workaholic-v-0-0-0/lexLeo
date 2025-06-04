@@ -1,20 +1,11 @@
 // src/data_structures/src/hashtable.c
 
-#include "hashtable.h"
+#include "internal/hashtable_internal.h"
 
 #include "internal/data_structure_memory_allocator.h"
 
-typedef struct entry {
-    char *key;
-    void *value;
-    struct entry *next;
-} entry;
-
-struct hashtable {
-    entry **buckets;
-    size_t size;
-    hashtable_destroy_value_t destroy_value;
-};
+#include <stdlib.h>
+#include <string.h>
 
 static unsigned long hash_djb2(const char *str) {
     unsigned long hash = 5381;
@@ -23,7 +14,23 @@ static unsigned long hash_djb2(const char *str) {
     return hash;
 }
 
-hashtable *hashtable_create(size_t size, hashtable_destroy_value_t hashtable_destroy_value) {
-    if (size == 0) return NULL;
-    return (void *) -2;
+hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
+    if (size == 0)
+        return NULL;
+
+    hashtable *ret = DATA_STRUCTURE_MALLOC(sizeof(hashtable));
+    if (!ret)
+        return NULL;
+
+    ret->buckets = DATA_STRUCTURE_MALLOC(size * sizeof(entry *));
+    if (!ret->buckets) {
+        DATA_STRUCTURE_FREE(ret);
+        return NULL;
+    }
+    memset(ret->buckets, 0, size * sizeof(entry *));
+
+    ret->size = size;
+    ret->destroy_value_fn = destroy_value_fn;
+
+    return ret;
 }

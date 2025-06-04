@@ -332,7 +332,7 @@ static void list_push_returns_null_when_e_null(void **state) {
 }
 
 // Given: e == NULL
-// Expected : do not call malloc
+// Expected : does not call malloc
 // param:
 //	- l_null_e_null
 //	- l_not_null_e_null_statically_allocated
