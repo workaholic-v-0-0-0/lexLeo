@@ -124,32 +124,6 @@ static hashtable_test_params_t s_2_f_dummy_not_null = {
 
 
 //-----------------------------------------------------------------------------
-// PARAMETRIC TEST STRUCTURE
-//-----------------------------------------------------------------------------
-
-/*
-typedef struct {
-    const char *label;
-    size_t s;
-    hashtable_destroy_value_fn_t f;
-} hashtable_create_test_params_t;
-*/
-
-
-
-//-----------------------------------------------------------------------------
-// HELPERS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// PARAMS (CASES)
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
@@ -159,7 +133,6 @@ static int hashtable_create_setup(void **state) {
     fake_malloc_returned_value_for_hashtable = malloc(sizeof(hashtable));
     fake_malloc_returned_value_for_buckets = malloc(param_s(state) * sizeof(entry *));
     assert_non_null(fake_malloc_returned_value_for_hashtable);
-
     return 0;
 }
 
@@ -167,7 +140,6 @@ static int hashtable_create_teardown(void **state) {
     set_allocators(NULL, NULL);
     free(fake_malloc_returned_value_for_hashtable);
     free(fake_malloc_returned_value_for_buckets);
-
     return 0;
 }
 
@@ -233,7 +205,7 @@ static void hashtable_create_calls_malloc_for_buckets_with_right_params_when_mal
     expect_value(mock_malloc, size, sizeof(hashtable));
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(entry *));
-    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
     hashtable_create(param_s(state), param_f(state));
 }
 
@@ -285,7 +257,7 @@ static void hashtable_create_returns_hashtable_pointer_with_correctly_initialize
     expect_value(mock_malloc, size, sizeof(hashtable));
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(entry *));
-    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
     hashtable *ret = hashtable_create(param_s(state), param_f(state));
     assert_non_null(ret);
     assert_int_equal(ret->size, param_s(state));
@@ -302,7 +274,7 @@ static void hashtable_create_returns_hashtable_pointer_with_correctly_initialize
     expect_value(mock_malloc, size, sizeof(hashtable));
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(entry *));
-    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
     hashtable *ret = hashtable_create(param_s(state), param_f(state));
     assert_non_null(ret);
     assert_ptr_equal(ret->destroy_value_fn, param_f(state));
