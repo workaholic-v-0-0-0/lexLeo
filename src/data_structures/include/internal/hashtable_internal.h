@@ -5,14 +5,15 @@
 
 #include "hashtable.h"
 
+#include "list.h"
+
 typedef struct entry {
     char *key;
     void *value;
-    struct entry *next;
 } entry;
 
 struct hashtable {
-    entry **buckets;
+    list *buckets;
     size_t size;
     hashtable_destroy_value_fn_t destroy_value_fn;
 };

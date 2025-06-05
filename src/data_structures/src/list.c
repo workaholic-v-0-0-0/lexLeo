@@ -8,19 +8,6 @@
 #include "internal/data_structure_memory_allocator.h"
 #include "logger.h"
 
-// make testable with dependency injection
-/*
-static void *(*current_malloc)(size_t) = malloc;
-static void (*current_free)(void *) = free;
-void set_allocators(void *(*alloc)(size_t), void (*fr)(void *)) {
-    current_malloc = alloc ? alloc : malloc;
-    current_free = fr ? fr : free;
-}
-void *get_current_free() {
-	return current_free;
-}
-*/
-
 list list_push(list l, void * e) {
 	if (!e)
 		return (list) NULL;

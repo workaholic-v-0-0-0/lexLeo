@@ -22,15 +22,20 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
     if (!ret)
         return NULL;
 
-    ret->buckets = DATA_STRUCTURE_MALLOC(size * sizeof(entry *));
+    ret->buckets = DATA_STRUCTURE_MALLOC(size * sizeof(list));
     if (!ret->buckets) {
         DATA_STRUCTURE_FREE(ret);
         return NULL;
     }
-    memset(ret->buckets, 0, size * sizeof(entry *));
+    memset(ret->buckets, 0, size * sizeof(list));
 
     ret->size = size;
     ret->destroy_value_fn = destroy_value_fn;
 
     return ret;
+}
+
+void hashtable_destroy(hashtable *ht) {
+    if (!ht)
+        return;
 }
