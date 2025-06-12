@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h> // debug
 
 static unsigned long hash_djb2(const char *str) {
     unsigned long hash = 5381;
@@ -25,6 +26,7 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
     ret->buckets = DATA_STRUCTURE_MALLOC(size * sizeof(list));
     if (!ret->buckets) {
         DATA_STRUCTURE_FREE(ret);
+        ret = NULL;
         return NULL;
     }
     memset(ret->buckets, 0, size * sizeof(list));
@@ -38,4 +40,8 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
 void hashtable_destroy(hashtable *ht) {
     if (!ht)
         return;
+	DATA_STRUCTURE_FREE(ht->buckets);
+	ht->buckets = NULL;
+	DATA_STRUCTURE_FREE(ht);
+	ht = NULL;
 }

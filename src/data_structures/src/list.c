@@ -25,13 +25,10 @@ list list_push(list l, void * e) {
 void list_free_list(list l, void (*destroy_fn_t)(void *)) {
 	list next;
 	while (l) {
-		if (destroy_fn_t) {
+		if (destroy_fn_t)
 			destroy_fn_t(l->car);
-			l->car = NULL;
-		}
 		next = l->cdr;
 		DATA_STRUCTURE_FREE(l);
-		l = NULL;
 		l = next;
 	}
 }
