@@ -36,7 +36,7 @@ static const int DUMMY_INT_VALUE = 0;
 static void *const DUMMY_POINTER_VALUE = NULL;
 static const size_t DUMMY_SIZE_T_VALUE = 0;
 static hashtable * const HASHTABLE_DEFINED_IN_SETUP = (hashtable *) &dummy;
-static entry * const ENTRIES_DEFINED_IN_SETUP = (entry *) &dummy;
+static entry ** const ENTRIES_DEFINED_IN_SETUP = (entry **) &dummy;
 
 static const char STATIC_CHAR_A = 'A';
 static const char STATIC_CHAR_B = 'B';
@@ -66,6 +66,11 @@ void mock_free(void *ptr) {
     set_allocators(NULL, NULL);
     collected_ptr_to_be_freed = list_push(collected_ptr_to_be_freed, ptr);
     set_allocators(mock_malloc, mock_free);
+}
+
+void destroy_fn_with_current_free(void *item, void *user_data){
+    (void)user_data; // unused
+    get_current_free()(item);
 }
 
 
@@ -169,7 +174,7 @@ static int create_setup(void **state) {
 
 static int create_teardown(void **state) {
     set_allocators(NULL, NULL);
-    list_free_list(collected_ptr_to_be_freed, free);
+    list_free_list(collected_ptr_to_be_freed, destroy_fn_with_current_free, NULL);
     collected_ptr_to_be_freed = NULL;
     return 0;
 }
@@ -347,7 +352,7 @@ typedef struct {
     boolean there_is_a_collision; // at the first entry and only one collision
     boolean chars_are_dynamically_allocated;
     hashtable *ht;
-    entry *entries; // values are chars
+    entry **entries; // values are chars
 } destroy_test_params_t;
 
 /*
@@ -456,7 +461,7 @@ static hashtable * destroy_param_ht(void **state) {
     return ((destroy_test_params_t *) *state)->ht;
 }
 
-static entry * destroy_param_entries(void **state) {
+static entry ** destroy_param_entries(void **state) {
     return ((destroy_test_params_t *) *state)->entries;
 }
 
@@ -465,12 +470,10 @@ static void initialize_hashtable(destroy_test_params_t *params) {
 	hashtable *ht = NULL;
 	if (s > 0) {
         alloc_and_config_free((void *)&ht, sizeof(hashtable), FALSE);
-		//ht = malloc(sizeof(hashtable));
 		assert_non_null(ht);
 		ht->size = s;
-		ht->destroy_value_fn = (params->ht)->destroy_value_fn;
+        ht->destroy_value_fn = params->f;
 		alloc_and_config_free((void *)&(ht->buckets), sizeof(list) * s, FALSE);
-        //ht->buckets = malloc(sizeof(list) * s);
 		assert_non_null(ht->buckets);
 		for (size_t i = 0; i < s; ++i) {
 			ht->buckets[i] = NULL;
@@ -481,26 +484,29 @@ static void initialize_hashtable(destroy_test_params_t *params) {
 
 static void initialize_entries(destroy_test_params_t *params) {
     int n = params->number_of_entries;
-	entry *entries = NULL;
+	entry **entries = NULL;
     if (n > 0) {
-    	entries = malloc(n * sizeof(entry));
+        alloc_and_config_free((void *)&entries, n * sizeof(entry *), TRUE);
     	assert_non_null(entries);
     	for (int i = 0; i < n; i++) {
-        	entries[i].key = strdup(KEY_VALUES[i]);
-        	assert_non_null(entries[i].key);
+            entries[i] = malloc(sizeof(entry));
+            assert_non_null(entries[i]);
+        	entries[i]->key = strdup(KEY_VALUES[i]);
+        	assert_non_null(entries[i]->key);
         	if (params->chars_are_dynamically_allocated) {
-            	entries[i].value = malloc(sizeof(char));
-            	assert_non_null(entries[i].value);
-            	* (char *) (entries[i].value) = STATIC_CHARS[i];
+            	entries[i]->value = malloc(sizeof(char));
+            	assert_non_null(entries[i]->value);
+            	* (char *) (entries[i]->value) = STATIC_CHARS[i];
         	}
         	else {
-            	entries[i].value = &STATIC_CHARS[i];
+            	entries[i]->value = &STATIC_CHARS[i];
         	}
     	}
 	}
 	params->entries = entries;
 }
 
+/*
 static void destroy_entries(destroy_test_params_t *params) {
     int n = params->number_of_entries;
     if (n == 0)
@@ -526,11 +532,12 @@ static void destroy_buckets(hashtable *ht) {
     }
     free(buckets);
 }
+*/
 
-static void put_an_entry_in_hashtable(hashtable *ht, entry *entries, size_t entry_index, size_t bucket_index) {
+static void put_an_entry_in_hashtable(hashtable *ht, entry **entries, size_t entry_index, size_t bucket_index) {
     cons *c = malloc(sizeof(cons));
     assert_non_null(c);
-    c->car = &entries[entry_index];
+    c->car = entries[entry_index];
     c->cdr = ht->buckets[bucket_index];
     ht->buckets[bucket_index] = c;
 }
@@ -541,7 +548,7 @@ static void put_entries_in_hashtable(destroy_test_params_t *params) {
     int number_of_entries = params->number_of_entries;
     if (number_of_entries == 0)
         return;
-    entry *entries = params->entries;
+    entry **entries = params->entries;
     if (number_of_entries >= 1) { // ht->buckets[0] = list_push(ht->buckets[0], car);
         put_an_entry_in_hashtable(ht, entries, 0, 0);
     }
@@ -711,7 +718,7 @@ static const destroy_test_params_t destroy_params_template_s_2_n_2_collision_sta
 };
 
 static const destroy_test_params_t destroy_params_template_s_2_n_2_no_collision_dynamic = {
-    .label = "hashtable size == 2, number of entries == 2, no collision, dynamic allocation, destroy_value_fn = NULL",
+    .label = "hashtable size == 2, number of entries == 2, no collision, dynamic allocation, destroy_value_fn = mock_free",
     .s = 2,
     .f = mock_free,
     .number_of_entries = 2,
@@ -722,7 +729,7 @@ static const destroy_test_params_t destroy_params_template_s_2_n_2_no_collision_
 };
 
 static const destroy_test_params_t destroy_params_template_s_2_n_2_collision_dynamic = {
-    .label = "hashtable size == 2, number of entries == 2, collision, dynamic allocation, destroy_value_fn = NULL",
+    .label = "hashtable size == 2, number of entries == 2, collision, dynamic allocation, destroy_value_fn = mock_free",
     .s = 2,
     .f = mock_free,
     .number_of_entries = 2,
@@ -806,7 +813,9 @@ static void destroy_does_not_call_free_when_s_0(void **state) {
 }
 
 // Given: ht size == 1 or 2, no entry (empty buckets)
-// Expected: frees ht->buckets and ht
+// Expected: frees
+//	- ht->buckets
+//	- ht
 // param:
 //	- destroy_params_template_s_1_n_0_f_null
 //	- destroy_params_template_s_1_n_0_f_free
@@ -818,7 +827,127 @@ static void destroy_frees_hashtable_when_no_entries(void **state) {
     hashtable_destroy(destroy_param_ht(state));
 }
 
-// HERE
+// Given: ht size == 1 or 2, one entry at first bucket for a char statically allocated
+// Expected: frees
+//	- ((entry *) ((ht->buckets)[0])->car)->key
+//  - ((ht->buckets)[0])->car
+//	- (ht->buckets)[0]
+//	- ht->buckets
+//	- ht
+// param:
+//	- destroy_params_template_s_1_n_1_static
+//	- destroy_params_template_s_2_n_1_static
+static void destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_static_char(void **state) {
+    hashtable *ht = destroy_param_ht(state);
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->key); // frees key of entry
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->car); // frees entry
+    expect_value(mock_free, ptr, (ht->buckets)[0]); // frees list which contained entry
+	expect_value(mock_free, ptr, ht->buckets); // frees buckets
+	expect_value(mock_free, ptr, ht); // frees hashtable
+    hashtable_destroy(destroy_param_ht(state));
+}
+
+// Given: ht size == 1 or 2, one entry at first bucket for a char dynamically allocated
+// Expected: frees
+//	- ((entry *) ((ht->buckets)[0])->car)->key
+//	- ((entry *) ((ht->buckets)[0])->car)->value
+//	- (ht->buckets)[0]
+//	- ht->buckets
+//	- ht
+// param:
+//	- destroy_params_template_s_1_n_1_dynamic
+//	- destroy_params_template_s_2_n_1_dynamic
+static void destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_dynamic_char(void **state) {
+    hashtable *ht = destroy_param_ht(state);
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->key); // frees key of entry
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->value); // frees value of entry
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->car); // frees entry
+    expect_value(mock_free, ptr, (ht->buckets)[0]); // frees list which contained entry
+	expect_value(mock_free, ptr, ht->buckets); // frees buckets
+	expect_value(mock_free, ptr, ht); // frees hashtable
+    hashtable_destroy(destroy_param_ht(state));
+}
+
+// Given: ht size == 2, 2 entries for chars statically allocated, no collision
+// Expected: frees
+//	- ((entry *) ((ht->buckets)[0])->car)->key
+//	- (ht->buckets)[0]
+//	- ((entry *) ((ht->buckets)[1])->car)->key
+//	- (ht->buckets)[1]
+//	- ht->buckets
+//	- ht
+// param:
+//	- destroy_params_template_s_2_n_2_no_collision_static
+static void destroy_frees_hashtable_when_s_2_two_entries_with_a_static_char_no_collision(void **state) {
+    hashtable *ht = destroy_param_ht(state);
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->key); // frees key of entry at first bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->car); // frees entry at first bucket
+    expect_value(mock_free, ptr, (ht->buckets)[0]); // frees list at first bucket
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[1])->car)->key); // frees key of entry at second bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[1])->car); // frees entry at second bucket
+    expect_value(mock_free, ptr, (ht->buckets)[1]); // frees list at second bucket
+	expect_value(mock_free, ptr, ht->buckets); // frees buckets
+	expect_value(mock_free, ptr, ht); // frees hashtable
+    hashtable_destroy(destroy_param_ht(state));
+}
+
+// Given: ht size == 2, 2 entries for chars dynamically allocated, no collision
+// Expected: frees
+//	- ((entry *) ((ht->buckets)[0])->car)->key
+//	- ((entry *) ((ht->buckets)[0])->car)->value
+//	- (ht->buckets)[0]
+//	- ((entry *) ((ht->buckets)[1])->car)->key
+//	- ((entry *) ((ht->buckets)[1])->car)->value
+//	- (ht->buckets)[1]
+//	- ht->buckets
+//	- ht
+// param:
+//	- destroy_params_template_s_2_n_2_no_collision_dynamic
+static void destroy_frees_hashtable_when_s_2_two_entries_with_a_dynamic_char_no_collision(void **state) {
+    hashtable *ht = destroy_param_ht(state);
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->key); // frees key of entry at first bucket
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->value); // frees value of entry at first bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->car); // frees entry at first bucket
+    expect_value(mock_free, ptr, (ht->buckets)[0]); // frees list at first bucket
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[1])->car)->key); // frees key of entry at second bucket
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[1])->car)->value); // frees value of entry at second bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[1])->car); // frees entry at second bucket
+    expect_value(mock_free, ptr, (ht->buckets)[1]); // frees list at second bucket
+	expect_value(mock_free, ptr, ht->buckets); // frees buckets
+	expect_value(mock_free, ptr, ht); // frees hashtable
+    hashtable_destroy(destroy_param_ht(state));
+}
+
+// Given: ht size == 1, 2 entries (hence collision)
+// Expected: frees
+//	- ((entry *) ((ht->buckets)[0])->car)->key
+//  - if chars are dynamically allocated: ((entry *) ((ht->buckets)[0])->car)->value
+//	- ((ht->buckets)[0])->car
+//	- ((entry *) (((ht->buckets)[0])->cdr)->car)->key
+//  - if chars are dynamically allocated: ((entry *) (((ht->buckets)[0])->cdr)->car)->value
+//  - (((ht->buckets)[0])->cdr)->car
+//	- (ht->buckets)[0]
+//	- ht->buckets
+//	- ht
+// param:
+//	- destroy_params_template_s_1_n_2_collision_static
+//  - destroy_params_template_s_1_n_2_collision_dynamic
+static void destroy_frees_hashtable_when_s_1_two_entries_hence_collision(void **state) {
+    hashtable *ht = destroy_param_ht(state);
+    expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->key); // frees key of first entry at first bucket
+    if (destroy_param_chars_are_dynamically_allocated(state))
+        expect_value(mock_free, ptr, ((entry *) ((ht->buckets)[0])->car)->value); // frees value of first entry at first bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->car); // frees first entry at first bucket
+    expect_value(mock_free, ptr, (ht->buckets)[0]); // frees first element of the list at first bucket
+    expect_value(mock_free, ptr, ((entry *) (((ht->buckets)[0])->cdr)->car)->key); // frees key of second entry at first bucket
+    if (destroy_param_chars_are_dynamically_allocated(state))
+        expect_value(mock_free, ptr, ((entry *) (((ht->buckets)[0])->cdr)->car)->value); // frees value of second entry at first bucket
+    expect_value(mock_free, ptr, (((ht->buckets)[0])->cdr)->car); // frees second entry at first bucket
+    expect_value(mock_free, ptr, ((ht->buckets)[0])->cdr); // frees second element of the list at first bucket
+	expect_value(mock_free, ptr, ht->buckets); // frees buckets
+	expect_value(mock_free, ptr, ht); // frees hashtable
+    hashtable_destroy(destroy_param_ht(state));
+}
 
 
 
@@ -943,6 +1072,32 @@ int main(void) {
         cmocka_unit_test_prestate_setup_teardown(
             destroy_frees_hashtable_when_no_entries,
             destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_2_n_0_f_free),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_static_char,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_1_n_1_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_static_char,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_2_n_1_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_dynamic_char,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_1_n_1_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_one_entry_at_first_bucket_with_a_dynamic_char,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_2_n_1_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_s_2_two_entries_with_a_static_char_no_collision,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_2_n_2_no_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_s_2_two_entries_with_a_dynamic_char_no_collision,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_2_n_2_no_collision_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_s_1_two_entries_hence_collision,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_1_n_2_collision_static),
+/*
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_frees_hashtable_when_s_1_two_entries_hence_collision,
+            destroy_setup, destroy_teardown, (void *)&destroy_params_template_s_1_n_2_collision_dynamic),
+*/
     };
 
     int failed = 0;

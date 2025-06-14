@@ -22,11 +22,11 @@ list list_push(list l, void * e) {
     return ret;
 }
 
-void list_free_list(list l, void (*destroy_fn_t)(void *)) {
+void list_free_list(list l, void (*destroy_fn)(void *item, void *user_data), void *user_data) {
 	list next;
 	while (l) {
-		if (destroy_fn_t)
-			destroy_fn_t(l->car);
+		if (destroy_fn)
+			destroy_fn(l->car, user_data);
 		next = l->cdr;
 		DATA_STRUCTURE_FREE(l);
 		l = next;

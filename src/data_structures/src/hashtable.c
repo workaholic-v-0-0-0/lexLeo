@@ -37,9 +37,38 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
     return ret;
 }
 
+
+static void hashtable_destroy_entry(void *item, void *user_data) {
+    entry *e = (entry *)item;
+    hashtable_destroy_value_fn_t destroy_fn = (hashtable_destroy_value_fn_t) user_data;
+    DATA_STRUCTURE_FREE(e->key);
+    if (destroy_fn) destroy_fn(e->value);
+    DATA_STRUCTURE_FREE(e);
+}
+
+// precondition: ht null or correctly initialized
 void hashtable_destroy(hashtable *ht) {
     if (!ht)
         return;
+    for (size_t i = 0 ; i < ht->size ; i++) {
+        if ((ht->buckets)[i]) {
+            // list_free_list will call hashtable_destroy_entry with
+            // ht->destroy_value_fn for second argument in order to properly
+            // destroy the value field of each entries
+            list_free_list(
+                (ht->buckets)[i],
+                hashtable_destroy_entry,
+                ht->destroy_value_fn
+            );
+/*
+            DATA_STRUCTURE_FREE(((entry *) ((ht->buckets)[i])->car)->key);
+            if (ht->destroy_value_fn)
+                (ht->destroy_value_fn)(((entry *) ((ht->buckets)[i])->car)->value);
+            DATA_STRUCTURE_FREE(((ht->buckets)[i])->car);
+            DATA_STRUCTURE_FREE((ht->buckets)[i]);
+*/
+        }
+    }
 	DATA_STRUCTURE_FREE(ht->buckets);
 	ht->buckets = NULL;
 	DATA_STRUCTURE_FREE(ht);
