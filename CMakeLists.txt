@@ -153,6 +153,43 @@ set(
 
 
 #------------------------------------------------------------------------------
+# STRING UTILS MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/string_utils)
+
+set(
+    USE_STRING_UTILS ON
+    CACHE BOOL
+    "Enable custom string utils support in subprojects"
+)
+set(
+    STRING_UTILS_TARGET string_utils
+    CACHE STRING
+    "CMake target to use for string  utils"
+)
+set(
+    STRING_UTILS_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/string_utils/include
+    CACHE PATH "Path to string utils header directory"
+)
+
+# string_utils library dependency injection ("at cmake scope") will be automatically
+# done by convention in other subprojects that uses the mechanism of the
+# following kind:
+#
+# if (USE_STRING_UTILS)
+#     target_compile_definitions(data_structures PRIVATE USE_STRING_UTILS)
+#     target_include_directories(data_structures PUBLIC ${USE_STRING_UTILS_HEADER_DIR})
+#     target_link_libraries(data_structures PUBLIC ${USE_STRING_UTILS_TARGET})
+# endif ()
+#
+# and in C sources:
+# #ifdef USE_STRING_UTILS
+# set_string_compare(strcmp_mock); // example for tests
+# #endif
+
+
+#------------------------------------------------------------------------------
 # OTHER LIBRARIES
 #------------------------------------------------------------------------------
 

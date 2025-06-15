@@ -11,6 +11,11 @@ typedef struct entry {
     char *key;
     void *value;
 } entry;
+// Note: The 'key' field in 'entry' is defined as 'char *' instead of 'const char *'
+// because the hashtable internally duplicates the provided key (using strdup)
+// and is responsible for freeing it when the entry is removed or destroyed.
+// This prevents accidental double-free or use-after-free bugs
+// and ensures the hash table fully owns the memory for each key.
 
 struct hashtable {
     list *buckets;

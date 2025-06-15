@@ -15,11 +15,15 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
 // frees values too (via callback) if callback
 void hashtable_destroy(hashtable *ht);
 
-// replace if key already exists
-int hashtable_add(hashtable *ht, const char *key, void *value);
+// returns 1 if the key is already in use, 0 otherwise
+int hashtable_key_is_in_use(hashtable *ht, const char *key);
 
-// return NULL if not found
+// returns NULL if the key is not found, but also if the found entry's value is NULL.
 void *hashtable_get(const hashtable *ht, const char *key);
+
+// replaces the value if the key already exists
+// returns 1 on error, 0 on success.
+int hashtable_add(hashtable *ht, const char *key, void *value);
 
 // frees value via callback if callback
 int hashtable_remove(hashtable *ht, const char *key);

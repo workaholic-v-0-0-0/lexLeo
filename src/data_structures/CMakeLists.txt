@@ -36,6 +36,15 @@ if (USE_MEMORY_ALLOCATOR)
     target_link_libraries(data_structures PUBLIC ${MEMORY_ALLOCATOR_TARGET})
 endif ()
 
+# optional string_utils injection "at cmake scope" ;
+# if no string comparison function is set, strcmp will be used for string comparison
+if (USE_STRING_UTILS)
+    target_compile_definitions(data_structures PRIVATE USE_STRING_UTILS)
+    target_include_directories(data_structures PUBLIC ${STRING_UTILS_HEADER_DIR})
+    target_link_libraries(data_structures PUBLIC ${STRING_UTILS_TARGET})
+endif ()
+
+
 if (BUILD_TESTING)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()
