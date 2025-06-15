@@ -37,7 +37,6 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
     return ret;
 }
 
-
 static void hashtable_destroy_entry(void *item, void *user_data) {
     entry *e = (entry *)item;
     hashtable_destroy_value_fn_t destroy_fn = (hashtable_destroy_value_fn_t) user_data;
@@ -60,13 +59,6 @@ void hashtable_destroy(hashtable *ht) {
                 hashtable_destroy_entry,
                 ht->destroy_value_fn
             );
-/*
-            DATA_STRUCTURE_FREE(((entry *) ((ht->buckets)[i])->car)->key);
-            if (ht->destroy_value_fn)
-                (ht->destroy_value_fn)(((entry *) ((ht->buckets)[i])->car)->value);
-            DATA_STRUCTURE_FREE(((ht->buckets)[i])->car);
-            DATA_STRUCTURE_FREE((ht->buckets)[i]);
-*/
         }
     }
 	DATA_STRUCTURE_FREE(ht->buckets);

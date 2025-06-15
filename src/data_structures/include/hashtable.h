@@ -18,10 +18,10 @@ void hashtable_destroy(hashtable *ht);
 // replace if key already exists
 int hashtable_add(hashtable *ht, const char *key, void *value);
 
-// return NULL if not found
-void *hashtable_get(const hashtable *ht, const char *key);
-
 // frees value via callback if callback
 int hashtable_remove(hashtable *ht, const char *key);
+
+// return NULL if not found
+void *hashtable_get(const hashtable *ht, const char *key);
 
 #endif // HASHTABLE_H
