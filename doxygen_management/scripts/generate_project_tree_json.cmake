@@ -44,28 +44,26 @@ file(
 )
 list(APPEND PROJECT_FILES "${SOURCE_DIR}")
 
-# Filtrer les fichiers exclus dans une nouvelle liste
+# Filter out excluded directories and files, storing the result in a new list
 set(FILTERED_PROJECT_FILES "")
-foreach(FILE ${PROJECT_FILES})
+foreach (FILE ${PROJECT_FILES})
     set(EXCLUDED FALSE)
-    foreach(EXCLUDE_DIR ${EXCLUDE_DIRS})
-        if(FILE MATCHES "${SOURCE_DIR}/${EXCLUDE_DIR}")
+    foreach (EXCLUDE_DIR ${EXCLUDE_DIRS})
+        if (FILE MATCHES "${SOURCE_DIR}/${EXCLUDE_DIR}")
             set(EXCLUDED TRUE)
-        endif()
-    endforeach()
-    if(NOT EXCLUDED)
+        endif ()
+    endforeach ()
+    if (NOT EXCLUDED)
         list(APPEND FILTERED_PROJECT_FILES "${FILE}")
-    endif()
-endforeach()
+    endif ()
+endforeach ()
 
 # write project_tree.json
 file(WRITE "${PROJECT_TREE_JSON_FILE}" "[\n")
 
 set(FIRST_ELEMENT TRUE)
 
-foreach(FILE ${FILTERED_PROJECT_FILES})
-    message(STATUS "FILE: ${FILE}")
-
+foreach (FILE ${FILTERED_PROJECT_FILES})
     # id
     file(RELATIVE_PATH REL_PATH "${SOURCE_DIR}/.." "${FILE}")
     string(REPLACE "/" "_2" ID "${REL_PATH}")
@@ -76,33 +74,32 @@ foreach(FILE ${FILTERED_PROJECT_FILES})
 
     # parent
     get_filename_component(PARENT_DIR "${REL_PATH}" DIRECTORY)
-    if("${PARENT_DIR}" STREQUAL "")
+    if ("${PARENT_DIR}" STREQUAL "")
         set(PARENT_ID "#")
-    else()
+    else ()
         string(REPLACE "/" "_2" PARENT_ID "${PARENT_DIR}")
         string(REPLACE "." "_8" PARENT_ID "${PARENT_ID}")
-    endif()
+    endif ()
 
     # text
     get_filename_component(BASE_NAME "${FILE}" NAME)
 
     # type
-    if(IS_DIRECTORY "${FILE}")
+    if (IS_DIRECTORY "${FILE}")
         set(TYPE "folder")
-    else()
+    else ()
         set(TYPE "file")
-    endif()
+    endif ()
 
     # a_attr
     getLink("\"${ID}\"" LINK)
-    message(STATUS "LINK: ${LINK}")
 
     # Ajouter l'entrée JSON
     if (NOT FIRST_ELEMENT)
         file(APPEND ${PROJECT_TREE_JSON_FILE} ",\n")
-    else()
+    else ()
         set(FIRST_ELEMENT FALSE)
-    endif()
+    endif ()
     file(
         APPEND
         "${PROJECT_TREE_JSON_FILE}"
@@ -112,7 +109,7 @@ ${I3}\"parent\": \"${PARENT_ID}\",\n\
 ${I3}\"text\": \"${BASE_NAME}\",\n\
 ${I3}\"type\": \"${TYPE}\""
     )
-    if(LINK)
+    if (LINK)
         file(
             APPEND
             "${PROJECT_TREE_JSON_FILE}"
@@ -121,10 +118,10 @@ ${I4}\"href\": ${LINK}\n${I4}}\n"
         )
     else ()
         file(APPEND "${PROJECT_TREE_JSON_FILE}" "\n")
-    endif()
+    endif ()
 
     file(APPEND "${PROJECT_TREE_JSON_FILE}" "${I2}}")
 
-endforeach()
+endforeach ()
 
 file(APPEND "${PROJECT_TREE_JSON_FILE}" "\n]")

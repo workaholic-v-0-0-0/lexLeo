@@ -10,3 +10,9 @@ void osal_sleep(int ms) {
     };
     nanosleep(&req, NULL);
 }
+
+void osal_open_in_web_browser(const char *filepath) {
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "open \"%s\" &", filepath);
+    system(cmd);
+}

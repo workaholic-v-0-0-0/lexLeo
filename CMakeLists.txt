@@ -244,4 +244,16 @@ target_compile_options(project_build_options INTERFACE
 target_link_libraries(lexLeo_cli PRIVATE project_build_options)
 target_link_libraries(data_structures PRIVATE project_build_options)
 
-# TO DO : NEED TO BE REFACTORED SO THAT EVERY SUB-PROJECT COULD BE STANDALONE
+
+#------------------------------------------------------------------------------
+# TOOLS MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(tools)
+
+
+#------------------------------------------------------------------------------
+# DOCUMENTATION MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(doxygen_management)

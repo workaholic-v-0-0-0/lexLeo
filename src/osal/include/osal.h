@@ -6,8 +6,10 @@
 extern "C" {
 #endif
 
-    /// Pause the thread for ms milliseconds.
-    void osal_sleep(int ms);
+/// Pause the thread for ms milliseconds.
+void osal_sleep(int ms);
+
+void osal_open_in_web_browser(const char *filepath);
 
 #ifdef __cplusplus
 }

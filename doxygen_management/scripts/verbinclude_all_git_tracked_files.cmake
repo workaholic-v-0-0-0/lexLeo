@@ -1,13 +1,17 @@
+# reset the directory containing doc pages dynamically generated
 if (EXISTS ${OUTPUT_DIR})
     file(REMOVE_RECURSE ${OUTPUT_DIR})
 endif ()
 
+# collect in FILES all files tracked by git
 set(DIRS_TO_BE_PARSED # to avoid parsing unexpected artifact
     "${SOURCE_DIR}/doxygen_management"
     "${SOURCE_DIR}/src"
     "${SOURCE_DIR}/tests"
 )
+
 set(FILES "${SOURCE_DIR}")
+
 foreach (DIR IN LISTS DIRS_TO_BE_PARSED)
     file(
         GLOB_RECURSE
@@ -22,6 +26,7 @@ foreach (DIR IN LISTS DIRS_TO_BE_PARSED)
         ${L}
     )
 endforeach ()
+
 list(
     APPEND
     FILES
@@ -33,48 +38,10 @@ list(
     "${SOURCE_DIR}"
 )
 
-#[[file(
-    GLOB_RECURSE
-    FILES
-    LIST_DIRECTORIES true
-    ${SOURCE_DIR}/*
-)
+# temporary — for visualizing the project architecture
+list(FILTER FILES EXCLUDE REGEX ".*/\\.gitkeep")
 
-list(
-    APPEND
-    FILES
-    ${SOURCE_DIR}
-)]]
-
-message(
-    STATUS
-    "FILES: ${FILES}"
-)
-
-#[[list(
-    FILTER
-    FILES
-    EXCLUDE
-    REGEX
-    "\\.git.*|\\.idea.*|.*/docs(/.*)?|.*/build(/.*)?|.*/\
-cmake-build-debug(/.*)?|.*/Testing(/.*)?|.*/doc_to_fetch_links_tmp(/.*)?"
-    )]]
-
-list(
-    FILTER
-    FILES
-    EXCLUDE
-    REGEX
-    ".*/\\.gitkeep"
-)
-
-message(
-    STATUS
-    "FILES: ${FILES}"
-)
-
-foreach(FILE IN LISTS FILES)
-    message(STATUS "FILE: ${FILE}")
+foreach (FILE IN LISTS FILES)
     file(
         RELATIVE_PATH
         RELATIVE_PATH_WITH_RESPECT_TO_OUTPUT_DIR
@@ -105,7 +72,7 @@ foreach(FILE IN LISTS FILES)
             PAGE_TITLE
             "Directory ${RELATIVE_PATH_WITH_RESPECT_TO_OUTPUT_DIR}"
         )
-        if("${PAGE_TITLE}" STREQUAL "Directory lexLeo")
+        if ("${PAGE_TITLE}" STREQUAL "Directory lexLeo")
             set(
                 PAGE_TITLE
                 "All the files of the project"
@@ -164,4 +131,4 @@ ${FILE_IN_DIR_IDENTIFIER}"
  */\n"
         )
     endif ()
-endforeach()
+endforeach ()
