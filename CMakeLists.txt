@@ -11,7 +11,7 @@ project(lexLeo LANGUAGES C)
 message(STATUS "CMake generator: ${CMAKE_GENERATOR}")
 # Detect if we are using a multi-config generator (Visual Studio, Xcode, etc.)
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if(isMultiConfig)
+if (isMultiConfig)
     message(STATUS [=[
 Multi-config generator detected (e.g., Visual Studio, Xcode).
 The build type is not selected during CMake configuration.
@@ -25,49 +25,47 @@ Then CMAKE_BUILD_TYPE is not set yet.
     )
     set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
     message(STATUS "CMAKE_CONFIGURATION_TYPES: ${CMAKE_CONFIGURATION_TYPES}") #debug
-else()
+else ()
     message(STATUS "Single-config generator detected (e.g., Makefiles, Ninja).")
     # Default to Debug build if nothing is specified
-    if(NOT CMAKE_BUILD_TYPE)
+    if (NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-    endif()
+    endif ()
     # Set allowed build types for cache editor GUIs or tools
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
     message(STATUS "CMAKE_BUILD_TYPE is set to ${CMAKE_BUILD_TYPE}") #debug
-endif()
-
+endif ()
 
 
 #------------------------------------------------------------------------------
 # TESTS MANAGEMENT
 #------------------------------------------------------------------------------
 
-if(BUILD_TESTING)
+if (BUILD_TESTING)
 
-# The include(CTest) command loads the CTest module from CMake's standard
-# module directory. This module provides functions to manage and run tests
-# as part of the build process. CTest manages test case registration and
-# execution, integrating seamlessly with CMake to enable commands like
-# add_test(). It searches for the CTest.cmake script in the default CMake
-# Modules directory, pre-packaged with the CMake installation. This setup
-# facilitates creating, managing, and running tests across different
-# platforms and configurations, ensuring consistent test behavior.
-include(CTest)
+    # The include(CTest) command loads the CTest module from CMake's standard
+    # module directory. This module provides functions to manage and run tests
+    # as part of the build process. CTest manages test case registration and
+    # execution, integrating seamlessly with CMake to enable commands like
+    # add_test(). It searches for the CTest.cmake script in the default CMake
+    # Modules directory, pre-packaged with the CMake installation. This setup
+    # facilitates creating, managing, and running tests across different
+    # platforms and configurations, ensuring consistent test behavior.
+    include(CTest)
 
-# Enable the testing functionality so CMake can prepare a test driver
-# This command must be called in the root tests.cmake to enable integration
-# of test cases defined in any subdirectory of the project.
-enable_testing()
+    # Enable the testing functionality so CMake can prepare a test driver
+    # This command must be called in the root tests.cmake to enable integration
+    # of test cases defined in any subdirectory of the project.
+    enable_testing()
 
-# Add the 'tests' subdirectory which contains only a tests.cmake.
-# It configures the Check and CMocka testing libraries for unit and mock
-# testing.
-# Then it defines targets to check all tests with verbose output and
-# to run specific groups of tests using labels.
-include(tests/tests.cmake)
+    # Add the 'tests' subdirectory which contains only a tests.cmake.
+    # It configures the Check and CMocka testing libraries for unit and mock
+    # testing.
+    # Then it defines targets to check all tests with verbose output and
+    # to run specific groups of tests using labels.
+    include(tests/tests.cmake)
 
-endif()
-
+endif ()
 
 
 #------------------------------------------------------------------------------
@@ -118,6 +116,80 @@ set(
 
 
 #------------------------------------------------------------------------------
+# MEMORY ALLOCATOR MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/memory_allocator)
+
+set(
+    USE_MEMORY_ALLOCATOR ON
+    CACHE BOOL
+    "Enable custom memory allocator support in subprojects"
+)
+set(
+    MEMORY_ALLOCATOR_TARGET memory_allocator
+    CACHE STRING
+    "CMake target to use for memory allocator"
+)
+set(
+    MEMORY_ALLOCATOR_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/memory_allocator/include
+    CACHE PATH "Path to memory allocator header directory"
+)
+
+# memory_allocator library dependency injection ("at cmake scope") will be automatically
+# done by convention in other subprojects that uses the mechanism of the
+# following kind:
+#
+# if (USE_MEMORY_ALLOCATOR)
+#     target_compile_definitions(mymodule PRIVATE USE_MEMORY_ALLOCATOR)
+#     target_include_directories(mymodule PUBLIC ${MEMORY_ALLOCATOR_HEADER_DIR})
+#     target_link_libraries(mymodule PUBLIC ${MEMORY_ALLOCATOR_TARGET})
+# endif()
+#
+# and in C sources:
+# #ifdef USE_MEMORY_ALLOCATOR
+# set_allocators(mock_malloc, mock_free); // example for tests
+# #endif
+
+
+#------------------------------------------------------------------------------
+# STRING UTILS MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/string_utils)
+
+set(
+    USE_STRING_UTILS ON
+    CACHE BOOL
+    "Enable custom string utils support in subprojects"
+)
+set(
+    STRING_UTILS_TARGET string_utils
+    CACHE STRING
+    "CMake target to use for string  utils"
+)
+set(
+    STRING_UTILS_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/string_utils/include
+    CACHE PATH "Path to string utils header directory"
+)
+
+# string_utils library dependency injection ("at cmake scope") will be automatically
+# done by convention in other subprojects that uses the mechanism of the
+# following kind:
+#
+# if (USE_STRING_UTILS)
+#     target_compile_definitions(data_structures PRIVATE USE_STRING_UTILS)
+#     target_include_directories(data_structures PUBLIC ${USE_STRING_UTILS_HEADER_DIR})
+#     target_link_libraries(data_structures PUBLIC ${USE_STRING_UTILS_TARGET})
+# endif ()
+#
+# and in C sources:
+# #ifdef USE_STRING_UTILS
+# set_string_compare(strcmp_mock); // example for tests
+# #endif
+
+
+#------------------------------------------------------------------------------
 # OTHER LIBRARIES
 #------------------------------------------------------------------------------
 
@@ -125,6 +197,7 @@ add_subdirectory(src/data_structures)
 
 # TO BE IMPLEMENTED
 # add_subdirectory(src/symtab)
+# "Draft idea" : symtab is standalone but it depends on data_structures
 # add_subdirectory(src/ast)
 # add_subdirectory(src/parser)
 # add_subdirectory(src/lexer)
