@@ -8,6 +8,8 @@ set(DIRS_TO_BE_PARSED # to avoid parsing unexpected artifact
     "${SOURCE_DIR}/doxygen_management"
     "${SOURCE_DIR}/src"
     "${SOURCE_DIR}/tests"
+    "${SOURCE_DIR}/scripts"
+    "${SOURCE_DIR}/tools"
 )
 
 set(FILES "${SOURCE_DIR}")

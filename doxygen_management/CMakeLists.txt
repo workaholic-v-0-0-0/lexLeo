@@ -303,6 +303,14 @@ add_dependencies(copy_doc_into_sources_directory map_dox_to_html)
 add_custom_target(open_doc
     COMMAND ${CMAKE_COMMAND} -E echo "Opening documentation via Firefox..."
     COMMAND $<TARGET_FILE:open_doc_executable> "${CMAKE_BINARY_DIR}/docs/html/index.html"
-    DEPENDS open_doc static-doc
+    DEPENDS static-doc
     COMMENT "Opening documentation via Firefox."
+)
+
+# update documentation on droplet
+add_custom_target(update_docs_on_droplet
+    COMMAND ${CMAKE_COMMAND} -E echo "Updating documentation on droplet..."
+    COMMAND $<TARGET_FILE:update_docs_on_droplet_executable> "${CMAKE_BINARY_DIR}"
+    DEPENDS static-doc
+    COMMENT "Updating documentation on droplet."
 )

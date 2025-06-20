@@ -88,6 +88,34 @@
         "value": "lexLeo_2doxygen_management_2stylesheet_8css.html"
     },
     {
+        "key": "lexLeo_2scripts",
+        "value": "lexLeo_2scripts.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2re_debug_build-check_8sh",
+        "value": "lexLeo_2scripts_2re_debug_build-check_8sh.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2re_debug_build-check_memory_8sh",
+        "value": "lexLeo_2scripts_2re_debug_build-check_memory_8sh.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2re_debug_build-doc_8sh",
+        "value": "lexLeo_2scripts_2re_debug_build-doc_8sh.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2re_debug_build-make_and_open_doc_8sh",
+        "value": "lexLeo_2scripts_2re_debug_build-make_and_open_doc_8sh.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2re_debug_build-no_check_8sh",
+        "value": "lexLeo_2scripts_2re_debug_build-no_check_8sh.html"
+    },
+    {
+        "key": "lexLeo_2scripts_2update_docs_on_droplet_8sh",
+        "value": "lexLeo_2scripts_2update_docs_on_droplet_8sh.html"
+    },
+    {
         "key": "lexLeo_2src",
         "value": "lexLeo_2src.html"
     },
@@ -414,5 +442,21 @@
     {
         "key": "lexLeo_2tests_2tests_8cmake",
         "value": "lexLeo_2tests_2tests_8cmake.html"
+    },
+    {
+        "key": "lexLeo_2tools",
+        "value": "lexLeo_2tools.html"
+    },
+    {
+        "key": "lexLeo_2tools_2CMakeLists_8txt",
+        "value": "lexLeo_2tools_2CMakeLists_8txt.html"
+    },
+    {
+        "key": "lexLeo_2tools_2open_doc_8c",
+        "value": "lexLeo_2tools_2open_doc_8c.html"
+    },
+    {
+        "key": "lexLeo_2tools_2update_docs_on_droplet_8c",
+        "value": "lexLeo_2tools_2update_docs_on_droplet_8c.html"
     }
 ]

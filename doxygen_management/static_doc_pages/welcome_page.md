@@ -2,6 +2,7 @@
 
 Welcome to the lexLeo programming language project! This repository contains the source code for lexLeo's compiler and
 interpreter, designed to explore and implement the capabilities of this new programming language.
+**The full documentation is available online at [https://caltuli.online/lexleo](https://caltuli.online/lexleo).**
 
 This project is primarily an educational initiative designed to deepen understanding and practical application of
 fundamental programming language concepts, as well as the principles of compilers and interpreters. It aims to provide
