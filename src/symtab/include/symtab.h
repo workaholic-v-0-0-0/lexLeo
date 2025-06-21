@@ -5,11 +5,15 @@
 
 typedef struct symbol {
     char *name;
-    void *image;
+    //ast *image;
 } symbol;
-// note: in hashtable, an entry with key = symbol.name and *value = symbol
+// note: registrer in hashtable with an entry with key = symbol.name and *value = symbol
 
 typedef struct symtab symtab;
+
+// for info :
+// typedef void (*hashtable_destroy_value_fn_t)(void *value);
+void symtab_destroy_symbol(void *value);
 
 symtab *symtab_create(void);
 void symtab_destroy(symtab *st);

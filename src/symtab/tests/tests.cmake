@@ -7,6 +7,7 @@ add_executable(
 target_include_directories(
     test_symtab
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/data_structures/include"
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
 target_link_libraries(test_symtab PRIVATE symtab ${CMOCKA_LIBRARY})

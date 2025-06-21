@@ -194,10 +194,9 @@ set(
 #------------------------------------------------------------------------------
 
 add_subdirectory(src/data_structures)
+add_subdirectory(src/symtab) # depends on data_structures
 
 # TO BE IMPLEMENTED
-# add_subdirectory(src/symtab)
-# "Draft idea" : symtab is standalone but it depends on data_structures
 # add_subdirectory(src/ast)
 # add_subdirectory(src/parser)
 # add_subdirectory(src/lexer)

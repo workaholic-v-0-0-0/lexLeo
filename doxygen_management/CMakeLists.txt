@@ -160,7 +160,6 @@ file(
 # already parsable by Doxygen
 add_custom_target(
     verbinclude_all_git_tracked_files
-    ALL
     COMMAND ${CMAKE_COMMAND}
     -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DOUTPUT_DIR="${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}"
@@ -176,7 +175,6 @@ Doxygen unparsable files of the source directory"
 
 add_custom_target(
     dynamic_doc
-    ALL
     COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_CONFIG_TO_VERBINCLUDE_GIT_TRACKED_FILES}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating dynamic documentation pages with Doxygen"
@@ -196,7 +194,6 @@ set(
 
 add_custom_target(
     map_dox_to_html
-    ALL
     COMMAND ${CMAKE_COMMAND}
     -DVERBINCLUDE_WRAPPED_PROJECT_FILES_DIR="${VERBINCLUDE_WRAPPED_PROJECT_FILES_DIR}"
     -DHTML_DIR=${DOC_TO_FETCH_LINKS_TMP}/docs
@@ -224,7 +221,6 @@ file(
 # project_tree.json generation
 add_custom_target(
     generate_project_tree_json
-    ALL
     COMMAND ${CMAKE_COMMAND}
     -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBUILT_DIR=${CMAKE_BINARY_DIR}
@@ -256,7 +252,6 @@ add_dependencies(remove_doc_to_fetch_links_tmp generate_project_tree_json)
 # project_tree.dox generation
 add_custom_target(
     generate_project_tree_dox
-    ALL
     COMMAND ${CMAKE_COMMAND}
     -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DBUILT_DIR=${CMAKE_BINARY_DIR}
@@ -278,7 +273,6 @@ add_dependencies(
 
 # Create a custom target to generate API documentation using Doxygen.
 add_custom_target(static-doc
-    ALL
     COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_CONFIG}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating static documentation pages with Doxygen"
@@ -289,7 +283,6 @@ add_dependencies(static-doc generate_project_tree_dox)
 # copy doc in sources directory
 add_custom_target(
     copy_doc_into_sources_directory
-    ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_BINARY_DIR}/docs/html
     ${CMAKE_SOURCE_DIR}/docs
