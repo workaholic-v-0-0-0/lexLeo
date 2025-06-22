@@ -29,6 +29,7 @@ static const void *DUMMY_STRDUP_RETURNED_VALUE = &dummy;
 static const int DUMMY_INT = 7;
 static char *const DUMMY_STRING = "dummy string";
 #define STRDUP_ERROR_CODE NULL
+static void *const DUMMY_SYMBOL = (void *) &dummy;
 
 
 
@@ -53,6 +54,7 @@ char *mock_strdup(const char *s) {
 
 static void *fake_malloc_returned_value_for_a_typed_data_int = NULL;
 static void *fake_malloc_returned_value_for_a_typed_data_string = NULL;
+static void *fake_malloc_returned_value_for_a_typed_data_symbol = NULL;
 static void *fake_typed_data_int = NULL;
 static char *fake_strdup_returned_value_for_string_value = NULL;
 static char *string_value = NULL;
@@ -102,6 +104,7 @@ static int create_typed_data_int_teardown(void **state) {
     }
     return 0;
 }
+
 
 
 //-----------------------------------------------------------------------------
@@ -327,6 +330,71 @@ static void destroy_typed_data_string_calls_free_for_string_value_field_then_for
 
 
 //-----------------------------------------------------------------------------
+// ast_create_typed_data_symbol TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_typed_data_symbol_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int create_typed_data_symbol_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: any
+// Expected: calls malloc with sizeof(typed_data)
+static void create_typed_data_symbol_calls_malloc_for_a_typed_data(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid mock call
+    ast_create_typed_data_symbol(DUMMY_SYMBOL);
+}
+
+// Given: malloc fails
+// Expected: return NULL
+static void create_typed_data_symbol_returns_null_when_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    assert_null(ast_create_typed_data_symbol(DUMMY_SYMBOL));
+}
+
+// Given: malloc succeeds
+// Expected: the malloc'ed typed_data is initialized and returned
+static void create_typed_data_symbol_initializes_and_returns_malloced_typed_data_when_malloc_succeds(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_symbol, sizeof(typed_data));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_symbol);
+    typed_data *ret = ast_create_typed_data_symbol(DUMMY_SYMBOL);
+    assert_int_equal(ret->type, TYPE_SYMBOL);
+    assert_ptr_equal((ret->data).symbol_value, DUMMY_SYMBOL);
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_a_typed_data_symbol);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -373,11 +441,24 @@ int main(void) {
             destroy_typed_data_string_setup, destroy_typed_data_string_teardown),
     };
 
+    const struct CMUnitTest ast_create_typed_data_symbol_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_typed_data_symbol_calls_malloc_for_a_typed_data,
+            create_typed_data_symbol_setup, create_typed_data_symbol_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_typed_data_symbol_returns_null_when_malloc_fails,
+            create_typed_data_symbol_setup, create_typed_data_symbol_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_typed_data_symbol_initializes_and_returns_malloced_typed_data_when_malloc_succeds,
+            create_typed_data_symbol_setup, create_typed_data_symbol_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_typed_data_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_string_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_typed_data_symbol_tests, NULL, NULL);
 
     return failed;
 }

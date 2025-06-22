@@ -44,3 +44,17 @@ void ast_destroy_typed_data_string(typed_data *typed_data_string) {
     AST_FREE(typed_data_string->data.string_value);
     AST_FREE(typed_data_string);
 }
+
+typed_data *ast_create_typed_data_symbol(symbol *s) {
+    typed_data *ret = AST_MALLOC(sizeof(typed_data));
+
+    if (!ret)
+        return NULL;
+
+    ret->type = TYPE_SYMBOL;
+    (ret->data).symbol_value = s;
+
+    return ret;
+
+    return ret;
+}
