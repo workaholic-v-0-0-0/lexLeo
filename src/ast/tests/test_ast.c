@@ -55,6 +55,8 @@ static void *fake_malloc_returned_value_for_a_typed_data_int = NULL;
 static void *fake_malloc_returned_value_for_a_typed_data_string = NULL;
 static void *fake_typed_data_int = NULL;
 static char *fake_strdup_returned_value_for_string_value = NULL;
+static char *string_value = NULL;
+static typed_data *typed_data_string = NULL;
 
 
 
@@ -276,6 +278,55 @@ static void ast_create_typed_data_string_initializes_and_returns_malloced_typed_
 
 
 //-----------------------------------------------------------------------------
+// ast_destroy_typed_data_string TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_typed_data_string_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&typed_data_string, sizeof(typed_data));
+    alloc_and_save_address_to_be_freed((void **)&string_value, strlen(DUMMY_STRING)+1);
+    typed_data_string->type = TYPE_STRING;
+    typed_data_string->data.string_value = string_value;
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int destroy_typed_data_string_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: any
+// Expected: calls free with typed_data_string->data.string_value and then with typed_data_string
+static void destroy_typed_data_string_calls_free_for_string_value_field_then_for_typed_data_string(void **state) {
+    expect_value(mock_free, ptr, typed_data_string->data.string_value);
+    expect_value(mock_free, ptr, typed_data_string);
+    ast_destroy_typed_data_string(typed_data_string);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -316,10 +367,17 @@ int main(void) {
             ast_create_typed_data_string_setup, ast_create_typed_data_string_teardown),
     };
 
+    const struct CMUnitTest ast_destroy_typed_data_string_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            destroy_typed_data_string_calls_free_for_string_value_field_then_for_typed_data_string,
+            destroy_typed_data_string_setup, destroy_typed_data_string_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_typed_data_string_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_typed_data_string_tests, NULL, NULL);
 
     return failed;
 }
