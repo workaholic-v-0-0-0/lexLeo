@@ -7,7 +7,6 @@ typedef enum {
     AST_TYPE_PROGRAM,
     AST_TYPE_LIST_OF_PARAMETERS,
     AST_TYPE_PARAMETER,
-    AST_TYPE_INSTRUCTION,
     AST_TYPE_BINDING,
     AST_TYPE_EVALUATION,
     AST_TYPE_EXECUTION,
@@ -39,21 +38,38 @@ typedef struct {
     } data;
 } typed_data;
 
+typedef struct ast_children_t {
+    size_t children_nb;
+    struct ast **children;
+} ast_children_t;
+
 typedef struct ast {
     ast_type type;
     union {
-        struct {
-            size_t children_nb;
-            struct ast **children;
-        };
+        ast_children_t children;
         typed_data data;
     };
 } ast;
 
+typed_data *ast_create_typed_data_int(int i);
+void ast_destroy_typed_data_int(typed_data *typed_data_int);
+
+typed_data *ast_create_typed_data_string(char *s);
+void ast_destroy_typed_data_string(typed_data *typed_data_string);
+
+typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible of s
+void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // note: will call ast_destroy because symbol has field of type ast
+
 ast *ast_create_typed_data_wrapper(typed_data data);
 void ast_destroy_typed_data_wrapper(typed_data data);
+
+ast_children_t *ast_create_ast_children(size_t children_nb, struct ast **children);
+ast_children_t *ast_create_ast_children_var(size_t children_nb,...);
+void ast_destroy_ast_children(ast_children_t *);
+
 ast *ast_create(ast_type type, size_t children_nb,...);
 void ast_destroy(ast *);
+
 char *ast_serialize(ast *root);
 ast *ast_deserialize(char *);
 
