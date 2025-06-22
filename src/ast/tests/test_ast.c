@@ -44,6 +44,7 @@ void mock_free(void *ptr) {
 }
 
 static void *fake_malloc_returned_value_for_a_typed_data_int;
+static void *fake_typed_data_int = NULL;
 
 
 
@@ -127,6 +128,51 @@ static void create_typed_data_int_initializes_fields_when_malloc_succeds(void **
 
 
 //-----------------------------------------------------------------------------
+// ast_destroy_typed_data_int TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_typed_data_int_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_typed_data_int, sizeof(typed_data));
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int destroy_typed_data_int_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: any
+// Expected: calls free with typed_data_int
+static void destroy_typed_data_int_calls_free(void **state) {
+    expect_value(mock_free, ptr, fake_typed_data_int);
+    ast_destroy_typed_data_int(fake_typed_data_int);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -143,7 +189,14 @@ int main(void) {
             create_typed_data_int_setup, create_typed_data_int_teardown),
     };
 
+    const struct CMUnitTest ast_destroy_typed_data_int_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            destroy_typed_data_int_calls_free,
+            destroy_typed_data_int_setup, destroy_typed_data_int_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
     return failed;
 }

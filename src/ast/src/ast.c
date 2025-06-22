@@ -17,3 +17,7 @@ typed_data *ast_create_typed_data_int(int i) {
 
     return ret;
 }
+
+void ast_destroy_typed_data_int(typed_data *typed_data_int) {
+    AST_FREE(typed_data_int);
+}
