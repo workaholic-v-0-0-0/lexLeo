@@ -16,12 +16,10 @@ doxygen_management/doc_to_fetch_links_tmp/
 docs/
 Doxyfile
 Doxyfile_to_fetch_links
+doc_to_fetch_links_tmp/
 
 # IDE artifacts
 .idea/
 
 # backup artifacts
 *~
-
-# todo list
-TODO.txt

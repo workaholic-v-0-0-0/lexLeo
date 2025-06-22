@@ -37,6 +37,7 @@ list(
     "${SOURCE_DIR}/README.md"
     "${SOURCE_DIR}/Doxyfile" # a build artifact
     "${SOURCE_DIR}/Doxyfile_to_fetch_links" # a build artifact
+    "${SOURCE_DIR}/TODO.txt"
     "${SOURCE_DIR}"
 )
 
