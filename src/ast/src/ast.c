@@ -39,3 +39,8 @@ typed_data *ast_create_typed_data_string(char *s) {
 
     return ret;
 }
+
+void ast_destroy_typed_data_string(typed_data *typed_data_string) {
+    AST_FREE(typed_data_string->data.string_value);
+    AST_FREE(typed_data_string);
+}
