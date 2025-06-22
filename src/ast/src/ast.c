@@ -58,3 +58,7 @@ typed_data *ast_create_typed_data_symbol(symbol *s) {
 
     return ret;
 }
+
+void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
+    AST_FREE(typed_data_symbol);
+}

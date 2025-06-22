@@ -59,6 +59,7 @@ static void *fake_typed_data_int = NULL;
 static char *fake_strdup_returned_value_for_string_value = NULL;
 static char *string_value = NULL;
 static typed_data *typed_data_string = NULL;
+static typed_data *typed_data_symbol = NULL;
 
 
 
@@ -395,6 +396,53 @@ static void create_typed_data_symbol_initializes_and_returns_malloced_typed_data
 
 
 //-----------------------------------------------------------------------------
+// ast_destroy_typed_data_symbol TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_typed_data_symbol_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&typed_data_symbol, sizeof(typed_data));
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int destroy_typed_data_symbol_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: any
+// Expected: calls free with typed_data_symbol
+static void destroy_typed_data_symbol_calls_free(void **state) {
+    expect_value(mock_free, ptr, typed_data_symbol);
+    ast_destroy_typed_data_symbol(typed_data_symbol);
+}
+
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -453,12 +501,19 @@ int main(void) {
             create_typed_data_symbol_setup, create_typed_data_symbol_teardown),
     };
 
+    const struct CMUnitTest ast_destroy_typed_data_symbol_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            destroy_typed_data_symbol_calls_free,
+            destroy_typed_data_string_setup, destroy_typed_data_string_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_typed_data_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_typed_data_symbol_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_typed_data_symbol_tests, NULL, NULL);
 
     return failed;
 }
