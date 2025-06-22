@@ -3,9 +3,13 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
+// forward declaration to handle cross-dependency
+typedef struct ast ast;
+// note: symtab.c will need '#include "ast.h"'
+
 typedef struct symbol {
     char *name;
-    //ast *image;
+    ast *image;
 } symbol;
 // note: registrer in hashtable with an entry with key = symbol.name and *value = symbol
 

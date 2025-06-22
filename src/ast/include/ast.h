@@ -1,0 +1,60 @@
+// src/ast/include/ast.h
+
+#ifndef AST_H
+#define AST_H
+
+typedef enum {
+    AST_TYPE_PROGRAM,
+    AST_TYPE_LIST_OF_PARAMETERS,
+    AST_TYPE_PARAMETER,
+    AST_TYPE_INSTRUCTION,
+    AST_TYPE_BINDING,
+    AST_TYPE_EVALUATION,
+    AST_TYPE_EXECUTION,
+    AST_TYPE_COMPUTATION,
+    AST_TYPE_READING,
+    AST_TYPE_WRITING,
+    AST_TYPE_ADDITION,
+    // other elementary operations
+    AST_TYPE_DATA_WRAPPER,
+} ast_type;
+
+typedef enum {
+    TYPE_INT,
+    TYPE_STRING, // can be code snippet
+    TYPE_SYMBOL, // can be unbound or bound to another symbol
+    //TYPE_FUNCTION,
+} data_type;
+
+// forward declaration to handle cross-dependency
+typedef struct symbol symbol;
+
+typedef struct {
+    data_type type;
+    union {
+        int int_value;
+        char *string_value;
+        symbol *symbol_value;
+        //function *function_value;
+    } data;
+} typed_data;
+
+typedef struct ast {
+    ast_type type;
+    union {
+        struct {
+            size_t children_nb;
+            struct ast **children;
+        };
+        typed_data data;
+    };
+} ast;
+
+ast *ast_create_typed_data_wrapper(typed_data data);
+void ast_destroy_typed_data_wrapper(typed_data data);
+ast *ast_create(ast_type type, size_t children_nb,...);
+void ast_destroy(ast *);
+char *ast_serialize(ast *root);
+ast *ast_deserialize(char *);
+
+#endif //AST_H

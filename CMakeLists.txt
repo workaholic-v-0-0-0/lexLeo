@@ -194,12 +194,13 @@ set(
 #------------------------------------------------------------------------------
 
 add_subdirectory(src/data_structures)
-add_subdirectory(src/symtab) # depends on data_structures
+add_subdirectory(src/ast) # depends on data_structures
+add_subdirectory(src/symtab) # depends on data_structures and ast
 
 # TO BE IMPLEMENTED
-# add_subdirectory(src/ast)
 # add_subdirectory(src/parser)
 # add_subdirectory(src/lexer)
+# add_subdirectory(src/interpreter)
 # add_subdirectory(src/compiler)
 
 
