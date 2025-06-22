@@ -3,6 +3,8 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stddef.h>
+
 typedef enum {
     AST_TYPE_PROGRAM,
     AST_TYPE_LIST_OF_PARAMETERS,
