@@ -55,10 +55,20 @@ typed_data *ast_create_typed_data_symbol(symbol *s) {
     (ret->data).symbol_value = s;
 
     return ret;
-
-    return ret;
 }
 
 void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
     AST_FREE(typed_data_symbol);
+}
+
+ast *ast_create_typed_data_wrapper(typed_data *data) {
+    ast * ret = AST_MALLOC(sizeof(ast));
+
+    if (!ret)
+        return NULL;
+
+    ret->type = AST_TYPE_DATA_WRAPPER;
+    ret->data = data;
+
+    return ret;
 }
