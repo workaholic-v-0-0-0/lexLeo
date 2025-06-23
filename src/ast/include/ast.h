@@ -17,7 +17,7 @@ typedef enum {
     AST_TYPE_WRITING,
     AST_TYPE_ADDITION,
     // other elementary operations
-    AST_TYPE_DATA_WRAPPER,
+    AST_TYPE_DATA_WRAPPER, // leaf
 } ast_type;
 
 typedef enum {
@@ -49,7 +49,7 @@ typedef struct ast {
     ast_type type;
     union {
         ast_children_t children;
-        typed_data data;
+        typed_data *data;
     };
 } ast;
 
@@ -62,8 +62,8 @@ void ast_destroy_typed_data_string(typed_data *typed_data_string);
 typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible of s
 void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // note: will call ast_destroy because symbol has field of type ast
 
-ast *ast_create_typed_data_wrapper(typed_data data);
-void ast_destroy_typed_data_wrapper(typed_data data);
+ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible of data
+void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
 ast_children_t *ast_create_ast_children(size_t children_nb, struct ast **children);
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...);
