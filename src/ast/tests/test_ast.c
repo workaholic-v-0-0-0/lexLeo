@@ -13,7 +13,9 @@
 #include "logger.h"
 #include "list.h"
 
-#include "ast.h"
+#include "internal/ast_test_utils.h"
+
+
 
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
@@ -28,10 +30,22 @@ static const void *DUMMY_STRDUP_RETURNED_VALUE = &dummy;
 #define MALLOC_ERROR_CODE NULL
 static const int DUMMY_INT = 7;
 static char *const DUMMY_STRING = "dummy string";
-#define STRDUP_ERROR_CODE NULL
 static void *const DUMMY_SYMBOL = (void *) &dummy;
+#define STRDUP_ERROR_CODE NULL
 static typed_data *const DUMMY_TYPED_DATA = (typed_data *) &dummy;
-//static ast *const DUMMY_DATA_WRAPPER = (ast *) &dummy;
+static char *string_value = NULL;
+static char *symbol_value = NULL;
+static typed_data *typed_data_int = NULL;
+static typed_data *typed_data_string = NULL;
+static typed_data *typed_data_symbol = NULL;
+static ast *const TYPED_DATA_WRAPPER_DEFINED_IN_SETUP = (ast *) &dummy;
+static typed_data *const TYPED_DATA_INT_DEFINED_IN_SETUP = (typed_data *) &dummy;
+static typed_data *const TYPED_DATA_STRING_DEFINED_IN_SETUP = (typed_data *) &dummy;
+static typed_data *const TYPED_DATA_SYMBOL_DEFINED_IN_SETUP = (typed_data *) &dummy;
+static const int DUMMY_DATA_TYPE = 0;
+static ast *const DUMMY_DATA_WRAPPER = (ast *) &dummy;
+static const int DUMMY_CHILDREN_NB = 0;
+static ast **const DUMMY_AST_CHILDREN = (ast **) &dummy;
 
 
 
@@ -60,9 +74,28 @@ static void *fake_malloc_returned_value_for_a_typed_data_symbol = NULL;
 static void *fake_malloc_returned_value_for_an_ast = NULL;
 static void *fake_typed_data_int = NULL;
 static char *fake_strdup_returned_value_for_string_value = NULL;
-static char *string_value = NULL;
-static typed_data *typed_data_string = NULL;
-static typed_data *typed_data_symbol = NULL;
+
+/*
+typed_data *mock_ast_create_typed_data_int(int i) {
+    check_expected_ptr(i);
+    return mock_type(typed_data *);
+}
+*/
+
+void mock_ast_destroy_typed_data_int(typed_data *typed_data_int) {
+    printf("mock_ast_destroy_typed_data_int is called\n");
+    check_expected_ptr(typed_data_int);
+}
+
+void mock_ast_destroy_typed_data_string(typed_data *typed_data_string) {
+    printf("mock_ast_destroy_typed_data_string is called\n");
+    check_expected_ptr(typed_data_string);
+}
+
+void mock_ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
+    printf("mock_ast_destroy_typed_data_symbol is called\n");
+    check_expected_ptr(typed_data_symbol);
+}
 
 
 
@@ -509,6 +542,186 @@ static void create_typed_data_wrapper_initializes_and_returns_malloced_ast_when_
 
 
 //-----------------------------------------------------------------------------
+// ast_destroy_typed_data_wrapper TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST STRUCTURES
+//----------------------------------------------------------------------------
+
+typedef struct {
+    const char *label;
+    data_type type;
+    ast *typed_data_wrapper;
+    union {
+        typed_data *typed_data_int;
+        typed_data *typed_data_string;
+        typed_data *typed_data_symbol;
+    };
+} destroy_typed_data_wrapper_params_t;
+
+
+
+//-----------------------------------------------------------------------------
+// PARAM CASES
+//-----------------------------------------------------------------------------
+
+
+static const destroy_typed_data_wrapper_params_t destroy_typed_data_wrapper_params_template_int = {
+    .label = "a typed data wrapper for an int",
+    .type = TYPE_INT,
+    .typed_data_wrapper = TYPED_DATA_WRAPPER_DEFINED_IN_SETUP,
+    .typed_data_int = TYPED_DATA_INT_DEFINED_IN_SETUP,
+};
+
+static const destroy_typed_data_wrapper_params_t destroy_typed_data_wrapper_params_template_string = {
+    .label = "a typed data wrapper for a string",
+    .type = TYPE_STRING,
+    .typed_data_wrapper = TYPED_DATA_WRAPPER_DEFINED_IN_SETUP,
+    .typed_data_string = TYPED_DATA_STRING_DEFINED_IN_SETUP,
+};
+
+static const destroy_typed_data_wrapper_params_t destroy_typed_data_wrapper_params_template_symbol = {
+    .label = "a typed data wrapper for a symbol",
+    .type = TYPE_SYMBOL,
+    .typed_data_wrapper = TYPED_DATA_WRAPPER_DEFINED_IN_SETUP,
+    .typed_data_symbol = TYPED_DATA_SYMBOL_DEFINED_IN_SETUP,
+};
+
+static const destroy_typed_data_wrapper_params_t destroy_typed_data_wrapper_not_a_data_wrapper = {
+    .label = "not a typed data wrapper",
+    .type = DUMMY_DATA_TYPE,
+    .typed_data_wrapper = DUMMY_DATA_WRAPPER,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// HELPER
+//-----------------------------------------------------------------------------
+
+
+static void initialize_destroy_typed_data_wrapper_params(destroy_typed_data_wrapper_params_t *params) {
+    alloc_and_save_address_to_be_freed((void **)&(params->typed_data_wrapper), sizeof(ast));
+    params->typed_data_wrapper->type = AST_TYPE_DATA_WRAPPER;
+    switch (params->type) {
+        case TYPE_INT:
+            alloc_and_save_address_to_be_freed((void **)&(params->typed_data_int), sizeof(typed_data));
+            params->typed_data_int->type = TYPE_INT;
+            params->typed_data_int->data.int_value = DUMMY_INT;
+            params->typed_data_wrapper->data = params->typed_data_int;
+            break;
+        case TYPE_STRING:
+            alloc_and_save_address_to_be_freed((void **)&(params->typed_data_string), sizeof(typed_data));
+            params->typed_data_string->type = TYPE_STRING;
+            alloc_and_save_address_to_be_freed((void **)&(params->typed_data_string->data.string_value), strlen(DUMMY_STRING)+1);
+            memcpy(params->typed_data_string->data.string_value, DUMMY_STRING, strlen(DUMMY_STRING)+1);
+            params->typed_data_wrapper->data = params->typed_data_string;
+            break;
+        case TYPE_SYMBOL:
+            alloc_and_save_address_to_be_freed((void **)&(params->typed_data_symbol), sizeof(typed_data));
+            params->typed_data_symbol->type = TYPE_SYMBOL;
+            params->typed_data_symbol->data.symbol_value = DUMMY_SYMBOL;
+            params->typed_data_wrapper->data = params->typed_data_symbol;
+    }
+}
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_typed_data_wrapper_setup(void **state) {
+    const destroy_typed_data_wrapper_params_t *model = *state;
+    destroy_typed_data_wrapper_params_t *params = NULL;
+    if (state == (void **)&destroy_typed_data_wrapper_not_a_data_wrapper) {
+        ast *not_a_data_wrapper = NULL;
+        alloc_and_save_address_to_be_freed((void*)&not_a_data_wrapper, sizeof(ast));
+        not_a_data_wrapper->type = AST_TYPE_ADDITION;
+        not_a_data_wrapper->children.children_nb = DUMMY_CHILDREN_NB;
+        not_a_data_wrapper->children.children = DUMMY_AST_CHILDREN;
+        *state = not_a_data_wrapper;
+    } else {
+        alloc_and_save_address_to_be_freed((void*)&params, sizeof(destroy_typed_data_wrapper_params_t));
+        *params = *model;
+        initialize_destroy_typed_data_wrapper_params(params);
+        *state = params;
+    }
+    set_allocators(mock_malloc, mock_free);
+    set_ast_destroy_typed_data_int(mock_ast_destroy_typed_data_int);
+    set_ast_destroy_typed_data_string(mock_ast_destroy_typed_data_string);
+    set_ast_destroy_typed_data_symbol(mock_ast_destroy_typed_data_symbol);
+    return 0;
+}
+
+static int destroy_typed_data_wrapper_teardown(void **state) {
+    set_ast_destroy_typed_data_int(NULL);
+    set_ast_destroy_typed_data_string(NULL);
+    set_ast_destroy_typed_data_symbol(NULL);
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: ast_data_wrapper is null
+// Expected: does not any side effect
+static void destroy_typed_data_wrapper_do_nothing_when_argument_null(void **state) {
+    ast_destroy_typed_data_wrapper(NULL);
+}
+
+// Given: ast_data_wrapper->type is not AST_TYPE_DATA_WRAPPER
+// Expected: does not any side effect
+// params:
+//  - destroy_typed_data_wrapper_not_a_data_wrapper
+static void destroy_typed_data_wrapper_do_nothing_when_no_data_wrapper(void **state) {
+    ast_destroy_typed_data_wrapper((ast*)*state);
+}
+
+// Given: ast_data_wrapper->type is AST_TYPE_DATA_WRAPPER
+// Expected:
+// - calls ast_destroy_typed_data_<int|string|symbol> with field data of argument of destroy_typed_data_wrapper
+// - calls free with with argument of destroy_typed_data_wrapper
+// params:
+//  - destroy_typed_data_wrapper_params_template_int
+//  - destroy_typed_data_wrapper_params_template_string
+//  - destroy_typed_data_wrapper_params_template_symbol
+static void destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper(void **state) {
+    destroy_typed_data_wrapper_params_t *params = *state;
+    ast *typed_data_wrapper = ((destroy_typed_data_wrapper_params_t*)(*state))->typed_data_wrapper;
+    switch (params->type) {
+        case TYPE_INT:
+            expect_value(mock_ast_destroy_typed_data_int, typed_data_int, typed_data_wrapper->data);
+            break;
+        case TYPE_STRING:
+            expect_value(mock_ast_destroy_typed_data_string, typed_data_string, typed_data_wrapper->data);
+            break;
+        case TYPE_SYMBOL:
+            expect_value(mock_ast_destroy_typed_data_symbol, typed_data_symbol, typed_data_wrapper->data);
+    }
+    expect_value(mock_free, ptr, typed_data_wrapper);
+    ast_destroy_typed_data_wrapper(typed_data_wrapper);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -585,6 +798,22 @@ int main(void) {
             create_typed_data_wrapper_setup, create_typed_data_wrapper_teardown),
     };
 
+    const struct CMUnitTest ast_destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper_tests[] = {
+        cmocka_unit_test(destroy_typed_data_wrapper_do_nothing_when_argument_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_typed_data_wrapper_do_nothing_when_no_data_wrapper,
+            destroy_typed_data_wrapper_setup, destroy_typed_data_wrapper_teardown, (void *)&destroy_typed_data_wrapper_not_a_data_wrapper),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper,
+            destroy_typed_data_wrapper_setup, destroy_typed_data_wrapper_teardown, (void *)&destroy_typed_data_wrapper_params_template_int),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper,
+            destroy_typed_data_wrapper_setup, destroy_typed_data_wrapper_teardown, (void *)&destroy_typed_data_wrapper_params_template_string),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper,
+            destroy_typed_data_wrapper_setup, destroy_typed_data_wrapper_teardown, (void *)&destroy_typed_data_wrapper_params_template_symbol),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -593,6 +822,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_typed_data_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_typed_data_wrapper_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper_tests, NULL, NULL);
 
     return failed;
 }

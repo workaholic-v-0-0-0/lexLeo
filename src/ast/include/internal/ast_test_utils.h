@@ -1,0 +1,30 @@
+// src/ast/include/internal/ast_test_utils.h
+
+#ifndef AST_INTERNAL_H
+#define AST_INTERNAL_H
+
+#include "ast.h"
+
+#include "internal/ast_memory_allocator.h"
+#include "internal/ast_string_utils.h"
+
+#ifdef UNIT_TEST
+
+typedef void (*ast_destroy_typed_data_int_fn)(typed_data *typed_data_int);
+void real_ast_destroy_typed_data_int(typed_data *typed_data_int);
+extern ast_destroy_typed_data_int_fn ast_destroy_typed_data_int_mockable;
+void set_ast_destroy_typed_data_int(ast_destroy_typed_data_int_fn f);
+
+typedef void (*ast_destroy_typed_data_string_fn)(typed_data *typed_data_string);
+void real_ast_destroy_typed_data_string(typed_data *typed_data_string);
+extern ast_destroy_typed_data_string_fn ast_destroy_typed_data_string_mockable;
+void set_ast_destroy_typed_data_string(ast_destroy_typed_data_string_fn f);
+
+typedef void (*ast_destroy_typed_data_symbol_fn)(typed_data *typed_data_symbol);
+void real_ast_destroy_typed_data_symbol(typed_data *typed_data_symbol);
+extern ast_destroy_typed_data_symbol_fn ast_destroy_typed_data_symbol_mockable;
+void set_ast_destroy_typed_data_symbol(ast_destroy_typed_data_symbol_fn f);
+
+#endif
+
+#endif //AST_INTERNAL_H
