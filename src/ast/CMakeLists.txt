@@ -3,7 +3,12 @@
 cmake_minimum_required(VERSION 3.27)
 project(ast LANGUAGES C)
 
-add_library(ast STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/ast.c)
+add_library(
+    ast
+    STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ast.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/ast_test_utils.c
+)
 target_include_directories(
     ast
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -35,5 +40,6 @@ if (USE_STRING_UTILS)
 endif ()
 
 if (BUILD_TESTING)
+    target_compile_definitions(ast PRIVATE UNIT_TEST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()

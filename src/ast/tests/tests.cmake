@@ -12,6 +12,7 @@ target_include_directories(
 )
 target_link_libraries(test_ast PRIVATE ast ${CMOCKA_LIBRARY})
 target_compile_definitions(test_ast PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+target_compile_definitions(test_ast PRIVATE UNIT_TEST)
 add_test(NAME test_ast COMMAND test_ast)
 add_test(
     NAME test_ast_memory
@@ -21,5 +22,3 @@ add_test(
     $<TARGET_FILE:test_ast>
 )
 set_tests_properties(test_ast_memory PROPERTIES LABELS "memory")
-
-message(STATUS "HELLO")
