@@ -18,6 +18,7 @@ typedef enum {
     AST_TYPE_ADDITION,
     // other elementary operations
     AST_TYPE_DATA_WRAPPER, // leaf
+    AST_TYPE_NB_TYPES,
 } ast_type;
 
 typedef enum {
@@ -48,7 +49,7 @@ typedef struct ast_children_t {
 typedef struct ast {
     ast_type type;
     union {
-        ast_children_t children;
+        ast_children_t *children;
         typed_data *data;
     };
 } ast;
@@ -69,7 +70,7 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children);
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced
 void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb value correctness
 
-ast * ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *);
+ast * ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
 ast * ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children);
 ast * ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...);
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
