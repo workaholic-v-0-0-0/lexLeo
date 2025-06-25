@@ -25,6 +25,18 @@ void real_ast_destroy_typed_data_symbol(typed_data *typed_data_symbol);
 extern ast_destroy_typed_data_symbol_fn ast_destroy_typed_data_symbol_mockable;
 void set_ast_destroy_typed_data_symbol(ast_destroy_typed_data_symbol_fn f);
 
+typedef void (*ast_destroy_typed_data_wrapper_fn)(ast *ast_data_wrapper);
+void real_ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
+extern ast_destroy_typed_data_wrapper_fn ast_destroy_typed_data_wrapper_mockable;
+void set_ast_destroy_typed_data_wrapper(ast_destroy_typed_data_wrapper_fn f);
+
+
+
+typedef void (*ast_destroy_non_typed_data_wrapper_fn)(ast *non_typed_data_wrapper);
+void real_ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
+extern ast_destroy_non_typed_data_wrapper_fn ast_destroy_non_typed_data_wrapper_mockable;
+void set_ast_destroy_non_typed_data_wrapper(ast_destroy_non_typed_data_wrapper_fn f);
+
 #endif
 
 #endif //AST_INTERNAL_H

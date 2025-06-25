@@ -51,6 +51,8 @@ static ast dummy_ast_child_one;
 static ast dummy_ast_child_two;
 static ast *DUMMY_CHILDREN_ARRAY_OF_SIZE_ONE[] = {&dummy_ast_child_one};
 static ast *DUMMY_CHILDREN_ARRAY_OF_SIZE_TWO[] = {&dummy_ast_child_one, &dummy_ast_child_two};
+static ast_children_t *const AST_CHILDREN_T_DEFINED_IN_SETUP = (ast_children_t *)&dummy[7];
+static ast_children_t *const DUMMY_AST_CHILDREN_T = (ast_children_t *)&dummy[8];
 
 
 
@@ -92,6 +94,14 @@ void mock_ast_destroy_typed_data_string(typed_data *typed_data_string) {
 
 void mock_ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
     check_expected_ptr(typed_data_symbol);
+}
+
+void mock_ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
+    check_expected_ptr(ast_data_wrapper);
+}
+
+void mock_ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
+    check_expected_ptr(non_typed_data_wrapper);
 }
 
 
@@ -1027,6 +1037,176 @@ static void create_ast_children_var_initializes_and_returns_malloced_ast_childre
 
 
 
+//-----------------------------------------------------------------------------
+// ast_destroy_ast_children TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST STRUCTURES
+//----------------------------------------------------------------------------
+
+typedef struct {
+    const char *label;
+    size_t children_nb;
+    ast_children_t *ast_children;
+} destroy_ast_children_params_t;
+
+
+
+//-----------------------------------------------------------------------------
+// PARAM CASES
+//-----------------------------------------------------------------------------
+
+
+static const destroy_ast_children_params_t destroy_ast_children_params_null = {
+    .label = "ast_children is null",
+    //.children_nb = 0,
+    .children_nb = DUMMY_INT,
+    .ast_children = NULL,
+};
+
+static const destroy_ast_children_params_t destroy_ast_children_params_template_no_child = {
+    .label = "children_nb = 0",
+    .children_nb = 0,
+    .ast_children = DUMMY_AST_CHILDREN_T,
+};
+
+static const destroy_ast_children_params_t destroy_ast_children_params_template_one_child = {
+    .label = "children_nb = 1, the child is a AST_TYPE_DATA_WRAPPER",
+    .children_nb = 1,
+    .ast_children = AST_CHILDREN_T_DEFINED_IN_SETUP,
+};
+
+static const destroy_ast_children_params_t destroy_ast_children_params_template_two_child = {
+    .label = "children_nb = 2, first child is a AST_TYPE_DATA_WRAPPER but not the second",
+    .children_nb = 2,
+    .ast_children = AST_CHILDREN_T_DEFINED_IN_SETUP,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// HELPER
+//-----------------------------------------------------------------------------
+
+
+static void initialize_ast_children_dynamically(destroy_ast_children_params_t *params) {
+    if (params->children_nb == 0) {
+        alloc_and_save_address_to_be_freed((void**)&(params->ast_children), sizeof(ast_children_t));
+        params->ast_children->children_nb = 0;
+        params->ast_children->children = DUMMY_AST_CHILDREN;
+    }
+    if (params->children_nb == 1) {
+        alloc_and_save_address_to_be_freed((void**)&params->ast_children, sizeof(ast_children_t));
+        params->ast_children->children_nb = 1;
+        alloc_and_save_address_to_be_freed((void**)&(params->ast_children->children), 1 * sizeof(ast *));
+        alloc_and_save_address_to_be_freed((void**)&((params->ast_children->children)[0]), sizeof(ast));
+        ((params->ast_children->children)[0])->type = AST_TYPE_DATA_WRAPPER;
+        ((params->ast_children->children)[0])->data = DUMMY_TYPED_DATA;
+    }
+    if (params->children_nb == 2) {
+        alloc_and_save_address_to_be_freed((void**)&params->ast_children, sizeof(ast_children_t));
+        params->ast_children->children_nb = 2;
+        alloc_and_save_address_to_be_freed((void**)&(params->ast_children->children), 2 * sizeof(ast *));
+        alloc_and_save_address_to_be_freed((void**)&((params->ast_children->children)[0]), sizeof(ast));
+        alloc_and_save_address_to_be_freed((void**)&((params->ast_children->children)[1]), sizeof(ast));
+        ((params->ast_children->children)[0])->type = AST_TYPE_DATA_WRAPPER;
+        ((params->ast_children->children)[1])->type = AST_TYPE_COMPUTATION;
+        ((params->ast_children->children)[0])->data = DUMMY_TYPED_DATA;
+        ((params->ast_children->children)[1])->children = *DUMMY_AST_CHILDREN_T;
+    }
+    // note: do nothing with DUMMY_INT because DUMMY_INT = 7
+}
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_ast_children_setup(void **state) {
+    const destroy_ast_children_params_t *model = *state;
+    destroy_ast_children_params_t *params = NULL;
+    alloc_and_save_address_to_be_freed((void**)&params, sizeof(destroy_ast_children_params_t));
+    *params = *model;
+    initialize_ast_children_dynamically(params);
+    *state = params;
+    set_allocators(mock_malloc, mock_free);
+    set_ast_destroy_typed_data_wrapper(mock_ast_destroy_typed_data_wrapper);
+    set_ast_destroy_non_typed_data_wrapper(mock_ast_destroy_non_typed_data_wrapper);
+    return 0;
+}
+
+static int destroy_ast_children_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_ast_destroy_typed_data_wrapper(NULL);
+    set_ast_destroy_non_typed_data_wrapper(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// Given: ast_children is null
+// Expected: does not any side effect
+// params: destroy_ast_children_params_null
+static void destroy_ast_children_do_nothing_when_argument_null(void **state) {
+    destroy_ast_children_params_t *params = *state;
+    ast_destroy_ast_children(params->ast_children);
+}
+
+// Given: children_nb = 0
+// Expected: does not any side effect
+// params: destroy_ast_children_params_template_no_child
+static void destroy_ast_children_do_nothing_when_no_child(void **state) {
+    destroy_ast_children_params_t *params = *state;
+    ast_destroy_ast_children(params->ast_children);
+}
+
+// Given: children_nb = 1
+// Expected:
+//  - calls ast_destroy_typed_data_wrapper with ast_children->children[0]
+//  - calls free with ast_children->children
+//  - calls free with ast_children
+// params: destroy_ast_children_params_template_one_child
+static void destroy_ast_children_calls_destroy_properly_when_one_child_which_is_data_wrapper(void **state) {
+    destroy_ast_children_params_t *params = *state;
+    expect_value(mock_ast_destroy_typed_data_wrapper, ast_data_wrapper, params->ast_children->children[0]);
+    expect_value(mock_free, ptr, params->ast_children->children);
+    expect_value(mock_free, ptr, params->ast_children);
+    ast_destroy_ast_children(params->ast_children);
+}
+
+// Given: children_nb = 2, first child is a typed data wrapper but not the second
+// Expected:
+//  - calls ast_destroy_typed_data_wrapper with ast_children->children[0]
+//  - calls ast_destroy_non_typed_data_wrapper with ast_children->children[1]
+//  - calls free with ast_children->children
+//  - calls free with ast_children
+// params: destroy_ast_children_params_template_two_child
+static void destroy_ast_children_calls_destroy_properly_when_two_children_one_data_wrapper_other_not(void **state) {
+    destroy_ast_children_params_t *params = *state;
+    expect_value(mock_ast_destroy_typed_data_wrapper, ast_data_wrapper, params->ast_children->children[0]);
+    expect_value(mock_ast_destroy_non_typed_data_wrapper, non_typed_data_wrapper, params->ast_children->children[1]);
+    expect_value(mock_free, ptr, params->ast_children->children);
+    expect_value(mock_free, ptr, params->ast_children);
+    ast_destroy_ast_children(params->ast_children);
+}
+
+
 
 
 
@@ -1183,6 +1363,21 @@ int main(void) {
             create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
     };
 
+    const struct CMUnitTest ast_destroy_ast_children_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_ast_children_do_nothing_when_argument_null,
+            destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_null),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_ast_children_do_nothing_when_no_child,
+            destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_template_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_ast_children_calls_destroy_properly_when_one_child_which_is_data_wrapper,
+            destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            destroy_ast_children_calls_destroy_properly_when_two_children_one_data_wrapper_other_not,
+            destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_template_two_child),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -1194,6 +1389,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_ast_children_arr_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_ast_children_var_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_ast_children_tests, NULL, NULL);
 
     return failed;
 }

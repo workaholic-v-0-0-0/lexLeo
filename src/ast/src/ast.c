@@ -7,6 +7,8 @@
 
 #include <stdarg.h>
 
+#include <stdio.h> // to debug
+
 #include <stdlib.h>
 
 typed_data *ast_create_typed_data_int(int i) {
@@ -88,21 +90,25 @@ ast *ast_create_typed_data_wrapper(typed_data *data) {
 }
 
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
+#ifdef UNIT_TEST
+    ast_destroy_typed_data_wrapper_mockable(ast_data_wrapper);
+#else
     if ((!ast_data_wrapper) ||(ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
         return;
 
     typed_data *data = ast_data_wrapper->data;
     switch (data->type) {
-    case TYPE_INT:
-        ast_destroy_typed_data_int(data);
-        break;
-    case TYPE_STRING:
-        ast_destroy_typed_data_string(data);
-        break;
-    case TYPE_SYMBOL:
-        ast_destroy_typed_data_symbol(data);
+        case TYPE_INT:
+            ast_destroy_typed_data_int(data);
+            break;
+        case TYPE_STRING:
+            ast_destroy_typed_data_string(data);
+            break;
+        case TYPE_SYMBOL:
+            ast_destroy_typed_data_symbol(data);
     }
     AST_FREE(ast_data_wrapper);
+#endif
 }
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
@@ -144,4 +150,28 @@ ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
     ret->children = children;
 
     return ret;
+}
+
+void ast_destroy_ast_children(ast_children_t *ast_children) {
+    if ((!ast_children) || (ast_children->children_nb == 0))
+        return;
+
+    for (size_t i = 0; i < ast_children->children_nb; i++) {
+        if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
+            ast_destroy_non_typed_data_wrapper(ast_children->children[i]);
+        else
+            ast_destroy_typed_data_wrapper(ast_children->children[i]);
+    }
+    AST_FREE(ast_children->children);
+    AST_FREE(ast_children);
+}
+
+
+
+void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
+#ifdef UNIT_TEST
+    ast_destroy_non_typed_data_wrapper_mockable(non_typed_data_wrapper);
+#else
+    // placeholder to be able to test ast_destroy_ast_children
+#endif
 }
