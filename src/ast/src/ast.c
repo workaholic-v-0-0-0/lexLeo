@@ -102,3 +102,17 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
     }
     AST_FREE(ast_data_wrapper);
 }
+
+ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
+    if (children_nb == 0)
+        return NULL;
+
+    ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
+    if (!ret)
+        return NULL;
+
+    ret->children_nb = children_nb;
+    ret->children = children;
+
+    return ret;
+}
