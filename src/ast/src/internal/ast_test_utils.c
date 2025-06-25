@@ -29,4 +29,34 @@ void set_ast_destroy_typed_data_symbol(ast_destroy_typed_data_symbol_fn f) {
     ast_destroy_typed_data_symbol_mockable = f ? f : real_ast_destroy_typed_data_symbol;
 }
 
+ast_destroy_typed_data_wrapper_fn ast_destroy_typed_data_wrapper_mockable = real_ast_destroy_typed_data_wrapper;
+void real_ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
+    if ((!ast_data_wrapper) ||(ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
+        return;
+
+    typed_data *data = ast_data_wrapper->data;
+    switch (data->type) {
+        case TYPE_INT:
+            ast_destroy_typed_data_int(data);
+            break;
+        case TYPE_STRING:
+            ast_destroy_typed_data_string(data);
+            break;
+        case TYPE_SYMBOL:
+            ast_destroy_typed_data_symbol(data);
+    }
+    AST_FREE(ast_data_wrapper);
+}
+void set_ast_destroy_typed_data_wrapper(ast_destroy_typed_data_wrapper_fn f) {
+    ast_destroy_typed_data_wrapper_mockable = f ? f : real_ast_destroy_typed_data_wrapper;
+}
+
+ast_destroy_non_typed_data_wrapper_fn ast_destroy_non_typed_data_wrapper_mockable = real_ast_destroy_non_typed_data_wrapper;
+void real_ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
+    // placeholder to be able to test ast_destroy_ast_children
+}
+void set_ast_destroy_non_typed_data_wrapper(ast_destroy_non_typed_data_wrapper_fn f) {
+    ast_destroy_non_typed_data_wrapper_mockable = f ? f : real_ast_destroy_non_typed_data_wrapper;
+}
+
 #endif
