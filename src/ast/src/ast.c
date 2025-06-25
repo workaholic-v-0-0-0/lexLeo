@@ -5,6 +5,8 @@
 #include "internal/ast_memory_allocator.h"
 #include "internal/ast_string_utils.h"
 
+#include <stdarg.h>
+
 #include <stdlib.h>
 
 typed_data *ast_create_typed_data_int(int i) {
@@ -110,6 +112,33 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) 
     ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
     if (!ret)
         return NULL;
+
+    ret->children_nb = children_nb;
+    ret->children = children;
+
+    return ret;
+}
+
+ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
+    if (children_nb == 0)
+        return NULL;
+
+    ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
+    if (!ret)
+        return NULL;
+
+    ast **children = AST_MALLOC(children_nb * sizeof(ast *));
+    if (!children) {
+        AST_FREE(ret);
+        return NULL;
+    }
+
+    va_list args;
+    va_start(args, children_nb);
+    for (size_t i = 0; i < children_nb; i++) {
+        children[i] =va_arg(args, ast *);
+    }
+    va_end(args);
 
     ret->children_nb = children_nb;
     ret->children = children;

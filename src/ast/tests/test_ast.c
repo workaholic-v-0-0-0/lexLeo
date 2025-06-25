@@ -78,6 +78,7 @@ static void *fake_malloc_returned_value_for_a_typed_data_string = NULL;
 static void *fake_malloc_returned_value_for_a_typed_data_symbol = NULL;
 static void *fake_malloc_returned_value_for_an_ast = NULL;
 static void *fake_malloc_returned_value_for_an_ast_children_t = NULL;
+static void *fake_malloc_returned_value_for_a_double_ast_pointer = NULL;
 static void *fake_typed_data_int = NULL;
 static char *fake_strdup_returned_value_for_string_value = NULL;
 
@@ -859,6 +860,173 @@ static void create_ast_children_arr_initializes_and_returns_malloced_ast_childre
 
 
 
+//-----------------------------------------------------------------------------
+// ast_create_ast_children_var TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST STRUCTURES
+//----------------------------------------------------------------------------
+
+#define create_ast_children_var_params_t create_ast_children_arr_params_t
+
+
+
+//-----------------------------------------------------------------------------
+// PARAM CASES
+//-----------------------------------------------------------------------------
+
+
+static const create_ast_children_var_params_t create_ast_children_var_params_no_child = create_ast_children_arr_params_no_child;
+static const create_ast_children_var_params_t create_ast_children_var_params_template_one_child = create_ast_children_arr_params_template_one_child;
+static const create_ast_children_var_params_t create_ast_children_var_params_template_two_children = create_ast_children_arr_params_template_two_children;
+
+
+
+//-----------------------------------------------------------------------------
+// HELPER
+//-----------------------------------------------------------------------------
+
+
+// use initialize_ast_children define in "ast_create_ast_children_arr TESTS" section
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+#define create_ast_children_var_setup create_ast_children_arr_setup
+#define create_ast_children_var_teardown create_ast_children_arr_teardown
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// Given: children_nb = 0
+// Expected: returns null
+// params: create_ast_children_var_params_no_child
+static void create_ast_children_var_return_null_when_children_nb_0(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    assert_null(ast_create_ast_children_var(params->children_nb));
+}
+
+// Given: children_nb = 1
+// Expected: calls malloc with sizeof(ast_children_t)
+// params:
+//  - create_ast_children_var_params_template_one_child
+//  - create_ast_children_var_params_template_two_children
+static void create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid mock call
+    if (params->children_nb == 1)
+        ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
+}
+
+// Given: malloc fails
+// Expected: returns null
+// params:
+//  - create_ast_children_var_params_template_one_child
+//  - create_ast_children_var_params_template_two_children
+static void create_ast_children_var_return_null_when_malloc_fails(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    ast_children_t *ret = NULL;
+    if (params->children_nb == 1)
+        ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
+    assert_null(ret);
+}
+
+// Given: malloc for an ast_children_t succeeds
+// Expected: calls malloc with children_nb * sizeof(ast *)
+// params:
+//  - create_ast_children_var_params_template_one_child
+//  - create_ast_children_var_params_template_two_children
+static void create_ast_children_var_calls_malloc_for_a_double_pointer_of_ast_when_malloc_for_an_ast_children_t_succeeds(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    if (params->children_nb == 1)
+        ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
+}
+
+// Given: malloc for a double pointer of ast fails
+// Expected: calls free with pointer returned by malloc for an ast_children_t and returns null
+// params:
+//  - create_ast_children_var_params_template_one_child
+//  - create_ast_children_var_params_template_two_children
+static void create_ast_children_var_calls_free_with_pointer_for_ast_children_t_when_malloc_for_double_pointer_of_ast_fails(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast_children_t, sizeof(ast_children_t));
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast_children_t);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_an_ast_children_t);
+    ast_children_t *ret = NULL;
+    if (params->children_nb == 1)
+        ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
+    assert_null(ret);
+}
+
+// Given: malloc for a double pointer of ast succeeds, children_nb = 1
+// Expected: the malloc'ed typed_data is initialized and returned
+// params:
+//  - create_ast_children_var_params_template_one_child
+static void create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_one_arg(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast_children_t, sizeof(ast_children_t));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast_children_t);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
+    ast_children_t *ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
+    assert_int_equal(ret->children_nb, params->children_nb);
+    assert_ptr_equal(ret->children[0], params->ast_children[0]);
+    assert_ptr_not_equal(ret->children, params->ast_children); // double pointer of ast has been malloced
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast_children_t);
+}
+
+// Given: malloc for a double pointer of ast succeeds, children_nb = 2
+// Expected: the malloc'ed typed_data is initialized and returned
+// params:
+//  - create_ast_children_var_params_template_two_child
+static void create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_two_args(void **state) {
+    create_ast_children_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast_children_t, sizeof(ast_children_t));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
+    expect_value(mock_malloc, size, sizeof(ast_children_t));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast_children_t);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
+    ast_children_t *ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
+    assert_int_equal(ret->children_nb, params->children_nb);
+    assert_ptr_equal(ret->children[0], params->ast_children[0]);
+    assert_ptr_equal(ret->children[1], params->ast_children[1]);
+    assert_ptr_not_equal(ret->children, params->ast_children); // double pointer of ast has been malloced
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast_children_t);
+}
+
+
+
 
 
 
@@ -979,6 +1147,42 @@ int main(void) {
             create_ast_children_arr_setup, create_ast_children_arr_teardown, (void *)&create_ast_children_arr_params_template_two_children),
     };
 
+    const struct CMUnitTest ast_create_ast_children_var_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_return_null_when_children_nb_0,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_return_null_when_malloc_fails,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_return_null_when_malloc_fails,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_malloc_for_a_double_pointer_of_ast_when_malloc_for_an_ast_children_t_succeeds,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_malloc_for_a_double_pointer_of_ast_when_malloc_for_an_ast_children_t_succeeds,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_free_with_pointer_for_ast_children_t_when_malloc_for_double_pointer_of_ast_fails,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_calls_free_with_pointer_for_ast_children_t_when_malloc_for_double_pointer_of_ast_fails,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_one_arg,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_two_args,
+            create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -989,6 +1193,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_typed_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_ast_children_arr_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_ast_children_var_tests, NULL, NULL);
 
     return failed;
 }
