@@ -65,9 +65,14 @@ void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // note: will
 ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible of data
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
-ast_children_t *ast_create_ast_children(size_t children_nb, struct ast **children);
+ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb value correctness
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...);
 void ast_destroy_ast_children(ast_children_t *);
+
+ast * ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *);
+ast * ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children);
+ast * ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...);
+void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
 
 ast *ast_create(ast_type type, size_t children_nb,...);
 void ast_destroy(ast *);
