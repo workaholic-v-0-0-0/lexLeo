@@ -30,12 +30,15 @@ void real_ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 extern ast_destroy_typed_data_wrapper_fn ast_destroy_typed_data_wrapper_mockable;
 void set_ast_destroy_typed_data_wrapper(ast_destroy_typed_data_wrapper_fn f);
 
-
-
 typedef void (*ast_destroy_non_typed_data_wrapper_fn)(ast *non_typed_data_wrapper);
 void real_ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
 extern ast_destroy_non_typed_data_wrapper_fn ast_destroy_non_typed_data_wrapper_mockable;
 void set_ast_destroy_non_typed_data_wrapper(ast_destroy_non_typed_data_wrapper_fn f);
+
+typedef ast_children_t * (*ast_create_ast_children_arr_fn)(size_t children_nb, ast **children);
+ast_children_t *real_ast_create_ast_children_arr(size_t children_nb, ast **children);
+extern ast_create_ast_children_arr_fn ast_create_ast_children_arr_mockable;
+void set_ast_create_ast_children_arr(ast_create_ast_children_arr_fn f);
 
 #endif
 
