@@ -112,6 +112,9 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 }
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
+#ifdef UNIT_TEST
+    ast_create_ast_children_arr_mockable(children_nb, children);
+#else
     if (children_nb == 0)
         return NULL;
 
@@ -123,6 +126,7 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) 
     ret->children = children;
 
     return ret;
+#endif
 }
 
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
@@ -167,7 +171,7 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 }
 
 ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children) {
-    if ((type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
+    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
         return NULL;
 
     ast *ret = AST_MALLOC(sizeof(ast));
@@ -180,6 +184,25 @@ ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_childr
     return ret;
 }
 
+ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children) {
+    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
+        return NULL;
+
+    ast_children_t * ast_children = ast_create_ast_children_arr(children_nb, children);
+    if (!ast_children)
+        return NULL;
+
+    ast *ret = AST_MALLOC(sizeof(ast));
+    if (!ret) {
+        AST_FREE(ast_children);
+        return NULL;
+    }
+
+    ret->type = type;
+    ret->children = ast_children;
+
+    return ret;
+}
 
 
 
