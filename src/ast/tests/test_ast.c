@@ -54,6 +54,7 @@ static ast *DUMMY_CHILDREN_ARRAY_OF_SIZE_TWO[] = {&dummy_ast_child_one, &dummy_a
 static ast_children_t *const AST_CHILDREN_T_DEFINED_IN_SETUP = (ast_children_t *)&dummy[7];
 static ast_children_t *const DUMMY_AST_CHILDREN_T_P = (ast_children_t *)&dummy[8];
 static const int UNSUPPORTED_AST_TYPE = AST_TYPE_NB_TYPES;
+static const int SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER = AST_TYPE_PROGRAM;
 
 
 
@@ -829,20 +830,14 @@ static int create_ast_children_arr_teardown(void **state) {
 // TESTS
 //-----------------------------------------------------------------------------
 
-// Given: children_nb = 0
-// Expected: returns null
-// params: create_ast_children_arr_params_no_child
-static void create_ast_children_arr_return_null_when_children_nb_0(void **state) {
-    create_ast_children_arr_params_t *params = *state;
-    assert_null(ast_create_ast_children_arr(params->children_nb, params->ast_children));
-}
 
-// Given: children_nb = 1 or 2
+// Given: any
 // Expected: calls malloc with sizeof(ast_children_t)
 // params:
+//  - create_ast_children_arr_params_no_child
 //  - create_ast_children_arr_params_template_one_child
 //  - create_ast_children_arr_params_template_two_children
-static void create_ast_children_arr_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2(void **state) {
+static void create_ast_children_arr_calls_malloc_for_an_ast_children_t(void **state) {
     create_ast_children_arr_params_t *params = *state;
     expect_value(mock_malloc, size, sizeof(ast_children_t));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
@@ -927,23 +922,19 @@ static const create_ast_children_var_params_t create_ast_children_var_params_tem
 // TESTS
 //-----------------------------------------------------------------------------
 
-// Given: children_nb = 0
-// Expected: returns null
-// params: create_ast_children_var_params_no_child
-static void create_ast_children_var_return_null_when_children_nb_0(void **state) {
-    create_ast_children_var_params_t *params = *state;
-    assert_null(ast_create_ast_children_var(params->children_nb));
-}
 
-// Given: children_nb = 1
+// Given: any
 // Expected: calls malloc with sizeof(ast_children_t)
 // params:
+//  - create_ast_children_var_params_no_child
 //  - create_ast_children_var_params_template_one_child
 //  - create_ast_children_var_params_template_two_children
-static void create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2(void **state) {
+static void create_ast_children_var_calls_malloc_for_an_ast_children_t(void **state) {
     create_ast_children_var_params_t *params = *state;
     expect_value(mock_malloc, size, sizeof(ast_children_t));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid mock call
+    if (params->children_nb == 0)
+        ast_create_ast_children_var(params->children_nb);
     if (params->children_nb == 1)
         ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
     if (params->children_nb == 2)
@@ -1006,7 +997,7 @@ static void create_ast_children_var_calls_free_with_pointer_for_ast_children_t_w
 }
 
 // Given: malloc for a double pointer of ast succeeds, children_nb = 1
-// Expected: the malloc'ed typed_data is initialized and returned
+// Expected: the malloc'ed ast_children_t is initialized and returned
 // params:
 //  - create_ast_children_var_params_template_one_child
 static void create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_one_arg(void **state) {
@@ -1025,7 +1016,7 @@ static void create_ast_children_var_initializes_and_returns_malloced_ast_childre
 }
 
 // Given: malloc for a double pointer of ast succeeds, children_nb = 2
-// Expected: the malloc'ed typed_data is initialized and returned
+// Expected: the malloc'ed ast_children_t is initialized and returned
 // params:
 //  - create_ast_children_var_params_template_two_child
 static void create_ast_children_var_initializes_and_returns_malloced_ast_children_t_when_malloc_for_double_pointer_of_ast_succeeds_and_two_args(void **state) {
@@ -1252,7 +1243,7 @@ static int create_non_typed_data_wrapper_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// Given: type is AST_TYPE_DATA_WRAPPER or not suported
+// Given: type is AST_TYPE_DATA_WRAPPER or not supported
 // Expected: returns null
 static void create_non_typed_data_wrapper_returns_null_when_type_data_wrapper_or_unsupported(void **state) {
     assert_null(ast_create_non_typed_data_wrapper(AST_TYPE_DATA_WRAPPER, DUMMY_AST_CHILDREN_T_P));
@@ -1332,14 +1323,14 @@ static int create_non_typed_data_wrapper_arr_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// Given: type is AST_TYPE_DATA_WRAPPER or not suported
+// Given: type is AST_TYPE_DATA_WRAPPER or not supported
 // Expected: returns null
 static void create_non_typed_data_wrapper_arr_returns_null_when_type_data_wrapper_or_unsupported(void **state) {
     assert_null(ast_create_non_typed_data_wrapper_arr(AST_TYPE_DATA_WRAPPER, DUMMY_INT, DUMMY_AST_CHILDREN));
     assert_null(ast_create_non_typed_data_wrapper_arr(UNSUPPORTED_AST_TYPE, DUMMY_INT, DUMMY_AST_CHILDREN));
 }
 
-// Given: type is supported and not AST_TYPE_DATA_WRAPPER, ast_children is null
+// Given: type is supported and not AST_TYPE_DATA_WRAPPER
 // Expected: calls ast_create_ast_children_arr with children_nb and children
 static void create_non_typed_data_wrapper_arr_calls_ast_create_ast_children_arr_with_last_args_when_type_supported_and_not_data_wrapper(void **state) {
     expect_value(mock_ast_create_ast_children_arr, children_nb, DUMMY_INT);
@@ -1396,6 +1387,388 @@ static void create_non_typed_data_wrapper_arr_initializes_and_returns_malloced_a
     assert_ptr_equal(ret->children, fake_ast_create_ast_children_arr_returned_value);
 }
 
+
+
+//-----------------------------------------------------------------------------
+// ast_create_non_typed_data_wrapper_var TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST STRUCTURES
+//----------------------------------------------------------------------------
+
+#define create_non_typed_data_wrapper_var_params_t create_ast_children_arr_params_t
+
+
+
+//-----------------------------------------------------------------------------
+// PARAM CASES
+//-----------------------------------------------------------------------------
+
+
+static const create_non_typed_data_wrapper_var_params_t create_non_typed_data_wrapper_var_params_no_child = create_ast_children_arr_params_no_child;
+static const create_non_typed_data_wrapper_var_params_t create_non_typed_data_wrapper_var_params_template_one_child = create_ast_children_arr_params_template_one_child;
+static const create_non_typed_data_wrapper_var_params_t create_non_typed_data_wrapper_var_params_template_two_children = create_ast_children_arr_params_template_two_children;
+
+
+
+//-----------------------------------------------------------------------------
+// HELPER
+//-----------------------------------------------------------------------------
+
+
+// use initialize_ast_children define in "ast_create_ast_children_arr TESTS" section
+
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_non_typed_data_wrapper_var_setup(void **state) {
+    const create_non_typed_data_wrapper_var_params_t *model = *state;
+    create_non_typed_data_wrapper_var_params_t *params = NULL;
+    alloc_and_save_address_to_be_freed((void**)&params, sizeof(create_non_typed_data_wrapper_var_params_t));
+    *params = *model;
+    initialize_ast_children(params);
+    *state = params;
+    set_allocators(mock_malloc, mock_free);
+    set_ast_create_ast_children_arr(mock_ast_create_ast_children_arr);
+    return 0;
+}
+
+static int create_non_typed_data_wrapper_var_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_ast_create_ast_children_arr(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: type is AST_TYPE_DATA_WRAPPER or not supported
+// Expected: returns null
+static void create_non_typed_data_wrapper_var_returns_null_when_type_data_wrapper_or_unsupported(void **state) {
+    assert_null(ast_create_non_typed_data_wrapper_var(AST_TYPE_DATA_WRAPPER, DUMMY_INT, DUMMY_AST_CHILDREN));
+    assert_null(ast_create_non_typed_data_wrapper_var(UNSUPPORTED_AST_TYPE, DUMMY_INT, DUMMY_AST_CHILDREN));
+}
+
+// Given: type is supported and not AST_TYPE_DATA_WRAPPER, children_nb = 0, 1 or 2
+// Expected:
+//  - calls malloc with sizeof(ast)
+// params:
+//  - create_non_typed_data_wrapper_var_params_no_child
+//  - create_non_typed_data_wrapper_var_params_template_one_child;
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_calls_malloc_for_an_ast_when_type_supported_and_not_data_wrapper(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock calls
+    if (params->children_nb == 0) {
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            0 );
+    }
+    if (params->children_nb == 1) {
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0] );
+    }
+    if (params->children_nb == 2) {
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+    }
+}
+
+// Given: malloc for an ast fails
+// Expected: returns null
+// params:
+//  - create_non_typed_data_wrapper_var_params_no_child
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_returns_null_when_malloc_for_an_ast_fails(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    ast *ret = NULL;
+    if (params->children_nb == 0) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            0 );
+    }
+    if (params->children_nb == 1) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0] );
+    }
+    if (params->children_nb == 2) {
+       ret =  ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+    }
+    assert_null(ret);
+}
+
+// Given: malloc for an ast succeeds, children_nb = 0
+// Expected: calls ast_create_ast_children_arr with 0 and NULL (and then get an ast_children_t pointing to {0, NULL})
+// params: create_non_typed_data_wrapper_var_params_no_child
+static void create_non_typed_data_wrapper_var_calls_ast_create_ast_children_arr_when_malloc_for_an_ast_succeeds_and_children_nb_0(void **state) {
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, 0);
+    expect_value(mock_ast_create_ast_children_arr, children, NULL);
+    will_return(mock_ast_create_ast_children_arr, DUMMY_AST_CHILDREN_T_P);
+    ast_create_non_typed_data_wrapper_var(
+        SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+        0 );
+}
+
+// Given: calls ast_create_ast_children_arr with 0 and NULL fails
+// Expected: calls free with pointer returned by malloc for an ast and return NULL
+// params: create_non_typed_data_wrapper_var_params_no_child
+static void create_non_typed_data_wrapper_var_calls_free_and_returns_null_when_ast_create_ast_children_arr_fails_and_children_nb_0(void **state) {
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, 0);
+    expect_value(mock_ast_create_ast_children_arr, children, NULL);
+    will_return(mock_ast_create_ast_children_arr, NULL);
+    expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
+    assert_null(
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            0 ) );
+}
+
+// Given: calls ast_create_ast_children_arr with 0 and NULL succeeds
+// Expected: the malloc'ed ast is initialized and returned
+// params: create_non_typed_data_wrapper_var_params_no_child
+static void create_non_typed_data_wrapper_var_initializes_and_returns_malloced_ast_when_ast_create_ast_children_arr_succeeds_and_children_nb_0(void **state) {
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, 0);
+    expect_value(mock_ast_create_ast_children_arr, children, NULL);
+    will_return(mock_ast_create_ast_children_arr, DUMMY_AST_CHILDREN_T_P);
+    ast *ret =
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            0 );
+    assert_ptr_equal(ret, DUMMY_MALLOC_RETURNED_VALUE);
+    assert_int_equal(ret->type, SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(ret->children, DUMMY_AST_CHILDREN_T_P);
+}
+
+// Given: malloc for an ast succeeds, children_nb = 1
+// Expected: calls malloc with children_nb * sizeof() for an array of ast pointer
+// params:
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_calls_malloc_for_an_array_of_pointer_of_ast_when_malloc_for_an_ast_succeeds_and_children_nb_not_0(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock calls
+    expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE); // to avoid more mock calls
+    if (params->children_nb == 1)
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+}
+
+// Given: malloc for an array of ast pointer fails
+// Expected: calls free with pointer returned by malloc for an ast and return NULL
+// params:
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_calls_free_and_returns_null_when_malloc_for_an_array_of_pointer_of_ast_fails(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
+    ast *ret = NULL;
+    if (params->children_nb == 1)
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0]);
+    if (params->children_nb == 2)
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+    assert_null(ret);
+}
+
+// Given: malloc for an array of ast pointer succeeds
+// Expected:
+//  - initializes malloc'ed array of ast pointer with variadic arguments
+//  - calls ast_create_ast_children_arr with children_nb and the array of ast pointer
+// params:
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_initializes_ast_p_array_and_calls_ast_create_ast_children_arr_when_malloc_for_ast_p_array_succeeds(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, params->children_nb);
+    expect_value(mock_ast_create_ast_children_arr, children, fake_malloc_returned_value_for_a_double_ast_pointer);
+    will_return(mock_ast_create_ast_children_arr, NULL); // to avoid more mock calls
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_double_ast_pointer); // to avoid more mock calls
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_an_ast); // to avoid more mock calls
+    if (params->children_nb == 1) {
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+    }
+    if (params->children_nb == 2) {
+        ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[1],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[1] );
+    }
+}
+
+// Given: ast_create_ast_children_arr with children_nb and the array of ast pointer fails
+// Expected:
+//  - calls free with the array of ast pointer
+//  - calls free with the pointer for an ast
+//  - returns NULL
+// params:
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_frees_two_malloced_pointers_when_ast_create_ast_children_arr_fails(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, params->children_nb);
+    expect_value(mock_ast_create_ast_children_arr, children, fake_malloc_returned_value_for_a_double_ast_pointer);
+    will_return(mock_ast_create_ast_children_arr, NULL); // the call fails
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_double_ast_pointer);
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_an_ast);
+    ast *ret = NULL;
+    if (params->children_nb == 1) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+    }
+    if (params->children_nb == 2) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[1],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[1] );
+    }
+    assert_null(ret);
+}
+
+// Given: ast_create_ast_children_arr with children_nb and the array of ast pointer succeeds
+// Expected:
+//  - initializes the malloc'ed ast
+//  - calls free with the array of ast pointer
+//  - returns the malloc'ed ast
+// params:
+//  - create_non_typed_data_wrapper_var_params_template_one_child
+//  - create_non_typed_data_wrapper_var_params_template_two_children
+static void create_non_typed_data_wrapper_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds(void **state) {
+    create_non_typed_data_wrapper_var_params_t *params = *state;
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+    expect_value(mock_malloc, size, params->children_nb * sizeof(ast *));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
+    expect_value(mock_ast_create_ast_children_arr, children_nb, params->children_nb);
+    expect_value(mock_ast_create_ast_children_arr, children, fake_malloc_returned_value_for_a_double_ast_pointer);
+    will_return(mock_ast_create_ast_children_arr, DUMMY_AST_CHILDREN_T_P);
+    expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_double_ast_pointer);
+    ast *ret = NULL;
+    if (params->children_nb == 1) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            1,
+            (params->ast_children)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+    }
+    if (params->children_nb == 2) {
+        ret = ast_create_non_typed_data_wrapper_var(
+            SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER,
+            2,
+            (params->ast_children)[0],
+            (params->ast_children)[1] );
+        assert_ptr_equal(
+            (params->ast_children)[0],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[0] );
+        assert_ptr_equal(
+            (params->ast_children)[1],
+            ((ast **)fake_malloc_returned_value_for_a_double_ast_pointer)[1] );
+    }
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
+    assert_int_equal(ret->type, SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(ret->children, DUMMY_AST_CHILDREN_T_P);
+}
 
 
 
@@ -1497,13 +1870,13 @@ int main(void) {
 
     const struct CMUnitTest ast_create_ast_children_arr_tests[] = {
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_arr_return_null_when_children_nb_0,
+            create_ast_children_arr_calls_malloc_for_an_ast_children_t,
             create_ast_children_arr_setup, create_ast_children_arr_teardown, (void *)&create_ast_children_arr_params_no_child),
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_arr_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_arr_calls_malloc_for_an_ast_children_t,
             create_ast_children_arr_setup, create_ast_children_arr_teardown, (void *)&create_ast_children_arr_params_template_one_child),
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_arr_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_arr_calls_malloc_for_an_ast_children_t,
             create_ast_children_arr_setup, create_ast_children_arr_teardown, (void *)&create_ast_children_arr_params_template_two_children),
         cmocka_unit_test_prestate_setup_teardown(
             create_ast_children_arr_return_null_when_malloc_fails,
@@ -1521,13 +1894,13 @@ int main(void) {
 
     const struct CMUnitTest ast_create_ast_children_var_tests[] = {
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_var_return_null_when_children_nb_0,
+            create_ast_children_var_calls_malloc_for_an_ast_children_t,
             create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_no_child),
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_var_calls_malloc_for_an_ast_children_t,
             create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_one_child),
         cmocka_unit_test_prestate_setup_teardown(
-            create_ast_children_var_calls_malloc_for_an_ast_children_t_when_children_nb_1_or_2,
+            create_ast_children_var_calls_malloc_for_an_ast_children_t,
             create_ast_children_var_setup, create_ast_children_var_teardown, (void *)&create_ast_children_var_params_template_two_children),
         cmocka_unit_test_prestate_setup_teardown(
             create_ast_children_var_return_null_when_malloc_fails,
@@ -1600,6 +1973,67 @@ int main(void) {
             create_non_typed_data_wrapper_arr_setup, create_non_typed_data_wrapper_arr_teardown),
     };
 
+    const struct CMUnitTest ast_create_non_typed_data_wrapper_var_tests[] = {
+        cmocka_unit_test(create_non_typed_data_wrapper_var_returns_null_when_type_data_wrapper_or_unsupported),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_malloc_for_an_ast_when_type_supported_and_not_data_wrapper,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_malloc_for_an_ast_when_type_supported_and_not_data_wrapper,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_malloc_for_an_ast_when_type_supported_and_not_data_wrapper,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_returns_null_when_malloc_for_an_ast_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_returns_null_when_malloc_for_an_ast_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_returns_null_when_malloc_for_an_ast_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_ast_create_ast_children_arr_when_malloc_for_an_ast_succeeds_and_children_nb_0,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_free_and_returns_null_when_ast_create_ast_children_arr_fails_and_children_nb_0,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_initializes_and_returns_malloced_ast_when_ast_create_ast_children_arr_succeeds_and_children_nb_0,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_no_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_malloc_for_an_array_of_pointer_of_ast_when_malloc_for_an_ast_succeeds_and_children_nb_not_0,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_malloc_for_an_array_of_pointer_of_ast_when_malloc_for_an_ast_succeeds_and_children_nb_not_0,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_free_and_returns_null_when_malloc_for_an_array_of_pointer_of_ast_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_calls_free_and_returns_null_when_malloc_for_an_array_of_pointer_of_ast_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_initializes_ast_p_array_and_calls_ast_create_ast_children_arr_when_malloc_for_ast_p_array_succeeds,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_initializes_ast_p_array_and_calls_ast_create_ast_children_arr_when_malloc_for_ast_p_array_succeeds,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_frees_two_malloced_pointers_when_ast_create_ast_children_arr_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_frees_two_malloced_pointers_when_ast_create_ast_children_arr_fails,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_one_child),
+        cmocka_unit_test_prestate_setup_teardown(
+            create_non_typed_data_wrapper_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds,
+            create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -1610,10 +2044,11 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_typed_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_wrapper_calls_destroy_then_free_when_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_ast_children_arr_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(ast_create_ast_children_var_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_ast_children_arr_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_ast_children_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_arr_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_var_tests, NULL, NULL);
 
     return failed;
 }

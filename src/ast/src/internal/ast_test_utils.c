@@ -61,16 +61,18 @@ void set_ast_destroy_non_typed_data_wrapper(ast_destroy_non_typed_data_wrapper_f
 
 ast_create_ast_children_arr_fn ast_create_ast_children_arr_mockable = real_ast_create_ast_children_arr;
 ast_children_t *real_ast_create_ast_children_arr(size_t children_nb, ast **children) {
-    if (children_nb == 0)
-        return NULL;
-
     ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
     if (!ret)
         return NULL;
 
-    ret->children_nb = children_nb;
-    ret->children = children;
+    if (children_nb == 0) {
+        ret->children_nb = 0;
+        ret->children = NULL;
+    } else {
 
+        ret->children_nb = children_nb;
+        ret->children = children;
+    }
     return ret;
 }
 void set_ast_create_ast_children_arr(ast_create_ast_children_arr_fn f) {
