@@ -166,6 +166,23 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
     AST_FREE(ast_children);
 }
 
+ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children) {
+    if ((type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
+        return NULL;
+
+    ast *ret = AST_MALLOC(sizeof(ast));
+    if (!ret)
+        return NULL;
+
+    ret->type = type;
+    ret->children = ast_children;
+
+    return ret;
+}
+
+
+
+
 
 
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
