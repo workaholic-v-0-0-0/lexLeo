@@ -40,6 +40,11 @@ ast_children_t *real_ast_create_ast_children_arr(size_t children_nb, ast **child
 extern ast_create_ast_children_arr_fn ast_create_ast_children_arr_mockable;
 void set_ast_create_ast_children_arr(ast_create_ast_children_arr_fn f);
 
+typedef void (*ast_destroy_ast_children_fn)(ast_children_t *ast_children);
+void real_ast_destroy_ast_children(ast_children_t *ast_children);
+extern ast_destroy_ast_children_fn ast_destroy_ast_children_mockable;
+void set_ast_destroy_ast_children(ast_destroy_ast_children_fn f);
+
 #endif
 
 #endif //AST_INTERNAL_H

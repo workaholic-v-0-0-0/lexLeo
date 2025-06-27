@@ -53,7 +53,10 @@ void set_ast_destroy_typed_data_wrapper(ast_destroy_typed_data_wrapper_fn f) {
 
 ast_destroy_non_typed_data_wrapper_fn ast_destroy_non_typed_data_wrapper_mockable = real_ast_destroy_non_typed_data_wrapper;
 void real_ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
-    // placeholder to be able to test ast_destroy_ast_children
+    if ((non_typed_data_wrapper) && (non_typed_data_wrapper->type != AST_TYPE_DATA_WRAPPER)) {
+        ast_destroy_ast_children(non_typed_data_wrapper->children);
+        AST_FREE(non_typed_data_wrapper);
+    }
 }
 void set_ast_destroy_non_typed_data_wrapper(ast_destroy_non_typed_data_wrapper_fn f) {
     ast_destroy_non_typed_data_wrapper_mockable = f ? f : real_ast_destroy_non_typed_data_wrapper;
@@ -77,6 +80,24 @@ ast_children_t *real_ast_create_ast_children_arr(size_t children_nb, ast **child
 }
 void set_ast_create_ast_children_arr(ast_create_ast_children_arr_fn f) {
     ast_create_ast_children_arr_mockable = f ? f : real_ast_create_ast_children_arr;
+}
+
+ast_destroy_ast_children_fn ast_destroy_ast_children_mockable = real_ast_destroy_ast_children;
+void real_ast_destroy_ast_children(ast_children_t *ast_children) {
+    if ((!ast_children) || (ast_children->children_nb == 0))
+        return;
+
+    for (size_t i = 0; i < ast_children->children_nb; i++) {
+        if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
+            ast_destroy_non_typed_data_wrapper(ast_children->children[i]);
+        else
+            ast_destroy_typed_data_wrapper(ast_children->children[i]);
+    }
+    AST_FREE(ast_children->children);
+    AST_FREE(ast_children);
+}
+void set_ast_destroy_ast_children(ast_destroy_ast_children_fn f) {
+    ast_destroy_ast_children_mockable = f ? f : real_ast_destroy_ast_children;
 }
 
 #endif
