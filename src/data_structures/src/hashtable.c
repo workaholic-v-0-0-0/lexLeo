@@ -99,6 +99,7 @@ int hashtable_add(hashtable *ht, const char *key, void *value) {
 
     if (hashtable_key_is_in_use(ht, key))
         return 1;
+
     entry *new_entry = DATA_STRUCTURE_MALLOC(sizeof(entry));
     if (!new_entry)
         return 1;
@@ -123,6 +124,31 @@ int hashtable_add(hashtable *ht, const char *key, void *value) {
     list *bucket = &((ht->buckets)[hash_djb2(key) % ht->size]);
     c->cdr = *bucket;
     *bucket = c;
+
+    return 0;
+}
+
+int hashtable_reset_value(hashtable *ht, const char *key, void *value) {
+    if (!ht)
+        return 1;
+
+    if (!hashtable_key_is_in_use(ht, key))
+        return 1;
+
+    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
+    entry *entry_p = NULL;
+    while (bucket) {
+        if (DATA_STRUCTURE_STRING_COMPARE(key, ((entry *) (bucket->car))->key) == 0)
+            entry_p = (entry *) (bucket->car);
+        bucket = bucket->cdr;
+    }
+    if (!entry_p)
+        return 1;
+
+    if (ht->destroy_value_fn)
+        ht->destroy_value_fn(entry_p->value);
+
+    entry_p->value = value;
 
     return 0;
 }
