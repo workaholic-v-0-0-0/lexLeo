@@ -1566,7 +1566,7 @@ static void get_returns_right_value_when_ht_contains_key(void **state) {
 //-----------------------------------------------------------------------------
 
 
-static int add_setup(void **state) { // *state is a models_t
+static int add_setup(void **state) { // *state is a params_t
 	const params_t *model = *state;
     params_instance_t *params = NULL;
     alloc_and_save_address_to_be_freed((void*)&params, sizeof(params_instance_t));
@@ -1984,6 +1984,123 @@ static void add_return_0_when_malloc_for_new_cons_succeeds(void **state) {
 
 
 
+
+//-----------------------------------------------------------------------------
+// hashtable_reset_value TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int reset_value_setup(void **state) { // *state is a params_t
+	const params_t *model = *state;
+    params_instance_t *params = NULL;
+    alloc_and_save_address_to_be_freed((void*)&params, sizeof(params_instance_t));
+    memcpy(params, model, sizeof(params_t));
+    *state = params;
+    int ret = 0;
+    ret += hashtable_setup((void**)&(((params_instance_t *)*state)->hashtable_params));
+    ret += key_value_pairs_to_be_added_setup((void**)&(((params_instance_t *)*state)->key_value_pairs_params));
+    set_allocators(mock_malloc, mock_free);
+    set_string_duplicate(mock_strdup);
+    return ret;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: ht == NULL
+// Expected: returns 1
+// param:
+//	- params_ht_null
+static void reset_value_returns_1_when_ht_null(void **state) {
+    params_t *params = (params_t *) *state;
+    const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
+    assert_int_equal(
+        1,
+        hashtable_reset_value(
+            params->hashtable_params->ht,
+            key_value_pairs_to_be_added->key,
+            key_value_pairs_to_be_added->value ) );
+}
+
+// Given: ht not null, argument key not already in use (==  A_KEY_NOT_IN_USE (A_KEY_NOT_IN_USE pointing to "a key not in use"), ht = 1 or 2, nb of entries = 0,1,2 or 3
+// Expected: call malloc with sizeof(entry)
+// param:
+//	- params_template_s_1_n_1_static_key_not_in_use
+//	- params_template_s_1_n_1_dynamic_key_not_in_use
+//	- params_template_s_1_n_2_collision_static_key_not_in_use
+//	- params_template_s_1_n_2_collision_dynamic_key_not_in_use
+//	- params_template_s_2_n_1_static_key_not_in_use
+//	- params_template_s_2_n_1_dynamic_key_not_in_use
+//	- params_template_s_2_n_2_no_collision_static_key_not_in_use
+//	- params_template_s_2_n_2_collision_static_key_not_in_use
+//	- params_template_s_2_n_2_no_collision_dynamic_key_not_in_use
+//	- params_template_s_2_n_2_collision_dynamic_key_not_in_use
+//	- params_template_s_2_n_3_collision_static_key_not_in_use
+//	- params_template_s_2_n_3_collision_dynamic_key_not_in_use
+//	- params_template_s_1_n_0_f_null_key_not_in_use
+//	- params_template_s_1_n_0_f_free_key_not_in_use
+//	- params_template_s_2_n_0_f_null_key_not_in_use
+//	- params_template_s_2_n_0_f_free_key_not_in_use
+static void reset_value_returns_1_when_key_not_in_use(void **state) {
+    params_t *params = (params_t *) *state;
+    const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
+    assert_int_equal(
+        1,
+        hashtable_reset_value(
+            params->hashtable_params->ht,
+            key_value_pairs_to_be_added->key,
+            key_value_pairs_to_be_added->value ) );
+}
+
+// Given: ht not null, argument key already in use (==  A_KEY_IN_USE (A_KEY_IN_USE pointing to "key_for_A"), ht = 1 or 2, nb of entries = 1,2 or 3
+// Expected:
+//  - if ht->destroy_value_fn not NULL calls ht->destroy_value_fn with the value related to key in ht
+//  - initialize the value related to key with argument value
+//  - returns 0
+// param:
+//	- params_t params_template_s_1_n_1_static_key_in_use
+//	- params_template_s_1_n_1_dynamic_key_in_use
+//	- params_template_s_1_n_2_collision_static_key_in_use
+//	- params_template_s_1_n_2_collision_dynamic_key_in_use
+//	- params_template_s_2_n_1_static_key_in_use
+//	- params_template_s_2_n_1_dynamic_key_in_use
+//	- params_template_s_2_n_2_no_collision_static_key_in_use
+//	- params_template_s_2_n_2_collision_static_key_in_use
+//	- params_template_s_2_n_2_no_collision_dynamic_key_in_use
+//	- params_template_s_2_n_2_collision_dynamic_key_in_use
+//	- params_template_s_2_n_3_collision_static_key_in_use
+//	- params_template_s_2_n_3_collision_dynamic_key_in_use
+static void reset_value_free_reset_value_and_returns_0_when_key_in_use(void **state) {
+    params_t *params = (params_t *) *state;
+    hashtable *ht = params->hashtable_params->ht;
+    const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
+    char *key = key_value_pairs_to_be_added->key;
+    void *value = key_value_pairs_to_be_added->value;
+    void *old_value = hashtable_get(ht, key);
+    if (ht->destroy_value_fn)
+        expect_value(mock_free, ptr, old_value);
+    assert_int_equal(
+        0,
+        hashtable_reset_value(ht, key, value) );
+    assert_ptr_equal(
+        value,
+        hashtable_get(ht, key) );
+}
+
+
+
+
+
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
@@ -2382,6 +2499,31 @@ int main(void) {
         add_return_0_when_malloc_for_new_cons_succeeds_tests[i] = tmp;
     }
 
+    const struct CMUnitTest reset_value_one_param_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            reset_value_returns_1_when_ht_null,
+            reset_value_setup, general_teardown, (void *)&params_ht_null),
+    };
+
+    struct CMUnitTest reset_value_returns_1_when_key_not_in_use_tests[17] = {0};
+    for (size_t i = 0; i < 16; i++) {
+        struct CMUnitTest tmp = cmocka_unit_test_prestate_setup_teardown(
+            reset_value_returns_1_when_key_not_in_use,
+            reset_value_setup,
+            general_teardown,
+            (void *)params_template_key_not_in_use[i]);
+        reset_value_returns_1_when_key_not_in_use_tests[i] = tmp;
+    }
+
+    struct CMUnitTest reset_value_free_reset_value_and_returns_0_when_key_in_use_tests[13] = {0};
+    for (size_t i = 0; i < 12; i++) {
+        struct CMUnitTest tmp = cmocka_unit_test_prestate_setup_teardown(
+            reset_value_free_reset_value_and_returns_0_when_key_in_use,
+            reset_value_setup,
+            general_teardown,
+            (void *)params_template_key_in_use[i]);
+        reset_value_free_reset_value_and_returns_0_when_key_in_use_tests[i] = tmp;
+    }
 
     int failed = 0;
     failed += cmocka_run_group_tests(create_tests, NULL, NULL);
@@ -2403,6 +2545,10 @@ int main(void) {
     failed += cmocka_run_group_tests(add_returns_1_when_malloc_for_new_cons_fails_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_initializes_new_entry_in_hashtable_when_malloc_for_new_cons_succeeds_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_return_0_when_malloc_for_new_cons_succeeds_tests, NULL, NULL);
+
+    failed += cmocka_run_group_tests(reset_value_one_param_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_value_returns_1_when_key_not_in_use_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_value_free_reset_value_and_returns_0_when_key_in_use_tests, NULL, NULL);
 
     return failed;
 }
