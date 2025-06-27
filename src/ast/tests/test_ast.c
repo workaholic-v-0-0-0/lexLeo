@@ -55,6 +55,7 @@ static ast_children_t *const AST_CHILDREN_T_DEFINED_IN_SETUP = (ast_children_t *
 static ast_children_t *const DUMMY_AST_CHILDREN_T_P = (ast_children_t *)&dummy[8];
 static const int UNSUPPORTED_AST_TYPE = AST_TYPE_NB_TYPES;
 static const int SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER = AST_TYPE_PROGRAM;
+static ast *ast_not_data_wrapper = NULL;
 
 
 
@@ -113,6 +114,10 @@ ast_children_t *mock_ast_create_ast_children_arr(size_t children_nb, ast **child
 }
 
 static ast_children_t *fake_ast_create_ast_children_arr_returned_value = NULL;
+
+void mock_ast_destroy_ast_children(ast_children_t *ast_children) {
+    check_expected_ptr(ast_children);
+}
 
 
 
@@ -1062,7 +1067,6 @@ typedef struct {
 
 static const destroy_ast_children_params_t destroy_ast_children_params_null = {
     .label = "ast_children is null",
-    //.children_nb = 0,
     .children_nb = DUMMY_INT,
     .ast_children = NULL,
 };
@@ -1117,7 +1121,7 @@ static void initialize_ast_children_dynamically(destroy_ast_children_params_t *p
         ((params->ast_children->children)[0])->data = DUMMY_TYPED_DATA_P;
         ((params->ast_children->children)[1])->children = DUMMY_AST_CHILDREN_T_P;
     }
-    // note: do nothing with DUMMY_INT because DUMMY_INT = 7
+    // note: do nothing when params->children_nb == DUMMY_INT because DUMMY_INT = 7
 }
 
 
@@ -1176,7 +1180,7 @@ static void destroy_ast_children_do_nothing_when_no_child(void **state) {
     ast_destroy_ast_children(params->ast_children);
 }
 
-// Given: children_nb = 1
+// Given: children_nb = 1, the child is a typed data wrapper
 // Expected:
 //  - calls ast_destroy_typed_data_wrapper with ast_children->children[0]
 //  - calls free with ast_children->children
@@ -1772,6 +1776,76 @@ static void create_non_typed_data_wrapper_var_initializes_and_returns_malloced_a
 
 
 
+//-----------------------------------------------------------------------------
+// ast_destroy_non_typed_data_wrapper TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_non_typed_data_wrapper_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&ast_not_data_wrapper, sizeof(ast));
+    set_allocators(mock_malloc, mock_free);
+    set_ast_destroy_ast_children(mock_ast_destroy_ast_children);
+    return 0;
+}
+
+static int destroy_non_typed_data_wrapper_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_ast_destroy_ast_children(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: non_typed_data_wrapper = NULL
+// Expected: do nothing
+static void destroy_non_typed_data_wrapper_do_nothing_when_arg_null(void **state) {
+    ast_destroy_non_typed_data_wrapper(NULL);
+}
+
+// Given: non_typed_data_wrapper != NULL, non_typed_data_wrapper->type == AST_TYPE_DATA_WRAPPER
+// Expected: do nothing
+static void destroy_non_typed_data_wrapper_do_nothing_when_arg_is_typed_data_wrapper(void **state) {
+    ast_not_data_wrapper->type = AST_TYPE_DATA_WRAPPER;
+    ast_not_data_wrapper->children = DUMMY_AST_CHILDREN_T_P;
+    ast_destroy_non_typed_data_wrapper(ast_not_data_wrapper);
+}
+
+// Given: non_typed_data_wrapper->type is not AST_TYPE_DATA_WRAPPER (and can even be not supported)
+// Expected:
+//  - calls ast_destroy_ast_children with non_typed_data_wrapper->children
+//  - calls free with non_typed_data_wrapper
+static void destroy_non_typed_data_wrapper_calls_ast_destroy_ast_children_and_calls_free_when_arg_is_valid(void **state) {
+    ast_not_data_wrapper->type = AST_TYPE_ADDITION;
+    ast_not_data_wrapper->children = DUMMY_AST_CHILDREN_T_P;
+    expect_value(mock_ast_destroy_ast_children, ast_children, DUMMY_AST_CHILDREN_T_P);
+    expect_value(mock_free, ptr, ast_not_data_wrapper);
+    ast_destroy_non_typed_data_wrapper(ast_not_data_wrapper);
+
+    ast_not_data_wrapper->type = UNSUPPORTED_AST_TYPE;
+    expect_value(mock_ast_destroy_ast_children, ast_children, DUMMY_AST_CHILDREN_T_P);
+    expect_value(mock_free, ptr, ast_not_data_wrapper);
+    ast_destroy_non_typed_data_wrapper(ast_not_data_wrapper);
+}
+
+
 
 
 
@@ -2034,6 +2108,16 @@ int main(void) {
             create_non_typed_data_wrapper_var_setup, create_non_typed_data_wrapper_var_teardown, (void *)&create_non_typed_data_wrapper_var_params_template_two_children),
     };
 
+    const struct CMUnitTest ast_destroy_non_typed_data_wrapper_tests[] = {
+        cmocka_unit_test(destroy_non_typed_data_wrapper_do_nothing_when_arg_null),
+        cmocka_unit_test_setup_teardown(
+            destroy_non_typed_data_wrapper_do_nothing_when_arg_is_typed_data_wrapper,
+            destroy_non_typed_data_wrapper_setup, destroy_non_typed_data_wrapper_teardown),
+        cmocka_unit_test_setup_teardown(
+            destroy_non_typed_data_wrapper_calls_ast_destroy_ast_children_and_calls_free_when_arg_is_valid,
+            destroy_non_typed_data_wrapper_setup, destroy_non_typed_data_wrapper_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2049,6 +2133,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_arr_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_var_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_non_typed_data_wrapper_tests, NULL, NULL);
 
     return failed;
 }

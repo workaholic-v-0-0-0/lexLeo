@@ -159,6 +159,9 @@ ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
 }
 
 void ast_destroy_ast_children(ast_children_t *ast_children) {
+#ifdef UNIT_TEST
+    ast_destroy_ast_children_mockable(ast_children);
+#else
     if ((!ast_children) || (ast_children->children_nb == 0))
         return;
 
@@ -170,6 +173,7 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
     }
     AST_FREE(ast_children->children);
     AST_FREE(ast_children);
+#endif
 }
 
 ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children) {
@@ -256,6 +260,9 @@ void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
 #ifdef UNIT_TEST
     ast_destroy_non_typed_data_wrapper_mockable(non_typed_data_wrapper);
 #else
-    // placeholder to be able to test ast_destroy_ast_children
+    if ((non_typed_data_wrapper) && (non_typed_data_wrapper->type != AST_TYPE_DATA_WRAPPER)) {
+        ast_destroy_ast_children(non_typed_data_wrapper->children);
+        AST_FREE(non_typed_data_wrapper);
+    }
 #endif
 }
