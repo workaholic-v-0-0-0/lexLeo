@@ -67,12 +67,12 @@ ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsi
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying chidren array (but not the ast * it contains)
-ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced
+ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)
 void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb value correctness
 
-ast * ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
-ast * ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying chidren array (but not the ast * it contains)
-ast * ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...);
+ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
+ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying children array (but not the ast * it contains)
+ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb value correctness
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
 
 ast *ast_create(ast_type type, size_t children_nb,...);

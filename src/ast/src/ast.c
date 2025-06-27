@@ -6,9 +6,6 @@
 #include "internal/ast_string_utils.h"
 
 #include <stdarg.h>
-
-#include <stdio.h> // to debug
-
 #include <stdlib.h>
 
 typed_data *ast_create_typed_data_int(int i) {
@@ -113,45 +110,50 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
 #ifdef UNIT_TEST
-    ast_create_ast_children_arr_mockable(children_nb, children);
+    return ast_create_ast_children_arr_mockable(children_nb, children);
 #else
-    if (children_nb == 0)
-        return NULL;
-
     ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
     if (!ret)
         return NULL;
 
-    ret->children_nb = children_nb;
-    ret->children = children;
+    if (children_nb == 0) {
+        ret->children_nb = 0;
+        ret->children = NULL;
+    } else {
 
+        ret->children_nb = children_nb;
+        ret->children = children;
+    }
     return ret;
 #endif
 }
 
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
-    if (children_nb == 0)
-        return NULL;
-
     ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
     if (!ret)
         return NULL;
 
-    ast **children = AST_MALLOC(children_nb * sizeof(ast *));
-    if (!children) {
-        AST_FREE(ret);
-        return NULL;
-    }
+    if (children_nb == 0) {
+        ret->children_nb = 0;
+        ret->children = NULL;
 
-    va_list args;
-    va_start(args, children_nb);
-    for (size_t i = 0; i < children_nb; i++) {
-        children[i] =va_arg(args, ast *);
-    }
-    va_end(args);
+    } else {
+        ast **children = AST_MALLOC(children_nb * sizeof(ast *));
+            if (!children) {
+            AST_FREE(ret);
+            return NULL;
+        }
 
-    ret->children_nb = children_nb;
-    ret->children = children;
+        va_list args;
+        va_start(args, children_nb);
+        for (size_t i = 0; i < children_nb; i++) {
+            children[i] = va_arg(args, ast *);
+        }
+        va_end(args);
+
+        ret->children_nb = children_nb;
+        ret->children = children;
+    }
 
     return ret;
 }
@@ -204,9 +206,51 @@ ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, as
     return ret;
 }
 
+ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...) {
+    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
+        return NULL;
 
+    ast *ret = AST_MALLOC(sizeof(ast));
+    if (!ret)
+        return NULL;
 
+    if (children_nb == 0) {
+        ast_children_t *children_info = ast_create_ast_children_arr(0, NULL);
+        if (!children_info) {
+            AST_FREE(ret);
+            return NULL;
+        }
 
+        ret->type = type;
+        ret->children = children_info;
+
+    } else {
+        ast **ast_p_arr = AST_MALLOC(children_nb * sizeof(ast *));
+        if (!ast_p_arr) {
+            AST_FREE(ret);
+            return NULL;
+        }
+
+        va_list args;
+        va_start(args, children_nb);
+        for (size_t i = 0; i < children_nb; i++) {
+            ast_p_arr[i] = va_arg(args, ast *);
+        }
+        va_end(args);
+
+        ast_children_t *children_info = ast_create_ast_children_arr(children_nb, ast_p_arr);
+        if (!children_info) {
+            AST_FREE(ast_p_arr);
+            AST_FREE(ret);
+            return NULL;
+        }
+
+        ret->type = type;
+        ret->children = children_info;
+        AST_FREE(ast_p_arr);
+    }
+    return ret;
+}
 
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
 #ifdef UNIT_TEST
