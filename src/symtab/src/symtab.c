@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-symtab *symtab_create(void) {
+symtab *symtab_create(void) { // CURRENTLY IMPLEMENED VIA TDD ; PENDING FULL AST IMPLEMENTATION
     symtab *ret = SYMTAB_MALLOC(sizeof(symtab));
     if (!ret)
         return NULL;

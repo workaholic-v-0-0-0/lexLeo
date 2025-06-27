@@ -75,9 +75,6 @@ ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, as
 ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb value correctness
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
 
-ast *ast_create(ast_type type, size_t children_nb,...);
-void ast_destroy(ast *);
-
 char *ast_serialize(ast *root);
 ast *ast_deserialize(char *);
 
