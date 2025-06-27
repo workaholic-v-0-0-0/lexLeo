@@ -1848,52 +1848,6 @@ static void destroy_non_typed_data_wrapper_calls_ast_destroy_ast_children_and_ca
 
 
 //-----------------------------------------------------------------------------
-// ast_create TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int create_setup(void **state) {
-    alloc_and_save_address_to_be_freed((void **)&ast_not_data_wrapper, sizeof(ast));
-    set_allocators(mock_malloc, mock_free);
-    return 0;
-}
-
-static int create_teardown(void **state) {
-    set_allocators(NULL, NULL);
-    while (collected_ptr_to_be_freed) {
-        list next = collected_ptr_to_be_freed->cdr;
-        if (collected_ptr_to_be_freed->car)
-            free(collected_ptr_to_be_freed->car);
-        free(collected_ptr_to_be_freed);
-        collected_ptr_to_be_freed = next;
-    }
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given:
-// Expected:
-static void create_(void **state) {
-    ast_create();
-}
-
-
-
-
-
-//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 

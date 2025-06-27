@@ -21,8 +21,8 @@ int hashtable_key_is_in_use(hashtable *ht, const char *key);
 // returns NULL if the key is not found, but also if the found entry's value is NULL.
 void *hashtable_get(const hashtable *ht, const char *key);
 
-// replaces the value if the key already exists
 // returns 1 on error, 0 on success.
+// error if the key already exists
 int hashtable_add(hashtable *ht, const char *key, void *value);
 
 // frees value via callback if callback

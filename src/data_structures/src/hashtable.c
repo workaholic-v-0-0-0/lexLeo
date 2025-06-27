@@ -99,7 +99,6 @@ int hashtable_add(hashtable *ht, const char *key, void *value) {
 
     if (hashtable_key_is_in_use(ht, key))
         return 1;
-
     entry *new_entry = DATA_STRUCTURE_MALLOC(sizeof(entry));
     if (!new_entry)
         return 1;
