@@ -8,6 +8,7 @@ add_library(
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashtable.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/hashtable_test_utils.c
 )
 target_include_directories(
     data_structures
@@ -44,7 +45,7 @@ if (USE_STRING_UTILS)
     target_link_libraries(data_structures PUBLIC ${STRING_UTILS_TARGET})
 endif ()
 
-
 if (BUILD_TESTING)
+    target_compile_definitions(data_structures PRIVATE UNIT_TEST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()

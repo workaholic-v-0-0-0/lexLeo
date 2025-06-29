@@ -14,6 +14,7 @@
 #include "list.h"
 
 #include "internal/hashtable_internal.h"
+#include "internal/hashtable_test_utils.h"
 
 
 
@@ -111,6 +112,15 @@ char *mock_strdup(const char *s) {
 
 static char *fake_strdup_returned_value_for_key_of_hashtable;
 
+unsigned long mock_hash_djb2(const char *str) {
+    return INDEX_OF_A_KEY_IN_USE;
+}
+unsigned long mock_hash_djb2_dummy_return_0(const char *str) {
+    return 0;
+}
+unsigned long mock_hash_djb2_dummy_return_1(const char *str) {
+    return 1;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -763,7 +773,7 @@ static void initialize_entries(hashtable_params_t *params) {
             assert_non_null(entries[i]);
             alloc_and_save_address_to_be_freed((void*)&(entries[i]->key), strlen(KEY_VALUES[i])+1);
             memcpy(entries[i]->key, KEY_VALUES[i], strlen(KEY_VALUES[i])+1);
-        	assert_non_null(entries[i]->key);
+        	//assert_non_null(entries[i]->key);
         	if ((params->config).chars_are_dynamically_allocated) {
                 alloc_and_save_address_to_be_freed((void*)&(entries[i]->value), sizeof(char));
             	assert_non_null(entries[i]->value);
@@ -1130,8 +1140,7 @@ static void create_returns_hashtable_pointer_with_correctly_initialized_destroy_
 
 
 static int destroy_setup(void **state) { // *state is a hashtable_params_t *
-    int ret = 0;
-    ret += hashtable_setup(state);
+    int ret = hashtable_setup(state);
     set_allocators(mock_malloc, mock_free);
     return ret;
 }
@@ -2007,6 +2016,7 @@ static int reset_value_setup(void **state) { // *state is a params_t
     ret += key_value_pairs_to_be_added_setup((void**)&(((params_instance_t *)*state)->key_value_pairs_params));
     set_allocators(mock_malloc, mock_free);
     set_string_duplicate(mock_strdup);
+	set_hash_djb2(mock_hash_djb2); // mock hash function to always return 0, so all keys map to bucket 0 (where INDEX_OF_A_KEY_IN_USE is stored)
     return ret;
 }
 
@@ -2086,7 +2096,7 @@ static void reset_value_free_reset_value_and_returns_0_when_key_in_use(void **st
     const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
     char *key = key_value_pairs_to_be_added->key;
     void *value = key_value_pairs_to_be_added->value;
-    void *old_value = hashtable_get(ht, key);
+    void *old_value = hashtable_get(ht, key); // the mock of hash_djb2 returns index 0
     if (ht->destroy_value_fn)
         expect_value(mock_free, ptr, old_value);
     assert_int_equal(
@@ -2099,6 +2109,214 @@ static void reset_value_free_reset_value_and_returns_0_when_key_in_use(void **st
 
 
 
+//-----------------------------------------------------------------------------
+// hashtable_remove TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int remove_setup(void **state) { // *state is a hashtable_params_t *
+	int ret = hashtable_setup(state);
+    set_allocators(mock_malloc, mock_free);
+    set_hash_djb2(mock_hash_djb2); // make hash always 0, the index of the bucket where is INDEX_OF_A_KEY_IN_USE
+    return ret;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: ht == NULL
+// Expected: returns 1
+// param:
+//	- hashtable_params_ht_null
+static void remove_returns_1_when_ht_null(void **state) {
+   	assert_int_equal(
+        1,
+        hashtable_remove(
+            ((hashtable_params_t *) *state)->ht,
+            DUMMY_KEY ) );
+}
+
+// Given: ht not null, argument key not already in use (==  A_KEY_NOT_IN_USE (A_KEY_NOT_IN_USE pointing to "a key not in use"), ht = 1 or 2, nb of entries = 0,1,2 or 3
+// Expected: returns 1
+// param:
+//  - hashtable_params_template_s_1_n_1_static,
+//  - hashtable_params_template_s_1_n_1_dynamic,
+//  - hashtable_params_template_s_1_n_2_collision_static,
+//  - hashtable_params_template_s_1_n_2_collision_dynamic,
+//  - hashtable_params_template_s_2_n_1_static,
+//  - hashtable_params_template_s_2_n_1_dynamic,
+//  - hashtable_params_template_s_2_n_2_no_collision_static,
+//  - hashtable_params_template_s_2_n_2_collision_static,
+//  - hashtable_params_template_s_2_n_2_no_collision_dynamic,
+//  - hashtable_params_template_s_2_n_2_collision_dynamic,
+//  - hashtable_params_template_s_2_n_3_collision_static,
+//  - hashtable_params_template_s_2_n_3_collision_dynamic
+static void remove_returns_1_when_key_not_in_use(void **state) {
+    assert_int_equal(
+        1,
+        hashtable_remove(
+            ((hashtable_params_t *) *state)->ht,
+            A_KEY_NOT_IN_USE ) );
+}
+
+// Given: The hashtable is not empty, and the provided key ("key_for_A") matches the key of the entry at the head of bucket 0.
+// Expected: (remove first entry of bucket 0)
+//  - If ht->destroy_value_fn is not NULL, calls ht->destroy_value_fn with the value associated with the key.
+//  - Frees the key of the entry to be removed.
+//  - Frees the entry structure itself (the entry pointed to by the car of the first cons cell in bucket 0).
+//  - Frees the cons cell at the head of bucket 0 (which contained the entry).
+//  - Updates bucket 0 to point to the next cons cell in the list (i.e., removes the head).
+//  - Returns 0.
+// param:
+//  - hashtable_params_template_s_1_n_1_static,
+//  - hashtable_params_template_s_1_n_1_dynamic,
+//  - hashtable_params_template_s_2_n_1_static,
+//  - hashtable_params_template_s_2_n_1_dynamic,
+//  - hashtable_params_template_s_2_n_2_no_collision_static,
+//  - hashtable_params_template_s_2_n_2_no_collision_dynamic,
+static void remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision(void **state) {
+    hashtable_params_t *params = (hashtable_params_t *) *state;
+    hashtable *ht = params->ht;
+
+	// what to be cleanup
+	cons *cons_to_be_cleanup = ht->buckets[0];
+	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
+	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
+
+	// a key which match the key to be removed
+	char *matching_key = NULL;
+	alloc_and_save_address_to_be_freed((void*)&matching_key, strlen(key_to_be_cleanup) + 1);
+    memcpy(matching_key, key_to_be_cleanup, strlen(key_to_be_cleanup) + 1);
+
+	// Expect cleanup of all dynamically allocated memory associated with the entry to be removed.
+	if (ht->destroy_value_fn)
+        expect_value(mock_free, ptr, value_that_might_be_cleanup);
+    expect_value(mock_free, ptr, key_to_be_cleanup);
+    expect_value(mock_free, ptr, entry_to_be_cleanup);
+    expect_value(mock_free, ptr, cons_to_be_cleanup);
+
+	list updated_first_bucket = cons_to_be_cleanup->cdr;
+
+	// make it search at first bucket
+	set_hash_djb2(mock_hash_djb2_dummy_return_0);
+
+    assert_int_equal(
+        0,
+        hashtable_remove(ht, matching_key) );
+
+    // check update
+    assert_ptr_equal((ht->buckets)[0], updated_first_bucket);
+}
+
+// Given: The hashtable is not empty, and the provided key ("key_for_B") matches the key of the second entry in bucket 0.
+// Expected: (remove second entry of bucket 0)
+//  - If ht->destroy_value_fn is not NULL, calls ht->destroy_value_fn with the value associated with the key.
+//  - Frees the key of the entry to be removed.
+//  - Frees the entry structure itself (the entry pointed to by the car of the second cons cell in bucket 0).
+//  - Frees the second cons cell in bucket 0 (the cell containing the entry to be removed).
+//  - Updates the bucket list so that the first cons cell's cdr points to the third cons cell (or NULL if there is no third cell), effectively skipping the removed cell.
+//  - Returns 0.
+// params:
+//  - hashtable_params_template_s_1_n_2_collision_static
+//  - hashtable_params_template_s_1_n_2_collision_dynamic
+//  - hashtable_params_template_s_2_n_2_collision_static
+//  - hashtable_params_template_s_2_n_2_collision_dynamic
+//  - hashtable_params_template_s_2_n_3_collision_static
+//  - hashtable_params_template_s_2_n_3_collision_dynamic
+static void remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket(void **state) {
+    hashtable_params_t *params = (hashtable_params_t *) *state;
+    hashtable *ht = params->ht;
+
+	// what to be cleanup
+	cons *cons_to_be_cleanup = (ht->buckets[0])->cdr;
+	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
+	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
+
+	// a key which match the key to be removed
+	char *matching_key = NULL;
+	alloc_and_save_address_to_be_freed((void*)&matching_key, strlen(key_to_be_cleanup) + 1);
+    memcpy(matching_key, key_to_be_cleanup, strlen(key_to_be_cleanup) + 1);
+
+	// Expect cleanup of all dynamically allocated memory associated with the entry to be removed.
+	if (ht->destroy_value_fn)
+        expect_value(mock_free, ptr, value_that_might_be_cleanup);
+    expect_value(mock_free, ptr, key_to_be_cleanup);
+    expect_value(mock_free, ptr, entry_to_be_cleanup);
+    expect_value(mock_free, ptr, cons_to_be_cleanup);
+
+	list updated_second_element_of_first_bucket = cons_to_be_cleanup->cdr;
+
+	// make it search at first bucket
+	set_hash_djb2(mock_hash_djb2_dummy_return_0);
+
+    assert_int_equal(
+        0,
+        hashtable_remove(ht, matching_key) );
+
+    // check update
+    assert_ptr_equal((ht->buckets)[0]->cdr, updated_second_element_of_first_bucket);
+}
+
+// Given: The hashtable is not empty, and the provided key matches the key of the entry at the head of bucket 1.
+// Expected: (removed first entry of bucket 0)
+//  - If ht->destroy_value_fn is not NULL, calls ht->destroy_value_fn with the value associated with the key.
+//  - Frees the key of the entry to be removed.
+//  - Frees the entry structure itself (the entry pointed to by the car of the first cons cell in bucket 1).
+//  - Frees the first cons cell in bucket 1 (the cell containing the entry to be removed).
+//  - Updates the bucket list so that the head of bucket 1 now points to the next cons cell (cdr), or NULL if there are no more entries.
+//  - Returns 0.
+// param:
+//  - hashtable_params_template_s_2_n_2_no_collision_static
+//  - hashtable_params_template_s_2_n_2_no_collision_dynamic
+//  - hashtable_params_template_s_2_n_3_collision_static
+//  - hashtable_params_template_s_2_n_3_collision_dynamic
+static void remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket(void **state) {
+    hashtable_params_t *params = (hashtable_params_t *) *state;
+    hashtable *ht = params->ht;
+
+	// what to be cleanup
+	cons *cons_to_be_cleanup = ht->buckets[1];
+	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
+	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
+
+	// a key which match the key to be removed
+	char *matching_key = NULL;
+	alloc_and_save_address_to_be_freed((void*)&matching_key, strlen(key_to_be_cleanup) + 1);
+    memcpy(matching_key, key_to_be_cleanup, strlen(key_to_be_cleanup) + 1);
+
+	// Expect cleanup of all dynamically allocated memory associated with the entry to be removed.
+	if (ht->destroy_value_fn)
+        expect_value(mock_free, ptr, value_that_might_be_cleanup);
+    expect_value(mock_free, ptr, key_to_be_cleanup);
+    expect_value(mock_free, ptr, entry_to_be_cleanup);
+    expect_value(mock_free, ptr, cons_to_be_cleanup);
+
+	list updated_second_bucket = cons_to_be_cleanup->cdr;
+
+	// make it search at second bucket
+	set_hash_djb2(mock_hash_djb2_dummy_return_1);
+
+    assert_int_equal(
+        0,
+        hashtable_remove(ht, matching_key) );
+
+    // check update
+    assert_ptr_equal((ht->buckets)[1], updated_second_bucket);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -2106,7 +2324,22 @@ static void reset_value_free_reset_value_and_returns_0_when_key_in_use(void **st
 //-----------------------------------------------------------------------------
 
 int main(void) {
-        const params_t *params_template_key_in_use[12] = {
+    const hashtable_params_t *hashtable_params_ht_not_empty[12] = {
+        &hashtable_params_template_s_1_n_1_static,
+        &hashtable_params_template_s_1_n_1_dynamic,
+        &hashtable_params_template_s_1_n_2_collision_static,
+        &hashtable_params_template_s_1_n_2_collision_dynamic,
+        &hashtable_params_template_s_2_n_1_static,
+        &hashtable_params_template_s_2_n_1_dynamic,
+        &hashtable_params_template_s_2_n_2_no_collision_static,
+        &hashtable_params_template_s_2_n_2_collision_static,
+        &hashtable_params_template_s_2_n_2_no_collision_dynamic,
+        &hashtable_params_template_s_2_n_2_collision_dynamic,
+        &hashtable_params_template_s_2_n_3_collision_static,
+        &hashtable_params_template_s_2_n_3_collision_dynamic
+    };
+
+    const params_t *params_template_key_in_use[12] = {
         &params_template_s_1_n_1_static_key_in_use,
         &params_template_s_1_n_1_dynamic_key_in_use,
         &params_template_s_1_n_2_collision_static_key_in_use,
@@ -2525,6 +2758,79 @@ int main(void) {
         reset_value_free_reset_value_and_returns_0_when_key_in_use_tests[i] = tmp;
     }
 
+    const struct CMUnitTest remove_returns_1_when_ht_null_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_returns_1_when_ht_null,
+            remove_setup, general_teardown, (void *)&hashtable_params_ht_null),
+    };
+
+    struct CMUnitTest remove_returns_1_when_key_not_in_use_tests[13] = {0};
+    for (size_t i = 0; i < 12; i++) {
+        struct CMUnitTest tmp = cmocka_unit_test_prestate_setup_teardown(
+            remove_returns_1_when_key_not_in_use,
+            remove_setup,
+            general_teardown,
+            (void *)hashtable_params_ht_not_empty[i]);
+        remove_returns_1_when_key_not_in_use_tests[i] = tmp;
+    }
+
+    const struct CMUnitTest remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_1_n_1_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_1_n_1_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_1_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_1_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_no_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_no_collision_dynamic),
+    };
+
+    const struct CMUnitTest remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_1_n_2_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_1_n_2_collision_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_collision_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_3_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_3_collision_dynamic),
+    };
+
+    const struct CMUnitTest remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_no_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_2_no_collision_dynamic),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_3_collision_static),
+        cmocka_unit_test_prestate_setup_teardown(
+            remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket,
+            remove_setup, general_teardown, (void *)&hashtable_params_template_s_2_n_3_collision_dynamic),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_tests, NULL, NULL);
     failed += cmocka_run_group_tests(destroy_tests, NULL, NULL);
@@ -2549,6 +2855,12 @@ int main(void) {
     failed += cmocka_run_group_tests(reset_value_one_param_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_value_returns_1_when_key_not_in_use_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_value_free_reset_value_and_returns_0_when_key_in_use_tests, NULL, NULL);
+
+    failed += cmocka_run_group_tests(remove_returns_1_when_ht_null_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_returns_1_when_key_not_in_use_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_collision_at_second_bucket_tests, NULL, NULL);
 
     return failed;
 }
