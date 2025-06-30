@@ -32,6 +32,7 @@ static const ast_children_t *const DUMMY_CHILDREN_INFO_P = (ast_children_t *) &D
 static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[4];
 static const hashtable *const DUMMY_HASHTABLE_P = (hashtable *) &DUMMY[5];
 static const size_t DUMMY_SIZE_STRUCT_HASHTABLE = 1;
+static const symtab *const DUMMY_SYMTAB_P = (symtab *) &DUMMY[6];
 
 static list collected_ptr_to_be_freed = NULL;
 
@@ -203,32 +204,28 @@ static int wind_scope_teardown(void **state) {
 
 // Given: any
 // Expected: calls malloc with sizeof(symtab)
-/*
-static void create_calls_malloc_for_a_symtab(void **state) {
+static void wind_scope_calls_malloc_for_a_symtab(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
 
-    symtab_create();
+    symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
 }
-*/
+
 
 // Given: malloc fails
 // Expected: return NULL
-/*
-static void create_returns_null_when_malloc_fails(void **state) {
+static void wind_scope_returns_null_when_malloc_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
-    assert_null(symtab_create());
+    assert_null(symtab_wind_scope((symtab *) DUMMY_SYMTAB_P));
 }
-*/
 
 // Given: malloc succeeds
 // Expected:
 //  - calls hashtable_create with:
 //     - size: SYMTAB_SIZE
 //     - destroy_value_fn: symtab_destroy_symbol
-/*
-static void create_calls_hashtable_create_when_malloc_succeds(void **state) {
+static void wind_scope_calls_hashtable_create_when_malloc_succeds(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(hashtable_create, size, SYMTAB_SIZE);
@@ -238,16 +235,14 @@ static void create_calls_hashtable_create_when_malloc_succeds(void **state) {
     will_return(hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
 
-    symtab_create();
+    symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
 }
-*/
 
 // Given: hashtable_create fails
 // Expected:
 //  - frees malloc'ed symtab
 //  - returns NULL
-/*
-static void create_calls_returns_null_when_hashtable_create_fails(void **state) {
+static void wind_scope_returns_null_when_hashtable_create_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(hashtable_create, size, SYMTAB_SIZE);
@@ -255,14 +250,12 @@ static void create_calls_returns_null_when_hashtable_create_fails(void **state) 
     will_return(hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
 
-    assert_null(symtab_create());
+    assert_null(symtab_wind_scope((symtab *) DUMMY_SYMTAB_P));
 }
-*/
 
 // Given: hashtable_create succeeds
 // Expected: malloc'ed symtab is initialized and returned
-/*
-static void create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds(void **state) {
+static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds(void **state) {
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symtab, sizeof(struct symtab));
     alloc_and_save_address_to_be_freed((void **)&fake_hashtable_create_returned_value, DUMMY_SIZE_STRUCT_HASHTABLE);
 
@@ -272,13 +265,12 @@ static void create_calls_initializes_and_returns_malloced_symtab_when_hashtable_
     expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
     will_return(hashtable_create, fake_hashtable_create_returned_value);
 
-    symtab *ret = symtab_create();
+    symtab *ret = symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
 
     assert_ptr_equal(ret, fake_malloc_returned_value_for_a_symtab);
     assert_ptr_equal(ret->symbols, fake_hashtable_create_returned_value);
-    assert_ptr_equal(ret->parent, NULL);
+    assert_ptr_equal(ret->parent, DUMMY_SYMTAB_P);
 }
-*/
 
 
 
@@ -300,32 +292,27 @@ int main(void) {
             destroy_symbol_setup, destroy_symbol_teardown),
     };
 
-/*
-    const struct CMUnitTest create_tests[] = {
+    const struct CMUnitTest wind_scope_tests[] = {
         cmocka_unit_test_setup_teardown(
-            create_calls_malloc_for_a_symtab,
-            create_setup, create_teardown),
+            wind_scope_calls_malloc_for_a_symtab,
+            wind_scope_setup, wind_scope_teardown),
         cmocka_unit_test_setup_teardown(
-            create_returns_null_when_malloc_fails,
-            create_setup, create_teardown),
+            wind_scope_returns_null_when_malloc_fails,
+            wind_scope_setup, wind_scope_teardown),
         cmocka_unit_test_setup_teardown(
-            destroy_symbol_calls_ast_destroy_typed_data_wrapper_when_image_is_data_wrapper,
-            create_setup, create_teardown),
+            wind_scope_calls_hashtable_create_when_malloc_succeds,
+            wind_scope_setup, wind_scope_teardown),
         cmocka_unit_test_setup_teardown(
-            create_calls_hashtable_create_when_malloc_succeds,
-            create_setup, create_teardown),
+            wind_scope_returns_null_when_hashtable_create_fails,
+            wind_scope_setup, wind_scope_teardown),
         cmocka_unit_test_setup_teardown(
-            create_calls_returns_null_when_hashtable_create_fails,
-            create_setup, create_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds,
-            create_setup, create_teardown),
+            wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds,
+            wind_scope_setup, wind_scope_teardown),
     };
-*/
 
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
-    //failed += cmocka_run_group_tests(create_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
 
     return failed;
 }
