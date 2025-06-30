@@ -175,7 +175,7 @@ static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_i
 
 
 //-----------------------------------------------------------------------------
-// symtab_create TESTS
+// symtab_wind_scope TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -185,12 +185,12 @@ static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_i
 //-----------------------------------------------------------------------------
 
 
-static int create_setup(void **state) {
+static int wind_scope_setup(void **state) {
     set_allocators(mock_malloc, mock_free);
     return 0;
 }
 
-static int create_teardown(void **state) {
+static int wind_scope_teardown(void **state) {
     set_allocators(NULL, NULL);
     return 0;
 }
@@ -203,26 +203,31 @@ static int create_teardown(void **state) {
 
 // Given: any
 // Expected: calls malloc with sizeof(symtab)
+/*
 static void create_calls_malloc_for_a_symtab(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
 
     symtab_create();
 }
+*/
 
 // Given: malloc fails
 // Expected: return NULL
+/*
 static void create_returns_null_when_malloc_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
     assert_null(symtab_create());
 }
+*/
 
 // Given: malloc succeeds
 // Expected:
 //  - calls hashtable_create with:
 //     - size: SYMTAB_SIZE
 //     - destroy_value_fn: symtab_destroy_symbol
+/*
 static void create_calls_hashtable_create_when_malloc_succeds(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
@@ -235,11 +240,13 @@ static void create_calls_hashtable_create_when_malloc_succeds(void **state) {
 
     symtab_create();
 }
+*/
 
 // Given: hashtable_create fails
 // Expected:
 //  - frees malloc'ed symtab
 //  - returns NULL
+/*
 static void create_calls_returns_null_when_hashtable_create_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
@@ -250,9 +257,11 @@ static void create_calls_returns_null_when_hashtable_create_fails(void **state) 
 
     assert_null(symtab_create());
 }
+*/
 
 // Given: hashtable_create succeeds
 // Expected: malloc'ed symtab is initialized and returned
+/*
 static void create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds(void **state) {
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symtab, sizeof(struct symtab));
     alloc_and_save_address_to_be_freed((void **)&fake_hashtable_create_returned_value, DUMMY_SIZE_STRUCT_HASHTABLE);
@@ -269,7 +278,7 @@ static void create_calls_initializes_and_returns_malloced_symtab_when_hashtable_
     assert_ptr_equal(ret->symbols, fake_hashtable_create_returned_value);
     assert_ptr_equal(ret->parent, NULL);
 }
-
+*/
 
 
 
@@ -291,6 +300,7 @@ int main(void) {
             destroy_symbol_setup, destroy_symbol_teardown),
     };
 
+/*
     const struct CMUnitTest create_tests[] = {
         cmocka_unit_test_setup_teardown(
             create_calls_malloc_for_a_symtab,
@@ -311,10 +321,11 @@ int main(void) {
             create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds,
             create_setup, create_teardown),
     };
+*/
 
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(create_tests, NULL, NULL);
+    //failed += cmocka_run_group_tests(create_tests, NULL, NULL);
 
     return failed;
 }

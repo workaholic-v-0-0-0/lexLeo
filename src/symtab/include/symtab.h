@@ -20,11 +20,8 @@ typedef struct symtab symtab;
 // typedef void (*hashtable_destroy_value_fn_t)(void *value);
 void symtab_destroy_symbol(void *value);
 
-symtab *symtab_create(void);
-void symtab_destroy(symtab *st);
-
-void symtab_wind_scope(symtab *st);
-void symtab_unwind_scope(symtab *st);
+symtab *symtab_wind_scope(symtab *st);
+symtab *symtab_unwind_scope(symtab *st);
 
 int symtab_add(symtab *st, symbol *sym);
 symbol *symtab_lookup(symtab *st, const char *name);
