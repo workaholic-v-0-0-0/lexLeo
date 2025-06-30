@@ -7,6 +7,7 @@ add_library(symtab STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c)
 target_include_directories(
     symtab
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/ast/include
 )
 target_link_libraries(symtab PUBLIC data_structures)
 target_compile_definitions(symtab PRIVATE $<$<CONFIG:Debug>:DEBUG>)
@@ -35,5 +36,6 @@ if (USE_STRING_UTILS)
 endif ()
 
 if (BUILD_TESTING)
+    target_compile_definitions(symtab PRIVATE UNIT_TEST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()
