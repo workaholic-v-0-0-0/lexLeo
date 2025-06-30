@@ -23,8 +23,6 @@
 //-----------------------------------------------------------------------------
 
 
-static list collected_ptr_to_be_freed = NULL;
-
 static const char DUMMY[10];
 static const void *const DUMMY_MALLOC_RETURNED_VALUE = (void *) &DUMMY[0];
 static const char *const DUMMY_STRING = (char *) &DUMMY[1];
@@ -32,6 +30,10 @@ static const char *const DUMMY_STRING = (char *) &DUMMY[1];
 static const ast *const DUMMY_AST_P = (ast *) &DUMMY[2];
 static const ast_children_t *const DUMMY_CHILDREN_INFO_P = (ast_children_t *) &DUMMY[3];
 static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[4];
+static const hashtable *const DUMMY_HASHTABLE_P = (hashtable *) &DUMMY[5];
+static const size_t DUMMY_SIZE_STRUCT_HASHTABLE = 1;
+
+static list collected_ptr_to_be_freed = NULL;
 
 
 
@@ -45,6 +47,8 @@ void * mock_malloc(size_t size) {
     return mock_type(void *);
 }
 
+static void *fake_malloc_returned_value_for_a_symtab;
+
 void mock_free(void *ptr) {
     check_expected_ptr(ptr);
 }
@@ -56,6 +60,14 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
     check_expected(non_typed_data_wrapper);
 }
+
+hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
+    check_expected(size);
+    check_expected(destroy_value_fn);
+    return mock_type(hashtable *);
+}
+
+static hashtable *fake_hashtable_create_returned_value;
 
 
 
@@ -162,15 +174,8 @@ static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_i
 
 
 
-
-
-
-
-
-
-
 //-----------------------------------------------------------------------------
-// create TESTS
+// symtab_create TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -200,7 +205,8 @@ static int create_teardown(void **state) {
 // Expected: calls malloc with sizeof(symtab)
 static void create_calls_malloc_for_a_symtab(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
-    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
+
     symtab_create();
 }
 
@@ -213,11 +219,55 @@ static void create_returns_null_when_malloc_fails(void **state) {
 }
 
 // Given: malloc succeeds
-// Expected: calls hashtable_create with SYMTAB_SIZE and ???
+// Expected:
+//  - calls hashtable_create with:
+//     - size: SYMTAB_SIZE
+//     - destroy_value_fn: symtab_destroy_symbol
 static void create_calls_hashtable_create_when_malloc_succeds(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
-    //will_return(mock_malloc, ???);
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(hashtable_create, size, SYMTAB_SIZE);
+    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
 
+    // finish a scenario tested further to avoid segmentation fault
+    will_return(hashtable_create, NULL);
+    expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
+
+    symtab_create();
+}
+
+// Given: hashtable_create fails
+// Expected:
+//  - frees malloc'ed symtab
+//  - returns NULL
+static void create_calls_returns_null_when_hashtable_create_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(symtab));
+    will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
+    expect_value(hashtable_create, size, SYMTAB_SIZE);
+    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    will_return(hashtable_create, NULL);
+    expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
+
+    assert_null(symtab_create());
+}
+
+// Given: hashtable_create succeeds
+// Expected: malloc'ed symtab is initialized and returned
+static void create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symtab, sizeof(struct symtab));
+    alloc_and_save_address_to_be_freed((void **)&fake_hashtable_create_returned_value, DUMMY_SIZE_STRUCT_HASHTABLE);
+
+    expect_value(mock_malloc, size, sizeof(symtab));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_symtab);
+    expect_value(hashtable_create, size, SYMTAB_SIZE);
+    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    will_return(hashtable_create, fake_hashtable_create_returned_value);
+
+    symtab *ret = symtab_create();
+
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_a_symtab);
+    assert_ptr_equal(ret->symbols, fake_hashtable_create_returned_value);
+    assert_ptr_equal(ret->parent, NULL);
 }
 
 
@@ -250,6 +300,15 @@ int main(void) {
             create_setup, create_teardown),
         cmocka_unit_test_setup_teardown(
             destroy_symbol_calls_ast_destroy_typed_data_wrapper_when_image_is_data_wrapper,
+            create_setup, create_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_calls_hashtable_create_when_malloc_succeds,
+            create_setup, create_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_calls_returns_null_when_hashtable_create_fails,
+            create_setup, create_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds,
             create_setup, create_teardown),
     };
 

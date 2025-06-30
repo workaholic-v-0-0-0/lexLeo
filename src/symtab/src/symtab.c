@@ -20,9 +20,19 @@ void symtab_destroy_symbol(void *value) {
     // and hashtable owns memory of its keys
 }
 
-symtab *symtab_create(void) { // CURRENTLY IMPLEMENED VIA TDD ; PENDING FULL AST IMPLEMENTATION
+symtab *symtab_create(void) {
     symtab *ret = SYMTAB_MALLOC(sizeof(symtab));
     if (!ret)
         return NULL;
-    return (symtab *)-2;
+
+    hashtable *ht = hashtable_create(SYMTAB_SIZE, symtab_destroy_symbol);
+    if (!ht) {
+        SYMTAB_FREE(ret);
+        return NULL;
+    }
+
+    ret->symbols = ht;
+    ret->parent = NULL;
+
+    return ret;
 }
