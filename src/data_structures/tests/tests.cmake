@@ -9,6 +9,7 @@ add_executable(
 target_include_directories(
     test_list
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/data_structures/include/"
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
 target_link_libraries(test_list PRIVATE data_structures ${CMOCKA_LIBRARY})

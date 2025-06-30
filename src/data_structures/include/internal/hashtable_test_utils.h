@@ -13,4 +13,15 @@ unsigned long real_hash_djb2(const char *str);
 extern hash_djb2_fn hash_djb2_mockable;
 void set_hash_djb2(hash_djb2_fn f);
 
+typedef hashtable *(*hashtable_create_fn)(size_t size, hashtable_destroy_value_fn_t destroy_value_fn);
+hashtable *real_hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn);
+extern hashtable_create_fn hashtable_create_mockable;
+void set_hashtable_create(hashtable_create_fn f);
+
+static void hashtable_destroy_entry(void *item, void *user_data);
+typedef void (*hashtable_destroy_fn)(hashtable *ht);
+void real_hashtable_destroy(hashtable *ht);
+extern hashtable_destroy_fn hashtable_destroy_mockable;
+void set_hashtable_destroy(hashtable_destroy_fn f);
+
 #endif //HASHTABLES_TEST_UTILS_H

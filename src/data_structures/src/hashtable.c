@@ -22,6 +22,9 @@ static unsigned long hash_djb2(const char *str) {
 hashtable *hashtable_create(
         size_t size,
         hashtable_destroy_value_fn_t destroy_value_fn ) {
+#ifdef UNIT_TEST
+    return hashtable_create_mockable(size, destroy_value_fn);
+#else
     if (size == 0)
         return NULL;
 
@@ -40,6 +43,7 @@ hashtable *hashtable_create(
     ret->destroy_value_fn = destroy_value_fn;
 
     return ret;
+#endif
 }
 
 int hashtable_key_is_in_use(hashtable *ht, const char *key) {
@@ -76,7 +80,9 @@ void *hashtable_get(const hashtable *ht, const char *key) {
     return NULL;
 }
 
-static void hashtable_destroy_entry(void *item, void *user_data) {
+
+static
+void hashtable_destroy_entry(void *item, void *user_data) {
     entry *e = (entry *)item;
     hashtable_destroy_value_fn_t destroy_fn =
         (hashtable_destroy_value_fn_t) user_data;
@@ -87,6 +93,9 @@ static void hashtable_destroy_entry(void *item, void *user_data) {
 
 // precondition: ht null or correctly initialized
 void hashtable_destroy(hashtable *ht) {
+#ifdef UNIT_TEST
+    hashtable_destroy_mockable(ht);
+#else
     if (!ht)
         return;
     for (size_t i = 0 ; i < ht->size ; i++) {
@@ -105,6 +114,7 @@ void hashtable_destroy(hashtable *ht) {
 	ht->buckets = NULL;
 	DATA_STRUCTURE_FREE(ht);
 	ht = NULL;
+#endif
 }
 
 int hashtable_add(hashtable *ht, const char *key, void *value) {
