@@ -9,9 +9,10 @@ typedef struct ast ast;
 
 typedef struct symbol {
     char *name;
-    ast *image;
+    ast *image; // must be NULL or correctly formed
 } symbol;
-// note: registrer in hashtable with an entry with key = symbol.name and *value = symbol
+// note: registrer in hashtable with an entry with
+//       key = symbol.name and *value = symbol
 
 typedef struct symtab symtab;
 
