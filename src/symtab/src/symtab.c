@@ -37,3 +37,14 @@ symtab *symtab_wind_scope(symtab *st) {
 
     return ret;
 }
+
+symtab *symtab_unwind_scope(symtab *st) {
+    if (!st)
+        return NULL;
+
+    symtab *ret = st->parent;
+    hashtable_destroy(st->symbols);
+    SYMTAB_FREE(st);
+
+    return ret;
+}

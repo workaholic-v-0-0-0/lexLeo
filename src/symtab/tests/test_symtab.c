@@ -15,7 +15,7 @@
 #include "ast.h"
 
 #include "internal/symtab_internal.h"
-
+#include "internal/hashtable_test_utils.h"
 
 
 //-----------------------------------------------------------------------------
@@ -62,13 +62,17 @@ void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
     check_expected(non_typed_data_wrapper);
 }
 
-hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
+hashtable *mock_hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
     check_expected(size);
     check_expected(destroy_value_fn);
     return mock_type(hashtable *);
 }
 
 static hashtable *fake_hashtable_create_returned_value;
+
+void mock_hashtable_destroy(hashtable *ht) {
+    check_expected(ht);
+}
 
 
 
@@ -188,11 +192,13 @@ static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_i
 
 static int wind_scope_setup(void **state) {
     set_allocators(mock_malloc, mock_free);
+    set_hashtable_create(mock_hashtable_create);
     return 0;
 }
 
 static int wind_scope_teardown(void **state) {
     set_allocators(NULL, NULL);
+    set_hashtable_create(NULL);
     return 0;
 }
 
@@ -228,11 +234,11 @@ static void wind_scope_returns_null_when_malloc_fails(void **state) {
 static void wind_scope_calls_hashtable_create_when_malloc_succeds(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
-    expect_value(hashtable_create, size, SYMTAB_SIZE);
-    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
 
     // finish a scenario tested further to avoid segmentation fault
-    will_return(hashtable_create, NULL);
+    will_return(mock_hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
 
     symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
@@ -245,9 +251,9 @@ static void wind_scope_calls_hashtable_create_when_malloc_succeds(void **state) 
 static void wind_scope_returns_null_when_hashtable_create_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
-    expect_value(hashtable_create, size, SYMTAB_SIZE);
-    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
-    will_return(hashtable_create, NULL);
+    expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    will_return(mock_hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
 
     assert_null(symtab_wind_scope((symtab *) DUMMY_SYMTAB_P));
@@ -261,9 +267,9 @@ static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashta
 
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, fake_malloc_returned_value_for_a_symtab);
-    expect_value(hashtable_create, size, SYMTAB_SIZE);
-    expect_value(hashtable_create, destroy_value_fn, symtab_destroy_symbol);
-    will_return(hashtable_create, fake_hashtable_create_returned_value);
+    expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    will_return(mock_hashtable_create, fake_hashtable_create_returned_value);
 
     symtab *ret = symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
 
@@ -271,6 +277,69 @@ static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashta
     assert_ptr_equal(ret->symbols, fake_hashtable_create_returned_value);
     assert_ptr_equal(ret->parent, DUMMY_SYMTAB_P);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// symtab_unwind_scope TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int unwind_scope_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    set_hashtable_destroy(mock_hashtable_destroy);
+    return 0;
+}
+
+static int unwind_scope_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_hashtable_destroy(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: do nothing and returns NULL
+static void unwind_scope_do_nothing_and_returns_null_when_st_null(void **state) {
+    assert_null(symtab_unwind_scope(NULL));
+}
+
+// Given: st != NULL
+// Expected:
+//  - calls hashtable_destroy with st->symbols
+//  - frees st
+//  - returns st->parent
+static void unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_when_st_not_null(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+
+    expect_value(mock_hashtable_destroy, ht, st->symbols);
+    expect_value(mock_free, ptr, st);
+
+    symtab *ret = symtab_unwind_scope(st);
+
+    assert_ptr_equal(ret, st->parent);
+}
+
+
+
+
+
+
 
 
 
@@ -310,9 +379,19 @@ int main(void) {
             wind_scope_setup, wind_scope_teardown),
     };
 
+    const struct CMUnitTest unwind_scope_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            unwind_scope_do_nothing_and_returns_null_when_st_null,
+            unwind_scope_setup, unwind_scope_teardown),
+        cmocka_unit_test_setup_teardown(
+            unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_when_st_not_null,
+            unwind_scope_setup, unwind_scope_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
 
     return failed;
 }
