@@ -20,8 +20,9 @@ void symtab_destroy_symbol(void *value) {
     // and hashtable owns memory of its keys
 }
 
-symtab *symtab_create(void) {
+symtab *symtab_wind_scope(symtab *st) {
     symtab *ret = SYMTAB_MALLOC(sizeof(symtab));
+
     if (!ret)
         return NULL;
 
@@ -32,7 +33,7 @@ symtab *symtab_create(void) {
     }
 
     ret->symbols = ht;
-    ret->parent = NULL;
+    ret->parent = st;
 
     return ret;
 }
