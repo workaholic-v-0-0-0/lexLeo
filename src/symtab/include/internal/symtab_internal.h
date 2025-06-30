@@ -9,10 +9,10 @@
 
 #define SYMTAB_SIZE 256
 
-//  list of symbol tables, one per scope
+// list of symbol tables, one per scope
 typedef struct symtab {
     hashtable *symbols;
     struct symtab *parent;
-} symtab, *symtab_stack;
+} symtab;
 
 #endif //SYMTAB_INTERNAL_H

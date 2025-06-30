@@ -5,7 +5,7 @@
 
 // forward declaration to handle cross-dependency
 typedef struct ast ast;
-// note: symtab.c will need '#include "ast.h"'
+// note: '#include "ast.h"' in symtab.c
 
 typedef struct symbol {
     char *name;
@@ -16,7 +16,7 @@ typedef struct symbol {
 
 typedef struct symtab symtab;
 
-// for info :
+// for info:
 // typedef void (*hashtable_destroy_value_fn_t)(void *value);
 void symtab_destroy_symbol(void *value);
 
