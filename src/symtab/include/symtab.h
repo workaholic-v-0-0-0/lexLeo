@@ -24,6 +24,8 @@ symtab *symtab_wind_scope(symtab *st); // the caller is responsible for passing 
 symtab *symtab_unwind_scope(symtab *st);  // the caller is responsible for passing either NULL or a well-formed symtab pointer
 
 int symtab_add(symtab *st, symbol *sym);
-symbol *symtab_lookup(symtab *st, const char *name);
+symbol *symtab_get(symtab *st, const char *name);
+int symtab_reset(symtab *st, const char *name, ast *image);
+int symtab_remove(symtab *st, const char *name);
 
 #endif //SYMTAB_H
