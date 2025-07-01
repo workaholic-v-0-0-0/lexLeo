@@ -33,6 +33,9 @@ static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[4];
 static const hashtable *const DUMMY_HASHTABLE_P = (hashtable *) &DUMMY[5];
 static const size_t DUMMY_SIZE_STRUCT_HASHTABLE = 1;
 static const symtab *const DUMMY_SYMTAB_P = (symtab *) &DUMMY[6];
+static const symbol *const DUMMY_SYMBOL_P = (symbol *) &DUMMY[7];
+static const int DUMMY_INT = 0;
+static const ast *const DUMMY_IMAGE = (ast *) &DUMMY[8];
 
 static list collected_ptr_to_be_freed = NULL;
 
@@ -72,6 +75,13 @@ static hashtable *fake_hashtable_create_returned_value;
 
 void mock_hashtable_destroy(hashtable *ht) {
     check_expected(ht);
+}
+
+int mock_hashtable_add(hashtable *ht, const char *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    check_expected(value);
+    return mock_type(int);
 }
 
 
@@ -337,7 +347,67 @@ static void unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_whe
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_add TESTS
+//-----------------------------------------------------------------------------
 
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int add_setup(void **state) {
+    set_hashtable_add(mock_hashtable_add);
+    return 0;
+}
+
+static int add_teardown(void **state) {
+    set_hashtable_add(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void add_returns_1_when_st_null(void **state) {
+    assert_int_equal(1, symtab_add(NULL, (symbol *) DUMMY_SYMBOL_P));
+}
+
+// Given: st != NULL, sym = NULL
+// Expected: returns 1
+static void add_returns_1_when_st_not_null_sym_null(void **state) {
+    assert_int_equal(1, symtab_add((symtab *) DUMMY_SYMTAB_P, NULL));
+}
+
+// Given: st != NULL, sym != NULL
+// Expected:
+//  - calls hashtable_add(st->symbols, sym->name, (void *) sym)
+//  - returns hashtable_add returned value
+static void add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_null_sym_not_null(void **state) {
+    symtab *st = NULL;
+    symbol *sym = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **)&sym, sizeof(symbol));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+    sym->name = (char *) DUMMY_STRING;
+    sym->image = (ast *) DUMMY_IMAGE;
+
+    expect_value(mock_hashtable_add, ht, st->symbols);
+    expect_value(mock_hashtable_add, key, sym->name);
+    expect_value(mock_hashtable_add, value, (void *) sym);
+    will_return(mock_hashtable_add, DUMMY_INT);
+
+    assert_int_equal(symtab_add(st, sym), DUMMY_INT);
+}
 
 
 
@@ -388,10 +458,26 @@ int main(void) {
             unwind_scope_setup, unwind_scope_teardown),
     };
 
+    const struct CMUnitTest add_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            add_returns_1_when_st_null,
+            add_setup, add_teardown),
+        cmocka_unit_test_setup_teardown(
+            add_returns_1_when_st_not_null_sym_null,
+            add_setup, add_teardown),
+        cmocka_unit_test_setup_teardown(
+            add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_null_sym_not_null,
+            add_setup, add_teardown),
+        cmocka_unit_test_setup_teardown(
+            add_returns_1_when_hashtable_add_fails,
+            add_setup, add_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(add_tests, NULL, NULL);
 
     return failed;
 }

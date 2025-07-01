@@ -118,13 +118,10 @@ void hashtable_destroy(hashtable *ht) {
 }
 
 int hashtable_add(hashtable *ht, const char *key, void *value) {
-    if (!ht)
-        return 1;
-
-    if (!key)
-        return 1;
-
-    if (hashtable_key_is_in_use(ht, key))
+#ifdef UNIT_TEST
+    return hashtable_add_mockable(ht, key, value);
+#else
+    if ((!ht) || (!key) || (hashtable_key_is_in_use(ht, key)))
         return 1;
 
     entry *new_entry = DATA_STRUCTURE_MALLOC(sizeof(entry));
@@ -153,6 +150,7 @@ int hashtable_add(hashtable *ht, const char *key, void *value) {
     *bucket = c;
 
     return 0;
+#endif
 }
 
 int hashtable_reset_value(hashtable *ht, const char *key, void *value) {

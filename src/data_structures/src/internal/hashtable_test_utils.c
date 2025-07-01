@@ -75,4 +75,46 @@ void set_hashtable_destroy(hashtable_destroy_fn f) {
     hashtable_destroy_mockable = f ? f : real_hashtable_destroy;
 }
 
+static unsigned long hash_djb2(const char *str) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *str++)) hash = ((hash << 5) + hash) + c;
+    return hash;
+}
+hashtable_add_fn hashtable_add_mockable = real_hashtable_add;
+int real_hashtable_add(hashtable *ht, const char *key, void *value) {
+    if ((!ht) || (!key) || (hashtable_key_is_in_use(ht, key)))
+        return 1;
+
+    entry *new_entry = DATA_STRUCTURE_MALLOC(sizeof(entry));
+    if (!new_entry)
+        return 1;
+
+    new_entry->key = DATA_STRUCTURE_STRING_DUPLICATE(key);
+    if (!new_entry->key) {
+        DATA_STRUCTURE_FREE(new_entry);
+        return 1;
+    }
+
+    new_entry->value = value;
+
+    cons *c = DATA_STRUCTURE_MALLOC(sizeof(cons));
+    if (!c) {
+        DATA_STRUCTURE_FREE(new_entry->key);
+        DATA_STRUCTURE_FREE(new_entry);
+        return 1;
+    }
+
+    c->car = new_entry;
+
+    list *bucket = &((ht->buckets)[hash_djb2(key) % ht->size]);
+    c->cdr = *bucket;
+    *bucket = c;
+
+    return 0;
+}
+void set_hashtable_add(hashtable_add_fn f) {
+    hashtable_add_mockable = f ? f : real_hashtable_add;
+}
+
 #endif
