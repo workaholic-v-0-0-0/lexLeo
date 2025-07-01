@@ -69,3 +69,10 @@ int symtab_reset(symtab *st, const char *name, ast *image) {
 
     return hashtable_reset_value(st->symbols, name, (void *) image);
 }
+
+int symtab_remove(symtab *st, const char *name) {
+    if (!st)
+        return 1;
+
+	return hashtable_remove(st->symbols, name);
+}

@@ -8,7 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static unsigned long hash_djb2(const char *str) {
+#ifndef UNIT_TEST
+static
+#endif
+unsigned long hash_djb2(const char *str) {
 #ifdef UNIT_TEST
     return hash_djb2_mockable(str);
 #else
@@ -189,6 +192,9 @@ int hashtable_reset_value(hashtable *ht, const char *key, void *value) {
 }
 
 int hashtable_remove(hashtable *ht, const char *key) {
+#ifdef UNIT_TEST
+    return hashtable_remove_mockable(ht, key);
+#else
     if ((!ht) || (!hashtable_key_is_in_use(ht, key))) {
 		return 1;
 	}
@@ -228,4 +234,5 @@ int hashtable_remove(hashtable *ht, const char *key) {
         before_to_be_removed->cdr = bucket->cdr; // bypass the removed cell
 
     return 0;
+#endif
 }

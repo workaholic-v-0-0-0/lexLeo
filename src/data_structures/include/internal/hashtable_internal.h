@@ -23,6 +23,9 @@ struct hashtable {
     hashtable_destroy_value_fn_t destroy_value_fn;
 };
 
-static unsigned long hash_djb2(const char *str);
+#ifndef UNIT_TEST
+static
+#endif
+unsigned long hash_djb2(const char *str);
 
 #endif //HASHTABLE_INTERNAL_H

@@ -96,12 +96,6 @@ void set_hashtable_get(hashtable_get_fn f) {
     hashtable_get_mockable = f ? f : real_hashtable_get;
 }
 
-static unsigned long hash_djb2(const char *str) {
-    unsigned long hash = 5381;
-    int c;
-    while ((c = *str++)) hash = ((hash << 5) + hash) + c;
-    return hash;
-}
 hashtable_add_fn hashtable_add_mockable = real_hashtable_add;
 int real_hashtable_add(hashtable *ht, const char *key, void *value) {
     if ((!ht) || (!key) || (hashtable_key_is_in_use(ht, key)))
@@ -172,8 +166,8 @@ void set_hashtable_reset_value(hashtable_reset_value_fn f) {
 hashtable_remove_fn hashtable_remove_mockable = real_hashtable_remove;
 int real_hashtable_remove(hashtable *ht, const char *key) {
     if ((!ht) || (!hashtable_key_is_in_use(ht, key))) {
-        return 1;
-    }
+		return 1;
+	}
 
     // find the cons cell to be removed ;
     // if it's not the first, keep track of the previous cell
@@ -192,7 +186,7 @@ int real_hashtable_remove(hashtable *ht, const char *key) {
                     0 ) {
             before_to_be_removed = bucket;
             bucket = bucket->cdr;
-                    }
+        }
     }
 
     // cleanup of all dynamically allocated memory associated with the
