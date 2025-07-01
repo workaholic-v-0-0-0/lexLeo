@@ -266,3 +266,13 @@ void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
     }
 #endif
 }
+
+void ast_destroy(ast *root) {
+    if (!root)
+        return;
+
+    if (root->type == AST_TYPE_DATA_WRAPPER)
+        ast_destroy_typed_data_wrapper(root);
+    else
+        ast_destroy_non_typed_data_wrapper(root);
+}

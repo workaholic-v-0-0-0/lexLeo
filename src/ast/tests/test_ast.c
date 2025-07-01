@@ -1848,6 +1848,66 @@ static void destroy_non_typed_data_wrapper_calls_ast_destroy_ast_children_and_ca
 
 
 //-----------------------------------------------------------------------------
+// ast_destroy TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_setup(void **state) {
+    set_ast_destroy_typed_data_wrapper(mock_ast_destroy_typed_data_wrapper);
+    set_ast_destroy_non_typed_data_wrapper(mock_ast_destroy_non_typed_data_wrapper);
+    return 0;
+}
+
+static int destroy_teardown(void **state) {
+    set_ast_destroy_typed_data_wrapper(NULL);
+    set_ast_destroy_non_typed_data_wrapper(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: root = NULL
+// Expected: do nothing
+static void destroy_do_nothing_when_root_null(void **state) {
+    ast_destroy(NULL);
+}
+
+// Given: root != NULL, root->type = AST_TYPE_DATA_WRAPPER
+// Expected: calls ast_destroy_typed_data_wrapper(root);
+static void destroy_calls_ast_destroy_typed_data_wrapper_when_root_is_data_wrapper(void **state) {
+    ast *root = NULL;
+    alloc_and_save_address_to_be_freed((void **)&root, sizeof(ast));
+    root->type = AST_TYPE_DATA_WRAPPER;
+    root->data = DUMMY_TYPED_DATA_P;
+    expect_value(mock_ast_destroy_typed_data_wrapper, ast_data_wrapper, root);
+    ast_destroy(root);
+}
+
+// Given: root != NULL, root->type != AST_TYPE_DATA_WRAPPER
+// Expected: calls ast_destroy_non_typed_data_wrapper(root);
+static void destroy_calls_ast_destroy_non_typed_data_wrapper_when_root_is_not_data_wrapper(void **state) {
+    ast *root = NULL;
+    alloc_and_save_address_to_be_freed((void **)&root, sizeof(ast));
+    root->type = AST_TYPE_ADDITION;
+    root->children = DUMMY_AST_CHILDREN_T_P;
+    expect_value(mock_ast_destroy_non_typed_data_wrapper, non_typed_data_wrapper, root);
+    ast_destroy(root);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -2116,6 +2176,18 @@ int main(void) {
             destroy_non_typed_data_wrapper_setup, destroy_non_typed_data_wrapper_teardown),
     };
 
+    const struct CMUnitTest ast_destroy_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            destroy_do_nothing_when_root_null,
+            destroy_setup, destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            destroy_calls_ast_destroy_typed_data_wrapper_when_root_is_data_wrapper,
+            destroy_setup, destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            destroy_calls_ast_destroy_non_typed_data_wrapper_when_root_is_not_data_wrapper,
+            destroy_setup, destroy_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2132,6 +2204,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_arr_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_non_typed_data_wrapper_var_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_non_typed_data_wrapper_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_tests, NULL, NULL);
 
     return failed;
 }
