@@ -75,8 +75,8 @@ void *hashtable_get(const hashtable *ht, const char *key) {
                 DATA_STRUCTURE_STRING_COMPARE(
                     key,
                     ((entry *) (bucket->car))->key )
-                    ==
-                    0 )
+                ==
+                0 )
             return ((entry *) (bucket->car))->value;
         bucket = bucket->cdr;
     }

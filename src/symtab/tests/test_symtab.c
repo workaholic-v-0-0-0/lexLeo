@@ -516,14 +516,23 @@ static void reset_returns_1_when_st_null(void **state) {
 
 // Given: st != NULL, image != NULL
 // Expected:
-//  - calls 
-static void reset_returns_1_when_st_not_null_image_null(void **state) {
+//   - calls hashtable_reset_value(st->symbols, name, (void *) image)
+//   - returns hashtable_reset_value returned value
+static void reset_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+
+    expect_value(mock_hashtable_reset_value, ht, st->symbols);
+    expect_value(mock_hashtable_reset_value, key, (char *) DUMMY_STRING);
+    expect_value(mock_hashtable_reset_value, value, (void *) DUMMY_IMAGE);
+    will_return(mock_hashtable_reset_value, DUMMY_INT);
+
     assert_int_equal(
-        symtab_reset((symtab *) DUMMY_SYMTAB_P, (char *) DUMMY_STRING, NULL),
-        1 );
+        symtab_reset((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        DUMMY_INT );
 }
-
-
 
 
 
@@ -596,7 +605,9 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             reset_returns_1_when_st_null,
             reset_setup, reset_teardown),
-
+        cmocka_unit_test_setup_teardown(
+            reset_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null,
+            reset_setup, reset_teardown),
     };
 
     int failed = 0;

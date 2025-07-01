@@ -1,3 +1,6 @@
 - Document all existing modules, functions, and code structure using Doxygen comments
 
 - Refactor CMake structure to make sub-projects standalone
+
+- Refactor symtab_destroy_symbol via ast_destroy
+

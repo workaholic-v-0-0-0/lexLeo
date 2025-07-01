@@ -100,4 +100,18 @@ void set_ast_destroy_ast_children(ast_destroy_ast_children_fn f) {
     ast_destroy_ast_children_mockable = f ? f : real_ast_destroy_ast_children;
 }
 
+ast_destroy_fn ast_destroy_mockable = real_ast_destroy;
+void real_ast_destroy(ast *root) {
+    if (!root)
+        return;
+
+    if (root->type == AST_TYPE_DATA_WRAPPER)
+        ast_destroy_typed_data_wrapper(root);
+    else
+        ast_destroy_non_typed_data_wrapper(root);
+}
+void set_ast_destroy(ast_destroy_fn f) {
+    ast_destroy_mockable = f ? f : real_ast_destroy;
+}
+
 #endif

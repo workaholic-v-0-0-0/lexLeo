@@ -67,5 +67,5 @@ int symtab_reset(symtab *st, const char *name, ast *image) {
     if (!st)
         return 1;
 
-    return -2;
+    return hashtable_reset_value(st->symbols, name, (void *) image);
 }

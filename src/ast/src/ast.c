@@ -268,6 +268,9 @@ void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
 }
 
 void ast_destroy(ast *root) {
+#ifdef UNIT_TEST
+    ast_destroy_mockable(root);
+#else
     if (!root)
         return;
 
@@ -275,4 +278,5 @@ void ast_destroy(ast *root) {
         ast_destroy_typed_data_wrapper(root);
     else
         ast_destroy_non_typed_data_wrapper(root);
+#endif
 }

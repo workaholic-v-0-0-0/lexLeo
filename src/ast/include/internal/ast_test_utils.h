@@ -45,6 +45,11 @@ void real_ast_destroy_ast_children(ast_children_t *ast_children);
 extern ast_destroy_ast_children_fn ast_destroy_ast_children_mockable;
 void set_ast_destroy_ast_children(ast_destroy_ast_children_fn f);
 
+typedef void (*ast_destroy_fn)(ast *root);
+void real_ast_destroy(ast *root);
+extern ast_destroy_fn ast_destroy_mockable;
+void set_ast_destroy(ast_destroy_fn f);
+
 #endif
 
 #endif //AST_INTERNAL_H
