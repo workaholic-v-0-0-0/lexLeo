@@ -77,7 +77,7 @@ void set_hashtable_destroy(hashtable_destroy_fn f) {
 
 hashtable_get_fn hashtable_get_mockable = real_hashtable_get;
 void *real_hashtable_get(const hashtable *ht, const char *key) {
-    if (!ht)
+	if ((!ht) || (!key))
         return NULL;
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
     while (bucket) {

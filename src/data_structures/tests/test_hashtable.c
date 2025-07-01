@@ -66,6 +66,7 @@ static void * VALUE_CORRESPONDING_TO_A_KEY_IN_USE;
 static const size_t INDEX_OF_A_KEY_IN_USE = 0;
 static const size_t INDEX_OF_A_KEY_NOT_IN_USE = 3;
 static const size_t DUMMY_INDEX_OF_A_DUMMY_KEY = 3;
+static const hashtable *DUMMY_HASHTABLE_P = (hashtable *) &dummy;
 
 static key_value_pair key_value_pairs_with_key_null = {
     .key = NULL,
@@ -1435,6 +1436,12 @@ static void key_is_in_use_return_0_when_ht_null(void **state) {
     expect_return(0, state);
 }
 
+// Given: ht != NULL, key = NULL
+// Expected: returns 0
+static void key_is_in_use_return_0_when_ht_not_null_key_null(void **state) {
+    assert_int_equal(hashtable_key_is_in_use((hashtable *) DUMMY_HASHTABLE_P, NULL), 0);
+}
+
 // Given: argument key already in use (==  A_KEY_IN_USE (A_KEY_IN_USE pointing to "key_for_A"), ht = 1 or 2, nb of entries = 1,2 or 3
 // Expected: returns 1
 // param:
@@ -1513,6 +1520,12 @@ static int get_setup(void **state) { // *state is a hashtable_params_t *
 //	- hashtable_params_ht_null
 static void get_returns_null_when_ht_null(void **state) {
     hashtable_get(((hashtable_params_t*)*state)->ht, DUMMY_KEY);
+}
+
+// Given: ht != NULL, key = NULL
+// Expected: returns NULL
+static void get_returns_null_when_ht_not_null_key_null(void **state) {
+	assert_null(hashtable_get((hashtable *) DUMMY_HASHTABLE_P, NULL));
 }
 
 // Given: ht == 1 or 2, argument key not in use
@@ -2034,14 +2047,18 @@ static int reset_value_setup(void **state) { // *state is a params_t
 static void reset_value_returns_1_when_ht_null(void **state) {
     params_t *params = (params_t *) *state;
     const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
-    printf("here1\n");
     assert_int_equal(
         1,
         hashtable_reset_value(
             params->hashtable_params->ht,
             key_value_pairs_to_be_added->key,
             key_value_pairs_to_be_added->value ) );
-    printf("here2\n");
+}
+
+// Given: ht != NULL, key = NULL
+// Expected: returns 1
+static void reset_value_return_null_when_ht_not_null_key_null(void **state) {
+    assert_int_equal(hashtable_reset_value((hashtable *) DUMMY_HASHTABLE_P, NULL, DUMMY_VALUE), 1);
 }
 
 // Given: ht not null, argument key not already in use (==  A_KEY_NOT_IN_USE (A_KEY_NOT_IN_USE pointing to "a key not in use"), ht = 1 or 2, nb of entries = 0,1,2 or 3
@@ -2146,6 +2163,12 @@ static void remove_returns_1_when_ht_null(void **state) {
         hashtable_remove(
             ((hashtable_params_t *) *state)->ht,
             DUMMY_KEY ) );
+}
+
+// Given: ht != NULL, key = NULL
+// Expected: returns 1
+static void remove_returns_1_when_when_ht_not_null_key_null(void **state) {
+	assert_int_equal(hashtable_remove((hashtable *) DUMMY_HASHTABLE_P, NULL), 1);
 }
 
 // Given: ht not null, argument key not already in use (==  A_KEY_NOT_IN_USE (A_KEY_NOT_IN_USE pointing to "a key not in use"), ht = 1 or 2, nb of entries = 0,1,2 or 3
@@ -2533,6 +2556,10 @@ int main(void) {
             key_is_in_use_return_0_when_ht_null,
             key_is_in_use_setup, general_teardown, (void *)&params_ht_null),
     };
+    const struct CMUnitTest key_is_in_use_no_param_no_fixtures_tests[] = {
+        cmocka_unit_test(
+            key_is_in_use_return_0_when_ht_not_null_key_null),
+    };
     struct CMUnitTest key_is_in_use_returns_1_when_key_already_in_use_tests[13] = {0};
     for (size_t i = 0; i < 12; i++) {
         struct CMUnitTest tmp = cmocka_unit_test_prestate_setup_teardown(
@@ -2557,6 +2584,7 @@ int main(void) {
         cmocka_unit_test_prestate_setup_teardown(
             get_returns_null_when_ht_null,
             get_setup, general_teardown, (void *)&hashtable_params_ht_null),
+        cmocka_unit_test(get_returns_null_when_ht_not_null_key_null),
         cmocka_unit_test_prestate_setup_teardown(
             get_returns_null_when_ht_does_not_contain_key,
             get_setup, general_teardown, (void *)&hashtable_params_template_s_1_n_0_f_null),
@@ -2739,7 +2767,9 @@ int main(void) {
             reset_value_returns_1_when_ht_null,
             reset_value_setup, general_teardown, (void *)&params_ht_null),
     };
-
+    const struct CMUnitTest reset_value_no_param_no_fixtures_tests[] = {
+        cmocka_unit_test(reset_value_return_null_when_ht_not_null_key_null),
+    };
     struct CMUnitTest reset_value_returns_1_when_key_not_in_use_tests[17] = {0};
     for (size_t i = 0; i < 16; i++) {
         struct CMUnitTest tmp = cmocka_unit_test_prestate_setup_teardown(
@@ -2764,6 +2794,11 @@ int main(void) {
         cmocka_unit_test_prestate_setup_teardown(
             remove_returns_1_when_ht_null,
             remove_setup, general_teardown, (void *)&hashtable_params_ht_null),
+    };
+
+    const struct CMUnitTest remove_no_param_no_fixtures_tests[] = {
+        cmocka_unit_test(
+            remove_returns_1_when_when_ht_not_null_key_null),
     };
 
     struct CMUnitTest remove_returns_1_when_key_not_in_use_tests[13] = {0};
@@ -2838,6 +2873,7 @@ int main(void) {
     failed += cmocka_run_group_tests(destroy_tests, NULL, NULL);
 
     failed += cmocka_run_group_tests(key_is_in_use_return_0_when_ht_null_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(key_is_in_use_no_param_no_fixtures_tests, NULL, NULL);
     failed += cmocka_run_group_tests(key_is_in_use_returns_1_when_key_already_in_use_tests, NULL, NULL);
     failed += cmocka_run_group_tests(key_is_in_use_returns_0_when_key_not_already_in_use_tests, NULL, NULL);
 
@@ -2855,10 +2891,12 @@ int main(void) {
     failed += cmocka_run_group_tests(add_return_0_when_malloc_for_new_cons_succeeds_tests, NULL, NULL);
 
     failed += cmocka_run_group_tests(reset_value_one_param_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_value_no_param_no_fixtures_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_value_returns_1_when_key_not_in_use_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_value_free_reset_value_and_returns_0_when_key_in_use_tests, NULL, NULL);
 
     failed += cmocka_run_group_tests(remove_returns_1_when_ht_null_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_no_param_no_fixtures_tests, NULL, NULL);
     failed += cmocka_run_group_tests(remove_returns_1_when_key_not_in_use_tests, NULL, NULL);
     failed += cmocka_run_group_tests(remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_collision_tests, NULL, NULL);
     failed += cmocka_run_group_tests(remove_destroy_second_entry_of_first_bucket_and_returns_0_when_collision_at_first_bucket_tests, NULL, NULL);

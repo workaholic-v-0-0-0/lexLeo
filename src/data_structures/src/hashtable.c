@@ -50,7 +50,7 @@ hashtable *hashtable_create(
 }
 
 int hashtable_key_is_in_use(hashtable *ht, const char *key) {
-    if (!ht)
+    if ((!ht) || (!key))
         return 0;
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
     while (bucket) {
@@ -70,7 +70,7 @@ void *hashtable_get(const hashtable *ht, const char *key) {
 #ifdef UNIT_TEST
     return hashtable_get_mockable(ht, key);
 #else
-    if (!ht)
+    if ((!ht) || (!key))
         return NULL;
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
     while (bucket) {
