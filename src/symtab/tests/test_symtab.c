@@ -91,6 +91,13 @@ void *mock_hashtable_get(const hashtable *ht, const char *key) {
     return mock_type(void *);
 }
 
+int mock_hashtable_reset_value(hashtable *ht, const char *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    check_expected(value);
+    return mock_type(int);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -471,7 +478,61 @@ static void get_calls_hashtable_get_and_returns_its_returned_value_when_st_not_n
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_reset TESTS
+//-----------------------------------------------------------------------------
 
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int reset_setup(void **state) {
+    set_hashtable_reset_value(mock_hashtable_reset_value);
+    return 0;
+}
+
+static int reset_teardown(void **state) {
+    set_hashtable_reset_value(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void reset_returns_1_when_st_null(void **state) {
+    assert_int_equal(
+        symtab_reset(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        1 );
+}
+
+// Given: st != NULL, image != NULL
+// Expected:
+//   - calls hashtable_reset_value(st->symbols, name, (void *) image)
+//   - returns hashtable_reset_value returned value
+static void reset_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+
+    expect_value(mock_hashtable_reset_value, ht, st->symbols);
+    expect_value(mock_hashtable_reset_value, key, (char *) DUMMY_STRING);
+    expect_value(mock_hashtable_reset_value, value, (void *) DUMMY_IMAGE);
+    will_return(mock_hashtable_reset_value, DUMMY_INT);
+
+    assert_int_equal(
+        symtab_reset((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        DUMMY_INT );
+}
 
 
 
@@ -540,6 +601,14 @@ int main(void) {
             get_setup, get_teardown),
     };
 
+    const struct CMUnitTest reset_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            reset_returns_1_when_st_null,
+            reset_setup, reset_teardown),
+        cmocka_unit_test_setup_teardown(
+            reset_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null,
+            reset_setup, reset_teardown),
+    };
 
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
@@ -547,6 +616,7 @@ int main(void) {
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
 
     return failed;
 }
