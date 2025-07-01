@@ -55,3 +55,10 @@ int symtab_add(symtab *st, symbol *sym) {
 
     return hashtable_add(st->symbols, sym->name, (void *) sym);
 }
+
+symbol *symtab_get(symtab *st, const char *name) {
+    if (!st)
+        return NULL;
+
+    return hashtable_get(st->symbols, name);
+}
