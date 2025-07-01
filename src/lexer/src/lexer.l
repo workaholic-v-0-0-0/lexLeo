@@ -12,18 +12,13 @@ extern void yyerror(const char *s);
 %%
 
 [0-9]+        {
-                    yylval.integer = atoi(yytext);
-                    return NUMBER;
+                    yylval.int_value = atoi(yytext);
+                    return INTEGER;
                 }
 
 [a-zA-Z_][a-zA-Z0-9_]*    {
-                    yylval.string = strdup(yytext);
+                    yylval.identifier = strdup(yytext);
                     return IDENTIFIER;
-                }
-
-\"[^"]*\"     {
-                    yylval.string = strdup(yytext);
-                    return CODE;
                 }
 
 "="           { return EQUAL; }
@@ -42,8 +37,8 @@ extern void yyerror(const char *s);
 "*"           { return MULTIPLY; }
 "/"           { return DIVIDE; }
 
-[ \t\n]+      { /* Ignore white spaaces */ }
-.             { /* Unknown characters */ yyerror("Caractère inconnu."); }
+[ \t\n]+      { /* Ignore white spaces */ }
+.             { yyerror("unknown characters"); }
 
 %%
 
