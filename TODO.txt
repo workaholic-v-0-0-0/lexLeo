@@ -4,3 +4,4 @@
 
 - Refactor symtab_destroy_symbol via ast_destroy
 
+- Add tests to manage case key NULL in hashtable

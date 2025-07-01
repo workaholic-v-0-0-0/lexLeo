@@ -98,6 +98,12 @@ int mock_hashtable_reset_value(hashtable *ht, const char *key, void *value) {
     return mock_type(int);
 }
 
+int mock_hashtable_remove(hashtable *ht, const char *key) {
+    check_expected(ht);
+    check_expected(key);
+    return mock_type(int);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -537,6 +543,67 @@ static void reset_calls_hashtable_reset_value_and_returns_its_returned_value_whe
 
 
 //-----------------------------------------------------------------------------
+// symtab_remove TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int remove_setup(void **state) {
+    set_hashtable_remove(mock_hashtable_remove);
+    return 0;
+}
+
+static int remove_teardown(void **state) {
+    set_hashtable_remove(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void remove_returns_1_when_st_null(void **state) {
+    assert_int_equal(
+        symtab_remove(NULL, (char *) DUMMY_STRING),
+        1 );
+}
+
+// Given: st != NULL
+// Expected:
+//  - calls hashtable_remove(st->symbols, name)
+//  - returns hashtable_remove returned value
+static void remove_calls_hashtable_remove_and_returns_its_returned_value_when_st_not_null_name_not_null(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+
+    expect_value(mock_hashtable_remove, ht, st->symbols);
+    expect_value(mock_hashtable_remove, key, (char *) DUMMY_STRING);
+    will_return(mock_hashtable_remove, DUMMY_INT);
+
+    assert_int_equal(
+        symtab_remove(st, (char *) DUMMY_STRING),
+        DUMMY_INT );
+}
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -610,6 +677,15 @@ int main(void) {
             reset_setup, reset_teardown),
     };
 
+    const struct CMUnitTest remove_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            remove_returns_1_when_st_null,
+            remove_setup, remove_teardown),
+        cmocka_unit_test_setup_teardown(
+            remove_calls_hashtable_remove_and_returns_its_returned_value_when_st_not_null_name_not_null,
+            remove_setup, remove_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
@@ -617,6 +693,7 @@ int main(void) {
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(remove_tests, NULL, NULL);
 
     return failed;
 }
