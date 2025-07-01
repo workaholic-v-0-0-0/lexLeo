@@ -29,4 +29,14 @@ int real_hashtable_add(hashtable *ht, const char *key, void *value);
 extern hashtable_add_fn hashtable_add_mockable;
 void set_hashtable_add(hashtable_add_fn f);
 
+typedef int (*hashtable_reset_value_fn)(hashtable *ht, const char *key, void *value);
+int real_hashtable_reset_value(hashtable *ht, const char *key, void *value);
+extern hashtable_reset_value_fn hashtable_reset_value_mockable;
+void set_hashtable_reset_value(hashtable_reset_value_fn f);
+
+typedef int (*hashtable_remove_fn)(hashtable *ht, const char *key);
+int real_hashtable_remove(hashtable *ht, const char *key);
+extern hashtable_remove_fn hashtable_remove_mockable;
+void set_hashtable_remove(hashtable_remove_fn f);
+
 #endif //HASHTABLES_TEST_UTILS_H

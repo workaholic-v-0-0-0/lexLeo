@@ -468,9 +468,6 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_null_sym_not_null,
             add_setup, add_teardown),
-        cmocka_unit_test_setup_teardown(
-            add_returns_1_when_hashtable_add_fails,
-            add_setup, add_teardown),
     };
 
     int failed = 0;

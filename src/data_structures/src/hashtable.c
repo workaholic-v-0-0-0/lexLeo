@@ -154,10 +154,10 @@ int hashtable_add(hashtable *ht, const char *key, void *value) {
 }
 
 int hashtable_reset_value(hashtable *ht, const char *key, void *value) {
-    if (!ht)
-        return 1;
-
-    if (!hashtable_key_is_in_use(ht, key))
+#ifdef UNIT_TEST
+    return hashtable_reset_value_mockable(ht, key, value);
+#else
+    if ((!ht) || (!hashtable_key_is_in_use(ht, key)))
         return 1;
 
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
@@ -181,13 +181,11 @@ int hashtable_reset_value(hashtable *ht, const char *key, void *value) {
     entry_p->value = value;
 
     return 0;
+#endif
 }
 
 int hashtable_remove(hashtable *ht, const char *key) {
-    if (!ht)
-        return 1;
-
-    if (!hashtable_key_is_in_use(ht, key)) {
+    if ((!ht) || (!hashtable_key_is_in_use(ht, key))) {
 		return 1;
 	}
 

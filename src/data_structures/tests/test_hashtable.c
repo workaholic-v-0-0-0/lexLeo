@@ -2034,12 +2034,14 @@ static int reset_value_setup(void **state) { // *state is a params_t
 static void reset_value_returns_1_when_ht_null(void **state) {
     params_t *params = (params_t *) *state;
     const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
+    printf("here1\n");
     assert_int_equal(
         1,
         hashtable_reset_value(
             params->hashtable_params->ht,
             key_value_pairs_to_be_added->key,
             key_value_pairs_to_be_added->value ) );
+    printf("here2\n");
 }
 
 // Given: ht not null, argument key not already in use (==  A_KEY_NOT_IN_USE (A_KEY_NOT_IN_USE pointing to "a key not in use"), ht = 1 or 2, nb of entries = 0,1,2 or 3
