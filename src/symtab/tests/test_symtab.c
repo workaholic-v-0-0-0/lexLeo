@@ -36,6 +36,7 @@ static const symtab *const DUMMY_SYMTAB_P = (symtab *) &DUMMY[6];
 static const symbol *const DUMMY_SYMBOL_P = (symbol *) &DUMMY[7];
 static const int DUMMY_INT = 0;
 static const ast *const DUMMY_IMAGE = (ast *) &DUMMY[8];
+static const void *const DUMMY_VOID_POINTER = (void *) &DUMMY[9];
 
 static list collected_ptr_to_be_freed = NULL;
 
@@ -82,6 +83,12 @@ int mock_hashtable_add(hashtable *ht, const char *key, void *value) {
     check_expected(key);
     check_expected(value);
     return mock_type(int);
+}
+
+void *mock_hashtable_get(const hashtable *ht, const char *key) {
+    check_expected(ht);
+    check_expected(key);
+    return mock_type(void *);
 }
 
 
@@ -411,6 +418,60 @@ static void add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_n
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_get TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int get_setup(void **state) {
+    set_hashtable_get(mock_hashtable_get);
+    return 0;
+}
+
+static int get_teardown(void **state) {
+    set_hashtable_get(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void get_returns_null_when_st_null(void **state) {
+    assert_null(symtab_get(NULL, (char *) DUMMY_STRING));
+}
+
+// Given: st != NULL
+// Expected:
+//  - calls hashtable_get(st->symbols, name)
+//  - returns hashtable_get returned value
+static void get_calls_hashtable_get_and_returns_its_returned_value_when_st_not_null(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+
+    expect_value(mock_hashtable_get, ht, st->symbols);
+    expect_value(mock_hashtable_get, key, DUMMY_STRING);
+    will_return(mock_hashtable_get, DUMMY_VOID_POINTER);
+
+    assert_ptr_equal(symtab_get(st, (char *) DUMMY_STRING), DUMMY_VOID_POINTER);
+}
+
+
+
+
 
 
 
@@ -470,11 +531,22 @@ int main(void) {
             add_setup, add_teardown),
     };
 
+    const struct CMUnitTest get_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            get_returns_null_when_st_null,
+            get_setup, get_teardown),
+        cmocka_unit_test_setup_teardown(
+            get_calls_hashtable_get_and_returns_its_returned_value_when_st_not_null,
+            get_setup, get_teardown),
+    };
+
+
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(get_tests, NULL, NULL);
 
     return failed;
 }

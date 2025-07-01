@@ -75,6 +75,27 @@ void set_hashtable_destroy(hashtable_destroy_fn f) {
     hashtable_destroy_mockable = f ? f : real_hashtable_destroy;
 }
 
+hashtable_get_fn hashtable_get_mockable = real_hashtable_get;
+void *real_hashtable_get(const hashtable *ht, const char *key) {
+    if (!ht)
+        return NULL;
+    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
+    while (bucket) {
+        if (
+                DATA_STRUCTURE_STRING_COMPARE(
+                    key,
+                    ((entry *) (bucket->car))->key )
+                    ==
+                    0 )
+            return ((entry *) (bucket->car))->value;
+        bucket = bucket->cdr;
+    }
+    return NULL;
+}
+void set_hashtable_get(hashtable_get_fn f) {
+    hashtable_get_mockable = f ? f : real_hashtable_get;
+}
+
 static unsigned long hash_djb2(const char *str) {
     unsigned long hash = 5381;
     int c;
