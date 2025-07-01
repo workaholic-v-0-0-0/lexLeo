@@ -48,3 +48,10 @@ symtab *symtab_unwind_scope(symtab *st) {
 
     return ret;
 }
+
+int symtab_add(symtab *st, symbol *sym) {
+    if ((!st) || (!sym))
+        return 1;
+
+    return hashtable_add(st->symbols, sym->name, (void *) sym);
+}

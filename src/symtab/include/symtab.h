@@ -23,7 +23,7 @@ void symtab_destroy_symbol(void *value);
 symtab *symtab_wind_scope(symtab *st); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 symtab *symtab_unwind_scope(symtab *st);  // the caller is responsible for passing either NULL or a well-formed symtab pointer
 
-int symtab_add(symtab *st, symbol *sym);
+int symtab_add(symtab *st, symbol *sym); // the caller is responsible for passing either NULL or a well-formed symtab and symbol pointers
 symbol *symtab_get(symtab *st, const char *name);
 int symtab_reset(symtab *st, const char *name, ast *image);
 int symtab_remove(symtab *st, const char *name);

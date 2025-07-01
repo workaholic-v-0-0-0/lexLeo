@@ -24,4 +24,9 @@ void real_hashtable_destroy(hashtable *ht);
 extern hashtable_destroy_fn hashtable_destroy_mockable;
 void set_hashtable_destroy(hashtable_destroy_fn f);
 
+typedef int (*hashtable_add_fn)(hashtable *ht, const char *key, void *value);
+int real_hashtable_add(hashtable *ht, const char *key, void *value);
+extern hashtable_add_fn hashtable_add_mockable;
+void set_hashtable_add(hashtable_add_fn f);
+
 #endif //HASHTABLES_TEST_UTILS_H
