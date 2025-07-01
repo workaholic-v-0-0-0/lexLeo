@@ -62,3 +62,10 @@ symbol *symtab_get(symtab *st, const char *name) {
 
     return hashtable_get(st->symbols, name);
 }
+
+int symtab_reset(symtab *st, const char *name, ast *image) {
+    if (!st)
+        return 1;
+
+    return -2;
+}

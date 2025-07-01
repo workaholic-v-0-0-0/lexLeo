@@ -91,6 +91,13 @@ void *mock_hashtable_get(const hashtable *ht, const char *key) {
     return mock_type(void *);
 }
 
+int mock_hashtable_reset_value(hashtable *ht, const char *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    check_expected(value);
+    return mock_type(int);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -471,6 +478,51 @@ static void get_calls_hashtable_get_and_returns_its_returned_value_when_st_not_n
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_reset TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int reset_setup(void **state) {
+    set_hashtable_reset_value(mock_hashtable_reset_value);
+    return 0;
+}
+
+static int reset_teardown(void **state) {
+    set_hashtable_reset_value(NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void reset_returns_1_when_st_null(void **state) {
+    assert_int_equal(
+        symtab_reset(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        1 );
+}
+
+// Given: st != NULL, image != NULL
+// Expected:
+//  - calls 
+static void reset_returns_1_when_st_not_null_image_null(void **state) {
+    assert_int_equal(
+        symtab_reset((symtab *) DUMMY_SYMTAB_P, (char *) DUMMY_STRING, NULL),
+        1 );
+}
+
 
 
 
@@ -540,6 +592,12 @@ int main(void) {
             get_setup, get_teardown),
     };
 
+    const struct CMUnitTest reset_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            reset_returns_1_when_st_null,
+            reset_setup, reset_teardown),
+
+    };
 
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
@@ -547,6 +605,7 @@ int main(void) {
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
 
     return failed;
 }
