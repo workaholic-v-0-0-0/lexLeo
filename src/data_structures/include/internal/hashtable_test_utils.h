@@ -44,4 +44,9 @@ int real_hashtable_remove(hashtable *ht, const char *key);
 extern hashtable_remove_fn hashtable_remove_mockable;
 void set_hashtable_remove(hashtable_remove_fn f);
 
+typedef int (*hashtable_key_is_in_use_fn)(hashtable *ht, const char *key);
+int real_hashtable_key_is_in_use(hashtable *ht, const char *key);
+extern hashtable_key_is_in_use_fn hashtable_key_is_in_use_mockable;
+void set_hashtable_key_is_in_use(hashtable_key_is_in_use_fn f);
+
 #endif //HASHTABLES_TEST_UTILS_H

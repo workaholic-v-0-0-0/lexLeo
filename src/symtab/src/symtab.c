@@ -76,3 +76,10 @@ int symtab_remove(symtab *st, const char *name) {
 
 	return hashtable_remove(st->symbols, name);
 }
+
+int symtab_contains(symtab *st, const char *name) {
+    if (!st)
+        return 0;
+
+    return hashtable_key_is_in_use(st->symbols, name);
+}

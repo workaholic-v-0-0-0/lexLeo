@@ -50,6 +50,9 @@ hashtable *hashtable_create(
 }
 
 int hashtable_key_is_in_use(hashtable *ht, const char *key) {
+#ifdef UNIT_TEST
+    return hashtable_key_is_in_use_mockable(ht, key);
+#else
     if ((!ht) || (!key))
         return 0;
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
@@ -64,6 +67,7 @@ int hashtable_key_is_in_use(hashtable *ht, const char *key) {
         bucket = bucket->cdr;
     }
     return 0;
+#endif
 }
 
 void *hashtable_get(const hashtable *ht, const char *key) {
