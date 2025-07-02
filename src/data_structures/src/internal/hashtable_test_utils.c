@@ -209,4 +209,25 @@ void set_hashtable_remove(hashtable_remove_fn f) {
     hashtable_remove_mockable = f ? f : real_hashtable_remove;
 }
 
+hashtable_key_is_in_use_fn hashtable_key_is_in_use_mockable = real_hashtable_key_is_in_use;
+int real_hashtable_key_is_in_use(hashtable *ht, const char *key) {
+    if ((!ht) || (!key))
+        return 0;
+    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
+    while (bucket) {
+        if (
+                DATA_STRUCTURE_STRING_COMPARE(
+                    key,
+                    ((entry *) (bucket->car))->key )
+                    ==
+                    0 )
+            return 1;
+        bucket = bucket->cdr;
+    }
+    return 0;
+}
+void set_hashtable_key_is_in_use(hashtable_key_is_in_use_fn f) {
+    hashtable_key_is_in_use_mockable = f ? f : real_hashtable_key_is_in_use;
+}
+
 #endif
