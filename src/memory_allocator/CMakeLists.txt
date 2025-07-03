@@ -1,4 +1,4 @@
-# src/memory_allocator/CMakeLists.txt
+# bison/memory_allocator/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.27)
 project(memory_allocator LANGUAGES C)

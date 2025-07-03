@@ -1,4 +1,4 @@
-// src/data_structures/include/internal/hashtable_test_utils.h
+// bison/data_structures/include/internal/hashtable_test_utils.h
 
 #ifndef HASHTABLES_TEST_UTILS_H
 #define HASHTABLES_TEST_UTILS_H

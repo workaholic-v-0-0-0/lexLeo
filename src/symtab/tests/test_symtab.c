@@ -1,4 +1,4 @@
-// src/symtab/test/test_symtab.h
+// bison/symtab/test/test_symtab.h
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -438,7 +438,7 @@ static void add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_n
 
 
 //-----------------------------------------------------------------------------
-// symtab_get TESTS
+// symtab_get_local TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -468,7 +468,7 @@ static int get_teardown(void **state) {
 // Given: st = NULL
 // Expected: returns 1
 static void get_returns_null_when_st_null(void **state) {
-    assert_null(symtab_get(NULL, (char *) DUMMY_STRING));
+    assert_null(symtab_get_local(NULL, (char *) DUMMY_STRING));
 }
 
 // Given: st != NULL
@@ -485,13 +485,13 @@ static void get_calls_hashtable_get_and_returns_its_returned_value_when_st_not_n
     expect_value(mock_hashtable_get, key, DUMMY_STRING);
     will_return(mock_hashtable_get, DUMMY_VOID_POINTER);
 
-    assert_ptr_equal(symtab_get(st, (char *) DUMMY_STRING), DUMMY_VOID_POINTER);
+    assert_ptr_equal(symtab_get_local(st, (char *) DUMMY_STRING), DUMMY_VOID_POINTER);
 }
 
 
 
 //-----------------------------------------------------------------------------
-// symtab_reset TESTS
+// symtab_reset_local TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -522,7 +522,7 @@ static int reset_teardown(void **state) {
 // Expected: returns 1
 static void reset_returns_1_when_st_null(void **state) {
     assert_int_equal(
-        symtab_reset(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        symtab_reset_local(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
         1 );
 }
 
@@ -542,7 +542,7 @@ static void reset_calls_hashtable_reset_value_and_returns_its_returned_value_whe
     will_return(mock_hashtable_reset_value, DUMMY_INT);
 
     assert_int_equal(
-        symtab_reset((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        symtab_reset_local((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
         DUMMY_INT );
 }
 
@@ -606,7 +606,7 @@ static void remove_calls_hashtable_remove_and_returns_its_returned_value_when_st
 
 
 //-----------------------------------------------------------------------------
-// symtab_contains TESTS
+// symtab_contains_local TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -637,7 +637,7 @@ static int contains_teardown(void **state) {
 // Expected: returns 0
 static void contains_returns_0_when_st_null(void **state) {
     assert_int_equal(
-        symtab_contains(NULL, (char *) DUMMY_STRING),
+        symtab_contains_local(NULL, (char *) DUMMY_STRING),
         0 );
 }
 
@@ -656,7 +656,7 @@ static void contains_calls_hashtable_key_is_in_use_when_st_not_null(void **state
     will_return(mock_hashtable_key_is_in_use, DUMMY_INT);
 
     assert_int_equal(
-        symtab_contains(st, (char *) DUMMY_STRING),
+        symtab_contains_local(st, (char *) DUMMY_STRING),
         DUMMY_INT );
 }
 

@@ -1,4 +1,4 @@
-// src/ast/tests/test_ast.c
+// bison/ast/tests/test_ast.c
 
 #include <stdarg.h>
 #include <stddef.h>

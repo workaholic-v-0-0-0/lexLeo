@@ -196,12 +196,12 @@ set(
 add_subdirectory(src/data_structures)
 add_subdirectory(src/ast) # depends on data_structures
 add_subdirectory(src/symtab) # depends on data_structures and ast
+add_subdirectory(src/parser) # depends on lexer, ast and symtab
+add_subdirectory(src/lexer) # depends on parser interface—opaque types
 
 # TO BE IMPLEMENTED
-# add_subdirectory(src/parser)
-# add_subdirectory(src/lexer)
-# add_subdirectory(src/interpreter)
-# add_subdirectory(src/compiler)
+# add_subdirectory(bison/interpreter)
+# add_subdirectory(bison/compiler)
 
 
 #------------------------------------------------------------------------------

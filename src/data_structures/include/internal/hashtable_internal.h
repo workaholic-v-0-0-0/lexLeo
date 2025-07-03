@@ -1,4 +1,4 @@
-// src/data_structures/include/internal/hashtable_internal.h
+// bison/data_structures/include/internal/hashtable_internal.h
 
 #ifndef HASHTABLE_INTERNAL_H
 #define HASHTABLE_INTERNAL_H

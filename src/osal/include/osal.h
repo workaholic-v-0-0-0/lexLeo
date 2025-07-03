@@ -1,4 +1,4 @@
-// src/osal/include/osal.h
+// bison/osal/include/osal.h
 
 #pragma once
 

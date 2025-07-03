@@ -1,4 +1,4 @@
-# src/logger/tests/tests.cmake
+# bison/logger/tests/tests.cmake
 
 add_executable(
     test_logger
@@ -28,7 +28,7 @@ add_test(
 set_tests_properties(test_logger_memory PROPERTIES LABELS "memory")
 
 # fake time zone
-# note: FAKE_TIME_ZONE is set in src/osal/CMakeLists.txt
+# note: FAKE_TIME_ZONE is set in bison/osal/CMakeLists.txt
 set_tests_properties(test_logger PROPERTIES ENVIRONMENT "${FAKE_TIME_ZONE}")
 set_tests_properties(
     test_logger_memory
