@@ -38,11 +38,9 @@ BISON_TARGET(parser ${PARSER_Y} ${PARSER_OUTPUT} DEFINES_FILE ${PARSER_HEADER})
 
 add_library(parser STATIC ${BISON_parser_OUTPUTS})
 
-target_include_directories(parser PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-target_include_directories(parser PUBLIC
+target_include_directories(
+    parser
+    PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${CMAKE_SOURCE_DIR}/src/ast/include
     ${CMAKE_SOURCE_DIR}/src/symtab/include

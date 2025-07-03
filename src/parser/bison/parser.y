@@ -1,6 +1,7 @@
 // src/parser/src/parser.y
 
 %define api.pure full
+%expect 1
 %lex-param   {yyscan_t scanner}
 %parse-param {yyscan_t scanner}
 
@@ -68,36 +69,74 @@
 // non-terminal lexeme types
 %type <ast>
 program
-list_of_parameters
-parameter
-instruction
+statements
 binding
 evaluation
 execution
 computation
-reading
-writing
-arithmetic_expression
+//reading
+//writing
 atom
 
 %start program
 
 %%
 
-program:
-      instruction program_end PARAMETERS list_of_parameters
-    | instruction program_end
+program
+    : statements
     ;
-program_end:
-      /* empty */
-    | SEMICOLON program
+
+statements
+    : /* empty */ {}
+    | statement_list {}
     ;
-list_of_parameters:
-      /* empty */ { $$ = NULL;}
-    | parameter list_of_parameters
+
+statement_list
+    : statement
+    | statement_list SEMICOLON statement
     ;
-atom:
-      INTEGER {
+
+statement
+    : binding
+    | evaluation
+    | execution
+    | computation
+ // | reading
+ // | writing
+ // | function_call
+    ;
+
+binding
+    : SYMBOL EQUAL expression {}
+    ;
+
+evaluation
+    : EVALUATE SYMBOL {}
+    ;
+
+execution
+    : EXECUTE program {}
+    ;
+
+computation
+    : COMPUTE expression {}
+    ;
+
+// function_call
+//  :
+
+expression
+    : atom
+    | LEFT_PARENTHESIS expression RIGHT_PARENTHESIS
+    | expression PLUS expression
+    | expression MINUS expression
+    | expression MULTIPLY expression
+    | expression DIVIDE expression
+ // | function_call
+    ;
+
+atom
+    : INTEGER {
 $$ =
     ast_create_typed_data_wrapper(
         ast_create_typed_data_int($1) );
@@ -119,55 +158,6 @@ if (symtab_contains_local(ctx->st, $1)) {
                 symtab_get_local(ctx->st, $1) ) );
 }
 }
-    ;
-parameter:
-    atom
-    ;
-instruction:
-      binding
-    | evaluation
-    | execution
-    | computation
-    | reading
-    | writing
-    ;
-binding:
-      SYMBOL EQUAL right_value {}
-    ;
-evaluation:
-      EVALUATE evaluable {}
-    ;
-execution:
-      EXECUTE SYMBOL {}
-    | EXECUTE program {}
-    ;
-computation:
-      COMPUTE SYMBOL {}
-    | COMPUTE arithmetic_expression  {}
-    ;
-reading:
-      READ readable {}
-    ;
-readable:
-      INTEGER {}
-    | STRING {}
-    ;
-writing:
-      WRITE right_value {}
-      ;
-right_value:
-      INTEGER {}
-    | STRING {}
-    | SYMBOL {}
-    ;
-evaluable:
-      INTEGER {}
-    | STRING {}
-    | SYMBOL {}
-    ;
-arithmetic_expression:
-      INTEGER {}
-    | arithmetic_expression PLUS arithmetic_expression {}
     ;
 
 %%

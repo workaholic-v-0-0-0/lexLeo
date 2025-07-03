@@ -32,7 +32,7 @@
     return INTEGER;
 }
 
-\"[^\"]*\" {
+\"([^\\\"]|\\.)*\" {
     char *s = strdup(yytext + 1);
     s[strlen(s) - 1] = '\0';
     yylval->string_value = s;

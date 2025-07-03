@@ -37,4 +37,4 @@ target_include_directories(lexer
     ${CMAKE_SOURCE_DIR}/src/ast/include
 )
 
-add_dependencies(lexer parser)
+add_dependencies(lexer parser) # lexer depends on the Bison-generated header
