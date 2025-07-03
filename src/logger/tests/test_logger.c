@@ -348,8 +348,8 @@ static void close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseRe
 
 static int log_info_setup(void **state) {
     // environnement has been configured in the following cmake files :
-    // src/osal/CMakeLists.txt
-    // src/logger/tests/tests.cmake
+    // bison/osal/CMakeLists.txt
+    // bison/logger/tests/tests.cmake
     // Ie "TZ=GMT-2" for Windows and "TZ=Europe/Paris" otherwise
     set_fake_time(EPOCH_TIME_2025_06_10_MIDDAY);
     if ((fake_log_file = fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE)) == NULL)

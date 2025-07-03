@@ -1,4 +1,4 @@
-// src memory_allocator/include/memory_allocator.h
+// bison memory_allocator/include/memory_allocator.h
 
 #ifndef MEMORY_ALLOCATOR_H
 #define MEMORY_ALLOCATOR_H

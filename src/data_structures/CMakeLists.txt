@@ -1,4 +1,4 @@
-# src/data_structures/CMakeLists.txt
+# bison/data_structures/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.27)
 project(data_structures LANGUAGES C)

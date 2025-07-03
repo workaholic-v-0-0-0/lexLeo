@@ -1,4 +1,4 @@
-// src/symtab/src/symtab.c
+// bison/symtab/bison/symtab.c
 
 #include "symtab.h"
 
@@ -56,14 +56,14 @@ int symtab_add(symtab *st, symbol *sym) {
     return hashtable_add(st->symbols, sym->name, (void *) sym);
 }
 
-symbol *symtab_get(symtab *st, const char *name) {
+symbol *symtab_get_local(symtab *st, const char *name) {
     if (!st)
         return NULL;
 
     return hashtable_get(st->symbols, name);
 }
 
-int symtab_reset(symtab *st, const char *name, ast *image) {
+int symtab_reset_local(symtab *st, const char *name, ast *image) {
     if (!st)
         return 1;
 
@@ -77,7 +77,7 @@ int symtab_remove(symtab *st, const char *name) {
 	return hashtable_remove(st->symbols, name);
 }
 
-int symtab_contains(symtab *st, const char *name) {
+int symtab_contains_local(symtab *st, const char *name) {
     if (!st)
         return 0;
 

@@ -1,4 +1,4 @@
-// src/data_structures/include/hashtable.h
+// bison/data_structures/include/hashtable.h
 
 #ifndef HASHTABLE_H
 #define HASHTABLE_H

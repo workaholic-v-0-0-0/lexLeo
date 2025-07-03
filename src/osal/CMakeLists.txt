@@ -1,4 +1,4 @@
-# src/osal/CMakeLists.txt
+# bison/osal/CMakeLists.txt
 
 set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

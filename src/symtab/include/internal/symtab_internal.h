@@ -1,4 +1,4 @@
-// src/symtab/include/internal/symtab_internal.h
+// bison/symtab/include/internal/symtab_internal.h
 
 #ifndef SYMTAB_INTERNAL_H
 #define SYMTAB_INTERNAL_H

@@ -1,4 +1,4 @@
-// src/symtab/include/internal/symtab_memory_allocator.h
+// bison/symtab/include/internal/symtab_memory_allocator.h
 
 #ifndef SYMTAB_MEMORY_ALLOCATOR_H
 #define SYMTAB_MEMORY_ALLOCATOR_H

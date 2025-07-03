@@ -1,4 +1,4 @@
-// src/osal/src/osal_macos.c
+// bison/osal/bison/osal_macos.c
 
 #include "osal.h"
 #include <time.h>

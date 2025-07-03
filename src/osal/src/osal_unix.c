@@ -1,4 +1,4 @@
-// src/osal/src/osal_unix.c
+// bison/osal/bison/osal_unix.c
 
 #include "osal.h"
 

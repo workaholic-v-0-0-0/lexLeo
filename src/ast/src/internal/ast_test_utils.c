@@ -1,4 +1,4 @@
-// src/ast/src/internal/ast_test_utils.c
+// bison/ast/bison/internal/ast_test_utils.c
 
 #include "internal/ast_test_utils.h"
 

@@ -1,4 +1,4 @@
-# src/symtab/tests/tests.cmake
+# bison/symtab/tests/tests.cmake
 
 add_executable(
     test_symtab
