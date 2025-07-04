@@ -67,7 +67,7 @@
 
 
 /* First part of user prologue.  */
-#line 21 "src/parser/bison/parser.y"
+#line 21 "src/parser/src/parser.y"
 
 
 #include "ast.h"

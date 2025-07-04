@@ -1,4 +1,4 @@
-// bison/string_utils/include/string_utils.h
+// src/string_utils/include/string_utils.h
 
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H

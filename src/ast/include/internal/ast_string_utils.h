@@ -1,4 +1,4 @@
-// bison/ast/include/internal/ast_string_utils.h
+// src/ast/include/internal/ast_string_utils.h
 
 #ifndef AST_STRING_UTILS_H
 #define AST_STRING_UTILS_H

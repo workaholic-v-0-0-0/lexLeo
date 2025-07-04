@@ -1,4 +1,4 @@
-# bison/osal/CMakeLists.txt
+# src/osal/CMakeLists.txt
 
 set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -10,8 +10,8 @@ add_library(osal STATIC
 target_include_directories(osal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # fake time zone
-if(WIN32)
+if (WIN32)
     set(FAKE_TIME_ZONE "TZ=GMT-2" CACHE STRING "fake time zone to test logger")
-else()
+else ()
     set(FAKE_TIME_ZONE "TZ=Europe/Paris" CACHE STRING "fake time zone to test logger")
-endif()
+endif ()

@@ -6,16 +6,7 @@
 %parse-param {yyscan_t scanner}
 
 %code requires {
-   #include "ast.h"
-   typedef struct symtab symtab;
-   typedef struct context { symtab *st; } *context;
-
-   // forward declaration of yyscan_t for Bison (as Flex generates it)
-   #ifndef YY_TYPEDEF_YY_SCANNER_T
-   #define YY_TYPEDEF_YY_SCANNER_T
-   typedef void* yyscan_t;
-   extern void* yyget_extra(yyscan_t scanner);
-   #endif
+    #include "parser_types.h"
 }
 
 %{

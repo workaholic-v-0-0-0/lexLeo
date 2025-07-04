@@ -1,4 +1,4 @@
-// bison/ast/include/internal/ast_test_utils.h
+// src/ast/include/internal/ast_test_utils.h
 
 #ifndef AST_INTERNAL_H
 #define AST_INTERNAL_H

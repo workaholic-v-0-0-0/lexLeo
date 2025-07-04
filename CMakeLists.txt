@@ -200,8 +200,8 @@ add_subdirectory(src/parser) # depends on lexer, ast and symtab
 add_subdirectory(src/lexer) # depends on parser interface—opaque types
 
 # TO BE IMPLEMENTED
-# add_subdirectory(bison/interpreter)
-# add_subdirectory(bison/compiler)
+# add_subdirectory(src/interpreter)
+# add_subdirectory(src/compiler)
 
 
 #------------------------------------------------------------------------------

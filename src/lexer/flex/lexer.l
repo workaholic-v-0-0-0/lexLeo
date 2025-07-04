@@ -1,8 +1,10 @@
 %option reentrant
 %option bison-bridge
+%option header-file="lexer.yy.h"
 
 %{
 #include "parser.tab.h"
+#include "parser_types.h"
 %}
 
 %option nounput
@@ -55,5 +57,9 @@
 %%
 
 int yyerror(yyscan_t scanner, const char *s) {
+    return 1;
+}
+
+int yywrap(yyscan_t scanner) {
     return 1;
 }

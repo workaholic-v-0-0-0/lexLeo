@@ -1,4 +1,4 @@
-# bison/ast/tests/tests.cmake
+# src/ast/tests/tests.cmake
 
 add_executable(
     test_ast

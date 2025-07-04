@@ -1,4 +1,4 @@
-// bison/data_structures/bison/list.c
+// src/data_structures/src/list.c
 
 #include "list.h"
 

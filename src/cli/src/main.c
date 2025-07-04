@@ -1,4 +1,4 @@
-// bison/cli/bison/main.c
+// src/cli/src/main.c
 
 #include "osal.h"
 #include <stdio.h>

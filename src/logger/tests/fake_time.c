@@ -1,4 +1,4 @@
-// bison/logger/tests/fake_time.c
+// src/logger/tests/fake_time.c
 
 #include "fake_time.h"
 #include <time.h>

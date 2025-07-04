@@ -1,4 +1,4 @@
-# bison/logger/CMakeLists.txt
+# src/logger/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.27)
 project(logger LANGUAGES C)

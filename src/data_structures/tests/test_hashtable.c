@@ -1,4 +1,4 @@
-// bison/data_structures/tests/test_hashtable.c
+// src/data_structures/tests/test_hashtable.c
 
 #include <stdarg.h>
 #include <stddef.h>

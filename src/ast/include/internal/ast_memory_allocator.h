@@ -1,4 +1,4 @@
-// bison/ast/include/internal/ast_memory_allocator.h
+// src/ast/include/internal/ast_memory_allocator.h
 
 #ifndef AST_MEMORY_ALLOCATOR_H
 #define AST_MEMORY_ALLOCATOR_H
