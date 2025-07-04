@@ -1,4 +1,4 @@
-// bison/symtab/test/test_symtab.h
+// src/symtab/test/test_symtab.h
 
 #include <stdarg.h>
 #include <stddef.h>

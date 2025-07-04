@@ -1,4 +1,4 @@
-// bison/logger/tests/fake_time.c
+// src/logger/tests/fake_time.c
 
 #ifndef FAKE_TIME_H
 #define FAKE_TIME_H

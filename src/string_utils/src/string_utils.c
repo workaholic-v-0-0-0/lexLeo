@@ -1,4 +1,4 @@
-// bison/string_utils/bison/string_utils.c
+// src/string_utils/src/string_utils.c
 
 #include "string_utils.h"
 

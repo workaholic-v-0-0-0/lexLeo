@@ -1,4 +1,4 @@
-# bison/data_structures/tests/tests.cmake
+# src/data_structures/tests/tests.cmake
 
 # pure unit tests
 

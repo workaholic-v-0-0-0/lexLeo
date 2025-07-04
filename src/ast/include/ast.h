@@ -1,4 +1,4 @@
-// bison/ast/include/ast.h
+// src/ast/include/ast.h
 
 #ifndef AST_H
 #define AST_H

@@ -1,4 +1,4 @@
-# bison/string_utils/CMakeLists.txt
+# src/string_utils/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.27)
 project(string_utils LANGUAGES C)

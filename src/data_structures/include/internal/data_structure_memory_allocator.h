@@ -1,4 +1,4 @@
-// bison/data_structures/include/internal/data_structure_memory_allocator.h
+// src/data_structures/include/internal/data_structure_memory_allocator.h
 
 #ifndef DATA_STRUCTURE_MEMORY_ALLOCATOR_H
 #define DATA_STRUCTURE_MEMORY_ALLOCATOR_H

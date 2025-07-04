@@ -1,4 +1,4 @@
-// bison/data_structures/bison/internal/hashtable_test_utils.c
+// src/data_structures/src/internal/hashtable_test_utils.c
 
 #include "internal/hashtable_test_utils.h"
 

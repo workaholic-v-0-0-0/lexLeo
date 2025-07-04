@@ -1,4 +1,4 @@
-// bison/data_structures/include/internal/data_structure_string_utils.h
+// src/data_structures/include/internal/data_structure_string_utils.h
 
 #ifndef DATA_STRUCTURE_STRING_UTILS_H
 #define DATA_STRUCTURE_STRING_UTILS_H

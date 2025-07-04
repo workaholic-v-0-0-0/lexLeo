@@ -1,4 +1,4 @@
-// bison/logger/bison/logger.c
+// src/logger/src/logger.c
 
 #include "logger.h"
 #include <stdio.h>

@@ -1,4 +1,4 @@
-// bison/symtab/bison/symtab.c
+// src/symtab/src/symtab.c
 
 #include "symtab.h"
 
