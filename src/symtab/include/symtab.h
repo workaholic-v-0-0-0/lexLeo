@@ -28,5 +28,8 @@ symbol *symtab_get_local(symtab *st, const char *name); // the caller is respons
 int symtab_reset_local(symtab *st, const char *name, ast *image);// the caller is responsible for passing either NULL or a well-formed symtab and ast pointers
 int symtab_remove(symtab *st, const char *name); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 int symtab_contains_local(symtab *st, const char *name);
+symbol *symtab_get(symtab *st, const char *name); // the caller is responsible for passing either NULL or a well-formed symtab pointer
+int symtab_reset(symtab *st, const char *name, ast *image);// the caller is responsible for passing either NULL or a well-formed symtab and ast pointers
+int symtab_contains(symtab *st, const char *name);
 
 #endif //SYMTAB_H
