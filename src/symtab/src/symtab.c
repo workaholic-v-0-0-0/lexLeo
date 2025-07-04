@@ -1,6 +1,8 @@
 // src/symtab/src/symtab.c
 
-#include "symtab.h"
+//#include "symtab.h"
+
+#include "internal/symtab_test_utils.h"
 
 #include "ast.h"
 #include "internal/symtab_internal.h"
@@ -57,10 +59,14 @@ int symtab_add(symtab *st, symbol *sym) {
 }
 
 symbol *symtab_get_local(symtab *st, const char *name) {
+#ifdef UNIT_TEST
+    return symtab_get_local_mockable(st, name);
+#else
     if (!st)
         return NULL;
 
     return hashtable_get(st->symbols, name);
+#endif
 }
 
 int symtab_reset_local(symtab *st, const char *name, ast *image) {
@@ -78,8 +84,27 @@ int symtab_remove(symtab *st, const char *name) {
 }
 
 int symtab_contains_local(symtab *st, const char *name) {
+#ifdef UNIT_TEST
+    return symtab_contains_local_mockable(st, name);
+#else
     if (!st)
         return 0;
 
     return hashtable_key_is_in_use(st->symbols, name);
+#endif
+}
+
+symbol *symtab_get(symtab *st, const char *name) {
+#ifdef UNIT_TEST
+    return symtab_get_mockable(st, name);
+#else
+    if (!st)
+        return NULL;
+
+    if (symtab_contains_local(st, name))
+        return symtab_get_local(st, name);
+
+    else
+        return symtab_get(st->parent, name);
+#endif
 }
