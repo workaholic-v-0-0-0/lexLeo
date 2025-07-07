@@ -3,7 +3,13 @@
 cmake_minimum_required(VERSION 3.27)
 project(symtab LANGUAGES C)
 
-add_library(symtab STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c)
+add_library(
+    symtab
+    STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_test_utils.c
+)
+
 target_include_directories(
     symtab
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include

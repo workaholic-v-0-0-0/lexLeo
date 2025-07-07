@@ -3,6 +3,8 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
+#include "internal/symtab_internal.h"
+
 // forward declaration to handle cross-dependency
 typedef struct ast ast;
 // note: '#include "ast.h"' in symtab.c
