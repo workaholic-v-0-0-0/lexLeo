@@ -162,6 +162,21 @@ int spy_symtab_reset(symtab *st, const char *name, ast *image) {
     return current_symtab_reset(st, name, image);
 }
 
+int mock_symtab_contains(symtab *st, const char *name) {
+    check_expected(st);
+    check_expected(name);
+    return mock_type(int);
+}
+
+static symtab_contains_fn next_symtab_contains = real_symtab_contains;
+
+// first call is real, second is mock, then repeats
+int spy_symtab_contains(symtab *st, const char *name) {
+    symtab_contains_fn current_symtab_contains = next_symtab_contains;
+    next_symtab_contains = (next_symtab_contains == mock_symtab_contains) ? real_symtab_contains : mock_symtab_contains;
+    return current_symtab_contains(st, name);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -886,7 +901,7 @@ static void reset_returns_0_when_symtab_reset_local_returns_0(void **state) {
 // Expected:
 //  - calls symtab_reset(st->parent, name, image);
 //  - returns symtab_reset returned value
-static void reset_calls_symtab_reset_local_and_returns_value_when_symtab_reset_local_returns_1(void **state) {
+static void reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1(void **state) {
     symtab *st = NULL;
     alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
@@ -906,9 +921,81 @@ static void reset_calls_symtab_reset_local_and_returns_value_when_symtab_reset_l
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_contains TESTS
+//-----------------------------------------------------------------------------
 
 
 
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int contains_setup(void **state) {
+    set_symtab_contains_local(mock_symtab_contains_local);
+    set_symtab_contains(spy_symtab_contains);
+    next_symtab_contains = real_symtab_contains;
+    return 0;
+}
+
+static int contains_teardown(void **state) {
+    set_symtab_contains_local(NULL);
+    set_symtab_contains(NULL);
+    free_saved_addresses_to_be_freed();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 0
+static void contains_returns_0_when_st_null(void **state) {
+    assert_int_equal(0, symtab_contains(NULL, DUMMY_STRING));
+}
+
+// Given: st != NULL
+// Expected: calls symtab_contains_local(st, name)
+static void contains_calls_symtab_contains_local_when_st_not_null(void **state) {
+    expect_value(mock_symtab_contains_local, st, DUMMY_SYMTAB_P);
+    expect_value(mock_symtab_contains_local, name, DUMMY_STRING);
+    will_return(mock_symtab_contains_local, true); // to avoid some mock calls
+    symtab_contains((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING);
+}
+
+// Given: symtab_contains_local(st, name) returns 1
+// Expected: returns 1
+static void contains_returns_1_when_symtab_contains_local_returns_1(void **state) {
+    expect_value(mock_symtab_contains_local, st, DUMMY_SYMTAB_P);
+    expect_value(mock_symtab_contains_local, name, DUMMY_STRING);
+    will_return(mock_symtab_contains_local, true);
+    assert_int_equal(1, symtab_contains((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING));
+}
+
+// Given: symtab_contains_local(st, name) returns 0
+// Expected:
+//  - calls symtab_contains(st->parent, name);
+//  - returns symtab_contains returned value
+static void contains_calls_symtab_contains_and_returns_value_when_symtab_contains_local_returns_0(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+    expect_value(mock_symtab_contains_local, st, st);
+    expect_value(mock_symtab_contains_local, name, DUMMY_STRING);
+    will_return(mock_symtab_contains_local, false);
+    expect_value(mock_symtab_contains, st, st->parent);
+    expect_value(mock_symtab_contains, name, DUMMY_STRING);
+    will_return(mock_symtab_contains, DUMMY_INT);
+    assert_int_equal(
+        symtab_contains(st, DUMMY_STRING),
+        DUMMY_INT );
+}
 
 
 
@@ -1030,8 +1117,23 @@ int main(void) {
             reset_returns_0_when_symtab_reset_local_returns_0,
             reset_setup, reset_teardown),
         cmocka_unit_test_setup_teardown(
-            reset_calls_symtab_reset_local_and_returns_value_when_symtab_reset_local_returns_1,
+            reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1,
             reset_setup, reset_teardown),
+    };
+
+    const struct CMUnitTest contains_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            contains_returns_0_when_st_null,
+            contains_setup, contains_teardown),
+        cmocka_unit_test_setup_teardown(
+            contains_calls_symtab_contains_local_when_st_not_null,
+            contains_setup, contains_teardown),
+        cmocka_unit_test_setup_teardown(
+            contains_returns_1_when_symtab_contains_local_returns_1,
+            contains_setup, contains_teardown),
+        cmocka_unit_test_setup_teardown(
+            contains_calls_symtab_contains_and_returns_value_when_symtab_contains_local_returns_0,
+            contains_setup, contains_teardown),
     };
 
     int failed = 0;
@@ -1045,6 +1147,7 @@ int main(void) {
     failed += cmocka_run_group_tests(contains_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
     failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(contains_tests, NULL, NULL);
 
     return failed;
 }
