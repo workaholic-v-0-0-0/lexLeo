@@ -66,4 +66,18 @@ void set_symtab_reset(symtab_reset_fn f) {
     symtab_reset_mockable = f ? f : real_symtab_reset;
 }
 
+symtab_contains_fn symtab_contains_mockable = real_symtab_contains;
+int real_symtab_contains(symtab *st, const char *name) {
+    if (!st)
+        return 0;
+
+    if (symtab_contains_local(st, name) == 1)
+        return 1;
+
+    return symtab_contains(st->parent, name);
+}
+void set_symtab_contains(symtab_contains_fn f) {
+    symtab_contains_mockable = f ? f : real_symtab_contains;
+}
+
 #endif

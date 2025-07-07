@@ -30,4 +30,9 @@ int real_symtab_reset(symtab *st, const char *name, ast *image);
 extern symtab_reset_fn symtab_reset_mockable;
 void set_symtab_reset(symtab_reset_fn f);
 
+typedef int (*symtab_contains_fn)(symtab *st, const char *name);
+int real_symtab_contains(symtab *st, const char *name);
+extern symtab_contains_fn symtab_contains_mockable;
+void set_symtab_contains(symtab_contains_fn f);
+
 #endif //SYMTAB_TEST_UTILS_H

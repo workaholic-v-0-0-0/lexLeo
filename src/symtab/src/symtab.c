@@ -126,3 +126,17 @@ int symtab_reset(symtab *st, const char *name, ast *image) {
     return symtab_reset(st->parent, name, image);
 #endif
 }
+
+int symtab_contains(symtab *st, const char *name) {
+#ifdef UNIT_TEST
+    return symtab_contains_mockable(st, name);
+#else
+    if (!st)
+        return 0;
+
+    if (symtab_contains_local(st, name) == 1)
+        return 1;
+
+    return symtab_contains(st->parent, name);
+#endif
+}
