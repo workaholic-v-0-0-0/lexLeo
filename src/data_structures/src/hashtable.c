@@ -168,7 +168,7 @@ int hashtable_reset_value(hashtable *ht, const char *key, void *value) {
 #ifdef UNIT_TEST
     return hashtable_reset_value_mockable(ht, key, value);
 #else
-    if ((!ht) || (!hashtable_key_is_in_use(ht, key)))
+    if ((!ht) || (!hashtable_key_is_in_use(ht, key))) // useless?
         return 1;
 
     list bucket = (ht->buckets)[hash_djb2(key) % ht->size];

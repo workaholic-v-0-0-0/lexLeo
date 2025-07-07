@@ -70,10 +70,14 @@ symbol *symtab_get_local(symtab *st, const char *name) {
 }
 
 int symtab_reset_local(symtab *st, const char *name, ast *image) {
+#ifdef UNIT_TEST
+    return symtab_reset_local_mockable(st, name, image);
+#else
     if (!st)
         return 1;
 
     return hashtable_reset_value(st->symbols, name, (void *) image);
+#endif
 }
 
 int symtab_remove(symtab *st, const char *name) {
@@ -106,5 +110,19 @@ symbol *symtab_get(symtab *st, const char *name) {
 
     else
         return symtab_get(st->parent, name);
+#endif
+}
+
+int symtab_reset(symtab *st, const char *name, ast *image) {
+#ifdef UNIT_TEST
+    return symtab_reset_mockable(st, name, image);
+#else
+    if (!st)
+        return 1;
+
+    if (symtab_reset_local(st, name, image) == 0)
+        return 0;
+
+    return symtab_reset(st->parent, name, image);
 #endif
 }

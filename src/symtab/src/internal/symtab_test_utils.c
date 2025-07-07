@@ -41,4 +41,29 @@ void set_symtab_get(symtab_get_fn f) {
     symtab_get_mockable = f ? f : real_symtab_get;
 }
 
+symtab_reset_local_fn symtab_reset_local_mockable = real_symtab_reset_local;
+int real_symtab_reset_local(symtab *st, const char *name, ast *image) {
+    if (!st)
+        return 1;
+
+    return hashtable_reset_value(st->symbols, name, (void *) image);
+}
+void set_symtab_reset_local(symtab_reset_local_fn f) {
+    symtab_reset_local_mockable = f ? f : real_symtab_reset_local;
+}
+
+symtab_reset_fn symtab_reset_mockable = real_symtab_reset;
+int real_symtab_reset(symtab *st, const char *name, ast *image) {
+    if (!st)
+        return 1;
+
+    if (symtab_reset_local(st, name, image) == 0)
+        return 0;
+
+    return symtab_reset(st->parent, name, image);
+}
+void set_symtab_reset(symtab_reset_fn f) {
+    symtab_reset_mockable = f ? f : real_symtab_reset;
+}
+
 #endif
