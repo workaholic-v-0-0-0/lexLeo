@@ -139,6 +139,29 @@ symbol *spy_symtab_get(symtab *st, const char *name) {
     return current_symtab_get(st, name);
 }
 
+int mock_symtab_reset_local(symtab *st, const char *name, ast *image) {
+    check_expected(st);
+    check_expected(name);
+    check_expected(image);
+    return mock_type(int);
+}
+
+int mock_symtab_reset(symtab *st, const char *name, ast *image) {
+    check_expected(st);
+    check_expected(name);
+    check_expected(image);
+    return mock_type(int);
+}
+
+static symtab_reset_fn next_symtab_reset = real_symtab_reset;
+
+// first call is real, second is mock, then repeats
+int spy_symtab_reset(symtab *st, const char *name, ast *image) {
+    symtab_reset_fn current_symtab_reset = next_symtab_reset;
+    next_symtab_reset = (next_symtab_reset == mock_symtab_reset) ? real_symtab_reset : mock_symtab_reset;
+    return current_symtab_reset(st, name, image);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -152,6 +175,16 @@ static void alloc_and_save_address_to_be_freed(void **ptr, size_t size) {
     set_allocators(NULL, NULL);
     collected_ptr_to_be_freed = list_push(collected_ptr_to_be_freed, *ptr);
     set_allocators(mock_malloc, mock_free);
+}
+
+static void free_saved_addresses_to_be_freed(void) {
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
 }
 
 
@@ -174,6 +207,7 @@ static int destroy_symbol_setup(void **state) {
 
 static int destroy_symbol_teardown(void **state) {
     set_allocators(NULL, NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -264,6 +298,7 @@ static int wind_scope_setup(void **state) {
 static int wind_scope_teardown(void **state) {
     set_allocators(NULL, NULL);
     set_hashtable_create(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -278,7 +313,6 @@ static int wind_scope_teardown(void **state) {
 static void wind_scope_calls_malloc_for_a_symtab(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
-
     symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
 }
 
@@ -365,6 +399,7 @@ static int unwind_scope_setup(void **state) {
 static int unwind_scope_teardown(void **state) {
     set_allocators(NULL, NULL);
     set_hashtable_destroy(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -420,6 +455,7 @@ static int add_setup(void **state) {
 
 static int add_teardown(void **state) {
     set_hashtable_add(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -484,6 +520,7 @@ static int get_local_setup(void **state) {
 
 static int get_local_teardown(void **state) {
     set_hashtable_get(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -537,6 +574,7 @@ static int reset_local_setup(void **state) {
 
 static int reset_local_teardown(void **state) {
     set_hashtable_reset_value(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -595,6 +633,7 @@ static int remove_setup(void **state) {
 
 static int remove_teardown(void **state) {
     set_hashtable_remove(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -652,6 +691,7 @@ static int contains_local_setup(void **state) {
 
 static int contains_local_teardown(void **state) {
     set_hashtable_key_is_in_use(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -715,6 +755,7 @@ static int get_teardown(void **state) {
     set_symtab_get_local(NULL);
     set_symtab_contains_local(NULL);
     set_symtab_get(NULL);
+    free_saved_addresses_to_be_freed();
     return 0;
 }
 
@@ -780,6 +821,90 @@ static void get_calls_itself_and_returns_value_when_symtab_contains_local_return
         DUMMY_SYMBOL_P
     );
 }
+
+
+
+//-----------------------------------------------------------------------------
+// symtab_reset TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int reset_setup(void **state) {
+    set_symtab_reset_local(mock_symtab_reset_local);
+    set_symtab_reset(spy_symtab_reset);
+    next_symtab_reset = real_symtab_reset;
+    return 0;
+}
+
+static int reset_teardown(void **state) {
+    set_symtab_reset_local(NULL);
+    set_symtab_reset(NULL);
+    free_saved_addresses_to_be_freed();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: st = NULL
+// Expected: returns 1
+static void reset_returns_1_when_st_null(void **state) {
+    assert_int_equal(1, symtab_reset(NULL, DUMMY_STRING, (ast *) DUMMY_IMAGE));
+}
+
+// Given: st != NULL
+// Expected: calls symtab_reset_local(st, name, image)
+static void reset_calls_symtab_reset_local_when_st_not_null(void **state) {
+    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
+    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
+    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
+    will_return(mock_symtab_reset_local, DUMMY_INT); // DUMMY_INT is 0 so no more call (see next tests)
+    symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE);
+}
+
+// Given: symtab_reset_local(st, name, image) returns 0 (meaning the reset has been done properly)
+// Expected: returns 0
+static void reset_returns_0_when_symtab_reset_local_returns_0(void **state) {
+    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
+    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
+    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
+    will_return(mock_symtab_reset_local, 0);
+    assert_int_equal(0, symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE));
+}
+
+// Given: symtab_reset_local(st, name, image) returns 1 (meaning name is not a symbol name in current scope)
+// Expected:
+//  - calls symtab_reset(st->parent, name, image);
+//  - returns symtab_reset returned value
+static void reset_calls_symtab_reset_local_and_returns_value_when_symtab_reset_local_returns_1(void **state) {
+    symtab *st = NULL;
+    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
+    st->parent = (symtab *) DUMMY_SYMTAB_P;
+    expect_value(mock_symtab_reset_local, st, st);
+    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
+    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
+    will_return(mock_symtab_reset_local, 1);
+    expect_value(mock_symtab_reset, st, st->parent);
+    expect_value(mock_symtab_reset, name, DUMMY_STRING);
+    expect_value(mock_symtab_reset, image, DUMMY_IMAGE);
+    will_return(mock_symtab_reset, DUMMY_INT);
+    assert_int_equal(
+        symtab_reset(st, DUMMY_STRING, (ast *) DUMMY_IMAGE),
+        DUMMY_INT );
+}
+
+
 
 
 
@@ -894,6 +1019,21 @@ int main(void) {
             get_setup, get_teardown),
     };
 
+    const struct CMUnitTest reset_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            reset_returns_1_when_st_null,
+            reset_setup, reset_teardown),
+        cmocka_unit_test_setup_teardown(
+            reset_calls_symtab_reset_local_when_st_not_null,
+            reset_setup, reset_teardown),
+        cmocka_unit_test_setup_teardown(
+            reset_returns_0_when_symtab_reset_local_returns_0,
+            reset_setup, reset_teardown),
+        cmocka_unit_test_setup_teardown(
+            reset_calls_symtab_reset_local_and_returns_value_when_symtab_reset_local_returns_1,
+            reset_setup, reset_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
@@ -904,6 +1044,7 @@ int main(void) {
     failed += cmocka_run_group_tests(remove_tests, NULL, NULL);
     failed += cmocka_run_group_tests(contains_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
 
     return failed;
 }

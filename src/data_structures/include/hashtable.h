@@ -26,7 +26,7 @@ void *hashtable_get(const hashtable *ht, const char *key);
 int hashtable_add(hashtable *ht, const char *key, void *value);
 
 // returns 1 on error, 0 on success.
-// error if the key does not exist
+// error if the key does not exist or ht is NULL
 int hashtable_reset_value(hashtable *ht, const char *key, void *value);
 
 // frees value via callback if callback
