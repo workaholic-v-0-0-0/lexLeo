@@ -13,6 +13,11 @@
 
 #include "list.h"
 
+// satisfies linker
+int yyerror(yyscan_t scanner, ast **result, const char *s) {
+    return 1;
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -220,7 +225,7 @@ static int teardown(void **state) {
 
 
 static void yylex_tokenize_properly(void **state) {
-    params_t *p = (params_t *)*state;
+    params_t *p = (params_t *) *state;
     yy_scan_string(
         p->input,
         scanner );

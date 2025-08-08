@@ -1,0 +1,64 @@
+// src/parser/bison/grammar.y
+
+/* src/parser/bison/grammar_full.y */
+/* –– même %union, %token, %type que dans grammar_core.y –– */
+%union {
+  int    int_value;
+  char  *string_value;
+  char  *symbol_name_value;
+  ast   *ast_value;
+}
+
+%token  <int_value>       INTEGER
+%token  <string_value>    STRING
+%token  <symbol_name_value> SYMBOL
+%token  EQUAL EVALUATE EXECUTE COMPUTE READ WRITE
+%token  SEMICOLON LEFT_PARENTHESIS RIGHT_PARENTHESIS
+%token  PLUS MINUS MULTIPLY DIVIDE
+
+%left PLUS MINUS
+%left MULTIPLY DIVIDE
+
+%type <ast_value>
+  atom statements statement_list statement translation_unit
+
+%%
+
+statements
+  : /* empty */           { $$ = NULL; }
+  | statement_list        { $$ = $1; }
+  ;
+
+statement_list
+  : statement
+  | statement_list ';' statement
+  ;
+
+statement
+  : /* binding, evaluation, etc. à détailler */
+  ;
+
+atom
+  : INTEGER {
+      $$ = ast_create_typed_data_wrapper(
+             ast_create_typed_data_int($1)
+           );
+    }
+  | STRING {
+      $$ = ast_create_typed_data_wrapper(
+             ast_create_typed_data_string($1)
+           );
+    }
+  | SYMBOL {
+      context ctx = (context)yyget_extra(scanner);
+      $$ = ast_create_typed_data_wrapper(
+             ast_create_typed_data_symbol(
+               symtab_get_local(ctx->st, $1)
+             )
+           );
+    }
+  ;
+
+translation_unit
+  : statements           { /* on donnera *result plus bas */ }
+  ;

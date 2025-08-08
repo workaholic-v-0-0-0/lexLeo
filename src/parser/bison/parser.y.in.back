@@ -1,0 +1,162 @@
+// src/parser/bison/parser.y.in
+
+%define api.pure full
+% expect 1
+% lex- param   {yyscan_t scanner}
+% parse - param {yyscan_t scanner}
+% parse - param { ast **result }
+
+% code requires {
+#include "parser_types.h"
+}
+
+%{
+
+#include "ast.h"
+#include "symtab.h"
+#include <stdlib.h>
+
+#define YYDEBUG 1
+%}
+
+% code provides {
+int yyerror(yyscan_t scanner, ast **result, const char *s);
+int yylex(YYSTYPE *yylval, yyscan_t scanner);
+}
+
+% union {
+int int_value;
+char *string_value;
+char *symbol_name_value;
+ast *ast;
+}
+
+% token <int_value> INTEGER
+% token <string_value> STRING
+% token <symbol_name_value> SYMBOL
+% token PARAMETERS // just INTEGER for the first version
+
+// key-word lexeme relative to instruction
+% token EQUAL
+% token EVALUATE
+% token EXECUTE
+% token COMPUTE
+% token READ
+% token WRITE
+
+//punctuation
+%token SEMICOLON
+% token LEFT_PARENTHESIS
+% token RIGHT_PARENTHESIS
+
+// arithmetic
+% token PLUS MINUS MULTIPLY DIVIDE
+
+// rules avoiding ambiguities
+% left PLUS MINUS
+% left MULTIPLY DIVIDE
+
+// non-terminal lexeme types
+% type <ast>
+translation_unit
+statements
+binding
+evaluation
+execution
+computation
+//reading
+//writing
+atom
+unit_test_atom
+% start @START_SYMBOL@
+%%
+translation_unit
+: statements { $$ = $1; }
+| unit_test_atom { *result = $1; }
+;
+
+statements
+: /* empty */ {}
+| statement_list {}
+;
+
+statement_list
+: statement
+| statement_list SEMICOLON statement
+;
+
+statement
+: binding
+| evaluation
+| execution
+| computation
+// | reading
+// | writing
+// | function_call
+;
+
+binding
+: SYMBOL EQUAL expression {}
+;
+
+evaluation
+: EVALUATE SYMBOL {}
+;
+
+execution
+: EXECUTE translation_unit {}
+;
+
+computation
+: COMPUTE expression {}
+;
+
+// function_call
+//  :
+
+expression
+: atom
+| LEFT_PARENTHESIS expression RIGHT_PARENTHESIS
+| expression PLUS expression
+| expression MINUS expression
+| expression MULTIPLY expression
+| expression DIVIDE expression
+// | function_call
+;
+
+atom
+: INTEGER {
+$$ =
+ast_create_typed_data_wrapper(
+ast_create_typed_data_int($1) );
+printf("here\n");
+}
+| STRING {
+$$ = ast_create_typed_data_wrapper(ast_create_typed_data_string($1));
+}
+| SYMBOL {
+context ctx = (context)yyget_extra(scanner);
+if (symtab_contains_local(ctx->st, $1)) {
+$$ =
+ast_create_typed_data_wrapper(
+ast_create_typed_data_symbol(
+symtab_get_local(ctx->st, $1) ) );
+} else {
+$$ =
+ast_create_typed_data_wrapper(
+ast_create_typed_data_symbol(
+symtab_get_local(ctx->st, $1) ) );
+}
+}
+;
+
+unit_test_atom:
+atom { $$ = $1; }
+;
+% %
+int yydebug = 0;
+
+int yyerror(yyscan_t scanner, ast **result, const char *msg) {
+fprintf(stderr, "Parse error: %s\n", msg);
+return 1;
+}

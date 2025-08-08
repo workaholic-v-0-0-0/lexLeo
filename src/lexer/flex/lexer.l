@@ -9,6 +9,7 @@
 
 %option nounput
 %option noinput
+%option noyywrap
 
 %%
 
@@ -31,6 +32,7 @@
 
 [0-9]+ {
     yylval->int_value = atoi(yytext);
+    printf("here2\n");
     return INTEGER;
 }
 
@@ -51,15 +53,6 @@
 }
 
 . {
-    yyerror(NULL, "unknown characters");
+    yyerror(NULL, NULL, "unknown characters");
 }
 
-%%
-
-int yyerror(yyscan_t scanner, const char *s) {
-    return 1;
-}
-
-int yywrap(yyscan_t scanner) {
-    return 1;
-}

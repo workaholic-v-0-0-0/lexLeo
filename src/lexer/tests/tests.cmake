@@ -25,4 +25,3 @@ add_test(
     $<TARGET_FILE:test_lexer>
 )
 set_tests_properties(test_lexer_memory PROPERTIES LABELS "memory")
-

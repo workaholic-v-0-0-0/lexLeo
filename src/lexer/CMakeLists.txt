@@ -51,6 +51,8 @@ target_include_directories(lexer
     PRIVATE
     "${CMAKE_SOURCE_DIR}/src/include"
     "${PARSER_INCLUDE_DIR}"
+    PUBLIC
+    ${LEXER_INCLUDE_DIR}
 )
 
 add_dependencies(lexer parser) # lexer depends on the Bison-generated header

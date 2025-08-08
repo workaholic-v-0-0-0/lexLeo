@@ -1,0 +1,82 @@
+// src/parser/bison/parser.y.in
+/* @formatter:off */
+
+%define api.pure full
+//%expect 1
+%lex-param   {yyscan_t scanner}
+%parse-param {yyscan_t scanner}
+%parse-param {ast **result}
+
+%code requires {
+#include "parser_types.h"
+}
+
+%{
+
+#include "ast.h"
+#include "symtab.h"
+#include <stdlib.h>
+
+#define YYDEBUG 1
+%}
+
+%code provides {
+int yyerror(yyscan_t scanner, ast **result, const char *s);
+int yylex(YYSTYPE *yylval, yyscan_t scanner);
+}
+
+%union {
+int int_value;
+char *string_value;
+char *symbol_name_value;
+ast *ast;
+}
+
+%token <int_value> INTEGER
+%token <string_value> STRING
+%token <symbol_name_value> SYMBOL
+%token PARAMETERS // just INTEGER for the first version
+
+// key-word lexeme relative to instruction
+%token EQUAL
+%token EVALUATE
+%token EXECUTE
+%token COMPUTE
+%token READ
+%token WRITE
+
+//punctuation
+%token SEMICOLON
+%token LEFT_PARENTHESIS
+%token RIGHT_PARENTHESIS
+
+// arithmetic
+%token PLUS MINUS MULTIPLY DIVIDE
+
+// rules avoiding ambiguities
+%left PLUS MINUS
+%left MULTIPLY DIVIDE
+
+// non-terminal lexeme types
+%type <ast>
+atom
+
+%start start
+
+%%
+
+start:
+@START_SYMBOL@ YYEOF { *result = $1; }
+
+@GRAMMAR_RULES@
+
+%%
+
+int yydebug = 0;
+
+int yyerror(yyscan_t scanner, ast **result, const char *msg) {
+fprintf(stderr, "Parse error: %s\n", msg);
+return 1;
+}
+
+/* @formatter:on */
