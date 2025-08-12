@@ -29,7 +29,11 @@ void symtab_destroy_symbol(void *value);
 symtab *symtab_wind_scope(symtab *st); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 symtab *symtab_unwind_scope(symtab *st);  // the caller is responsible for passing either NULL or a well-formed symtab pointer
 
-int symtab_add(symtab *st, symbol *sym); // the caller is responsible for passing either NULL or a well-formed symtab and symbol pointers
+// the caller is responsible for passing either NULL or a well-formed symtab and symbol pointers
+// on success (return value 0), symtab is responsible for sym
+// on error, the caller is responsible for sym
+int symtab_add(symtab *st, symbol *sym);
+
 symbol *symtab_get_local(symtab *st, const char *name); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 int symtab_reset_local(symtab *st, const char *name, ast *image);// the caller is responsible for passing either NULL or a well-formed symtab and ast pointers
 int symtab_remove(symtab *st, const char *name); // the caller is responsible for passing either NULL or a well-formed symtab pointer
