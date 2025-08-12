@@ -1,10 +1,10 @@
 // src/data_structures/src/internal/hashtable_test_utils.c
 
-#include "internal/hashtable_test_utils.h"
+#ifdef UNIT_TEST
 
 #include <string.h>
 
-#ifdef UNIT_TEST
+#include "internal/hashtable_test_utils.h"
 
 hash_djb2_fn hash_djb2_mockable = real_hash_djb2;
 unsigned long real_hash_djb2(const char *str) {

@@ -9,12 +9,16 @@
 typedef struct ast ast;
 // note: '#include "ast.h"' in symtab.c
 
+#define MAXIMUM_SYMBOL_NAME_LENGTH 255
 typedef struct symbol {
-    char *name;
+    char *name; // must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
     ast *image; // must be NULL or correctly formed
 } symbol;
 // note: registrer in hashtable with an entry with
 //       key = symbol.name and *value = symbol
+
+symbol *symtab_create_symbol(char *name, ast *image); // must be interned so that it can be freed via symtab_unwind_scope
+// the caller is responsible for passing a well-formed ast pointer or NULL
 
 typedef struct symtab symtab;
 
