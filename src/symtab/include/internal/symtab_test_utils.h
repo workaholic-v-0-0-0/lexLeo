@@ -5,6 +5,9 @@
 
 #include "internal/symtab_internal.h"
 
+#include "internal/symtab_memory_allocator.h"
+#include "internal/symtab_string_utils.h"
+
 typedef symbol *(*symtab_get_local_fn)(symtab *st, const char *name);
 symbol *real_symtab_get_local(symtab *st, const char *name);
 extern symtab_get_local_fn symtab_get_local_mockable;

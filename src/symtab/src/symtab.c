@@ -7,8 +7,29 @@
 #include "ast.h"
 #include "internal/symtab_internal.h"
 #include "internal/symtab_memory_allocator.h"
+#include "internal/symtab_string_utils.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+symbol *symtab_create_symbol(char *name, ast *image) {
+	if ((!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
+		return NULL;
+
+	symbol *ret = SYMTAB_MALLOC(sizeof(symbol));
+	if (!ret)
+		return NULL;
+
+	ret->name = SYMTAB_STRING_DUPLICATE(name);
+	if (!ret->name) {
+		SYMTAB_FREE(ret);
+		return NULL;
+	}
+
+	ret->image = image;
+
+	return ret;
+}
 
 void symtab_destroy_symbol(void *value) {
     symbol *s = (symbol *) value;
