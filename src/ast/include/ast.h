@@ -19,6 +19,7 @@ typedef enum {
     AST_TYPE_ADDITION,
     // other elementary operations
     AST_TYPE_DATA_WRAPPER, // leaf
+	AST_TYPE_ERROR, // leaf
     AST_TYPE_NB_TYPES,
 } ast_type;
 
@@ -32,6 +33,11 @@ typedef enum {
 // forward declaration to handle cross-dependency
 typedef struct symbol symbol;
 
+typedef struct ast_children_t {
+    size_t children_nb;
+    struct ast **children;
+} ast_children_t;
+
 typedef struct {
     data_type type;
     union {
@@ -42,18 +48,32 @@ typedef struct {
     } data;
 } typed_data;
 
-typedef struct ast_children_t {
-    size_t children_nb;
-    struct ast **children;
-} ast_children_t;
+typedef struct {
+    error_type code;
+    char *message;
+    bool is_sentinel; // true for the static fallback node
+    // YYLTYPE loc;
+} ast_error;
 
 typedef struct ast {
     ast_type type;
     union {
         ast_children_t *children;
         typed_data *data;
+        ast_error error; // for ERROR nodes
     };
 } ast;
+
+static ast_error_t g_error_sentinel_payload = {
+    .code = UNRETRIEVABLE_ERROR_CODE,
+    .message = NULL,
+    .is_sentinel = true
+};
+static ast g_error_sentinel = {
+    .type = AST_TYPE_ERROR,
+    .error = &g_error_sentinel_payload
+};
+static ast *const AST_ERROR_SENTINEL = &g_error_sentinel;
 
 typed_data *ast_create_typed_data_int(int i);
 void ast_destroy_typed_data_int(typed_data *typed_data_int);
