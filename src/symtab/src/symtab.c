@@ -2,7 +2,9 @@
 
 //#include "symtab.h"
 
+#ifdef UNIT_TEST
 #include "internal/symtab_test_utils.h"
+#endif
 
 #include "ast.h"
 #include "internal/symtab_internal.h"

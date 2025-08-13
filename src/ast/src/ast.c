@@ -1,12 +1,29 @@
 // src/ast/src/ast.c
 
+#ifdef UNIT_TEST
 #include "internal/ast_test_utils.h"
+#endif
 
 #include "internal/ast_memory_allocator.h"
 #include "internal/ast_string_utils.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
+
+static error_info error_sentinel_payload = {
+    .code = UNRETRIEVABLE_ERROR_CODE,
+    .message = NULL,
+    .is_sentinel = true
+};
+static ast error_sentinel = {
+    .type = AST_TYPE_ERROR,
+    .error = &error_sentinel_payload
+};
+static ast *const AST_ERROR_SENTINEL = &error_sentinel;
+
+ast * ast_error_sentinel(void) {
+    return AST_ERROR_SENTINEL;
+}
 
 typed_data *ast_create_typed_data_int(int i) {
     typed_data *ret = AST_MALLOC(sizeof(typed_data));
@@ -176,7 +193,7 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 #endif
 }
 
-ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children) {
+ast *ast_create_children_node(ast_type type, ast_children_t *ast_children) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
         return NULL;
 
@@ -190,7 +207,7 @@ ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_childr
     return ret;
 }
 
-ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children) {
+ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
         return NULL;
 
@@ -210,7 +227,7 @@ ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, as
     return ret;
 }
 
-ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...) {
+ast *ast_create_children_node_var(ast_type type, size_t children_nb,...) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
         return NULL;
 
