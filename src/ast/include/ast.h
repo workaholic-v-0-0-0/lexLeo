@@ -55,6 +55,7 @@ typedef struct {
     } data;
 } typed_data;
 
+#define MAXIMUM_ERROR_MESSAGE_LENGTH 255
 typedef struct {
     error_type code;
     char *message;
@@ -79,13 +80,13 @@ void ast_destroy_typed_data_int(typed_data *typed_data_int);
 typed_data *ast_create_typed_data_string(char *s);
 void ast_destroy_typed_data_string(typed_data *typed_data_string);
 
-typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible of s
+typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible for s
 void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // note: will call ast_destroy because symbol has field of type ast
 
-ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible of data
+ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible for data
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
-ast *ast_create_error_node(error_type code, char *message);
+ast *ast_create_error_node(error_type code, char *message); // client code is responsible for message
 ast *ast_destroy_error_node(ast *ast_error_node);
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying chidren array (but not the ast * it contains)
@@ -95,7 +96,7 @@ void ast_destroy_ast_children(ast_children_t *ast_children); // client code is r
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
 ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying children array (but not the ast * it contains)
 ast *ast_create_children_node_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb value correctness
-void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper);
+void ast_destroy_children_node(ast *children_node);
 
 void ast_destroy(ast *root); // the caller is responsible for passing either NULL or a well-formed ast pointer
 

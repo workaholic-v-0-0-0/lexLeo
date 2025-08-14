@@ -69,8 +69,8 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
     check_expected(ast_data_wrapper);
 }
 
-void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
-    check_expected(non_typed_data_wrapper);
+void ast_destroy_children_node(ast *children_node) {
+    check_expected(children_node);
 }
 
 hashtable *mock_hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
@@ -288,9 +288,9 @@ static void destroy_symbol_calls_ast_destroy_typed_data_wrapper_when_image_is_da
 //  - symbol->image != NULL
 //  - symbol->image->type != AST_TYPE_DATA_WRAPPER
 // Expected:
-//  - calls ast_destroy_non_typed_data_wrapper with symbol->image
+//  - calls ast_destroy_children_node with symbol->image
 //  - symbol->name IS NOT FREED because hashtable owns its keys memory
-static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_is_not_data_wrapper(void **state) {
+static void destroy_symbol_calls_ast_destroy_children_node_when_image_is_not_data_wrapper(void **state) {
     symbol *s;
     alloc_and_save_address_to_be_freed((void **)&s, sizeof(symbol));
     s->name = (char *) DUMMY_STRING;
@@ -298,7 +298,7 @@ static void destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_i
     s->image->type = AST_TYPE_ADDITION;
     s->image->children = (ast_children_t *) DUMMY_CHILDREN_INFO_P;
 
-    expect_value(ast_destroy_non_typed_data_wrapper, non_typed_data_wrapper, s->image);
+    expect_value(ast_destroy_children_node, children_node, s->image);
 
     symtab_destroy_symbol((void *) s);
 }
@@ -1130,7 +1130,7 @@ int main(void) {
             destroy_symbol_frees_name_and_symbol_when_image_null,
             destroy_symbol_setup, destroy_symbol_teardown),
         cmocka_unit_test_setup_teardown(
-            destroy_symbol_calls_ast_destroy_non_typed_data_wrapper_when_image_is_not_data_wrapper,
+            destroy_symbol_calls_ast_destroy_children_node_when_image_is_not_data_wrapper,
             destroy_symbol_setup, destroy_symbol_teardown),
     };
 

@@ -9,6 +9,7 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 static error_info error_sentinel_payload = {
     .code = UNRETRIEVABLE_ERROR_CODE,
@@ -125,6 +126,37 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 #endif
 }
 
+ast *ast_create_error_node(error_type code, char *message) {
+	if ((!message) || (strlen(message) > MAXIMUM_ERROR_MESSAGE_LENGTH))
+		return NULL;
+
+	ast *ret = AST_MALLOC(sizeof(ast));
+	if (!ret)
+		return NULL;
+
+	char *error_message = AST_STRING_DUPLICATE(message);
+	if (!error_message) {
+		AST_FREE(ret);
+		return NULL;
+	}
+
+	error_info *error = AST_MALLOC(sizeof(error_info));
+	if (!error) {
+		AST_FREE(error_message);
+		AST_FREE(ret);
+		return NULL;
+	}
+
+	error->code = code;
+	error->message = error_message;
+	error->is_sentinel = false;
+
+	ret->type = AST_TYPE_ERROR;
+	ret->error = error;
+
+	return ret;
+}
+
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
 #ifdef UNIT_TEST
     return ast_create_ast_children_arr_mockable(children_nb, children);
@@ -184,7 +216,7 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 
     for (size_t i = 0; i < ast_children->children_nb; i++) {
         if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
-            ast_destroy_non_typed_data_wrapper(ast_children->children[i]);
+            ast_destroy_children_node(ast_children->children[i]);
         else
             ast_destroy_typed_data_wrapper(ast_children->children[i]);
     }
@@ -273,13 +305,13 @@ ast *ast_create_children_node_var(ast_type type, size_t children_nb,...) {
     return ret;
 }
 
-void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
+void ast_destroy_children_node(ast *children_node) {
 #ifdef UNIT_TEST
-    ast_destroy_non_typed_data_wrapper_mockable(non_typed_data_wrapper);
+    ast_destroy_children_node_mockable(children_node);
 #else
-    if ((non_typed_data_wrapper) && (non_typed_data_wrapper->type != AST_TYPE_DATA_WRAPPER)) {
-        ast_destroy_ast_children(non_typed_data_wrapper->children);
-        AST_FREE(non_typed_data_wrapper);
+    if ((children_node) && (children_node->type != AST_TYPE_DATA_WRAPPER)) {
+        ast_destroy_ast_children(children_node->children);
+        AST_FREE(children_node);
     }
 #endif
 }
@@ -294,6 +326,6 @@ void ast_destroy(ast *root) {
     if (root->type == AST_TYPE_DATA_WRAPPER)
         ast_destroy_typed_data_wrapper(root);
     else
-        ast_destroy_non_typed_data_wrapper(root);
+        ast_destroy_children_node(root);
 #endif
 }
