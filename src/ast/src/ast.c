@@ -1,12 +1,30 @@
 // src/ast/src/ast.c
 
+#ifdef UNIT_TEST
 #include "internal/ast_test_utils.h"
+#endif
 
 #include "internal/ast_memory_allocator.h"
 #include "internal/ast_string_utils.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+
+static error_info error_sentinel_payload = {
+    .code = UNRETRIEVABLE_ERROR_CODE,
+    .message = NULL,
+    .is_sentinel = true
+};
+static ast error_sentinel = {
+    .type = AST_TYPE_ERROR,
+    .error = &error_sentinel_payload
+};
+static ast *const AST_ERROR_SENTINEL = &error_sentinel;
+
+ast * ast_error_sentinel(void) {
+    return AST_ERROR_SENTINEL;
+}
 
 typed_data *ast_create_typed_data_int(int i) {
     typed_data *ret = AST_MALLOC(sizeof(typed_data));
@@ -108,6 +126,46 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 #endif
 }
 
+ast *ast_create_error_node(error_type code, char *message) {
+	if ((!message) || (strlen(message) > MAXIMUM_ERROR_MESSAGE_LENGTH))
+		return NULL;
+
+	ast *ret = AST_MALLOC(sizeof(ast));
+	if (!ret)
+		return NULL;
+
+	char *error_message = AST_STRING_DUPLICATE(message);
+	if (!error_message) {
+		AST_FREE(ret);
+		return NULL;
+	}
+
+	error_info *error = AST_MALLOC(sizeof(error_info));
+	if (!error) {
+		AST_FREE(error_message);
+		AST_FREE(ret);
+		return NULL;
+	}
+
+	error->code = code;
+	error->message = error_message;
+	error->is_sentinel = false;
+
+	ret->type = AST_TYPE_ERROR;
+	ret->error = error;
+
+	return ret;
+}
+
+void ast_destroy_error_node(ast *ast_error_node) {
+	if (!ast_error_node)
+		return;
+
+	AST_FREE(ast_error_node->error->message);
+	AST_FREE(ast_error_node->error);
+	AST_FREE(ast_error_node);
+}
+
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
 #ifdef UNIT_TEST
     return ast_create_ast_children_arr_mockable(children_nb, children);
@@ -162,21 +220,18 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 #ifdef UNIT_TEST
     ast_destroy_ast_children_mockable(ast_children);
 #else
-    if ((!ast_children) || (ast_children->children_nb == 0))
+    if (!ast_children)
         return;
 
     for (size_t i = 0; i < ast_children->children_nb; i++) {
-        if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
-            ast_destroy_non_typed_data_wrapper(ast_children->children[i]);
-        else
-            ast_destroy_typed_data_wrapper(ast_children->children[i]);
+        ast_destroy(ast_children->children[i]);
     }
     AST_FREE(ast_children->children);
     AST_FREE(ast_children);
 #endif
 }
 
-ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_children) {
+ast *ast_create_children_node(ast_type type, ast_children_t *ast_children) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
         return NULL;
 
@@ -190,7 +245,7 @@ ast *ast_create_non_typed_data_wrapper(ast_type type, ast_children_t *ast_childr
     return ret;
 }
 
-ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, ast **children) {
+ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
         return NULL;
 
@@ -210,7 +265,7 @@ ast *ast_create_non_typed_data_wrapper_arr(ast_type type, size_t children_nb, as
     return ret;
 }
 
-ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...) {
+ast *ast_create_children_node_var(ast_type type, size_t children_nb,...) {
     if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
         return NULL;
 
@@ -251,18 +306,17 @@ ast *ast_create_non_typed_data_wrapper_var(ast_type type, size_t children_nb,...
 
         ret->type = type;
         ret->children = children_info;
-        AST_FREE(ast_p_arr);
     }
     return ret;
 }
 
-void ast_destroy_non_typed_data_wrapper(ast *non_typed_data_wrapper) {
+void ast_destroy_children_node(ast *children_node) {
 #ifdef UNIT_TEST
-    ast_destroy_non_typed_data_wrapper_mockable(non_typed_data_wrapper);
+    ast_destroy_children_node_mockable(children_node);
 #else
-    if ((non_typed_data_wrapper) && (non_typed_data_wrapper->type != AST_TYPE_DATA_WRAPPER)) {
-        ast_destroy_ast_children(non_typed_data_wrapper->children);
-        AST_FREE(non_typed_data_wrapper);
+    if ((children_node) && (children_node->type != AST_TYPE_DATA_WRAPPER)) {
+        ast_destroy_ast_children(children_node->children);
+        AST_FREE(children_node);
     }
 #endif
 }
@@ -274,9 +328,15 @@ void ast_destroy(ast *root) {
     if (!root)
         return;
 
-    if (root->type == AST_TYPE_DATA_WRAPPER)
-        ast_destroy_typed_data_wrapper(root);
-    else
-        ast_destroy_non_typed_data_wrapper(root);
+	switch (root->type) {
+		case AST_TYPE_DATA_WRAPPER:
+			ast_destroy_typed_data_wrapper(root);
+			break;
+		case AST_TYPE_ERROR:
+			ast_destroy_error_node(root);
+        	break;
+		default:
+	        ast_destroy_children_node(root);
+	}
 #endif
 }

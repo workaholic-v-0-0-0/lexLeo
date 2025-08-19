@@ -2,7 +2,9 @@
 
 //#include "symtab.h"
 
+#ifdef UNIT_TEST
 #include "internal/symtab_test_utils.h"
+#endif
 
 #include "ast.h"
 #include "internal/symtab_internal.h"
@@ -37,7 +39,7 @@ void symtab_destroy_symbol(void *value) {
         if (s->image->type == AST_TYPE_DATA_WRAPPER)
             ast_destroy_typed_data_wrapper(s->image);
         else
-            ast_destroy_non_typed_data_wrapper(s->image);
+            ast_destroy_children_node(s->image);
     }
     // s->name must not be freed here because it's key in hashtable
     // and hashtable owns memory of its keys
