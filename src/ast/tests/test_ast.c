@@ -58,8 +58,10 @@ static const int SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER = AST_TYPE_PRO
 static ast *ast_not_data_wrapper = NULL;
 #define DUMMY_ERROR_TYPE 2
 static char *DUMMY_ERROR_MESSAGE = "This is a dummy error message";
-static char too_long_error_message[256];
+static char too_long_error_message[MAXIMUM_ERROR_MESSAGE_LENGTH + 1];
 static char *valid_error_message = "This is a valid error message";
+static ast *ast_error_node = NULL;
+static error_info *error = NULL;
 
 
 
@@ -1179,14 +1181,6 @@ static void destroy_ast_children_do_nothing_when_argument_null(void **state) {
     ast_destroy_ast_children(params->ast_children);
 }
 
-// Given: children_nb = 0
-// Expected: does not any side effect
-// params: destroy_ast_children_params_template_no_child
-static void destroy_ast_children_do_nothing_when_no_child(void **state) {
-    destroy_ast_children_params_t *params = *state;
-    ast_destroy_ast_children(params->ast_children);
-}
-
 // Given: children_nb = 1, the child is a typed data wrapper
 // Expected:
 //  - calls ast_destroy_typed_data_wrapper with ast_children->children[0]
@@ -1736,12 +1730,11 @@ static void create_children_node_var_frees_two_malloced_pointers_when_ast_create
 // Given: ast_create_ast_children_arr with children_nb and the array of ast pointer succeeds
 // Expected:
 //  - initializes the malloc'ed ast
-//  - calls free with the array of ast pointer
 //  - returns the malloc'ed ast
 // params:
 //  - create_children_node_var_params_template_one_child
 //  - create_children_node_var_params_template_two_children
-static void create_children_node_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds(void **state) {
+static void create_children_node_var_initializes_and_returns_malloced_ast_when_ast_create_ast_children_arr_succeeds(void **state) {
     create_children_node_var_params_t *params = *state;
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_double_ast_pointer, params->children_nb * sizeof(ast *));
@@ -1752,7 +1745,6 @@ static void create_children_node_var_initializes_and_returns_malloced_ast_and_fr
     expect_value(mock_ast_create_ast_children_arr, children_nb, params->children_nb);
     expect_value(mock_ast_create_ast_children_arr, children, fake_malloc_returned_value_for_a_double_ast_pointer);
     will_return(mock_ast_create_ast_children_arr, DUMMY_AST_CHILDREN_T_P);
-    expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_double_ast_pointer);
     ast *ret = NULL;
     if (params->children_nb == 1) {
         ret = ast_create_children_node_var(
@@ -1927,7 +1919,7 @@ static void destroy_calls_ast_destroy_children_node_when_root_is_not_data_wrappe
 
 static int create_error_node_setup(void **state) {
 	memset(too_long_error_message, 'a', MAXIMUM_ERROR_MESSAGE_LENGTH + 1);
-	too_long_error_message[256] = '\0';
+	too_long_error_message[MAXIMUM_ERROR_MESSAGE_LENGTH + 1] = '\0';
     set_allocators(mock_malloc, mock_free);
 	set_string_duplicate(mock_strdup);
     return 0;
@@ -2062,6 +2054,70 @@ static void create_error_node_initializes_and_returns_malloced_ast_when_malloc_f
 	assert_ptr_equal(ret->error->message, fake_strdup_returned_value_for_error_message);
 	assert_ptr_equal(ret->error->is_sentinel, false);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// ast_destroy_error_node TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int destroy_error_node_setup(void **state) {
+	alloc_and_save_address_to_be_freed((void **)&ast_error_node, sizeof(ast));
+	alloc_and_save_address_to_be_freed((void **)&error, sizeof(error_info));
+	ast_error_node->type = AST_TYPE_ERROR;
+	error->code = DUMMY_INT;
+	error->message = DUMMY_STRING;
+	error->is_sentinel = false;
+	ast_error_node->error = error;
+	set_allocators(mock_malloc, mock_free);
+	return 0;
+}
+
+static int destroy_error_node_teardown(void **state) {
+	set_allocators(NULL, NULL);
+	while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+	return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: ast_error_node is null
+// Expected: does not any side effect
+static void destroy_error_node_do_nothing_when_argument_null(void **state) {
+    ast_destroy_error_node(NULL);
+}
+
+// Given: ast_error_node is not null and well-formed
+// Expected:
+//  - frees ast_error_node->error->message
+//  - frees ast_error_node->error
+//  - frees ast_error_node
+static void destroy_error_node__when_argument_not_null_and_well_formed(void **state) {
+	expect_value(mock_free, ptr, ast_error_node->error->message);
+	expect_value(mock_free, ptr, ast_error_node->error);
+	expect_value(mock_free, ptr, ast_error_node);
+    ast_destroy_error_node(ast_error_node);
+}
+
+
 
 
 
@@ -2223,9 +2279,6 @@ int main(void) {
             destroy_ast_children_do_nothing_when_argument_null,
             destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_null),
         cmocka_unit_test_prestate_setup_teardown(
-            destroy_ast_children_do_nothing_when_no_child,
-            destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_template_no_child),
-        cmocka_unit_test_prestate_setup_teardown(
             destroy_ast_children_calls_destroy_properly_when_one_child_which_is_data_wrapper,
             destroy_ast_children_setup, destroy_ast_children_teardown, (void *)&destroy_ast_children_params_template_one_child),
         cmocka_unit_test_prestate_setup_teardown(
@@ -2317,10 +2370,10 @@ int main(void) {
             create_children_node_var_frees_two_malloced_pointers_when_ast_create_ast_children_arr_fails,
             create_children_node_var_setup, create_children_node_var_teardown, (void *)&create_children_node_var_params_template_two_children),
         cmocka_unit_test_prestate_setup_teardown(
-            create_children_node_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds,
+            create_children_node_var_initializes_and_returns_malloced_ast_when_ast_create_ast_children_arr_succeeds,
             create_children_node_var_setup, create_children_node_var_teardown, (void *)&create_children_node_var_params_template_one_child),
         cmocka_unit_test_prestate_setup_teardown(
-            create_children_node_var_initializes_and_returns_malloced_ast_and_frees_ast_p_arr_when_ast_create_ast_children_arr_succeeds,
+            create_children_node_var_initializes_and_returns_malloced_ast_when_ast_create_ast_children_arr_succeeds,
             create_children_node_var_setup, create_children_node_var_teardown, (void *)&create_children_node_var_params_template_two_children),
     };
 
@@ -2376,6 +2429,15 @@ int main(void) {
             create_error_node_setup, create_error_node_teardown),
 	};
 
+    const struct CMUnitTest ast_destroy_error_node_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            destroy_error_node_do_nothing_when_argument_null,
+            destroy_error_node_setup, destroy_error_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            destroy_error_node__when_argument_not_null_and_well_formed,
+            destroy_error_node_setup, destroy_error_node_teardown),
+	};
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2394,6 +2456,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_destroy_children_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_error_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_destroy_error_node_tests, NULL, NULL);
 
     return failed;
 }

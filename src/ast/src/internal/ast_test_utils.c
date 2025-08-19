@@ -83,14 +83,11 @@ void set_ast_create_ast_children_arr(ast_create_ast_children_arr_fn f) {
 
 ast_destroy_ast_children_fn ast_destroy_ast_children_mockable = real_ast_destroy_ast_children;
 void real_ast_destroy_ast_children(ast_children_t *ast_children) {
-    if ((!ast_children) || (ast_children->children_nb == 0))
+    if (!ast_children)
         return;
 
     for (size_t i = 0; i < ast_children->children_nb; i++) {
-        if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
-            ast_destroy_children_node(ast_children->children[i]);
-        else
-            ast_destroy_typed_data_wrapper(ast_children->children[i]);
+        ast_destroy(ast_children->children[i]);
     }
     AST_FREE(ast_children->children);
     AST_FREE(ast_children);
@@ -104,10 +101,16 @@ void real_ast_destroy(ast *root) {
     if (!root)
         return;
 
-    if (root->type == AST_TYPE_DATA_WRAPPER)
-        ast_destroy_typed_data_wrapper(root);
-    else
-        ast_destroy_children_node(root);
+    switch (root->type) {
+        case AST_TYPE_DATA_WRAPPER:
+            ast_destroy_typed_data_wrapper(root);
+            break;
+        case AST_TYPE_ERROR:
+            ast_destroy_error_node(root);
+            break;
+        default:
+            ast_destroy_children_node(root);
+    }
 }
 void set_ast_destroy(ast_destroy_fn f) {
     ast_destroy_mockable = f ? f : real_ast_destroy;

@@ -157,6 +157,15 @@ ast *ast_create_error_node(error_type code, char *message) {
 	return ret;
 }
 
+void ast_destroy_error_node(ast *ast_error_node) {
+	if (!ast_error_node)
+		return;
+
+	AST_FREE(ast_error_node->error->message);
+	AST_FREE(ast_error_node->error);
+	AST_FREE(ast_error_node);
+}
+
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
 #ifdef UNIT_TEST
     return ast_create_ast_children_arr_mockable(children_nb, children);
@@ -211,14 +220,11 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 #ifdef UNIT_TEST
     ast_destroy_ast_children_mockable(ast_children);
 #else
-    if ((!ast_children) || (ast_children->children_nb == 0))
+    if (!ast_children)
         return;
 
     for (size_t i = 0; i < ast_children->children_nb; i++) {
-        if (ast_children->children[i]->type != AST_TYPE_DATA_WRAPPER)
-            ast_destroy_children_node(ast_children->children[i]);
-        else
-            ast_destroy_typed_data_wrapper(ast_children->children[i]);
+        ast_destroy(ast_children->children[i]);
     }
     AST_FREE(ast_children->children);
     AST_FREE(ast_children);
@@ -300,7 +306,6 @@ ast *ast_create_children_node_var(ast_type type, size_t children_nb,...) {
 
         ret->type = type;
         ret->children = children_info;
-        AST_FREE(ast_p_arr);
     }
     return ret;
 }
@@ -323,9 +328,15 @@ void ast_destroy(ast *root) {
     if (!root)
         return;
 
-    if (root->type == AST_TYPE_DATA_WRAPPER)
-        ast_destroy_typed_data_wrapper(root);
-    else
-        ast_destroy_children_node(root);
+	switch (root->type) {
+		case AST_TYPE_DATA_WRAPPER:
+			ast_destroy_typed_data_wrapper(root);
+			break;
+		case AST_TYPE_ERROR:
+			ast_destroy_error_node(root);
+        	break;
+		default:
+	        ast_destroy_children_node(root);
+	}
 #endif
 }
