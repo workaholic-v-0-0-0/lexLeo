@@ -7,7 +7,13 @@ find_package(BISON REQUIRED)
 
 set(
     PARSER_Y
-    "${CMAKE_CURRENT_SOURCE_DIR}/bison/parser.y"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/bison/parser.y"
+    "${CMAKE_CURRENT_BINARY_DIR}/bison/number_parser.y"
+)
+
+set(
+    PARSER_Y_TEMPLATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/bison/parser.y.in"
 )
 
 set(
@@ -33,6 +39,18 @@ set(
 file(MAKE_DIRECTORY ${GENERATED_PARSER_SOURCE_DIR})
 file(MAKE_DIRECTORY ${GENERATED_PARSER_INCLUDE_DIR})
 
+set(START_SYMBOL "number_atom")
+file(
+    READ
+    "${CMAKE_CURRENT_SOURCE_DIR}/bison/number_atom_rule.y"
+    GRAMMAR_RULES
+)
+configure_file(
+    ${PARSER_Y_TEMPLATE}
+    "${CMAKE_CURRENT_BINARY_DIR}/bison/number_parser.y"
+    @ONLY
+)
+
 BISON_TARGET(parser ${PARSER_Y} ${PARSER_SRC} DEFINES_FILE ${PARSER_HEADER})
 add_library(parser STATIC ${BISON_parser_OUTPUTS})
 target_include_directories(
@@ -41,6 +59,5 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_CURRENT_BINARY_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src/ast/include"
-    "${CMAKE_SOURCE_DIR}/src/symtab/include"
 )
-target_link_libraries(parser PRIVATE lexer ast symtab)
+target_link_libraries(parser PRIVATE lexer ast)

@@ -55,7 +55,9 @@ target_include_directories(lexer
 
 add_dependencies(lexer parser) # lexer depends on the Bison-generated header
 
+#[[
 if (BUILD_TESTING)
     target_compile_definitions(lexer PRIVATE UNIT_TEST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()
+]]

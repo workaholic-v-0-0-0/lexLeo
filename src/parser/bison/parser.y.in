@@ -15,7 +15,6 @@
 %{
 
 #include "ast.h"
-#include "symtab.h"
 #include <stdlib.h>
 
 #define YYDEBUG 1
@@ -28,17 +27,17 @@ int yylex(YYSTYPE *yylval, yyscan_t scanner);
 }
 
 %union {
-int int_value;
-char *string_value;
-char *symbol_name_value;
-ast *ast;
+    int int_value;
+    char *string_value;
+    char *symbol_name_value;
+    ast *ast;
 }
 
 %token <int_value> INTEGER
 
 // non-terminal lexeme types
 %type <ast>
-number
+number_atom
 
 %start start
 
@@ -54,8 +53,8 @@ start:
 int yydebug = 0;
 
 int yyerror(yyscan_t scanner, ast **result, const char *msg) {
-fprintf(stderr, "Parse error: %s\n", msg);
-return 1;
+    fprintf(stderr, "Parse error: %s\n", msg);
+    return 1;
 }
 
 /* @formatter:on */

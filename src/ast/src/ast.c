@@ -72,6 +72,27 @@ void ast_destroy_typed_data_string(typed_data *typed_data_string) {
 #endif
 }
 
+typed_data *ast_create_typed_data_symbol_name(char *s) {
+    typed_data *ret = AST_MALLOC(sizeof(typed_data));
+    if (!ret)
+        return NULL;
+
+    char *string_value = AST_STRING_DUPLICATE(s);
+    if (!string_value) {
+        AST_FREE(ret);
+        return NULL;
+    }
+
+    ret->type = TYPE_SYMBOL_NAME;
+    ret->data.string_value = string_value;
+
+    return ret;
+}
+
+void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name) {
+	ast_destroy_typed_data_string(typed_data_symbol_name);
+}
+
 typed_data *ast_create_typed_data_symbol(symbol *s) {
     typed_data *ret = AST_MALLOC(sizeof(typed_data));
 
@@ -108,7 +129,7 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 #ifdef UNIT_TEST
     ast_destroy_typed_data_wrapper_mockable(ast_data_wrapper);
 #else
-    if ((!ast_data_wrapper) ||(ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
+    if ((!ast_data_wrapper) || (ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
         return;
 
     typed_data *data = ast_data_wrapper->data;
@@ -118,6 +139,9 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
             break;
         case TYPE_STRING:
             ast_destroy_typed_data_string(data);
+            break;
+        case TYPE_SYMBOL_NAME:
+            ast_destroy_typed_data_symbol_name(data);
             break;
         case TYPE_SYMBOL:
             ast_destroy_typed_data_symbol(data);
