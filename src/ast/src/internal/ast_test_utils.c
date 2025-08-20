@@ -42,6 +42,9 @@ void real_ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
         case TYPE_STRING:
             ast_destroy_typed_data_string(data);
             break;
+        case TYPE_SYMBOL_NAME:
+            ast_destroy_typed_data_symbol_name(data);
+            break;
         case TYPE_SYMBOL:
             ast_destroy_typed_data_symbol(data);
     }

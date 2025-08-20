@@ -5,7 +5,7 @@
 
 typedef struct cons {void *car; struct cons *cdr;} cons, *list;
 
-//returns NULL on error
+//returns NULL on error and if so no side effect
 list list_push(list l, void * e);
 
 void *list_pop(list *l_p);

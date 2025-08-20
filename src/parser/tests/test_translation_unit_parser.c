@@ -101,7 +101,7 @@ ast *mock_create_children_node_var(ast_type type, size_t children_nb, ...) {
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node_or_sentinel(error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
     check_expected(code);
     check_expected(message);
     return mock_type(ast *);
@@ -411,7 +411,7 @@ static void translation_unit_parse_create_translation_unit_node_for_LHS_when_3_s
 
 
 int main(void) {
-    const struct CMUnitTest statements_parse_tests[] = {
+    const struct CMUnitTest translation_unit_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
             translation_unit_parse_create_error_node_for_LHS_when_0_statement_and_create_children_node_var_fails,
             translation_unit_parse_setup, translation_unit_parse_teardown),
@@ -432,7 +432,7 @@ int main(void) {
             translation_unit_parse_setup, translation_unit_parse_teardown),
     };
     int failed = 0;
-    failed += cmocka_run_group_tests(statements_parse_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(translation_unit_parse_tests, NULL, NULL);
 
     return failed;
 }

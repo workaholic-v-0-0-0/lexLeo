@@ -41,9 +41,10 @@ typedef enum {
     AST_ERROR_CODE_WRITING_NODE_CREATION_FAILED,
     AST_ERROR_CODE_TRANSLATION_UNIT_NODE_CREATION_FAILED,
     AST_ERROR_CODE_TRANSLATION_UNIT_APPEND_FAILED,
+    //AST_ERROR_CODE_???_FAILED,
 	// ...,
-	UNRETRIEVABLE_ERROR_CODE,
-} error_type;
+	AST_UNRETRIEVABLE_ERROR_CODE,
+} ast_error_type;
 
 // forward declaration to handle cross-dependency
 typedef struct symbol symbol;
@@ -66,7 +67,7 @@ typedef struct {
 
 #define MAXIMUM_ERROR_MESSAGE_LENGTH 255
 typedef struct {
-    error_type code;
+    ast_error_type code;
     char *message;
     bool is_sentinel; // true for the static fallback node
     // YYLTYPE loc; // later?
@@ -81,7 +82,7 @@ typedef struct ast {
     };
 } ast;
 
-ast * ast_error_sentinel(void);
+ast *ast_error_sentinel(void);
 
 typed_data *ast_create_typed_data_int(int i);
 void ast_destroy_typed_data_int(typed_data *typed_data_int);
@@ -103,9 +104,9 @@ ast *ast_create_string_node(char *str); // client code is responsible for str
 ast *ast_create_symbol_name_node(char *str); // client code is responsible for str
 ast *ast_create_symbol_node(symbol *sym); // client code is responsible for s
 
-ast *ast_create_error_node(error_type code, char *message); // client code is responsible for message
+ast *ast_create_error_node(ast_error_type code, char *message); // client code is responsible for message
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR
-ast *ast_create_error_node_or_sentinel(error_type code, char *message); // client code is responsible for message
+ast *ast_create_error_node_or_sentinel(ast_error_type code, char *message); // client code is responsible for message
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb correctness and for destroying chidren array (but not the ast * it contains)
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)

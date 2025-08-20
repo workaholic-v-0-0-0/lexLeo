@@ -1,0 +1,12 @@
+
+in main, roughly speaking:
+
+symtab *env = symtab_wind_scope(NULL);
+ctx = parser_init_ops(...)
+ast *a = malloc(...)
+yyparse(NULL, &a, &ctx);
+
+resolver_resolve_ast(env, a);
+
+// a is now with symbol data wrapper ast and symbols
+// are "declared" in env

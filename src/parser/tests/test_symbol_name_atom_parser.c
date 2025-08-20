@@ -44,7 +44,7 @@ ast *mock_create_symbol_name_node(char *str) {
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node_or_sentinel(error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
     check_expected(code);
     check_expected(message);
     return mock_type(ast *);
