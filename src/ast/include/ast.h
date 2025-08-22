@@ -27,6 +27,7 @@ typedef enum {
 typedef enum {
     TYPE_INT,
     TYPE_STRING, // can be code snippet
+    TYPE_SYMBOL_NAME,
     TYPE_SYMBOL, // can be unbound or bound to another symbol
     //TYPE_FUNCTION,
 } data_type;
@@ -80,8 +81,11 @@ void ast_destroy_typed_data_int(typed_data *typed_data_int);
 typed_data *ast_create_typed_data_string(char *s);
 void ast_destroy_typed_data_string(typed_data *typed_data_string);
 
+typed_data *ast_create_typed_data_symbol_name(char *s);
+void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name);
+
 typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible for s
-void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // note: will call ast_destroy because symbol has field of type ast
+void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // does not destroy the symbol* (owned by the symtab)
 
 ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible for data
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
