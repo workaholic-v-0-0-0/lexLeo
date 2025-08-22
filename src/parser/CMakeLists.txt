@@ -61,3 +61,8 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src/ast/include"
 )
 target_link_libraries(parser PRIVATE lexer ast)
+
+if (BUILD_TESTING)
+    target_compile_definitions(parser PRIVATE UNIT_TEST)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
+endif ()
