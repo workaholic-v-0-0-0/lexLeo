@@ -7,22 +7,25 @@
 %lex-param   {yyscan_t scanner}
 %parse-param {yyscan_t scanner}
 %parse-param {ast **result}
+%parse-param { struct parser_ctx *ctx }
 
 %code requires {
 #include "parser_types.h"
+struct parser_ctx;
 }
 
 %{
 
 #include "ast.h"
 #include <stdlib.h>
+#include "parser_ctx.h"
 
 #define YYDEBUG 1
 
 %}
 
 %code provides {
-int yyerror(yyscan_t scanner, ast **result, const char *s);
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
 int yylex(YYSTYPE *yylval, yyscan_t scanner);
 }
 
@@ -52,7 +55,8 @@ start:
 
 int yydebug = 0;
 
-int yyerror(yyscan_t scanner, ast **result, const char *msg) {
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+    (void)scanner; (void)result; (void)ctx;
     fprintf(stderr, "Parse error: %s\n", msg);
     return 1;
 }

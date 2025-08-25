@@ -14,6 +14,7 @@
 #include "ast.h"
 
 #include "parser.tab.h"
+#include "parser_ctx.h"
 #include "lexer.yy.h"
 
 
@@ -60,6 +61,16 @@ static int yyparse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
+
+static inline parser_ctx make_default_ctx(void) {
+    parser_ctx c = { .ops = { .create_typed_data_int = ast_create_typed_data_int } };
+    return c;
+}
+static typed_data *mock_create_typed_data_int(int i) {
+	check_expected_ptr(i);
+    return mock_type(typed_data *);
+}
+
 // Given: lexer gives lexem INTEGER with value 5
 // Expected: ast_data_wrapper with int 5
 static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
@@ -69,9 +80,10 @@ static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
     printf("here2\n");
     yyscan_t scanner;
     yylex_init(&scanner);
+	parser_ctx ctx = make_default_ctx();
     YY_BUFFER_STATE buf = yy_scan_string("5", scanner);
     printf("here3\n");
-    int result = yyparse(scanner, ret);
+    int result = yyparse(scanner, ret, &ctx);
     printf("result: %i\n", result);
     printf("ret: %p\n", ret);
     printf("*ret: %p\n", *ret);
@@ -80,6 +92,25 @@ static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
     printf("ret->data->type: %i\n", (*(ast **)ret)->data->type);
     printf("TYPE_INT: %i\n", TYPE_INT);
     printf("ret->data->data.int_value: %i\n", (*(ast **)ret)->data->data.int_value);
+    yy_delete_buffer(buf, scanner);
+    yylex_destroy(scanner);
+}
+
+// Given:
+// Expected:
+// with a create_typed_data_int double
+static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **state) { // ICI
+    ast *parsed_ast = NULL;
+    ast **ret = &parsed_ast;
+    yyscan_t scanner;
+    yylex_init(&scanner);
+	parser_ctx ctx = { .ops = { .create_typed_data_int = mock_create_typed_data_int } };
+	YY_BUFFER_STATE buf = yy_scan_string("5", scanner);
+
+	expect_value(mock_create_typed_data_int, i, 5);
+    will_return(mock_create_typed_data_int, NULL);
+
+    int result = yyparse(scanner, ret, &ctx);
     yy_delete_buffer(buf, scanner);
     yylex_destroy(scanner);
 }
@@ -94,6 +125,9 @@ int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
             yyparse_build_right_ast_when_given_an_int,
+            yyparse_setup, yyparse_teardown),
+        cmocka_unit_test_setup_teardown(
+            yyparse__when_given_an_int_and_create_typed_data_int_fails,
             yyparse_setup, yyparse_teardown),
     };
     int failed = 0;

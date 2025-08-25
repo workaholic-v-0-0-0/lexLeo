@@ -2,7 +2,8 @@
 
 number_atom
   : INTEGER {
-      typed_data *td = ast_create_typed_data_int($1);
+      //typed_data *td = ast_create_typed_data_int($1);
+      typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
         ast *err = ast_create_error_node(
             MEMORY_ALLOCATION_ERROR_CODE,

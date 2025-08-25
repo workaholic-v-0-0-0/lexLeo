@@ -12,6 +12,7 @@ target_include_directories(
     "${CMAKE_BINARY_DIR}/src/lexer/include"
     "${PARSER_INCLUDE_DIR}"
     "${CMAKE_SOURCE_DIR}/src/data_structures/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 add_dependencies(test_number_parser move_generated_lexer_header)

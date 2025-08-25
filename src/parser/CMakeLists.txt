@@ -59,6 +59,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_CURRENT_BINARY_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src/ast/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_link_libraries(parser PRIVATE lexer ast)
 
