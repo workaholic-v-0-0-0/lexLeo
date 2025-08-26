@@ -21,6 +21,14 @@
 //-----------------------------------------------------------------------------
 
 
+static yyscan_t scanner;
+static YY_BUFFER_STATE buf;
+static ast *parsed_ast;
+
+static const char DUMMY[1];
+static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[0];
+
+
 
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
@@ -31,18 +39,7 @@ static typed_data *mock_create_typed_data_int(int i) {
 	check_expected(i);
     return mock_type(typed_data *);
 }
-
-
-
-//-----------------------------------------------------------------------------
-// GENERAL HELPERS
-//-----------------------------------------------------------------------------
-
-
-static parser_ctx make_default_ctx(void) {
-    parser_ctx c = { .ops = { .create_typed_data_int = ast_create_typed_data_int } };
-    return c;
-}
+parser_ctx mock_ctx = { .ops = { .create_typed_data_int = mock_create_typed_data_int } };
 
 
 
@@ -58,13 +55,22 @@ static parser_ctx make_default_ctx(void) {
 
 
 static int yyparse_setup(void **state) {
-    //set_allocators(mock_malloc, mock_free);
+    (void)state;
+    assert_int_equal(yylex_init(&scanner), 0);
+	buf = NULL;
+    parsed_ast = NULL;
+    mock_ctx.ops.create_typed_data_int = mock_create_typed_data_int; // injecte la fake
     return 0;
 }
 
 static int yyparse_teardown(void **state) {
-    //set_allocators(NULL, NULL);
-    //free_saved_addresses_to_be_freed();
+    (void)state;
+    if (buf) {
+        yy_delete_buffer(buf, scanner);
+        buf = NULL;
+    }
+    yylex_destroy(scanner);
+    parsed_ast = NULL;
     return 0;
 }
 
@@ -75,8 +81,15 @@ static int yyparse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// Given: lexer gives lexem INTEGER with value 5
-// Expected: ast_data_wrapper with int 5
+// Given: lexer returns INTEGER(5)
+// Expected: calls ast_create_typed_data_int with 5
+static void yyparse_calls_ast_create_typed_data_int_when_given_an_int(void **state) {
+	buf = yy_scan_string("5", scanner);
+	expect_value(mock_create_typed_data_int, i, 5);
+    will_return(mock_create_typed_data_int, DUMMY_TYPED_DATA_P);
+    yyparse(scanner, &parsed_ast, &mock_ctx);
+}
+
 
 
 
@@ -136,7 +149,9 @@ static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **st
 
 int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
-
+        cmocka_unit_test_setup_teardown(
+            yyparse_calls_ast_create_typed_data_int_when_given_an_int,
+            yyparse_setup, yyparse_teardown),
 /* should not have been written yet for one wants a TDD approach
         cmocka_unit_test_setup_teardown(
             yyparse_build_right_ast_when_given_an_int,

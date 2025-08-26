@@ -2,7 +2,7 @@
 
 number_atom
   : INTEGER {
-
+      ctx->ops.create_typed_data_int($1);
 /* should not have been written yet for one wants a TDD approach
       typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
