@@ -4,9 +4,10 @@ number_atom
   : INTEGER {
       typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
-        ctx->ops.create_error_node(
-            MEMORY_ALLOCATION_ERROR_CODE,
-            "Data wrapper creation for a number failed.");
+        ast *err = ctx->ops.create_error_node(
+            0,
+            "dummy");
+        $$ = err ? err : ctx->ops.error_sentinel();
       }
 /* should not have been written yet for one wants a TDD approach
         ast *err = ast_create_error_node(
