@@ -25,8 +25,9 @@ static yyscan_t scanner;
 static YY_BUFFER_STATE buf;
 static ast *parsed_ast;
 
-static const char DUMMY[1];
+static const char DUMMY[2];
 static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[0];
+static ast *const DUMMY_AST_P = (ast *) &DUMMY[1];
 
 
 
@@ -39,7 +40,14 @@ static typed_data *mock_create_typed_data_int(int i) {
 	check_expected(i);
     return mock_type(typed_data *);
 }
-parser_ctx mock_ctx = { .ops = { .create_typed_data_int = mock_create_typed_data_int } };
+
+ast *mock_create_error_node(error_type code, char *message) {
+	check_expected(code);
+	check_expected(message);
+    return mock_type(ast *);
+}
+
+parser_ctx mock_ctx;
 
 
 
@@ -59,7 +67,8 @@ static int yyparse_setup(void **state) {
     assert_int_equal(yylex_init(&scanner), 0);
 	buf = NULL;
     parsed_ast = NULL;
-    mock_ctx.ops.create_typed_data_int = mock_create_typed_data_int; // injecte la fake
+    mock_ctx.ops.create_typed_data_int = mock_create_typed_data_int;
+    mock_ctx.ops.create_error_node = mock_create_error_node;
     return 0;
 }
 
@@ -88,6 +97,21 @@ static void yyparse_calls_ast_create_typed_data_int_when_given_an_int(void **sta
 	expect_value(mock_create_typed_data_int, i, 5);
     will_return(mock_create_typed_data_int, DUMMY_TYPED_DATA_P);
     yyparse(scanner, &parsed_ast, &mock_ctx);
+}
+
+// Given: ast_create_typed_data_int fails
+// Expected:
+//  - calls ast_create_error_node with
+//    - MEMORY_ALLOCATION_ERROR_CODE
+//    - "Data wrapper creation for a number failed."
+static void yyparse_calls_ast_create_error_node_when_ast_create_typed_data_int_fails(void **state) {
+	buf = yy_scan_string("5", scanner);
+	expect_value(mock_create_typed_data_int, i, 5);
+    will_return(mock_create_typed_data_int, NULL);
+	expect_value(mock_create_error_node, code, MEMORY_ALLOCATION_ERROR_CODE);
+	expect_string(mock_create_error_node, message, "Data wrapper creation for a number failed.");
+    will_return(mock_create_error_node, DUMMY_AST_P);
+	yyparse(scanner, &parsed_ast, &mock_ctx);
 }
 
 
@@ -151,6 +175,9 @@ int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
             yyparse_calls_ast_create_typed_data_int_when_given_an_int,
+            yyparse_setup, yyparse_teardown),
+        cmocka_unit_test_setup_teardown(
+            yyparse_calls_ast_create_error_node_when_ast_create_typed_data_int_fails,
             yyparse_setup, yyparse_teardown),
 /* should not have been written yet for one wants a TDD approach
         cmocka_unit_test_setup_teardown(

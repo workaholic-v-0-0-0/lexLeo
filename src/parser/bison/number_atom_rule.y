@@ -2,10 +2,13 @@
 
 number_atom
   : INTEGER {
-      ctx->ops.create_typed_data_int($1);
-/* should not have been written yet for one wants a TDD approach
       typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
+        ctx->ops.create_error_node(
+            MEMORY_ALLOCATION_ERROR_CODE,
+            "Data wrapper creation for a number failed.");
+      }
+/* should not have been written yet for one wants a TDD approach
         ast *err = ast_create_error_node(
             MEMORY_ALLOCATION_ERROR_CODE,
             "Data wrapper creation for a number failed.");
