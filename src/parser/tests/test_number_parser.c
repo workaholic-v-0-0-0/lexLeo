@@ -9,9 +9,6 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include "logger.h"
-#include "list.h"
-#include "ast.h"
 
 #include "parser.tab.h"
 #include "parser_ctx.h"
@@ -30,6 +27,24 @@
 //-----------------------------------------------------------------------------
 
 
+static typed_data *mock_create_typed_data_int(int i) {
+	check_expected(i);
+    return mock_type(typed_data *);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// GENERAL HELPERS
+//-----------------------------------------------------------------------------
+
+
+static parser_ctx make_default_ctx(void) {
+    parser_ctx c = { .ops = { .create_typed_data_int = ast_create_typed_data_int } };
+    return c;
+}
+
+
 
 //-----------------------------------------------------------------------------
 // yyparse TESTS
@@ -43,7 +58,6 @@
 
 
 static int yyparse_setup(void **state) {
-    printf("here0\n");
     //set_allocators(mock_malloc, mock_free);
     return 0;
 }
@@ -61,18 +75,14 @@ static int yyparse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
+// Given: lexer gives lexem INTEGER with value 5
+// Expected: ast_data_wrapper with int 5
 
-static inline parser_ctx make_default_ctx(void) {
-    parser_ctx c = { .ops = { .create_typed_data_int = ast_create_typed_data_int } };
-    return c;
-}
-static typed_data *mock_create_typed_data_int(int i) {
-	check_expected_ptr(i);
-    return mock_type(typed_data *);
-}
+
 
 // Given: lexer gives lexem INTEGER with value 5
 // Expected: ast_data_wrapper with int 5
+/* should not have been written yet for one wants a TDD approach
 static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
     printf("here1\n");
     ast *parsed_ast = NULL;
@@ -95,10 +105,12 @@ static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
     yy_delete_buffer(buf, scanner);
     yylex_destroy(scanner);
 }
+*/
 
 // Given:
 // Expected:
 // with a create_typed_data_int double
+/* should not have been written yet for one wants a TDD approach
 static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **state) { // ICI
     ast *parsed_ast = NULL;
     ast **ret = &parsed_ast;
@@ -114,6 +126,7 @@ static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **st
     yy_delete_buffer(buf, scanner);
     yylex_destroy(scanner);
 }
+*/
 
 
 
@@ -123,12 +136,15 @@ static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **st
 
 int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
+
+/* should not have been written yet for one wants a TDD approach
         cmocka_unit_test_setup_teardown(
             yyparse_build_right_ast_when_given_an_int,
             yyparse_setup, yyparse_teardown),
         cmocka_unit_test_setup_teardown(
             yyparse__when_given_an_int_and_create_typed_data_int_fails,
             yyparse_setup, yyparse_teardown),
+*/
     };
     int failed = 0;
     failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);

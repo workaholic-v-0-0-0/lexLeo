@@ -2,7 +2,8 @@
 
 number_atom
   : INTEGER {
-      //typed_data *td = ast_create_typed_data_int($1);
+
+/* should not have been written yet for one wants a TDD approach
       typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
         ast *err = ast_create_error_node(
@@ -21,5 +22,6 @@ number_atom
           $$ = a;
         }
       }
+*/
     }
   ;
