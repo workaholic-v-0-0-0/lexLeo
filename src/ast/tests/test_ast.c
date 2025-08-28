@@ -2119,6 +2119,50 @@ static void destroy_error_node__when_argument_not_null_and_well_formed(void **st
 
 
 
+//-----------------------------------------------------------------------------
+// ast_create_int_node TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_int_node_setup(void **state) {
+    //set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int create_int_node_teardown(void **state) {
+    //set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given: i = 5
+// Expected: calls ast_create_typed_data_int
+static void create_int_node_calls__(void **state) {
+    // TO DO
+    ast_create_int_node(DUMMY_INT);
+}
+
+
+
 
 
 //-----------------------------------------------------------------------------
