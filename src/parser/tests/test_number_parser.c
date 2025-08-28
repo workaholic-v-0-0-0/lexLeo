@@ -25,10 +25,12 @@ static yyscan_t scanner;
 static YY_BUFFER_STATE buf;
 static ast *parsed_ast;
 
-static const char DUMMY[3];
+static const char DUMMY[4];
 static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[0];
-static ast *const DUMMY_AST_P = (ast *) &DUMMY[1];
-static ast *const DUMMY_ERROR_SENTINEL = (ast *) &DUMMY[2];
+static ast *const DUMMY_ERROR_SENTINEL = (ast *) &DUMMY[1];
+static ast *const DUMMY_AST_ERROR_NOT_SENTINEL_P = (ast *) &DUMMY[2];
+static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[3];
+
 
 
 
@@ -106,7 +108,7 @@ static int yyparse_teardown(void **state) {
 //  - ast_create_error_node fails
 // Expected:
 //  - calls ast_error_sentinel
-//  - give sentinel error ast for the semantic value of the left lexem
+//  - gives sentinel error ast for the semantic value of the left lexem
 static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails(void **state) {
 
 	buf = yy_scan_string("5", scanner);
@@ -120,7 +122,31 @@ static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when
 	will_return(mock_error_sentinel, DUMMY_ERROR_SENTINEL);
 
 	yyparse(scanner, &parsed_ast, &mock_ctx);
+	assert_ptr_equal(parsed_ast, DUMMY_ERROR_SENTINEL);
 }
+
+// Given:
+//  - ast_create_typed_data_int fails
+//  - ast_create_error_node succeeds
+// Expected:
+//  - calls ast_create_error_node with:
+//    - code = MEMORY_ALLOCATION_ERROR_CODE
+//    - message = "Data wrapper creation for a number failed."
+//  - gives the returned value of ast_create_error_node for the semantic value of the left lexem
+static void yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds(void **state) {
+
+	buf = yy_scan_string("5", scanner);
+
+	expect_value(mock_create_typed_data_int, i, 5);
+    will_return(mock_create_typed_data_int, NULL);
+	expect_value(mock_create_error_node, code, MEMORY_ALLOCATION_ERROR_CODE);
+	expect_string(mock_create_error_node, message, "Data wrapper creation for a number failed.");
+    will_return(mock_create_error_node, DUMMY_AST_ERROR_NOT_SENTINEL_P);
+
+	yyparse(scanner, &parsed_ast, &mock_ctx);
+	assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_NOT_SENTINEL_P);
+}
+
 
 
 
@@ -201,6 +227,9 @@ int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
             yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails,
+            yyparse_setup, yyparse_teardown),
+        cmocka_unit_test_setup_teardown(
+            yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds,
             yyparse_setup, yyparse_teardown),
 /* should not have been written yet for one wants a TDD approach
         cmocka_unit_test_setup_teardown(

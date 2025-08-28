@@ -5,8 +5,8 @@ number_atom
       typed_data *td = ctx->ops.create_typed_data_int($1);
       if (!td) {
         ast *err = ctx->ops.create_error_node(
-            0,
-            "dummy");
+            MEMORY_ALLOCATION_ERROR_CODE,
+            "Data wrapper creation for a number failed.");
         $$ = err ? err : ctx->ops.error_sentinel();
       }
 /* should not have been written yet for one wants a TDD approach
