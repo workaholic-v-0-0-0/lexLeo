@@ -2295,6 +2295,25 @@ static void create_string_node_returns_null_when_first_malloc_fails(void **state
     assert_ptr_equal(NULL, ast_create_string_node(DUMMY_STRING));
 }
 
+// Given:
+//  - str == DUMMY_STRING ("dummy string")
+//  - the allocation of the typed_data will succeed
+//  - the duplication of the string str will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - strdup is called with argument str
+//  - free is called with argument the malloced typed_data
+//  - returns NULL
+static void create_string_node_cleans_up_and_returns_null_when_strdup_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, DUMMY_TYPED_DATA_P);
+    expect_value(mock_strdup, s, DUMMY_STRING);
+    will_return(mock_strdup, STRDUP_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+
+    assert_ptr_equal(NULL, ast_create_string_node(DUMMY_STRING));
+}
+
 
 
 
@@ -2633,7 +2652,9 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             create_string_node_returns_null_when_first_malloc_fails,
             create_string_node_setup, create_string_node_teardown),
-
+        cmocka_unit_test_setup_teardown(
+            create_string_node_cleans_up_and_returns_null_when_strdup_fails,
+            create_string_node_setup, create_string_node_teardown),
     };
 
     int failed = 0;
