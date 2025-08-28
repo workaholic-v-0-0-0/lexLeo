@@ -2126,17 +2126,31 @@ static void destroy_error_node__when_argument_not_null_and_well_formed(void **st
 
 
 //-----------------------------------------------------------------------------
+// CONSIDERED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_create_int_node
+// ast_create_typed_data_int
+// ast_destroy_typed_data_int
+// ast_create_typed_data_wrapper
+
+// Note: Only external dependencies (memory allocators) are mocked.
+
+
+
+//-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int create_int_node_setup(void **state) {
-    //set_allocators(mock_malloc, mock_free);
+    set_allocators(mock_malloc, mock_free);
     return 0;
 }
 
 static int create_int_node_teardown(void **state) {
-    //set_allocators(NULL, NULL);
+    set_allocators(NULL, NULL);
     while (collected_ptr_to_be_freed) {
         list next = collected_ptr_to_be_freed->cdr;
         if (collected_ptr_to_be_freed->car)
@@ -2156,8 +2170,8 @@ static int create_int_node_teardown(void **state) {
 
 // Given: i = 5
 // Expected: calls ast_create_typed_data_int
-static void create_int_node_calls__(void **state) {
-    // TO DO
+static void create_int_node_TONAME_when_TONAME(void **state) {
+    // TODO
     ast_create_int_node(DUMMY_INT);
 }
 
