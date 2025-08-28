@@ -384,5 +384,11 @@ ast *ast_create_string_node(char *str) {
     if (!td)
         return NULL;
 
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_string(td);
+		return NULL;
+    }
+
     return (ast *)-2;
 }
