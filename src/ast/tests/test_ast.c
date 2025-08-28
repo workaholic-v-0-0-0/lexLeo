@@ -2168,11 +2168,16 @@ static int create_int_node_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// Given: i = 5
-// Expected: calls ast_create_typed_data_int
-static void create_int_node_TONAME_when_TONAME(void **state) {
-    // TODO
-    ast_create_int_node(DUMMY_INT);
+// Given:
+//  - i = DUMMY_INT (7)
+//  - the allocation of the typed_data will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - returns NULL
+static void create_int_node_returns_null_when_first_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    assert_ptr_equal(NULL, ast_create_int_node(DUMMY_INT));
 }
 
 
@@ -2496,6 +2501,13 @@ int main(void) {
             destroy_error_node_setup, destroy_error_node_teardown),
 	};
 
+    const struct CMUnitTest ast_create_int_node_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_int_node_returns_null_when_first_malloc_fails,
+            create_int_node_setup, create_int_node_teardown),
+
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2515,6 +2527,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_destroy_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_error_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_error_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_int_node_tests, NULL, NULL);
 
     return failed;
 }

@@ -364,3 +364,11 @@ void ast_destroy(ast *root) {
 	}
 #endif
 }
+
+ast *ast_create_int_node(int i) {
+    typed_data *td = ast_create_typed_data_int(i);
+    if (!td)
+        return NULL;
+
+    return (ast *)-2;
+}
