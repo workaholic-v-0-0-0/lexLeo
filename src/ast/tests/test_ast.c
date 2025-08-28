@@ -2180,6 +2180,24 @@ static void create_int_node_returns_null_when_first_malloc_fails(void **state) {
     assert_ptr_equal(NULL, ast_create_int_node(DUMMY_INT));
 }
 
+// Given:
+//  - i = DUMMY_INT (7)
+//  - the allocation of the typed_data will succeed
+//  - the allocation of the ast will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - malloc is called with argument sizeof(ast)
+//  - free is called with argument the malloced typed_data
+//  - returns NULL
+static void create_int_node_returns_null_when_second_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, DUMMY_TYPED_DATA_P);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+    assert_ptr_equal(NULL, ast_create_int_node(DUMMY_INT));
+}
+
 
 
 
@@ -2505,7 +2523,9 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             create_int_node_returns_null_when_first_malloc_fails,
             create_int_node_setup, create_int_node_teardown),
-
+        cmocka_unit_test_setup_teardown(
+            create_int_node_returns_null_when_second_malloc_fails,
+            create_int_node_setup, create_int_node_teardown),
     };
 
     int failed = 0;
