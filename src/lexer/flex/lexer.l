@@ -9,6 +9,7 @@
 
 %option nounput
 %option noinput
+%option noyywrap
 
 %%
 
@@ -22,7 +23,7 @@
 }
 
 . {
-    yyerror(NULL, NULL, "unknown characters");
+    yyerror(NULL, NULL, NULL, "unknown characters");
 }
 
 %%
