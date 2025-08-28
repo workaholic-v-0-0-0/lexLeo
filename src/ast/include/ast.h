@@ -91,7 +91,7 @@ ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsi
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
 ast *ast_create_int_node(int i);
-ast *ast_create_string_node(char *str);
+ast *ast_create_string_node(char *str); // client code is responsible for str
 ast *ast_create_symbol_name_node(char *str);
 ast *ast_create_symbol_node(symbol *sym);
 

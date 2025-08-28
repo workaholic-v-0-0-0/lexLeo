@@ -378,3 +378,11 @@ ast *ast_create_int_node(int i) {
 
     return ret;
 }
+
+ast *ast_create_string_node(char *str) {
+    typed_data *td = ast_create_typed_data_string(str);
+    if (!td)
+        return NULL;
+
+    return (ast *)-2;
+}

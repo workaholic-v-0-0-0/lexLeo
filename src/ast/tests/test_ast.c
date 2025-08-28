@@ -2126,7 +2126,7 @@ static void destroy_error_node__when_argument_not_null_and_well_formed(void **st
 
 
 //-----------------------------------------------------------------------------
-// CONSIDERED UNIT
+// ISOLATED UNIT
 //-----------------------------------------------------------------------------
 
 
@@ -2135,7 +2135,7 @@ static void destroy_error_node__when_argument_not_null_and_well_formed(void **st
 // ast_destroy_typed_data_int
 // ast_create_typed_data_wrapper
 
-// Note: Only external dependencies (memory allocators) are mocked.
+// mocked: memory allocators
 
 
 
@@ -2229,6 +2229,72 @@ static void create_int_node_initializes_and_returns_malloced_ast_when_second_mal
     assert_int_equal(res->data->type, TYPE_INT);
     assert_int_equal(res->data->data.int_value, DUMMY_INT);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// ast_create_string_node TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_create_string_node
+// ast_create_typed_data_string
+// ast_destroy_typed_data_string
+// ast_create_typed_data_wrapper
+
+// mocked: memory allocators, string duplicator
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_string_node_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    set_string_duplicate(mock_strdup);
+    return 0;
+}
+
+static int create_string_node_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// Given:
+//  - str == DUMMY_STRING ("dummy string")
+//  - the allocation of the typed_data will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - returns NULL
+static void create_string_node_returns_null_when_first_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+
+    assert_ptr_equal(NULL, ast_create_string_node(DUMMY_STRING));
+}
+
 
 
 
@@ -2563,6 +2629,13 @@ int main(void) {
             create_int_node_setup, create_int_node_teardown),
     };
 
+    const struct CMUnitTest ast_create_string_node_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_string_node_returns_null_when_first_malloc_fails,
+            create_string_node_setup, create_string_node_teardown),
+
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2583,6 +2656,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_error_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_error_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_int_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_string_node_tests, NULL, NULL);
 
     return failed;
 }
