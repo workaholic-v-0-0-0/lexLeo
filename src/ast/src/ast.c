@@ -370,11 +370,11 @@ ast *ast_create_int_node(int i) {
     if (!td)
         return NULL;
 
-    ast *ret = AST_MALLOC(sizeof(ast));
+    ast *ret = ast_create_typed_data_wrapper(td);
 	if (!ret) {
         ast_destroy_typed_data_int(td);
 		return NULL;
     }
 
-    return (ast *)-2;
+    return ret;
 }

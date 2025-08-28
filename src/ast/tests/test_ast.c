@@ -2169,7 +2169,7 @@ static int create_int_node_teardown(void **state) {
 
 
 // Given:
-//  - i = DUMMY_INT (7)
+//  - i == DUMMY_INT (7)
 //  - the allocation of the typed_data will fail
 // Expected:
 //  - malloc is called with argument sizeof(typed_data)
@@ -2177,11 +2177,12 @@ static int create_int_node_teardown(void **state) {
 static void create_int_node_returns_null_when_first_malloc_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(typed_data));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
+
     assert_ptr_equal(NULL, ast_create_int_node(DUMMY_INT));
 }
 
 // Given:
-//  - i = DUMMY_INT (7)
+//  - i == DUMMY_INT (7)
 //  - the allocation of the typed_data will succeed
 //  - the allocation of the ast will fail
 // Expected:
@@ -2195,7 +2196,38 @@ static void create_int_node_returns_null_when_second_malloc_fails(void **state) 
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
     expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+
     assert_ptr_equal(NULL, ast_create_int_node(DUMMY_INT));
+}
+
+// Given:
+//  - i == DUMMY_INT (7)
+//  - allocation of typed_data succeeds
+//  - allocation of ast succeeds
+// Expected:
+//  - malloc is called with sizeof(typed_data)
+//  - malloc is called with sizeof(ast)
+//  - letting td and res denote the allocated typed_data and ast:
+//    - res->type == AST_TYPE_DATA_WRAPPER
+//    - res->data == td
+//    - td->type == TYPE_INT
+//    - td->data.int_value == DUMMY_INT
+//  - returns the allocated ast
+static void create_int_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_int, sizeof(typed_data));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_int);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+
+    ast *res = ast_create_int_node(DUMMY_INT);
+
+    assert_ptr_equal(res, fake_malloc_returned_value_for_an_ast);
+    assert_int_equal(res->type, AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(res->data, fake_malloc_returned_value_for_a_typed_data_int);
+    assert_int_equal(res->data->type, TYPE_INT);
+    assert_int_equal(res->data->data.int_value, DUMMY_INT);
 }
 
 
@@ -2525,6 +2557,9 @@ int main(void) {
             create_int_node_setup, create_int_node_teardown),
         cmocka_unit_test_setup_teardown(
             create_int_node_returns_null_when_second_malloc_fails,
+            create_int_node_setup, create_int_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_int_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
             create_int_node_setup, create_int_node_teardown),
     };
 
