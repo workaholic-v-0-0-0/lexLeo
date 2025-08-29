@@ -11,43 +11,40 @@
 %parse-param { struct parser_ctx *ctx }
 
 %code requires {
-    #include "parser_types.h"
-    struct parser_ctx;
+#include "parser_types.h"
+struct parser_ctx;
 }
 
 %{
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include "ast.h"
-    #include "parser_ctx.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include "ast.h"
+#include "parser_ctx.h"
 %}
 
 %code provides {
-    int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
-    int yylex(YYSTYPE *yylval, yyscan_t scanner);
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
+int yylex(YYSTYPE *yylval, yyscan_t scanner);
 }
 
 %union {
     int int_value;
-    /*
     char *string_value;
     char *symbol_name_value;
-    */
-    ast *ast;
+ast *ast;
 }
 
-%token <int_value> INTEGER
+@TERMINAL_LEXEMS_DECLARATION@
 
-// non-terminal lexeme types
-%type <ast> number_atom
+%type <ast> @NON_TERMINAL_LEXEMS_LIST@
 
 %start start
 
 %%
 
 start:
-    @START_SYMBOL@ YYEOF { *result = $1; }
-    ;
+@START_SYMBOL@ YYEOF { *result = $1; }
+;
 
 @GRAMMAR_RULES@
 

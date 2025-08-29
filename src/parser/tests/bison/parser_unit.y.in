@@ -1,0 +1,91 @@
+// src/parser/tests/bison/parser_unit.y.in
+
+/* @formatter:off */
+
+%define api.pure full
+
+%define api.prefix {@API_PREFIX@}
+
+%lex-param   { yyscan_t scanner }
+
+%parse-param { yyscan_t scanner }
+%parse-param { ast **result }
+%parse-param { struct parser_ctx *ctx }
+
+%code requires {
+    #include "parser_types.h"
+    struct parser_ctx;
+}
+
+%{
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include "ast.h"
+    #include "parser_ctx.h"
+
+    #ifndef YY_TYPEDEF_YY_SCANNER_T
+    #define YY_TYPEDEF_YY_SCANNER_T
+    typedef void* yyscan_t;
+    #endif
+
+    #ifndef YY_TYPEDEF_YYSTYPE
+    #define YY_TYPEDEF_YYSTYPE
+    typedef union YYSTYPE YYSTYPE;
+    #endif
+
+    int @API_PREFIX@lex(YYSTYPE *yylval, yyscan_t scanner);
+    int @API_PREFIX@error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg);
+%}
+
+%union {
+    int int_value;
+    char *string_value;
+    char *symbol_name_value;
+    ast *ast;
+}
+
+@TERMINAL_LEXEMS_DECLARATION@
+
+%type <ast> @NON_TERMINAL_LEXEMS_LIST@
+
+%start start
+
+%%
+
+start:
+    @START_SYMBOL@ YYEOF { *result = $1; }
+    ;
+
+@GRAMMAR_RULES_UNDER_TEST@
+
+@GRAMMAR_RULES_STUB@
+
+%%
+
+#ifdef yylex
+#define YYLEX_WAS_MACRO 1
+#define YYLEX_MACRO_TARGET @API_PREFIX@lex
+#undef yylex // temporarily disable the yylex macro so we can refer to the real symbol
+#endif
+
+// Declare the real yylex (this will be the mock in unit tests)
+int yylex(YYSTYPE *yylval, yyscan_t scanner);
+
+// Prefixed wrapper that forwards calls to the real yylex
+int @API_PREFIX@lex(YYSTYPE *yylval, yyscan_t scanner) {
+    return yylex(yylval, scanner);
+}
+
+#if YYLEX_WAS_MACRO
+#undef yylex
+#define yylex YYLEX_MACRO_TARGET // restore the yylex macro so the rest of the Bison code works as expected
+#undef YYLEX_WAS_MACRO
+#undef YYLEX_MACRO_TARGET
+#endif
+int @API_PREFIX@error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+    (void)scanner; (void)result; (void)ctx;
+    fprintf(stderr, "Parse error: %s\n", msg);
+    return 1;
+}
+
+/* @formatter:on */
