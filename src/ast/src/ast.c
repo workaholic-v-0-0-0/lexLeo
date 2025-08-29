@@ -51,8 +51,8 @@ typed_data *ast_create_typed_data_string(char *s) {
     if (!ret)
         return NULL;
 
-    char *string_value = AST_STRING_DUPLICATE(s);
-    if (!string_value) {
+    char *string_value = (s) ? AST_STRING_DUPLICATE(s) : NULL;
+    if ((!string_value) && (s)) {
         AST_FREE(ret);
         return NULL;
     }
@@ -73,6 +73,9 @@ void ast_destroy_typed_data_string(typed_data *typed_data_string) {
 }
 
 typed_data *ast_create_typed_data_symbol_name(char *s) {
+	if (!s)
+		return NULL;
+
     typed_data *ret = AST_MALLOC(sizeof(typed_data));
     if (!ret)
         return NULL;
@@ -363,4 +366,66 @@ void ast_destroy(ast *root) {
 	        ast_destroy_children_node(root);
 	}
 #endif
+}
+
+ast *ast_create_int_node(int i) {
+    typed_data *td = ast_create_typed_data_int(i);
+    if (!td)
+        return NULL;
+
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_int(td);
+		return NULL;
+    }
+
+    return ret;
+}
+
+ast *ast_create_string_node(char *str) {
+    typed_data *td = ast_create_typed_data_string(str);
+    if (!td)
+        return NULL;
+
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_string(td);
+		return NULL;
+    }
+
+    return ret;
+}
+
+ast *ast_create_symbol_name_node(char *str) {
+	if (!str)
+		return NULL;
+
+	typed_data *td = ast_create_typed_data_symbol_name(str);
+    if (!td)
+        return NULL;
+
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_symbol_name(td);
+		return NULL;
+    }
+
+    return ret;
+}
+
+ast *ast_create_symbol_node(symbol *sym) {
+	if (!sym)
+		return NULL;
+
+	typed_data *td = ast_create_typed_data_symbol(sym);
+    if (!td)
+        return NULL;
+
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_symbol(td);
+		return NULL;
+    }
+
+	return ret;
 }
