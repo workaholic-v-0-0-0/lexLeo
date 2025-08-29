@@ -78,7 +78,7 @@ ast * ast_error_sentinel(void);
 typed_data *ast_create_typed_data_int(int i);
 void ast_destroy_typed_data_int(typed_data *typed_data_int);
 
-typed_data *ast_create_typed_data_string(char *s);
+typed_data *ast_create_typed_data_string(char *s); // s can be NULL
 void ast_destroy_typed_data_string(typed_data *typed_data_string);
 
 typed_data *ast_create_typed_data_symbol_name(char *s);

@@ -307,9 +307,29 @@ static void ast_create_typed_data_string_returns_null_when_malloc_fails(void **s
     assert_null(ast_create_typed_data_string(DUMMY_STRING));
 }
 
-// Given: malloc succeeds
+// Given:
+//  - malloc succeeds
+//  - s == NULL
+// Expected:
+//  - letting ret denote the allocated typed_data:
+//    - ret->type == TYPE_STRING
+//    - ret->data.string_value == NULL
+//  - returns the allocated typed_data
+static void ast_create_typed_data_string_initializes_and_returns_malloced_typed_data_when_malloc_succeeds_and_s_null(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_string, sizeof(typed_data));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_string);
+    typed_data *ret = ast_create_typed_data_string(NULL);
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_a_typed_data_string);
+    assert_int_equal(ret->type, TYPE_STRING);
+    assert_ptr_equal(ret->data.string_value, NULL);
+}
+
+// Given:
+//  - malloc succeeds
+//  - s != NULL
 // Expected: calls strdup with s
-static void ast_create_typed_data_string_calls_strdup_when_malloc_succeds(void **state) {
+static void ast_create_typed_data_string_calls_strdup_when_malloc_succeeds_and_s_not_null(void **state) {
     expect_value(mock_malloc, size, sizeof(typed_data));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(mock_strdup, s, DUMMY_STRING);
@@ -2283,6 +2303,16 @@ static int create_string_node_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 // Given:
+//  - str == NULL
+// Expected:
+//  -
+/*
+static void create_string_node__when_str_null(void **state) {
+    ast_create_string_node(NULL);
+}
+*/
+
+// Given:
 //  - str == DUMMY_STRING ("dummy string")
 //  - the allocation of the typed_data will fail
 // Expected:
@@ -2344,6 +2374,9 @@ static void create_string_node_cleans_up_and_returns_null_when_second_malloc_fai
 
 
 
+
+
+
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
@@ -2375,7 +2408,10 @@ int main(void) {
             ast_create_typed_data_string_returns_null_when_malloc_fails,
             ast_create_typed_data_string_setup, ast_create_typed_data_string_teardown),
         cmocka_unit_test_setup_teardown(
-            ast_create_typed_data_string_calls_strdup_when_malloc_succeds,
+            ast_create_typed_data_string_initializes_and_returns_malloced_typed_data_when_malloc_succeeds_and_s_null,
+            ast_create_typed_data_string_setup, ast_create_typed_data_string_teardown),
+        cmocka_unit_test_setup_teardown(
+            ast_create_typed_data_string_calls_strdup_when_malloc_succeeds_and_s_not_null,
             ast_create_typed_data_string_setup, ast_create_typed_data_string_teardown),
         cmocka_unit_test_setup_teardown(
             ast_create_typed_data_string_calls_free_and_returns_null_when_strdup_fails,
@@ -2671,6 +2707,11 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             create_int_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
             create_int_node_setup, create_int_node_teardown),
+/*
+        cmocka_unit_test_setup_teardown(
+            create_string_node__when_str_null,
+            create_int_node_setup, create_int_node_teardown),
+*/
     };
 
     const struct CMUnitTest ast_create_string_node_tests[] = {

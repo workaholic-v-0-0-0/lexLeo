@@ -51,8 +51,8 @@ typed_data *ast_create_typed_data_string(char *s) {
     if (!ret)
         return NULL;
 
-    char *string_value = AST_STRING_DUPLICATE(s);
-    if (!string_value) {
+    char *string_value = (s) ? AST_STRING_DUPLICATE(s) : NULL;
+    if ((!string_value) && (s)) {
         AST_FREE(ret);
         return NULL;
     }
