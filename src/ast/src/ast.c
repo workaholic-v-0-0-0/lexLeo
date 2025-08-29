@@ -390,5 +390,5 @@ ast *ast_create_string_node(char *str) {
 		return NULL;
     }
 
-    return (ast *)-2;
+    return ret;
 }
