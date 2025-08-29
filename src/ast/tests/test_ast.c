@@ -30,6 +30,7 @@ static const void *DUMMY_STRDUP_RETURNED_VALUE = &dummy[1];
 #define MALLOC_ERROR_CODE NULL
 static const int DUMMY_INT = 7;
 static char *const DUMMY_STRING = "dummy string";
+static char *const DUMMY_SYMBOL_NAME = "symbol_name";
 static void *const DUMMY_SYMBOL = (void*)&dummy[2];
 #define STRDUP_ERROR_CODE NULL
 static typed_data *const DUMMY_TYPED_DATA_P = (typed_data*)&dummy[3];
@@ -86,6 +87,7 @@ char *mock_strdup(const char *s) {
 
 static void *fake_malloc_returned_value_for_a_typed_data_int = NULL;
 static void *fake_malloc_returned_value_for_a_typed_data_string = NULL;
+static void *fake_malloc_returned_value_for_a_typed_data_symbol_name = NULL;
 static void *fake_malloc_returned_value_for_a_typed_data_symbol = NULL;
 static void *fake_malloc_returned_value_for_an_ast = NULL;
 static void *fake_malloc_returned_value_for_an_ast_children_t = NULL;
@@ -2368,11 +2370,11 @@ static void create_string_node_cleans_up_and_returns_null_when_second_malloc_fai
 //  - malloc is called with argument sizeof(typed_data)
 //  - strdup is called with argument str
 //  - malloc is called with argument sizeof(ast)
-//  - letting td and ret denote the allocated typed_data and ast:
+//  - letting duplicated, td and ret denote the allocated string, typed_data and ast:
 //    - ret->type == AST_TYPE_DATA_WRAPPER
 //    - ret->data == td
 //    - td->type == TYPE_STRING
-//    - td->data.string_value == DUMMY_STRING
+//    - td->data.string_value == duplicated
 //  - returns the allocated ast
 static void create_string_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds(void **state) {
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_string, sizeof(typed_data));
@@ -2424,6 +2426,162 @@ static void create_string_node_initializes_and_returns_malloced_ast_when_second_
     assert_int_equal(ret->data->type, TYPE_STRING);
     assert_ptr_equal(ret->data->data.string_value, NULL);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// ast_create_symbol_name_node TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_create_symbol_name_node
+// ast_create_typed_data_symbol_name
+// ast_destroy_typed_data_symbol_name
+// ast_create_typed_data_wrapper
+
+// mocked: memory allocators, string duplicator
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_symbol_name_node_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    set_string_duplicate(mock_strdup);
+    return 0;
+}
+
+static int create_symbol_name_node_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - str == NULL
+// Expected:
+//  - returns NULL
+static void create_symbol_name_node_returns_null_when_str_null(void **state) {
+    assert_ptr_equal(NULL, ast_create_symbol_name_node(NULL));
+}
+
+// Given:
+//  - str == DUMMY_SYMBOL_NAME ("symbol_name")
+//  - the allocation of the typed_data will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - returns NULL
+static void create_symbol_name_node_returns_null_when_first_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+
+    assert_ptr_equal(NULL, ast_create_symbol_name_node(DUMMY_SYMBOL_NAME));
+}
+
+// Given:
+//  - str == DUMMY_SYMBOL_NAME ("symbol_name")
+//  - the allocation of the typed_data will succeed
+//  - the duplication of the string str will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - strdup is called with argument str
+//  - free is called with argument the malloced typed_data
+//  - returns NULL
+static void create_symbol_name_node_cleans_up_and_returns_null_when_strdup_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, DUMMY_TYPED_DATA_P);
+    expect_value(mock_strdup, s, DUMMY_SYMBOL_NAME);
+    will_return(mock_strdup, STRDUP_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+
+    assert_ptr_equal(NULL, ast_create_symbol_name_node(DUMMY_SYMBOL_NAME));
+}
+
+// Given:
+//  - str == DUMMY_SYMBOL_NAME ("symbol_name")
+//  - the allocation of the typed_data will succeed
+//  - the duplication of the string str will succeed
+//  - the allocation of the ast will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - strdup is called with argument str
+//  - malloc is called with argument sizeof(ast)
+//  - free is called with argument the string copy
+//  - free is called with argument the malloced typed_data
+//  - returns NULL
+static void create_symbol_name_node_cleans_up_and_returns_null_when_second_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, DUMMY_TYPED_DATA_P);
+    expect_value(mock_strdup, s, DUMMY_SYMBOL_NAME);
+    will_return(mock_strdup, DUMMY_STRDUP_RETURNED_VALUE);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_STRDUP_RETURNED_VALUE);
+    expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+
+    assert_ptr_equal(NULL, ast_create_symbol_name_node(DUMMY_SYMBOL_NAME));
+}
+
+// Given:
+//  - str == DUMMY_SYMBOL_NAME ("symbol_name")
+//  - the allocation of the typed_data will succeed
+//  - the duplication of the string str will succeed
+//  - the allocation of the ast will succeed
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - strdup is called with argument str
+//  - malloc is called with argument sizeof(ast)
+//  - letting duplicated, td and ret denote the allocated string, typed_data and ast:
+//    - ret->type == AST_TYPE_DATA_WRAPPER
+//    - ret->data == td
+//    - td->type == TYPE_SYMBOL_NAME
+//    - td->data.string_value == duplicated
+//  - returns the allocated ast
+static void create_symbol_name_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_symbol_name, sizeof(typed_data));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_symbol_name);
+    expect_value(mock_strdup, s, DUMMY_SYMBOL_NAME);
+    will_return(mock_strdup, DUMMY_STRDUP_RETURNED_VALUE);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+
+    ast *ret =  ast_create_symbol_name_node(DUMMY_SYMBOL_NAME);
+
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
+    assert_int_equal(ret->type, AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(ret->data, fake_malloc_returned_value_for_a_typed_data_symbol_name);
+    assert_int_equal(ret->data->type, TYPE_SYMBOL_NAME);
+    assert_ptr_equal(ret->data->data.string_value, DUMMY_STRDUP_RETURNED_VALUE);
+}
+
+
+
+
 
 
 
@@ -2777,6 +2935,24 @@ int main(void) {
             create_string_node_setup, create_string_node_teardown),
     };
 
+    const struct CMUnitTest ast_create_symbol_name_node_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_symbol_name_node_returns_null_when_str_null,
+            create_symbol_name_node_setup, create_symbol_name_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_name_node_returns_null_when_first_malloc_fails,
+            create_symbol_name_node_setup, create_symbol_name_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_name_node_cleans_up_and_returns_null_when_strdup_fails,
+            create_symbol_name_node_setup, create_symbol_name_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_name_node_cleans_up_and_returns_null_when_second_malloc_fails,
+            create_symbol_name_node_setup, create_symbol_name_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_name_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
+            create_symbol_name_node_setup, create_symbol_name_node_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2798,6 +2974,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_destroy_error_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_int_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_string_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_symbol_name_node_tests, NULL, NULL);
 
     return failed;
 }
