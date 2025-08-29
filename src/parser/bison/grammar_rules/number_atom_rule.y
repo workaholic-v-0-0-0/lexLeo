@@ -1,4 +1,4 @@
-// src/parser/bison/number_atom_rule.y
+// src/parser/bison/grammar_rules/number_atom_rule.y
 
 number_atom
   : INTEGER {

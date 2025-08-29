@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 
-#include "parser.tab.h"
+#include "number_parser.tab.h"
 #include "parser_ctx.h"
 #include "lexer.yy.h"
 

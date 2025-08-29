@@ -7,8 +7,7 @@ find_package(BISON REQUIRED)
 
 set(
     PARSER_Y
-    #"${CMAKE_CURRENT_SOURCE_DIR}/bison/parser.y"
-    "${CMAKE_CURRENT_BINARY_DIR}/bison/number_parser.y"
+    "${CMAKE_CURRENT_BINARY_DIR}/bison/parser.y"
 )
 
 set(
@@ -39,15 +38,25 @@ set(
 file(MAKE_DIRECTORY ${GENERATED_PARSER_SOURCE_DIR})
 file(MAKE_DIRECTORY ${GENERATED_PARSER_INCLUDE_DIR})
 
+# will be changed to the full parser
+set(
+    TERMINAL_LEXEMS_DECLARATION
+    "\
+%token <int_value> INTEGER\n\
+%token <string_value> STRING\n\
+%destructor { free($$); } STRING
+"
+)
+set(NON_TERMINAL_LEXEMS_LIST "number_atom")
 set(START_SYMBOL "number_atom")
 file(
     READ
-    "${CMAKE_CURRENT_SOURCE_DIR}/bison/number_atom_rule.y"
+    "bison/grammar_rules/number_atom_rule.y"
     GRAMMAR_RULES
 )
 configure_file(
     ${PARSER_Y_TEMPLATE}
-    "${CMAKE_CURRENT_BINARY_DIR}/bison/number_parser.y"
+    "${PARSER_Y}"
     @ONLY
 )
 

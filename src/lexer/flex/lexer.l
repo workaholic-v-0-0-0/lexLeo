@@ -18,6 +18,20 @@
     return INTEGER;
 }
 
+\"([^\\\"]|\\.)*\" {
+    size_t len = yyleng - 2;
+    char *s = malloc(len + 1);
+    if (!s) { // parser must handle this error
+        yylval->string_value = NULL;
+        return STRING;
+    }
+    memcpy(s, yytext + 1, len);
+    s[len] = '\0';
+
+    yylval->string_value = s;
+    return STRING;
+}
+
 [ \t\n]+ {
     // ignore white spaces
 }

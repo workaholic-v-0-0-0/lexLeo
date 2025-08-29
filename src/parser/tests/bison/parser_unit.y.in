@@ -1,0 +1,63 @@
+// src/parser/tests/bison/parser_unit.y.in
+
+/* @formatter:off */
+
+%define api.pure full
+
+//%define api.prefix {@API_PREFIX@}
+
+%lex-param   { yyscan_t scanner }
+
+%parse-param { yyscan_t scanner }
+%parse-param { ast **result }
+%parse-param { struct parser_ctx *ctx }
+
+%code requires {
+    #include "parser_types.h"
+    struct parser_ctx;
+}
+
+%{
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include "ast.h"
+    #include "parser_ctx.h"
+%}
+
+%code provides {
+    int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
+    int yylex(YYSTYPE *yylval, yyscan_t scanner);
+}
+
+%union {
+    int int_value;
+    char *string_value;
+    char *symbol_name_value;
+    ast *ast;
+}
+
+@TERMINAL_LEXEMS_DECLARATION@
+
+%type <ast> @NON_TERMINAL_LEXEMS_LIST@
+
+%start start
+
+%%
+
+start:
+    @START_SYMBOL@ YYEOF { *result = $1; }
+    ;
+
+@GRAMMAR_RULES_UNDER_TEST@
+
+@GRAMMAR_RULES_STUB@
+
+%%
+
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+    (void)scanner; (void)result; (void)ctx;
+    fprintf(stderr, "Parse error: %s\n", msg);
+    return 1;
+}
+
+/* @formatter:on */

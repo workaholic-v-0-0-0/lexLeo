@@ -1,4 +1,4 @@
-// src/parser/bison/symbol_atom_rule.y
+// src/parser/bison/grammar_rules/symbol_atom_rule.y
 
 symbol_atom
     : SYMBOL {
