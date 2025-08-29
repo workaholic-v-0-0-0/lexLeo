@@ -26,7 +26,7 @@ static YY_BUFFER_STATE buf;
 static ast *parsed_ast;
 
 static const char DUMMY[4];
-static const typed_data *const DUMMY_TYPED_DATA_P = (typed_data *) &DUMMY[0];
+static ast *const DUMMY_AST_P = (ast *) &DUMMY[0];
 static ast *const DUMMY_ERROR_SENTINEL = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_ERROR_NOT_SENTINEL_P = (ast *) &DUMMY[2];
 static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[3];
@@ -157,74 +157,19 @@ static void yyparse_calls_ast_create_error_node_and_returns_its_returned_value_w
 	assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_NOT_SENTINEL_P);
 }
 
-
-
-
-
-
-
-
-
-
-/*
-static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails(void **state) {
-	buf = yy_scan_string("5", scanner);
-	expect_value(mock_create_typed_data_int, i, 5);
-    will_return(mock_create_typed_data_int, NULL);
-	expect_value(mock_create_error_node, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
-	expect_string(mock_create_error_node, message, "Data wrapper creation for a number failed.");
-    will_return(mock_create_error_node, DUMMY_AST_P);
-	yyparse(scanner, &parsed_ast, &mock_ctx);
-}
-*/
-
-// Given: lexer gives lexeme INTEGER with value 5
-// Expected: ast_data_wrapper with int 5
-/* should not have been written yet for one wants a TDD approach
-static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
-    printf("here1\n");
-    ast *parsed_ast = NULL;
-    ast **ret = &parsed_ast;
-    printf("here2\n");
-    yyscan_t scanner;
-    yylex_init(&scanner);
-	parser_ctx ctx = make_default_ctx();
-    YY_BUFFER_STATE buf = yy_scan_string("5", scanner);
-    printf("here3\n");
-    int result = yyparse(scanner, ret, &ctx);
-    printf("result: %i\n", result);
-    printf("ret: %p\n", ret);
-    printf("*ret: %p\n", *ret);
-    printf("ret->type: %i\n", (*(ast **)ret)->type);
-    printf("AST_TYPE_DATA_WRAPPER: %i\n", AST_TYPE_DATA_WRAPPER);
-    printf("ret->data->type: %i\n", (*(ast **)ret)->data->type);
-    printf("TYPE_INT: %i\n", TYPE_INT);
-    printf("ret->data->data.int_value: %i\n", (*(ast **)ret)->data->data.int_value);
-    yy_delete_buffer(buf, scanner);
-    yylex_destroy(scanner);
-}
-*/
-
 // Given:
+//  - create_int_node succeeds
 // Expected:
-// with a create_typed_data_int double
-/* should not have been written yet for one wants a TDD approach
-static void yyparse__when_given_an_int_and_create_typed_data_int_fails(void **state) { // ICI
-    ast *parsed_ast = NULL;
-    ast **ret = &parsed_ast;
-    yyscan_t scanner;
-    yylex_init(&scanner);
-	parser_ctx ctx = { .ops = { .create_typed_data_int = mock_create_typed_data_int } };
-	YY_BUFFER_STATE buf = yy_scan_string("5", scanner);
+//  - gives the returned value of create_int_node for the semantic value number_atom lexeme
+static void yyparse_returns_value_from_create_int_node_when_successful(void **state) {
+	buf = yy_scan_string("5", scanner);
+	expect_value(mock_create_int_node, i, 5);
+	will_return(mock_create_int_node, DUMMY_AST_P);
 
-	expect_value(mock_create_typed_data_int, i, 5);
-    will_return(mock_create_typed_data_int, NULL);
+	yyparse(scanner, &parsed_ast, &mock_ctx);
 
-    int result = yyparse(scanner, ret, &ctx);
-    yy_delete_buffer(buf, scanner);
-    yylex_destroy(scanner);
+	assert_ptr_equal(parsed_ast, DUMMY_AST_P);
 }
-*/
 
 
 
@@ -240,6 +185,9 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds,
             yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
+    	cmocka_unit_test_setup_teardown(
+			yyparse_returns_value_from_create_int_node_when_successful,
+			yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
     };
     int failed = 0;
     failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);

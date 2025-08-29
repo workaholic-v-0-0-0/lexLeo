@@ -9,7 +9,7 @@ number_atom
                 "ast creation for a number failed" );
             $$ = err ? err : ctx->ops.error_sentinel();
         } else {
-            //$$ = a;
+            $$ = a;
         }
     }
   ;
