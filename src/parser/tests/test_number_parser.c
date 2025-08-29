@@ -33,15 +33,14 @@ static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[3];
 
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
 
-static typed_data *mock_create_typed_data_int(int i) {
+ast *mock_create_int_node(int i) {
 	check_expected(i);
-    return mock_type(typed_data *);
+    return mock_type(ast *);
 }
 
 ast *mock_create_error_node(error_type code, char *message) {
@@ -59,8 +58,22 @@ parser_ctx mock_ctx;
 
 
 //-----------------------------------------------------------------------------
-// yyparse TESTS
+// yyparse TESTS with INTEGER lexem inputs
 //-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// number_atom : INTEGER action via injected ops
+
+// mocked: functions of the ast module which are used:
+//  - ast_create_int_node
+//  - ast_create_error_node
+//  - ast_error_sentinel
 
 
 
@@ -69,18 +82,18 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-static int yyparse_setup(void **state) {
+static int yyparse_with_INTEGER_input_setup(void **state) {
     (void)state;
     assert_int_equal(yylex_init(&scanner), 0);
 	buf = NULL;
     parsed_ast = NULL;
-    mock_ctx.ops.create_typed_data_int = mock_create_typed_data_int;
+    mock_ctx.ops.create_int_node = mock_create_int_node;
     mock_ctx.ops.create_error_node = mock_create_error_node;
 	mock_ctx.ops.error_sentinel = mock_error_sentinel;
     return 0;
 }
 
-static int yyparse_teardown(void **state) {
+static int yyparse_with_INTEGER_input_teardown(void **state) {
     (void)state;
     if (buf) {
         yy_delete_buffer(buf, scanner);
@@ -100,52 +113,51 @@ static int yyparse_teardown(void **state) {
 
 // At every test
 // Given: lexer returns INTEGER(5)
-// Expected: calls ast_create_typed_data_int(5)
+// Expected: calls ast_create_int_node(5)
 
 
 // Given:
-//  - ast_create_typed_data_int fails
+//  - create_int_node fails
 //  - ast_create_error_node fails
 // Expected:
 //  - calls ast_error_sentinel
-//  - gives sentinel error ast for the semantic value of the left lexem
+//  - gives sentinel error ast for the semantic value number_atom lexeme
 static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails(void **state) {
-
 	buf = yy_scan_string("5", scanner);
-
-	expect_value(mock_create_typed_data_int, i, 5);
-    will_return(mock_create_typed_data_int, NULL);
+	expect_value(mock_create_int_node, i, 5);
+    will_return(mock_create_int_node, NULL);
 	expect_any(mock_create_error_node, code);
 	expect_any(mock_create_error_node, message);
     will_return(mock_create_error_node, NULL);
-
 	will_return(mock_error_sentinel, DUMMY_ERROR_SENTINEL);
 
 	yyparse(scanner, &parsed_ast, &mock_ctx);
+
 	assert_ptr_equal(parsed_ast, DUMMY_ERROR_SENTINEL);
 }
 
 // Given:
-//  - ast_create_typed_data_int fails
+//  - create_int_node fails
 //  - ast_create_error_node succeeds
 // Expected:
 //  - calls ast_create_error_node with:
-//    - code = MEMORY_ALLOCATION_ERROR_CODE
-//    - message = "Data wrapper creation for a number failed."
-//  - gives the returned value of ast_create_error_node for the semantic value of the left lexem
+//    - code = AST_ERROR_CODE_INT_NODE_CREATION_FAILED
+//    - message = "ast creation for a number failed"
+//  - gives the returned value of ast_create_error_node for the semantic value number_atom lexeme
 static void yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds(void **state) {
-
 	buf = yy_scan_string("5", scanner);
-
-	expect_value(mock_create_typed_data_int, i, 5);
-    will_return(mock_create_typed_data_int, NULL);
-	expect_value(mock_create_error_node, code, MEMORY_ALLOCATION_ERROR_CODE);
-	expect_string(mock_create_error_node, message, "Data wrapper creation for a number failed.");
+	expect_value(mock_create_int_node, i, 5);
+	will_return(mock_create_int_node, NULL);
+	expect_value(mock_create_error_node, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
+	expect_string(mock_create_error_node, message, "ast creation for a number failed");
     will_return(mock_create_error_node, DUMMY_AST_ERROR_NOT_SENTINEL_P);
 
 	yyparse(scanner, &parsed_ast, &mock_ctx);
+
 	assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_NOT_SENTINEL_P);
 }
+
+
 
 
 
@@ -159,17 +171,14 @@ static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when
 	buf = yy_scan_string("5", scanner);
 	expect_value(mock_create_typed_data_int, i, 5);
     will_return(mock_create_typed_data_int, NULL);
-	expect_value(mock_create_error_node, code, MEMORY_ALLOCATION_ERROR_CODE);
+	expect_value(mock_create_error_node, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
 	expect_string(mock_create_error_node, message, "Data wrapper creation for a number failed.");
     will_return(mock_create_error_node, DUMMY_AST_P);
 	yyparse(scanner, &parsed_ast, &mock_ctx);
 }
 */
 
-
-
-
-// Given: lexer gives lexem INTEGER with value 5
+// Given: lexer gives lexeme INTEGER with value 5
 // Expected: ast_data_wrapper with int 5
 /* should not have been written yet for one wants a TDD approach
 static void yyparse_build_right_ast_when_given_an_int(void **state) { // ICI
@@ -227,18 +236,10 @@ int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
             yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails,
-            yyparse_setup, yyparse_teardown),
+            yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
         cmocka_unit_test_setup_teardown(
             yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds,
-            yyparse_setup, yyparse_teardown),
-/* should not have been written yet for one wants a TDD approach
-        cmocka_unit_test_setup_teardown(
-            yyparse_build_right_ast_when_given_an_int,
-            yyparse_setup, yyparse_teardown),
-        cmocka_unit_test_setup_teardown(
-            yyparse__when_given_an_int_and_create_typed_data_int_fails,
-            yyparse_setup, yyparse_teardown),
-*/
+            yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
     };
     int failed = 0;
     failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);
