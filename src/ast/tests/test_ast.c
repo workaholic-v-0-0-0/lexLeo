@@ -2212,7 +2212,7 @@ static void create_int_node_returns_null_when_first_malloc_fails(void **state) {
 //  - malloc is called with argument sizeof(ast)
 //  - free is called with argument the malloced typed_data
 //  - returns NULL
-static void create_int_node_returns_null_when_second_malloc_fails(void **state) {
+static void create_int_node_cleans_up_and_returns_null_when_second_malloc_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(typed_data));
     will_return(mock_malloc, DUMMY_TYPED_DATA_P);
     expect_value(mock_malloc, size, sizeof(ast));
@@ -2581,7 +2581,123 @@ static void create_symbol_name_node_initializes_and_returns_malloced_ast_when_se
 
 
 
+//-----------------------------------------------------------------------------
+// ast_create_symbol_node TESTS
+//-----------------------------------------------------------------------------
 
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_create_symbol_node
+// ast_create_typed_data_symbol
+// ast_destroy_typed_data_symbol
+// ast_create_typed_data_wrapper
+
+// mocked: memory allocators
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_symbol_node_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int create_symbol_node_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// Given:
+//  - sym == NULL
+// Expected:
+//  - returns NULL
+static void create_symbol_node_returns_null_when_sym_null(void **state) {
+    assert_ptr_equal(NULL, ast_create_symbol_node(NULL));
+}
+
+// Given:
+//  - sym == DUMMY_SYMBOL (not NULL)
+//  - the allocation of the typed_data will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - returns NULL
+static void create_symbol_node_returns_null_when_first_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+
+    assert_ptr_equal(NULL, ast_create_symbol_node(DUMMY_SYMBOL));
+}
+
+// Given:
+//  - sym == DUMMY_SYMBOL (not NULL)
+//  - the allocation of the typed_data will succeed
+//  - the allocation of the ast will fail
+// Expected:
+//  - malloc is called with argument sizeof(typed_data)
+//  - malloc is called with argument sizeof(ast)
+//  - free is called with argument the malloced typed_data
+//  - returns NULL
+static void create_symbol_node_cleans_up_and_returns_null_when_second_malloc_fails(void **state) {
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, DUMMY_TYPED_DATA_P);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, MALLOC_ERROR_CODE);
+    expect_value(mock_free, ptr, DUMMY_TYPED_DATA_P);
+
+    assert_ptr_equal(NULL, ast_create_symbol_node(DUMMY_SYMBOL));
+}
+
+// Given:
+//  - sym == DUMMY_SYMBOL (not NULL)
+//  - allocation of typed_data succeeds
+//  - allocation of ast succeeds
+// Expected:
+//  - malloc is called with sizeof(typed_data)
+//  - malloc is called with sizeof(ast)
+//  - letting td and ret denote the allocated typed_data and ast:
+//    - ret->type == AST_TYPE_DATA_WRAPPER
+//    - ret->data == td
+//    - td->type == TYPE_SYMBOL
+//    - td->data.symbol_value == DUMMY_SYMBOL
+//  - returns the allocated ast
+static void create_symbol_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_symbol, sizeof(typed_data));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_symbol);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+
+    ast *ret = ast_create_symbol_node(DUMMY_SYMBOL);
+
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
+    assert_int_equal(ret->type, AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(ret->data, fake_malloc_returned_value_for_a_typed_data_symbol);
+    assert_int_equal(ret->data->type, TYPE_SYMBOL);
+    assert_ptr_equal(ret->data->data.symbol_value, DUMMY_SYMBOL);
+}
 
 
 
@@ -2910,7 +3026,7 @@ int main(void) {
             create_int_node_returns_null_when_first_malloc_fails,
             create_int_node_setup, create_int_node_teardown),
         cmocka_unit_test_setup_teardown(
-            create_int_node_returns_null_when_second_malloc_fails,
+            create_int_node_cleans_up_and_returns_null_when_second_malloc_fails,
             create_int_node_setup, create_int_node_teardown),
         cmocka_unit_test_setup_teardown(
             create_int_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
@@ -2953,6 +3069,21 @@ int main(void) {
             create_symbol_name_node_setup, create_symbol_name_node_teardown),
     };
 
+    const struct CMUnitTest ast_create_symbol_node_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_symbol_node_returns_null_when_sym_null,
+            create_symbol_node_setup, create_symbol_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_node_returns_null_when_first_malloc_fails,
+            create_symbol_node_setup, create_symbol_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_node_cleans_up_and_returns_null_when_second_malloc_fails,
+            create_symbol_node_setup, create_symbol_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_symbol_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
+            create_symbol_node_setup, create_symbol_node_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -2975,6 +3106,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_int_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_string_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_symbol_name_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_symbol_node_tests, NULL, NULL);
 
     return failed;
 }

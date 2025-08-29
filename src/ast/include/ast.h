@@ -93,7 +93,7 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 ast *ast_create_int_node(int i);
 ast *ast_create_string_node(char *str); // client code is responsible for str
 ast *ast_create_symbol_name_node(char *str); // client code is responsible for str
-ast *ast_create_symbol_node(symbol *sym);
+ast *ast_create_symbol_node(symbol *sym); // client code is responsible for s
 
 ast *ast_create_error_node(error_type code, char *message); // client code is responsible for message
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR

@@ -412,3 +412,20 @@ ast *ast_create_symbol_name_node(char *str) {
 
     return ret;
 }
+
+ast *ast_create_symbol_node(symbol *sym) {
+	if (!sym)
+		return NULL;
+
+	typed_data *td = ast_create_typed_data_symbol(sym);
+    if (!td)
+        return NULL;
+
+    ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+        ast_destroy_typed_data_symbol(td);
+		return NULL;
+    }
+
+	return ret;
+}
