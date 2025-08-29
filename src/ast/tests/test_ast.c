@@ -2393,36 +2393,37 @@ static void create_string_node_initializes_and_returns_malloced_ast_when_second_
     assert_ptr_equal(ret->data->data.string_value, DUMMY_STRDUP_RETURNED_VALUE);
 }
 
-
-
-
-
-
-
-
 // Given:
 //  - str == NULL
 //  - the allocation of the typed_data will succeed
 //  - THERE IS NO DUPLICATION OF THE STRING str
-//  - the allocation of the ast will fail
+//  - the allocation of the ast will succeed
 // Expected:
 //  - malloc is called with argument sizeof(typed_data)
-//  - strdup is called with argument str
+//  - strdup IS NOT CALLED
 //  - malloc is called with argument sizeof(ast)
-//  - free is called with argument the string copy
-//  - free is called with argument the malloced typed_data
-//  - returns NULL
-/*
-static void create_string_node__when_str_null(void **state) {
-    ast_create_string_node(NULL);
+//  - letting td and ret denote the allocated typed_data and ast:
+//    - ret->type == AST_TYPE_DATA_WRAPPER
+//    - ret->data == td
+//    - td->type == TYPE_STRING
+//    - td->data.string_value == NULL
+//  - returns the allocated ast
+static void create_string_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds_and_str_null(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_typed_data_string, sizeof(typed_data));
+    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
+    expect_value(mock_malloc, size, sizeof(typed_data));
+    will_return(mock_malloc, fake_malloc_returned_value_for_a_typed_data_string);
+    expect_value(mock_malloc, size, sizeof(ast));
+    will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
+
+    ast *ret =  ast_create_string_node(NULL);
+
+    assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
+    assert_int_equal(ret->type, AST_TYPE_DATA_WRAPPER);
+    assert_ptr_equal(ret->data, fake_malloc_returned_value_for_a_typed_data_string);
+    assert_int_equal(ret->data->type, TYPE_STRING);
+    assert_ptr_equal(ret->data->data.string_value, NULL);
 }
-*/
-
-
-
-
-
-
 
 
 
@@ -2768,15 +2769,12 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             create_string_node_cleans_up_and_returns_null_when_second_malloc_fails,
             create_string_node_setup, create_string_node_teardown),
-
         cmocka_unit_test_setup_teardown(
             create_string_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds,
             create_string_node_setup, create_string_node_teardown),
-/*
         cmocka_unit_test_setup_teardown(
-            create_string_node__when_str_null,
-            create_string_node_setup, create_string_node_teardown),œ
-*/
+            create_string_node_initializes_and_returns_malloced_ast_when_second_malloc_succeeds_and_str_null,
+            create_string_node_setup, create_string_node_teardown),
     };
 
     int failed = 0;
