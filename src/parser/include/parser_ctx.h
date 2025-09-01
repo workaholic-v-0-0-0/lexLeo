@@ -7,8 +7,7 @@
 
 typedef struct parser_ops {
     ast* (*create_int_node)(int);
-	ast* (*create_error_node)(error_type code, char *message);
-	ast* (*error_sentinel)(void);
+	ast* (*create_error_node_or_sentinel)(error_type code, char *message);
 } parser_ops;
 
 typedef struct parser_ctx {
