@@ -2,11 +2,5 @@
 
 - Refactor CMake structure to make sub-projects standalone
 
-- Refactor symtab_destroy_symbol via ast_destroy
 
-- Refactor TDD-Bison architecture in parser module
-
-- Refactor ast interface by grouping ast_create_error_node
-  and ast_error_sentinel in order to simplify error management
-  of the actions of grammar rules
 
