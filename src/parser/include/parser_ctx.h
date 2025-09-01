@@ -8,6 +8,7 @@
 typedef struct parser_ops {
     ast* (*create_int_node)(int);
     ast* (*create_string_node)(char *);
+    ast *(*create_symbol_name_node)(char *);
 	ast* (*create_error_node_or_sentinel)(error_type code, char *message);
 } parser_ops;
 
