@@ -89,6 +89,53 @@ target_include_directories(
 )
 target_link_libraries(number_parser PRIVATE lexer ast)
 
+# string_atom parser
+set(API_PREFIX "string_atom_")
+set(
+    STRING_PARSER_Y
+    "${GENERATED_BISON_FILES_FOR_TESTS}/string_parser.y"
+)
+set(
+    STRING_PARSER_SRC
+    "${GENERATED_PARSER_UNIT_SOURCE_DIR}/string_parser.tab.c"
+)
+set(
+    STRING_PARSER_HEADER
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}/string_parser.tab.h"
+)
+set(TERMINAL_LEXEMS_DECLARATION "%token <string_value> STRING")
+set(NON_TERMINAL_LEXEMS_LIST "string_atom")
+set(START_SYMBOL "string_atom")
+file(
+    READ
+    "${GRAMMAR_RULES_UNDER_TEST_DIR}/string_atom_rule.y"
+    GRAMMAR_RULES_UNDER_TEST
+)
+#[[
+file(
+    READ
+    "${GRAMMAR_RULES_STUBS_DIR}/string_atom_rule_stubbed_dependencies.y"
+    GRAMMAR_RULES_STUB
+)
+]]
+
+configure_file(
+    ${PARSER_UNIT_Y_TEMPLATE}
+    "${GENERATED_BISON_FILES_FOR_TESTS}/string_parser.y"
+    @ONLY
+)
+BISON_TARGET(string_parser ${STRING_PARSER_Y} ${STRING_PARSER_SRC} DEFINES_FILE ${STRING_PARSER_HEADER})
+add_library(string_parser STATIC ${BISON_string_parser_OUTPUTS})
+target_include_directories(
+    string_parser
+    PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/include"
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/ast/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(string_parser PRIVATE lexer ast)
+
 # unit tests
 
 add_executable(
@@ -119,3 +166,33 @@ add_test(
     $<TARGET_FILE:test_number_parser>
 )
 set_tests_properties(test_number_parser_memory PROPERTIES LABELS "memory")
+
+
+add_executable(
+    test_string_parser
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_string_parser.c
+)
+
+target_include_directories(
+    test_string_parser
+    PRIVATE
+    "${CMOCKA_INCLUDE_DIR}"
+    "${CMAKE_BINARY_DIR}/src/lexer/include"
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/data_structures/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+
+add_dependencies(test_string_parser move_generated_lexer_header)
+
+target_link_libraries(test_string_parser PRIVATE string_parser ${CMOCKA_LIBRARY} lexer data_structures)
+target_compile_definitions(test_string_parser PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+add_test(NAME test_string_parser COMMAND test_string_parser)
+add_test(
+    NAME test_string_parser_memory
+    COMMAND valgrind
+    --leak-check=full
+    --error-exitcode=1
+    $<TARGET_FILE:test_string_parser>
+)
+set_tests_properties(test_string_parser_memory PROPERTIES LABELS "memory")
