@@ -89,7 +89,6 @@ target_include_directories(
 )
 target_link_libraries(number_parser PRIVATE lexer ast)
 
-
 # unit tests
 
 add_executable(
