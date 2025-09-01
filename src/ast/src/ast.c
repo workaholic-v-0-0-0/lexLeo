@@ -22,7 +22,7 @@ static ast error_sentinel = {
 };
 static ast *const AST_ERROR_SENTINEL = &error_sentinel;
 
-ast * ast_error_sentinel(void) {
+ast *ast_error_sentinel(void) {
     return AST_ERROR_SENTINEL;
 }
 
@@ -162,6 +162,7 @@ ast *ast_create_error_node(error_type code, char *message) {
 		return NULL;
 
 	char *error_message = AST_STRING_DUPLICATE(message);
+
 	if (!error_message) {
 		AST_FREE(ret);
 		return NULL;
@@ -182,6 +183,11 @@ ast *ast_create_error_node(error_type code, char *message) {
 	ret->error = error;
 
 	return ret;
+}
+
+ast *ast_create_error_node_or_sentinel(error_type code, char *message) {
+	ast *error_node = ast_create_error_node(code, message);
+	return (error_node) ? error_node : ast_error_sentinel();
 }
 
 void ast_destroy_error_node(ast *ast_error_node) {

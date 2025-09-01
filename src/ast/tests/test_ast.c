@@ -7,6 +7,7 @@
 #include <cmocka.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "memory_allocator.h"
 #include "string_utils.h"
@@ -129,6 +130,50 @@ void mock_ast_destroy_ast_children(ast_children_t *ast_children) {
 }
 
 static char *fake_strdup_returned_value_for_error_message;
+
+void *fake_broken_malloc(size_t size) {
+	(void)size;
+    return NULL;
+}
+
+void fake_broken_free(void *ptr) {
+	(void)ptr;
+}
+
+char *fake_broken_strdup(const char *s) {
+	(void)s;
+    return NULL;
+}
+
+#define FAKE_HEAP_SIZE 1024
+static uint8_t fake_heap[FAKE_HEAP_SIZE] = {0};
+static uint8_t *fake_heap_top_pointer;
+static uint8_t *const FAKE_HEAP_END = &fake_heap[FAKE_HEAP_SIZE];
+void fake_heap_reset(void) {
+	memset(fake_heap, 0, sizeof(fake_heap));
+    fake_heap_top_pointer = fake_heap;
+}
+
+void *fake_operational_malloc(size_t size) {
+    assert(size > 0);
+    assert(size <= (size_t) (FAKE_HEAP_END - fake_heap_top_pointer));
+	void *ret = fake_heap_top_pointer;
+	fake_heap_top_pointer += size;
+    return ret;
+}
+
+void fake_operational_free(void *ptr) {
+	(void)ptr;
+}
+
+char *fake_operational_strdup(const char *s) {
+    assert_non_null(s);
+	size_t size = strlen(s) + 1;
+    char *ret = (char *) fake_operational_malloc(size);
+    assert_non_null(ret);
+    memcpy(ret, s, size);
+    return ret;
+}
 
 
 
@@ -1974,7 +2019,7 @@ static void create_error_node_returns_null_when_message_null(void **state) {
 }
 
 // Given: message length exceeds MAXIMUM_ERROR_MESSAGE_LENGTH
-// Expected: calls malloc with sizeof(ast)
+// Expected: returns NULL
 static void create_error_node_returns_null_when_message_is_too_long(void **state) {
 	assert_null(ast_create_error_node(DUMMY_ERROR_TYPE, too_long_error_message));
 }
@@ -2702,6 +2747,144 @@ static void create_symbol_node_initializes_and_returns_malloced_ast_when_second_
 
 
 //-----------------------------------------------------------------------------
+// ast_create_error_node_or_sentinel TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_create_error_node_or_sentinel
+// ast_create_error_node
+// ast_error_sentinel
+
+// doubled: memory allocator, string duplicator
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int create_error_node_or_sentinel_setup(void **state) {
+	memset(too_long_error_message, 'a', MAXIMUM_ERROR_MESSAGE_LENGTH + 1);
+	too_long_error_message[MAXIMUM_ERROR_MESSAGE_LENGTH + 1] = '\0';
+	fake_heap_reset();
+    return 0;
+}
+
+static int create_error_node_or_sentinel_teardown(void **state) {
+    set_allocators(NULL, NULL);
+	set_string_duplicate(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+	fake_heap_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// always given
+// code == DUMMY_ERROR_TYPE
+
+
+// Given:
+//  - message == NULL
+// Expected:
+//  - returns ast_error_sentinel()
+static void create_error_node_or_sentinel_returns_sentinel_when_message_null(void **state) {
+    assert_ptr_equal(ast_error_sentinel(), ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, NULL));
+}
+
+// Given:
+//  - message length exceeds MAXIMUM_ERROR_MESSAGE_LENGTH
+// Expected:
+//  - returns ast_error_sentinel()
+static void create_error_node_returns_sentinel_when_message_is_too_long(void **state) {
+    assert_ptr_equal(ast_error_sentinel(), ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, too_long_error_message));
+}
+
+// Given:
+//  - message is valid
+//  - memory allocator fails
+//  - string duplication succeeds
+// Expected:
+//  - returns ast_error_sentinel()
+static void create_error_node_returns_sentinel_when_malloc_fails(void **state) {
+    set_allocators(fake_broken_malloc, fake_broken_free);
+    set_string_duplicate(fake_operational_strdup);
+
+    assert_ptr_equal(ast_error_sentinel(), ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, DUMMY_ERROR_MESSAGE));
+}
+
+// Given:
+//  - message is valid
+//  - memory allocator succeeds
+//  - string duplication fails
+// Expected:
+//  - returns ast_error_sentinel()
+static void create_error_node_returns_sentinel_when_strdup_fails(void **state) {
+    set_allocators(fake_operational_malloc, fake_operational_free);
+    set_string_duplicate(fake_broken_strdup);
+
+    assert_ptr_equal(ast_error_sentinel(), ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, DUMMY_ERROR_MESSAGE));
+}
+
+// Given:
+//  - message is valid
+//  - memory allocator fails
+//  - string duplication fails
+// Expected:
+//  - returns ast_error_sentinel()
+static void create_error_node_returns_sentinel_when_strdup_and_malloc_fails(void **state) {
+    set_allocators(fake_broken_malloc, fake_broken_free);
+    set_string_duplicate(fake_broken_strdup);
+
+    assert_ptr_equal(ast_error_sentinel(), ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, DUMMY_ERROR_MESSAGE));
+}
+
+// Given:
+//  - message == DUMMY_ERROR_MESSAGE
+//  - memory allocator succeeds
+//  - string duplication succeeds
+// Expected:
+// - returns an ast pointer ret initialized as follows:
+//   - ret->type == AST_TYPE_ERROR
+//   - ret->error->code == DUMMY_ERROR_TYPE
+//   - ret->error->message == a copy of DUMMY_ERROR_MESSAGE
+//   - ret->error->is_sentinel == false
+static void create_error_node_initializes_and_returns_error_node_when_strdup_and_malloc_succeeds(void **state) {
+    set_allocators(fake_operational_malloc, fake_operational_free);
+    set_string_duplicate(fake_operational_strdup);
+
+    ast *ret = ast_create_error_node_or_sentinel(DUMMY_ERROR_TYPE, DUMMY_ERROR_MESSAGE);
+
+    assert_non_null(ret);
+    assert_non_null(ret->error);
+    assert_non_null(ret->error->message);
+    assert_int_equal(ret->type, AST_TYPE_ERROR);
+    assert_int_equal(ret->error->code, DUMMY_ERROR_TYPE);
+    assert_memory_equal(DUMMY_ERROR_MESSAGE, ret->error->message, strlen(DUMMY_ERROR_MESSAGE) + 1);
+    assert_int_equal(ret->error->is_sentinel, false);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -3084,6 +3267,27 @@ int main(void) {
             create_symbol_node_setup, create_symbol_node_teardown),
     };
 
+    const struct CMUnitTest ast_create_error_node_or_sentinel_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            create_error_node_or_sentinel_returns_sentinel_when_message_null,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_error_node_returns_sentinel_when_message_is_too_long,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_error_node_returns_sentinel_when_malloc_fails,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_error_node_returns_sentinel_when_strdup_fails,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_error_node_returns_sentinel_when_strdup_and_malloc_fails,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+        cmocka_unit_test_setup_teardown(
+            create_error_node_initializes_and_returns_error_node_when_strdup_and_malloc_succeeds,
+            create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3107,6 +3311,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_string_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_symbol_name_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_symbol_node_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_create_error_node_or_sentinel_tests, NULL, NULL);
 
     return failed;
 }
