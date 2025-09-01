@@ -2798,7 +2798,7 @@ static int create_error_node_or_sentinel_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// always given
+// At every test
 // code == DUMMY_ERROR_TYPE
 
 

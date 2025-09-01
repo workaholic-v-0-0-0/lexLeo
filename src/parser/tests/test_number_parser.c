@@ -22,11 +22,9 @@
 
 static ast *parsed_ast;
 
-static const char DUMMY[4];
-static ast *const DUMMY_AST_P = (ast *) &DUMMY[0];
-static ast *const DUMMY_ERROR_SENTINEL = (ast *) &DUMMY[1];
-static ast *const DUMMY_AST_ERROR_NOT_SENTINEL_P = (ast *) &DUMMY[2];
-static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[3];
+static const char DUMMY[2];
+static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[0];
+static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 
 
 
@@ -75,13 +73,9 @@ ast *mock_create_int_node(int i) {
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node(error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(error_type code, char *message) {
 	check_expected(code);
 	check_expected(message);
-    return mock_type(ast *);
-}
-
-ast *mock_error_sentinel(void) {
     return mock_type(ast *);
 }
 
@@ -105,8 +99,7 @@ parser_ctx mock_ctx;
 // mocked:
 //  - functions of the ast module which are used:
 //    - ast_create_int_node
-//    - ast_create_error_node
-//    - ast_error_sentinel
+//    - ast_create_error_node_or_sentinel
 //  - function of the lexer module which are used:
 //    - yylex
 
@@ -121,8 +114,7 @@ static int yyparse_with_INTEGER_input_setup(void **state) {
     (void)state;
     parsed_ast = NULL;
     mock_ctx.ops.create_int_node = mock_create_int_node;
-    mock_ctx.ops.create_error_node = mock_create_error_node;
-	mock_ctx.ops.error_sentinel = mock_error_sentinel;
+    mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
 	mock_lex_reset();
 	mock_lex_set(seq, 2);
     return 0;
@@ -149,54 +141,32 @@ static int yyparse_with_INTEGER_input_teardown(void **state) {
 
 // Given:
 //  - create_int_node fails
-//  - ast_create_error_node fails
 // Expected:
-//  - calls ast_error_sentinel
-//  - gives sentinel error ast for the semantic value number_atom lexeme
-static void yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails(void **state) {
+//  - calls create_error_node_or_sentinel
+//  - gives create_error_node_or_sentinel returned value for the semantic value number_atom lexeme
+static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails(void **state) {
 	expect_value(mock_create_int_node, i, 5);
     will_return(mock_create_int_node, NULL);
-	expect_any(mock_create_error_node, code);
-	expect_any(mock_create_error_node, message);
-    will_return(mock_create_error_node, NULL);
-	will_return(mock_error_sentinel, DUMMY_ERROR_SENTINEL);
+	expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
+	expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a number failed");
+	will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
 	number_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
-	assert_ptr_equal(parsed_ast, DUMMY_ERROR_SENTINEL);
-}
-
-// Given:
-//  - create_int_node fails
-//  - ast_create_error_node succeeds
-// Expected:
-//  - calls ast_create_error_node with:
-//    - code = AST_ERROR_CODE_INT_NODE_CREATION_FAILED
-//    - message = "ast creation for a number failed"
-//  - gives the returned value of ast_create_error_node for the semantic value number_atom lexeme
-static void yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds(void **state) {
-	expect_value(mock_create_int_node, i, 5);
-	will_return(mock_create_int_node, NULL);
-	expect_value(mock_create_error_node, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
-	expect_string(mock_create_error_node, message, "ast creation for a number failed");
-    will_return(mock_create_error_node, DUMMY_AST_ERROR_NOT_SENTINEL_P);
-
-	number_atom_parse(NULL, &parsed_ast, &mock_ctx);
-
-	assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_NOT_SENTINEL_P);
+	assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_P);
 }
 
 // Given:
 //  - create_int_node succeeds
 // Expected:
-//  - gives the returned value of create_int_node for the semantic value number_atom lexeme
-static void yyparse_returns_value_from_create_int_node_when_successful(void **state) {
+//  - gives create_int_node returned value for the semantic value number_atom lexeme
+static void yyparse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds(void **state) {
 	expect_value(mock_create_int_node, i, 5);
-	will_return(mock_create_int_node, DUMMY_AST_P);
+    will_return(mock_create_int_node, DUMMY_AST_NOT_ERROR_P);
 
 	number_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
-	assert_ptr_equal(parsed_ast, DUMMY_AST_P);
+	assert_ptr_equal(parsed_ast, DUMMY_AST_NOT_ERROR_P);
 }
 
 
@@ -208,14 +178,11 @@ static void yyparse_returns_value_from_create_int_node_when_successful(void **st
 int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_ast_error_sentinel_and_returns_its_returned_value_when_ast_create_error_node_fails,
+            yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails,
             yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_ast_create_error_node_and_returns_its_returned_value_when_ast_create_error_node_succeeds,
+            yyparse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds,
             yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
-    	cmocka_unit_test_setup_teardown(
-			yyparse_returns_value_from_create_int_node_when_successful,
-			yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
     };
     int failed = 0;
     failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);
