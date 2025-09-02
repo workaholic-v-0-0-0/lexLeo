@@ -4,7 +4,7 @@
 
 %define api.pure full
 
-%define api.prefix {@API_PREFIX@}
+%define api.prefix {@NAME@_}
 
 %lex-param   { yyscan_t scanner }
 
@@ -34,8 +34,8 @@
     typedef union YYSTYPE YYSTYPE;
     #endif
 
-    int @API_PREFIX@lex(YYSTYPE *yylval, yyscan_t scanner);
-    int @API_PREFIX@error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg);
+    int @NAME@_lex(YYSTYPE *yylval, yyscan_t scanner);
+    int @NAME@_error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg);
 %}
 
 %union {
@@ -45,16 +45,14 @@
     ast *ast;
 }
 
-@TERMINAL_LEXEMS_DECLARATION@
-
-%type <ast> @NON_TERMINAL_LEXEMS_LIST@
+@GRAMMAR_SYMBOLS_DECLARATION@
 
 %start start
 
 %%
 
 start:
-    @START_SYMBOL@ YYEOF { *result = $1; }
+    @START_SYMBOL@  { *result = $1; }
     ;
 
 @GRAMMAR_RULES_UNDER_TEST@
@@ -65,7 +63,7 @@ start:
 
 #ifdef yylex
 #define YYLEX_WAS_MACRO 1
-#define YYLEX_MACRO_TARGET @API_PREFIX@lex
+#define YYLEX_MACRO_TARGET @NAME@_lex
 #undef yylex // temporarily disable the yylex macro so we can refer to the real symbol
 #endif
 
@@ -73,7 +71,7 @@ start:
 int yylex(YYSTYPE *yylval, yyscan_t scanner);
 
 // Prefixed wrapper that forwards calls to the real yylex
-int @API_PREFIX@lex(YYSTYPE *yylval, yyscan_t scanner) {
+int @NAME@_lex(YYSTYPE *yylval, yyscan_t scanner) {
     return yylex(yylval, scanner);
 }
 
@@ -83,7 +81,7 @@ int @API_PREFIX@lex(YYSTYPE *yylval, yyscan_t scanner) {
 #undef YYLEX_WAS_MACRO
 #undef YYLEX_MACRO_TARGET
 #endif
-int @API_PREFIX@error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+int @NAME@_error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
     (void)scanner; (void)result; (void)ctx;
     fprintf(stderr, "Parse error: %s\n", msg);
     return 1;

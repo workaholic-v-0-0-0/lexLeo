@@ -1,4 +1,4 @@
-// src/parser/tests/test_string_parser.c
+// src/parser/tests/test_symbol_name_atom_parser.c
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include "string_parser.tab.h"
+#include "symbol_name_atom_parser.tab.h"
 #include "parser_ctx.h"
 
 
@@ -35,7 +35,7 @@ static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 
 typedef struct {
     int tok;
-    STRING_ATOM_STYPE yv;
+    SYMBOL_NAME_ATOM_STYPE yv;
 } MockTok;
 
 static const MockTok *g_seq = NULL;
@@ -55,11 +55,11 @@ void mock_lex_reset() {
 }
 
 static MockTok seq[] = {
-    { STRING, { .string_value = "chaine" } },
+    { SYMBOL_NAME, { .string_value = "symbol_name" } },
     { 0,       { 0 } }
 };
 
-int yylex(STRING_ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
+int yylex(SYMBOL_NAME_ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
     (void)yyscanner;
     if (!g_seq || g_idx >= g_len) return 0;
     int tok = g_seq[g_idx].tok;
@@ -68,7 +68,7 @@ int yylex(STRING_ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
     return tok;
 }
 
-ast *mock_create_string_node(char *str) {
+ast *mock_create_symbol_name_node(char *str) {
     check_expected(str);
     return mock_type(ast *);
 }
@@ -84,9 +84,8 @@ parser_ctx mock_ctx;
 
 
 //-----------------------------------------------------------------------------
-// yyparse TESTS with STRING lexeme input
+// yyparse TESTS with SYMBOL_NAME lexeme input
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -94,11 +93,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// "string_atom : STRING" action via injected ops
+// "symbol_name_atom : SYMBOL_NAME" action via injected ops
 
 // mocked:
 //  - functions of the ast module which are used:
-//    - ast_create_string_node
+//    - ast_create_symbol_name_node
 //    - ast_create_error_node_or_sentinel
 //  - function of the lexer module which are used:
 //    - yylex
@@ -110,17 +109,17 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-static int yyparse_with_STRING_input_setup(void **state) {
+static int yyparse_with_SYMBOL_NAME_input_setup(void **state) {
     (void)state;
     parsed_ast = NULL;
-    mock_ctx.ops.create_string_node = mock_create_string_node;
+    mock_ctx.ops.create_symbol_name_node = mock_create_symbol_name_node;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
     mock_lex_reset();
     mock_lex_set(seq, 2);
     return 0;
 }
 
-static int yyparse_with_STRING_input_teardown(void **state) {
+static int yyparse_with_SYMBOL_NAME_input_teardown(void **state) {
     (void)state;
     mock_lex_reset();
     parsed_ast = NULL;
@@ -135,40 +134,39 @@ static int yyparse_with_STRING_input_teardown(void **state) {
 
 
 // At every test
-// Given: lexer returns STRING("chaine")
-// Expected: calls ast_create_string_node("chaine")
+// Given: lexer returns SYMBOL_NAME("symbol_name")
+// Expected: calls ast_create_symbol_name_node("symbol_name")
 
 
 // Given:
-//  - create_string_node fails
+//  - create_symbol_name_node fails
 // Expected:
 //  - calls create_error_node_or_sentinel
-//  - gives create_error_node_or_sentinel returned value for the semantic value string_atom lexeme
-static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_string_node_fails(void **state) {
-    expect_value(mock_create_string_node, str, "chaine");
-    will_return(mock_create_string_node, NULL);
-    expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_STRING_NODE_CREATION_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a string failed");
+//  - gives create_error_node_or_sentinel returned value for the semantic value of the symbol_name_atom lexeme
+static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(void **state) {
+    expect_string(mock_create_symbol_name_node, str, "symbol_name");
+    will_return(mock_create_symbol_name_node, NULL);
+    expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_SYMBOL_NAME_NODE_CREATION_FAILED);
+    expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a symbol name failed");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
-    string_atom_parse(NULL, &parsed_ast, &mock_ctx);
+    symbol_name_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_P);
 }
 
 // Given:
-//  - create_string_node succeeds
+//  - create_symbol_name_node succeeds
 // Expected:
-//  - gives create_string_node returned value for the semantic value string_atom lexeme
-static void yyparse_calls_create_string_node_and_returns_its_returned_value_when_create_string_node_succeeds(void **state) {
-    expect_string(mock_create_string_node, str, "chaine");
-    will_return(mock_create_string_node, DUMMY_AST_NOT_ERROR_P);
+//  - gives create_symbol_name_node returned value for the semantic value of the symbol_name_atom lexeme
+static void yyparse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(void **state) {
+    expect_string(mock_create_symbol_name_node, str, "symbol_name");
+    will_return(mock_create_symbol_name_node, DUMMY_AST_NOT_ERROR_P);
 
-    string_atom_parse(NULL, &parsed_ast, &mock_ctx);
+    symbol_name_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_NOT_ERROR_P);
 }
-
 
 
 
@@ -179,11 +177,11 @@ static void yyparse_calls_create_string_node_and_returns_its_returned_value_when
 int main(void) {
     const struct CMUnitTest yyparse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_string_node_fails,
-            yyparse_with_STRING_input_setup, yyparse_with_STRING_input_teardown),
+            yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails,
+            yyparse_with_SYMBOL_NAME_input_setup, yyparse_with_SYMBOL_NAME_input_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_string_node_and_returns_its_returned_value_when_create_string_node_succeeds,
-            yyparse_with_STRING_input_setup, yyparse_with_STRING_input_teardown),
+            yyparse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds,
+            yyparse_with_SYMBOL_NAME_input_setup, yyparse_with_SYMBOL_NAME_input_teardown),
     };
     int failed = 0;
     failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);

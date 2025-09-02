@@ -1,0 +1,43 @@
+# src/parser/tests/cmake/unit_parsers_config.cmake
+
+set(
+    GRAMMAR_RULES_UNDER_TEST_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"
+)
+set(
+    GRAMMAR_RULES_STUBS_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/bison/grammar_rules_stubs"
+)
+set(
+    PARSER_UNIT_Y_TEMPLATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/bison/parser_unit.y.in"
+)
+set(
+    GRAMMAR_SYMBOLS_DECLARATION_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/bison/grammar_symbols_declaration"
+)
+set(
+    GRAMMAR_RULES_STUBS_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/bison/grammar_rules_stubs"
+)
+set(
+    GENERATED_PARSER_UNIT_DIR
+    "${CMAKE_CURRENT_BINARY_DIR}/tests"
+)
+set(
+    GENERATED_PARSER_UNIT_SOURCE_DIR
+    "${GENERATED_PARSER_UNIT_DIR}/src"
+)
+set(
+    GENERATED_PARSER_UNIT_INCLUDE_DIR
+    "${GENERATED_PARSER_UNIT_DIR}/include"
+)
+set(
+    GENERATED_BISON_FILES_FOR_TESTS
+    "${CMAKE_CURRENT_BINARY_DIR}/tests/bison"
+)
+
+file(MAKE_DIRECTORY ${GENERATED_PARSER_UNIT_DIR})
+file(MAKE_DIRECTORY ${GENERATED_PARSER_UNIT_SOURCE_DIR})
+file(MAKE_DIRECTORY ${GENERATED_PARSER_UNIT_INCLUDE_DIR})
+file(MAKE_DIRECTORY ${GENERATED_BISON_FILES_FOR_TESTS})
