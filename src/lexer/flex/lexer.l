@@ -13,12 +13,15 @@
 
 %%
 
-[0-9]+ {
+";"           { return SEMICOLON; }
+"="           { return EQUAL; }
+
+[0-9]+ { // number
     yylval->int_value = atoi(yytext);
     return INTEGER;
 }
 
-\"([^\\\"]|\\.)*\" {
+\"([^\\\"]|\\.)*\" { // string
     size_t len = yyleng - 2;
     char *s = malloc(len + 1);
     if (!s) { // parser must handle this error
@@ -30,6 +33,16 @@
 
     yylval->string_value = s;
     return STRING;
+}
+
+[a-zA-Z_][a-zA-Z0-9_]* {
+    char *s = strdup(yytext);
+    if (!s) { // parser must handle this error
+        yylval->string_value = NULL;
+        return SYMBOL_NAME;
+    }
+    yylval->string_value = s;
+    return SYMBOL_NAME;
 }
 
 [ \t\n]+ {
