@@ -43,7 +43,7 @@ ast *ast;
 %%
 
 start:
-@START_SYMBOL@ YYEOF { *result = $1; }
+@START_SYMBOL@  { *result = $1; }
 ;
 
 @GRAMMAR_RULES@
