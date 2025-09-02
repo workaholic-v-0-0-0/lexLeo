@@ -38,22 +38,32 @@ set(
 file(MAKE_DIRECTORY ${GENERATED_PARSER_SOURCE_DIR})
 file(MAKE_DIRECTORY ${GENERATED_PARSER_INCLUDE_DIR})
 
-# will be changed to the full parser
+# will be changed to the full parser when archived
 set(
     TERMINAL_LEXEMS_DECLARATION
     "\
 %token <int_value> INTEGER\n\
 %token <string_value> STRING\n\
-%destructor { free($$); } STRING
+%destructor { free($$); } STRING\n\
+%token <symbol_name_value> SYMBOL_NAME
 "
 )
-set(NON_TERMINAL_LEXEMS_LIST "number_atom")
-set(START_SYMBOL "number_atom")
-file(
-    READ
-    "bison/grammar_rules/number_atom_rule.y"
-    GRAMMAR_RULES
+set(NON_TERMINAL_LEXEMS_LIST "\n\
+number_atom \
+string_atom \
+symbol_name_atom \
+atom")
+set(START_SYMBOL "atom")
+set(
+    GRAMMAR_RULES_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"
 )
+file(GLOB GRAMMAR_RULE_FILES "${GRAMMAR_RULES_DIR}/*.y")
+set(GRAMMAR_RULES "")
+foreach (_f IN LISTS GRAMMAR_RULE_FILES)
+    file(READ "${_f}" _content)
+    string(APPEND GRAMMAR_RULES "${_content}\n")
+endforeach ()
 configure_file(
     ${PARSER_Y_TEMPLATE}
     "${PARSER_Y}"
