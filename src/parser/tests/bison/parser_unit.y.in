@@ -15,6 +15,7 @@
 %code requires {
     #include "parser_types.h"
     struct parser_ctx;
+    @STUBS_DECLARATION@
 }
 
 %{
