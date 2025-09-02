@@ -118,7 +118,6 @@ file(
     GRAMMAR_RULES_STUB
 )
 ]]
-
 configure_file(
     ${PARSER_UNIT_Y_TEMPLATE}
     "${GENERATED_BISON_FILES_FOR_TESTS}/string_parser.y"
@@ -165,7 +164,6 @@ file(
     GRAMMAR_RULES_STUB
 )
 ]]
-
 configure_file(
     ${PARSER_UNIT_Y_TEMPLATE}
     "${GENERATED_BISON_FILES_FOR_TESTS}/symbol_name_parser.y"
@@ -182,6 +180,68 @@ target_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_link_libraries(symbol_name_parser PRIVATE lexer ast)
+
+# atom parser
+set(API_PREFIX "atom_")
+set(
+    ATOM_PARSER_Y
+    "${GENERATED_BISON_FILES_FOR_TESTS}/atom_parser.y"
+)
+set(
+    ATOM_PARSER_SRC
+    "${GENERATED_PARSER_UNIT_SOURCE_DIR}/atom_parser.tab.c"
+)
+set(
+    ATOM_PARSER_HEADER
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}/atom_parser.tab.h"
+)
+set(
+    TERMINAL_LEXEMS_DECLARATION
+    "\
+%token <int_value> INTEGER\n\
+%token <string_value> STRING\n\
+%destructor { free($$); } STRING\n\
+%token <symbol_name_value> SYMBOL_NAME
+"
+)
+set(NON_TERMINAL_LEXEMS_LIST "\
+number_atom \
+string_atom \
+symbol_name_atom \
+atom \
+")
+set(START_SYMBOL "atom")
+file(
+    READ
+    "${GRAMMAR_RULES_UNDER_TEST_DIR}/atom_rule.y"
+    GRAMMAR_RULES_UNDER_TEST
+)
+file(
+    READ
+    "${GRAMMAR_RULES_STUBS_DIR}/atom_rule_dependencies_stubs_declaration.y"
+    STUBS_DECLARATION
+)
+file(
+    READ
+    "${GRAMMAR_RULES_STUBS_DIR}/atom_rule_dependencies.y"
+    GRAMMAR_RULES_STUB
+)
+configure_file(
+    ${PARSER_UNIT_Y_TEMPLATE}
+    "${GENERATED_BISON_FILES_FOR_TESTS}/atom_parser.y"
+    @ONLY
+)
+BISON_TARGET(atom_parser ${ATOM_PARSER_Y} ${ATOM_PARSER_SRC} DEFINES_FILE ${ATOM_PARSER_HEADER})
+add_library(atom_parser STATIC ${BISON_atom_parser_OUTPUTS})
+target_include_directories(
+    atom_parser
+    PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/include"
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/ast/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(atom_parser PRIVATE lexer ast)
 
 # unit tests
 
@@ -273,3 +333,33 @@ add_test(
     $<TARGET_FILE:test_symbol_name_parser>
 )
 set_tests_properties(test_symbol_name_parser_memory PROPERTIES LABELS "memory")
+
+
+add_executable(
+    test_atom_parser
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_atom_parser.c
+)
+
+target_include_directories(
+    test_atom_parser
+    PRIVATE
+    "${CMOCKA_INCLUDE_DIR}"
+    "${CMAKE_BINARY_DIR}/src/lexer/include"
+    "${GENERATED_PARSER_UNIT_INCLUDE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/data_structures/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+
+add_dependencies(test_atom_parser move_generated_lexer_header)
+
+target_link_libraries(test_atom_parser PRIVATE atom_parser ${CMOCKA_LIBRARY} lexer data_structures)
+target_compile_definitions(test_atom_parser PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+add_test(NAME test_atom_parser COMMAND test_atom_parser)
+add_test(
+    NAME test_atom_parser_memory
+    COMMAND valgrind
+    --leak-check=full
+    --error-exitcode=1
+    $<TARGET_FILE:test_atom_parser>
+)
+set_tests_properties(test_atom_parser_memory PROPERTIES LABELS "memory")
