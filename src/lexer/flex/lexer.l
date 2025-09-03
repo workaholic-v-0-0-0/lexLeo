@@ -15,6 +15,7 @@
 
 ";"           { return SEMICOLON; }
 "="           { return EQUAL; }
+"read"           { return READ; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);
@@ -35,7 +36,7 @@
     return STRING;
 }
 
-[a-zA-Z_][a-zA-Z0-9_]* {
+[a-zA-Z_][a-zA-Z0-9_]* { // symbol name
     char *s = strdup(yytext);
     if (!s) { // parser must handle this error
         yylval->string_value = NULL;

@@ -47,7 +47,8 @@ set(
 %destructor { free($$); } STRING\n\
 %token <symbol_name_value> SYMBOL_NAME\n\
 %token EQUAL\n\
-%token SEMICOLON
+%token SEMICOLON\n\
+%token READ
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -55,8 +56,9 @@ number_atom \
 string_atom \
 symbol_name_atom \
 atom \
-binding")
-set(START_SYMBOL "binding")
+binding \
+reading ")
+set(START_SYMBOL "binding") # might be reading now
 set(
     GRAMMAR_RULES_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"
