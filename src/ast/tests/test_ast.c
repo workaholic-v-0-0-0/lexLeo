@@ -64,6 +64,7 @@ static char too_long_error_message[MAXIMUM_ERROR_MESSAGE_LENGTH + 1];
 static char *valid_error_message = "This is a valid error message";
 static ast *ast_error_node = NULL;
 static error_info *error = NULL;
+static ast *AST_ERROR_SENTINEL;
 
 
 
@@ -2143,6 +2144,7 @@ static int destroy_error_node_setup(void **state) {
 	error->message = DUMMY_STRING;
 	error->is_sentinel = false;
 	ast_error_node->error = error;
+    AST_ERROR_SENTINEL = ast_error_sentinel();
 	set_allocators(mock_malloc, mock_free);
 	return 0;
 }
@@ -2170,6 +2172,12 @@ static int destroy_error_node_teardown(void **state) {
 // Expected: does not any side effect
 static void destroy_error_node_do_nothing_when_argument_null(void **state) {
     ast_destroy_error_node(NULL);
+}
+
+// Given: ast_error_node == AST_ERROR_SENTINEL
+// Expected: does not any side effect
+static void destroy_error_node_do_nothing_when_argument_is_error_sentinel(void **state) {
+    ast_destroy_error_node(AST_ERROR_SENTINEL);
 }
 
 // Given: ast_error_node is not null and well-formed
@@ -3198,6 +3206,9 @@ int main(void) {
     const struct CMUnitTest ast_destroy_error_node_tests[] = {
         cmocka_unit_test_setup_teardown(
             destroy_error_node_do_nothing_when_argument_null,
+            destroy_error_node_setup, destroy_error_node_teardown),
+        cmocka_unit_test_setup_teardown(
+            destroy_error_node_do_nothing_when_argument_is_error_sentinel,
             destroy_error_node_setup, destroy_error_node_teardown),
         cmocka_unit_test_setup_teardown(
             destroy_error_node__when_argument_not_null_and_well_formed,

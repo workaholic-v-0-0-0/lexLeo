@@ -191,7 +191,7 @@ ast *ast_create_error_node_or_sentinel(error_type code, char *message) {
 }
 
 void ast_destroy_error_node(ast *ast_error_node) {
-	if (!ast_error_node)
+    if ((ast_error_node == AST_ERROR_SENTINEL) || (!ast_error_node))
 		return;
 
 	AST_FREE(ast_error_node->error->message);
