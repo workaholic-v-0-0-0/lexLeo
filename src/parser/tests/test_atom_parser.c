@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #include "atom_parser.tab.h"
+#include "mock_lexer.h"
 
 
 
@@ -30,50 +31,20 @@ static ast *const DUMMY_AST_P = (ast *) &DUMMY[0];
 //-----------------------------------------------------------------------------
 
 
-typedef struct {
-    int tok;
-    ATOM_STYPE yv;
-} MockTok;
-
-static const MockTok *g_seq = NULL;
-static size_t g_len = 0;
-static size_t g_idx = 0;
-
-void mock_lex_set(const MockTok *seq, size_t len) {
-    g_seq = seq;
-    g_len = len;
-    g_idx = 0;
-}
-
-void mock_lex_reset() {
-    g_seq = NULL;
-    g_len = 0;
-    g_idx = 0;
-}
-
-static MockTok seq_integer[] = {
+static mock_token seq_integer[] = {
     { INTEGER, { .int_value = 5 } },
     { 0,       { 0 } }
 };
 
-MockTok seq_string[] = {
+mock_token seq_string[] = {
     { STRING, { .string_value = "chaine" } },
     { 0,      { 0 } }
 };
 
-static MockTok seq_symbol_name[] = {
+static mock_token seq_symbol_name[] = {
     { SYMBOL_NAME, { .string_value = "symbol_name" } },
     { 0,       { 0 } }
 };
-
-int yylex(ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
-    (void)yyscanner;
-    if (!g_seq || g_idx >= g_len) return 0;
-    int tok = g_seq[g_idx].tok;
-    if (tok != 0 && yylval) *yylval = g_seq[g_idx].yv;
-    g_idx++;
-    return tok;
-}
 
 ast *stub_number_atom_action(int i) {
     check_expected(i);
@@ -93,7 +64,7 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 
 
 //-----------------------------------------------------------------------------
-// yyparse TESTS
+// atom_parse TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -121,14 +92,14 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 //-----------------------------------------------------------------------------
 
 
-static int yyparse_setup(void **state) {
+static int atom_parse_setup(void **state) {
     (void)state;
     parsed_ast = NULL;
     mock_lex_reset();
     return 0;
 }
 
-static int yyparse_teardown(void **state) {
+static int atom_parse_teardown(void **state) {
     (void)state;
     mock_lex_reset();
     parsed_ast = NULL;
@@ -147,7 +118,7 @@ static int yyparse_teardown(void **state) {
 // Expected:
 //  - the action of "number_atom : INTEGER" is executed
 //  - the semantic value of number_atom is propagated to atom's semantic value
-static void yyparse_executes_number_atom_action_and_propagates_value_when_lexer_returns_INTEGER(void **state) {
+static void atom_parse_executes_number_atom_action_and_propagates_value_when_lexer_returns_INTEGER(void **state) {
     mock_lex_set(seq_integer, 2);
     expect_value(stub_number_atom_action, i, 5);
     will_return(stub_number_atom_action, DUMMY_AST_P);
@@ -162,7 +133,7 @@ static void yyparse_executes_number_atom_action_and_propagates_value_when_lexer_
 // Expected:
 //  - the action of "string_atom : STRING" is executed
 //  - the semantic value of string_atom is propagated to atom's semantic value
-static void yyparse_executes_string_atom_action_and_propagates_value_when_lexer_returns_STRING(void **state) {
+static void atom_parse_executes_string_atom_action_and_propagates_value_when_lexer_returns_STRING(void **state) {
     mock_lex_set(seq_string, 2);
     expect_string(stub_string_atom_action, str, "chaine");
     will_return(stub_string_atom_action, DUMMY_AST_P);
@@ -177,7 +148,7 @@ static void yyparse_executes_string_atom_action_and_propagates_value_when_lexer_
 // Expected:
 //  - the action of "symbol_name_atom : SYMBOL_NAME" is executed
 //  - the semantic value of symbol_name_atom is propagated to atom's semantic value
-static void yyparse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME(void **state) {
+static void atom_parse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME(void **state) {
     mock_lex_set(seq_symbol_name, 2);
     expect_string(stub_symbol_name_atom_action, symbol_name, "symbol_name");
     will_return(stub_symbol_name_atom_action, DUMMY_AST_P);
@@ -194,19 +165,19 @@ static void yyparse_executes_symbol_name_atom_action_and_propagates_value_when_l
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest yyparse_tests[] = {
+    const struct CMUnitTest atom_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            yyparse_executes_number_atom_action_and_propagates_value_when_lexer_returns_INTEGER,
-            yyparse_setup, yyparse_teardown),
+            atom_parse_executes_number_atom_action_and_propagates_value_when_lexer_returns_INTEGER,
+            atom_parse_setup, atom_parse_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_executes_string_atom_action_and_propagates_value_when_lexer_returns_STRING,
-            yyparse_setup, yyparse_teardown),
+            atom_parse_executes_string_atom_action_and_propagates_value_when_lexer_returns_STRING,
+            atom_parse_setup, atom_parse_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME,
-            yyparse_setup, yyparse_teardown),
+            atom_parse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME,
+            atom_parse_setup, atom_parse_teardown),
     };
     int failed = 0;
-    failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(atom_parse_tests, NULL, NULL);
 
     return failed;
 }

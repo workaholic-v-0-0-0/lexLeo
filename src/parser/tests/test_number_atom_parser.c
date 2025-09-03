@@ -12,6 +12,7 @@
 
 #include "number_atom_parser.tab.h"
 #include "parser_ctx.h"
+#include "mock_lexer.h"
 
 
 
@@ -32,41 +33,10 @@ static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
-
-typedef struct {
-	int tok;
-	NUMBER_ATOM_STYPE yv;
-} MockTok;
-
-static const MockTok *g_seq = NULL;
-static size_t g_len = 0;
-static size_t g_idx = 0;
-
-void mock_lex_set(const MockTok *seq, size_t len) {
-	g_seq = seq;
-	g_len = len;
-	g_idx = 0;
-}
-
-void mock_lex_reset() {
-	g_seq = NULL;
-	g_len = 0;
-	g_idx = 0;
-}
-
-static MockTok seq[] = {
+static mock_token seq[] = {
 	{ INTEGER, { .int_value = 5 } },
 	{ 0,       { 0 } }
 };
-
-int yylex(NUMBER_ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
-	(void)yyscanner;
-	if (!g_seq || g_idx >= g_len) return 0;
-	int tok = g_seq[g_idx].tok;
-	if (tok != 0 && yylval) *yylval = g_seq[g_idx].yv;
-	g_idx++;
-	return tok;
-}
 
 ast *mock_create_int_node(int i) {
 	check_expected(i);
@@ -84,7 +54,7 @@ parser_ctx mock_ctx;
 
 
 //-----------------------------------------------------------------------------
-// yyparse TESTS with INTEGER lexem inputs
+// number_atom_parse TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -110,19 +80,19 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-static int yyparse_with_INTEGER_input_setup(void **state) {
+static int number_atom_parse_setup(void **state) {
     (void)state;
     parsed_ast = NULL;
     mock_ctx.ops.create_int_node = mock_create_int_node;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
-	mock_lex_reset();
-	mock_lex_set(seq, 2);
+		mock_lex_reset();
+		mock_lex_set(seq, 2);
     return 0;
 }
 
-static int yyparse_with_INTEGER_input_teardown(void **state) {
+static int number_atom_parse_teardown(void **state) {
     (void)state;
-	mock_lex_reset();
+		mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
@@ -144,7 +114,7 @@ static int yyparse_with_INTEGER_input_teardown(void **state) {
 // Expected:
 //  - calls create_error_node_or_sentinel
 //  - gives create_error_node_or_sentinel returned value for the semantic value number_atom lexeme
-static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails(void **state) {
+static void number_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails(void **state) {
 	expect_value(mock_create_int_node, i, 5);
   will_return(mock_create_int_node, NULL);
 	expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
@@ -160,7 +130,7 @@ static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned
 //  - create_int_node succeeds
 // Expected:
 //  - gives create_int_node returned value for the semantic value number_atom lexeme
-static void yyparse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds(void **state) {
+static void number_atom_parse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds(void **state) {
 	expect_value(mock_create_int_node, i, 5);
 	will_return(mock_create_int_node, DUMMY_AST_NOT_ERROR_P);
 
@@ -176,16 +146,16 @@ static void yyparse_calls_create_int_node_and_returns_its_returned_value_when_cr
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest yyparse_tests[] = {
+    const struct CMUnitTest number_atom_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails,
-            yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
+            number_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails,
+            number_atom_parse_setup, number_atom_parse_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds,
-            yyparse_with_INTEGER_input_setup, yyparse_with_INTEGER_input_teardown),
+            number_atom_parse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds,
+            number_atom_parse_setup, number_atom_parse_teardown),
     };
     int failed = 0;
-    failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(number_atom_parse_tests, NULL, NULL);
 
     return failed;
 }

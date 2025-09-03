@@ -5,5 +5,3 @@
 - lexer TDD
 
 - check if there's a memory leak due to strdup in lexer
-
-- refactor lexer mocking in parser unit tests
