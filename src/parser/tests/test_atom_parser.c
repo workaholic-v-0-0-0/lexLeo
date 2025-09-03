@@ -104,7 +104,7 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 
 
 // Action under test via injected stubs:
-// "atom : number_atom | string_atom | symbol_name_atom"
+// atom : number_atom | string_atom | symbol_name_atom
 
 // mocked:
 //  - actions of grammar rules that the rule under test depends on:

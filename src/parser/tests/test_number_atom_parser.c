@@ -146,7 +146,7 @@ static int yyparse_with_INTEGER_input_teardown(void **state) {
 //  - gives create_error_node_or_sentinel returned value for the semantic value number_atom lexeme
 static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_int_node_fails(void **state) {
 	expect_value(mock_create_int_node, i, 5);
-    will_return(mock_create_int_node, NULL);
+  will_return(mock_create_int_node, NULL);
 	expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_INT_NODE_CREATION_FAILED);
 	expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a number failed");
 	will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
@@ -162,7 +162,7 @@ static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned
 //  - gives create_int_node returned value for the semantic value number_atom lexeme
 static void yyparse_calls_create_int_node_and_returns_its_returned_value_when_create_int_node_succeeds(void **state) {
 	expect_value(mock_create_int_node, i, 5);
-    will_return(mock_create_int_node, DUMMY_AST_NOT_ERROR_P);
+	will_return(mock_create_int_node, DUMMY_AST_NOT_ERROR_P);
 
 	number_atom_parse(NULL, &parsed_ast, &mock_ctx);
 

@@ -45,15 +45,18 @@ set(
 %token <int_value> INTEGER\n\
 %token <string_value> STRING\n\
 %destructor { free($$); } STRING\n\
-%token <symbol_name_value> SYMBOL_NAME
+%token <symbol_name_value> SYMBOL_NAME\n\
+%token EQUAL\n\
+%token SEMICOLON
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
 number_atom \
 string_atom \
 symbol_name_atom \
-atom")
-set(START_SYMBOL "atom")
+atom \
+binding")
+set(START_SYMBOL "binding")
 set(
     GRAMMAR_RULES_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"
