@@ -49,6 +49,7 @@ set(
 %token EQUAL\n\
 %token SEMICOLON\n\
 %token READ
+%token WRITE
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -57,7 +58,8 @@ string_atom \
 symbol_name_atom \
 atom \
 binding \
-reading ")
+reading \
+writing")
 set(START_SYMBOL "binding") # might be reading now
 set(
     GRAMMAR_RULES_DIR
