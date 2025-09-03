@@ -7,5 +7,3 @@
 - check if there's a memory leak due to strdup in lexer
 
 - refactor lexer mocking in parser unit tests
-
-- fix ast_destroy so that it doesn't try to free the sentinel error ast
