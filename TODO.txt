@@ -5,3 +5,5 @@
 - lexer TDD
 
 - check if there's a memory leak due to strdup in lexer
+
+- the next rule LHS will be statement
