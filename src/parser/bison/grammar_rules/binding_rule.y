@@ -14,7 +14,7 @@ binding
                 AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED,
                 "ast creation for a binding node failed" );
         } else {
-            $$ = (a);
+            $$ = a;
         }
   }
   ;

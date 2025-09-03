@@ -1,4 +1,4 @@
-// src/parser/tests/test_binding_parser.c
+// src/parser/tests/test_reading_parser.c
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "binding_parser.tab.h"
+#include "reading_parser.tab.h"
 #include "parser_ctx.h"
 #include "mock_lexer.h"
 
@@ -21,11 +21,11 @@
 
 static ast *parsed_ast;
 
-static const char DUMMY[4];
+static const char DUMMY[3];
 static ast *const DUMMY_AST_P = (ast *) &DUMMY[0];
 static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[1];
-static ast *const DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P = (ast *) &DUMMY[2];
-static ast *const DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P = (ast *) &DUMMY[3];
+static ast *const DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P = (ast *) &DUMMY[2];
+
 
 
 //-----------------------------------------------------------------------------
@@ -34,29 +34,13 @@ static ast *const DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P = (ast *) &DUMMY
 
 
 mock_token seq[] = {
+    {READ, { 0 }},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
-    {EQUAL, {0}},
-    {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
     {0, {0}}
 };
 
 ast *stub_symbol_name_atom_action(char *symbol_name) {
-    check_expected(symbol_name);
-    return mock_type(ast *);
-}
-
-ast *stub_atom_from_int_action(int i) {
-    check_expected(i);
-    return mock_type(ast *);
-}
-
-ast *stub_atom_from_string_action(char *s) {
-    check_expected(s);
-    return mock_type(ast *);
-}
-
-ast *stub_atom_from_symbol_name_action(char *symbol_name) {
     check_expected(symbol_name);
     return mock_type(ast *);
 }
@@ -91,8 +75,9 @@ ast *mock_create_error_node_or_sentinel(error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
+
 //-----------------------------------------------------------------------------
-// binding_parse TESTS
+// reading_parse TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -102,12 +87,11 @@ parser_ctx mock_ctx;
 
 
 // Action under test via injected stubs:
-// binding: symbol_name_atom EQUAL atom SEMICOLON
+// reading: READ symbol_name_atom SEMICOLON
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - action of grammar rule that the rule under test depends on:
 //    - symbol_name_atom: SYMBOL_NAME
-//    - atom : number_atom | string_atom | symbol_name_atom
 // mocked:
 //  - functions of the ast module which are used:
 //    - ast_create_children_node_var
@@ -122,23 +106,24 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-static int binding_parse_setup(void **state) {
+static int reading_parse_setup(void **state) {
     (void) state;
     parsed_ast = NULL;
     mock_ctx.ops.create_children_node_var = mock_create_children_node_var;
     mock_ctx.ops.destroy = mock_destroy;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
     mock_lex_reset();
-    mock_lex_set(seq, 5);
+    mock_lex_set(seq, 4);
     return 0;
 }
 
-static int binding_parse_teardown(void **state) {
+static int reading_parse_teardown(void **state) {
     (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
+
 
 
 //-----------------------------------------------------------------------------
@@ -149,47 +134,39 @@ static int binding_parse_teardown(void **state) {
 // At every test
 // Given:
 //  - lexer returns:
+//    - READ
 //    - SYMBOL_NAME("symbol_name")
-//    - EQUAL
-//    - STRING("chaine")
 //    - SEMICOLON
 // Expected:
 //  - calls _create_children_node_var with:
-//    - type: AST_TYPE_BINDING
-//    - children_nb: 2
-//    - first optionnal arg: symbol_name_atom's semantic value
-//    - second optionnal arg: atom's semantic value
+//    - type: AST_TYPE_READING
+//    - children_nb: 1
+//    - first optionnal arg: $2 (symbol_name_atom's semantic value)
 //    - no more arg
 
 // Given:
 //  - ast_create_children_node_var will fail
 // Expected:
 //  - calls ast_destroy with:
-//    - root: $1 (symbol_name_atom's semantic value)
-//  - calls ast_destroy with:
-//    - root: $3 (atom's semantic value)
+//    - root: $2 (symbol_name_atom's semantic value)
 //  - calls create_error_node_or_sentinel with:
-//    - code: AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED
-//    - message: "ast creation for a binding node failed"
+//    - code: AST_ERROR_CODE_READING_NODE_CREATION_FAILED
+//    - message: "ast creation for a reading node failed"
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
-static void binding_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
+static void reading_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
     void **state) {
     expect_string(stub_symbol_name_atom_action, symbol_name, "symbol_name");
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
-    expect_string(stub_atom_from_string_action, s, "chaine");
-    will_return(stub_atom_from_string_action, DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P);
-    expect_value(mock_create_children_node_var, type, AST_TYPE_BINDING);
-    expect_value(mock_create_children_node_var, children_nb, 2);
+    expect_value(mock_create_children_node_var, type, AST_TYPE_READING);
+    expect_value(mock_create_children_node_var, children_nb, 1);
     expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
-    expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P);
     will_return(mock_create_children_node_var, NULL);
     expect_value(mock_destroy, root, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
-    expect_value(mock_destroy, root, DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P);
-    expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a binding node failed");
+    expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_READING_NODE_CREATION_FAILED);
+    expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a reading node failed");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
-    binding_parse(NULL, &parsed_ast, &mock_ctx);
+    reading_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_P);
 }
@@ -198,21 +175,19 @@ static void binding_parse_cleans_up_and_create_error_node_for_LHS_semantic_value
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void binding_parse_create_binding_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void reading_parse_create_reading_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
     expect_string(stub_symbol_name_atom_action, symbol_name, "symbol_name");
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
-    expect_string(stub_atom_from_string_action, s, "chaine");
-    will_return(stub_atom_from_string_action, DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P);
-    expect_value(mock_create_children_node_var, type, AST_TYPE_BINDING);
-    expect_value(mock_create_children_node_var, children_nb, 2);
+    expect_value(mock_create_children_node_var, type, AST_TYPE_READING);
+    expect_value(mock_create_children_node_var, children_nb, 1);
     expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
-    expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_STRING_DATA_WRAPPER_P);
     will_return(mock_create_children_node_var, DUMMY_AST_P);
 
-    binding_parse(NULL, &parsed_ast, &mock_ctx);
+    reading_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_P);
 }
+
 
 
 //-----------------------------------------------------------------------------
@@ -220,16 +195,16 @@ static void binding_parse_create_binding_node_for_LHS_semantic_value_when_create
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest binding_parse_tests[] = {
+    const struct CMUnitTest reading_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            binding_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails,
-            binding_parse_setup, binding_parse_teardown),
+            reading_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails,
+            reading_parse_setup, reading_parse_teardown),
         cmocka_unit_test_setup_teardown(
-            binding_parse_create_binding_node_for_LHS_semantic_value_when_create_children_node_var_succeeds,
-            binding_parse_setup, binding_parse_teardown),
+            reading_parse_create_reading_node_for_LHS_semantic_value_when_create_children_node_var_succeeds,
+            reading_parse_setup, reading_parse_teardown),
     };
     int failed = 0;
-    failed += cmocka_run_group_tests(binding_parse_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(reading_parse_tests, NULL, NULL);
 
     return failed;
 }
