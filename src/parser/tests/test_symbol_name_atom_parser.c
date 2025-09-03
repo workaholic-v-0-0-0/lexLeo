@@ -12,6 +12,7 @@
 
 #include "symbol_name_atom_parser.tab.h"
 #include "parser_ctx.h"
+#include "mock_lexer.h"
 
 
 
@@ -33,40 +34,10 @@ static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 //-----------------------------------------------------------------------------
 
 
-typedef struct {
-    int tok;
-    SYMBOL_NAME_ATOM_STYPE yv;
-} MockTok;
-
-static const MockTok *g_seq = NULL;
-static size_t g_len = 0;
-static size_t g_idx = 0;
-
-void mock_lex_set(const MockTok *seq, size_t len) {
-    g_seq = seq;
-    g_len = len;
-    g_idx = 0;
-}
-
-void mock_lex_reset() {
-    g_seq = NULL;
-    g_len = 0;
-    g_idx = 0;
-}
-
-static MockTok seq[] = {
+static mock_token seq[] = {
     { SYMBOL_NAME, { .string_value = "symbol_name" } },
     { 0,       { 0 } }
 };
-
-int yylex(SYMBOL_NAME_ATOM_STYPE *yylval, void *yyscanner /* yyscan_t */) {
-    (void)yyscanner;
-    if (!g_seq || g_idx >= g_len) return 0;
-    int tok = g_seq[g_idx].tok;
-    if (tok != 0 && yylval) *yylval = g_seq[g_idx].yv;
-    g_idx++;
-    return tok;
-}
 
 ast *mock_create_symbol_name_node(char *str) {
     check_expected(str);
@@ -84,7 +55,7 @@ parser_ctx mock_ctx;
 
 
 //-----------------------------------------------------------------------------
-// yyparse TESTS with SYMBOL_NAME lexeme input
+// symbol_name_atom_parse TESTS
 //-----------------------------------------------------------------------------
 
 
@@ -109,7 +80,7 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-static int yyparse_with_SYMBOL_NAME_input_setup(void **state) {
+static int symbol_name_atom_parse_setup(void **state) {
     (void)state;
     parsed_ast = NULL;
     mock_ctx.ops.create_symbol_name_node = mock_create_symbol_name_node;
@@ -119,7 +90,7 @@ static int yyparse_with_SYMBOL_NAME_input_setup(void **state) {
     return 0;
 }
 
-static int yyparse_with_SYMBOL_NAME_input_teardown(void **state) {
+static int symbol_name_atom_parse_teardown(void **state) {
     (void)state;
     mock_lex_reset();
     parsed_ast = NULL;
@@ -143,7 +114,7 @@ static int yyparse_with_SYMBOL_NAME_input_teardown(void **state) {
 // Expected:
 //  - calls create_error_node_or_sentinel
 //  - gives create_error_node_or_sentinel returned value for the semantic value of the symbol_name_atom lexeme
-static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(void **state) {
+static void symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(void **state) {
     expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, NULL);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_SYMBOL_NAME_NODE_CREATION_FAILED);
@@ -159,7 +130,7 @@ static void yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned
 //  - create_symbol_name_node succeeds
 // Expected:
 //  - gives create_symbol_name_node returned value for the semantic value of the symbol_name_atom lexeme
-static void yyparse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(void **state) {
+static void symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(void **state) {
     expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, DUMMY_AST_NOT_ERROR_P);
 
@@ -175,16 +146,16 @@ static void yyparse_calls_create_symbol_name_node_and_returns_its_returned_value
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest yyparse_tests[] = {
+    const struct CMUnitTest symbol_name_atom_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails,
-            yyparse_with_SYMBOL_NAME_input_setup, yyparse_with_SYMBOL_NAME_input_teardown),
+            symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails,
+            symbol_name_atom_parse_setup, symbol_name_atom_parse_teardown),
         cmocka_unit_test_setup_teardown(
-            yyparse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds,
-            yyparse_with_SYMBOL_NAME_input_setup, yyparse_with_SYMBOL_NAME_input_teardown),
+            symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds,
+            symbol_name_atom_parse_setup, symbol_name_atom_parse_teardown),
     };
     int failed = 0;
-    failed += cmocka_run_group_tests(yyparse_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(symbol_name_atom_parse_tests, NULL, NULL);
 
     return failed;
 }
