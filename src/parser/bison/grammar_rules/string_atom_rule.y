@@ -1,4 +1,4 @@
-// src/parser/bison/grammar_rules/string_atom_rume.y
+// src/parser/bison/grammar_rules/string_atom_rule.y
 
 string_atom
   : STRING {

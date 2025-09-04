@@ -211,7 +211,6 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) 
         ret->children_nb = 0;
         ret->children = NULL;
     } else {
-
         ret->children_nb = children_nb;
         ret->children = children;
     }
