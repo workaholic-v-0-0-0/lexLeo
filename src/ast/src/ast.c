@@ -267,8 +267,7 @@ bool ast_children_reserve(ast_children_t *ast_children, size_t capacity) {
     if ((!ast_children) || (capacity < ast_children->children_nb))
         return false;
 
-    if ((capacity >= ast_children->children_nb)
-            && (capacity <= ast_children->capacity))
+    if (capacity <= ast_children->capacity)
         return true;
 
     void *new_address =
@@ -280,7 +279,30 @@ bool ast_children_reserve(ast_children_t *ast_children, size_t capacity) {
 
     ast_children->children = new_address;
     ast_children->capacity = capacity;
+    return true;
+}
 
+static size_t next_capacity(size_t capacity) {
+    return 1 + 2 * capacity;
+}
+
+bool ast_children_append_take(ast *parent, ast *child) {
+    if (
+               (!parent)
+            || (!child)
+            || (parent->type == AST_TYPE_DATA_WRAPPER)
+            || (parent->type == AST_TYPE_ERROR))
+        return false;
+
+    ast_children_t *children = parent->children;
+    if (children->capacity == children->children_nb) {
+        if (!ast_children_reserve(
+                parent->children,
+                next_capacity(children->capacity) ) )
+            return false;
+    }
+
+    (children->children)[children->children_nb++] = child;
     return true;
 }
 

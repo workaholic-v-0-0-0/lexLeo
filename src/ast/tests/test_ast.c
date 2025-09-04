@@ -25,7 +25,7 @@
 
 static list collected_ptr_to_be_freed = NULL;
 
-static char dummy[11];
+static char dummy[13];
 static const void *DUMMY_MALLOC_RETURNED_VALUE = (void*)&dummy[0];
 static const void *DUMMY_STRDUP_RETURNED_VALUE = &dummy[1];
 #define MALLOC_ERROR_CODE NULL
@@ -67,8 +67,11 @@ static error_info *error = NULL;
 static ast *AST_ERROR_SENTINEL;
 static const size_t DUMMY_CAPACITY = 77;
 static ast_children_t *ast_children_p = NULL;
-static ast *const DUMMY_AST_1 = (ast *)&dummy[9];
-static ast *const DUMMY_AST_2 = (ast *)&dummy[10];
+static ast *const DUMMY_AST_CHILD_0 = (ast *)&dummy[9];
+static ast *const DUMMY_AST_CHILD_1 = (ast *)&dummy[10];
+static ast *const DUMMY_AST_CHILD_TO_BE_ADDED = (ast *)&dummy[11];
+static ast *children_node_p = NULL;
+static error_info *const DUMMY_ERROR_INFO_P = (error_info *)&dummy[12];
 
 
 
@@ -185,6 +188,8 @@ char *fake_operational_strdup(const char *s) {
     memcpy(ret, s, size);
     return ret;
 }
+
+static void *fake_realloc_returned_value = NULL;
 
 
 
@@ -2915,7 +2920,8 @@ static void create_error_node_initializes_and_returns_error_node_when_strdup_and
 
 // ast_children_reserve
 
-// doubled: memory allocator
+// mocked:
+//  - memory reallocator
 
 
 
@@ -2931,8 +2937,8 @@ static int children_reserve_setup(void **state) {
     alloc_and_save_address_to_be_freed(
         (void **)&ast_children_p->children,
         ast_children_p->children_nb * sizeof(ast *) );
-    (ast_children_p->children)[0] = DUMMY_AST_1;
-    (ast_children_p->children)[1] = DUMMY_AST_2;
+    (ast_children_p->children)[0] = DUMMY_AST_CHILD_0;
+    (ast_children_p->children)[1] = DUMMY_AST_CHILD_1;
     set_reallocator(mock_realloc);
     return 0;
 }
@@ -2961,8 +2967,8 @@ static int children_reserve_teardown(void **state) {
 //  - ast_children == ast_children_p initializes in setup such as:
 //    - ast_children_p->children_nb == 2
 //    - ast_children_p->capacity == 7
-//    - (ast_children_p->children)[0] == DUMMY_AST_1;
-//    - (ast_children_p->children)[1] == DUMMY_AST_2;
+//    - (ast_children_p->children)[0] == DUMMY_AST_CHILD_0;
+//    - (ast_children_p->children)[1] == DUMMY_AST_CHILD_1;
 
 // Given:
 //  - ast_children == NULL
@@ -3071,6 +3077,258 @@ static void children_reserve_reallocates_children_update_capacity_and_returns_tr
     assert_ptr_equal(
         ast_children_p->children,
         DUMMY_AST_CHILDREN );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// ast_children_append_take TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_children_append_take
+// ast_children_reserve
+
+// mocked:
+//  - memory reallocator
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int children_append_take_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&children_node_p, sizeof(ast));
+    children_node_p->type = AST_TYPE_TRANSLATION_UNIT;
+    alloc_and_save_address_to_be_freed((void **)&children_node_p->children, sizeof(ast_children_t));
+    children_node_p->children->children_nb = 2;
+    children_node_p->children->capacity = 2;
+    alloc_and_save_address_to_be_freed((void **)&children_node_p->children->children, 3 * sizeof(ast *));
+    (children_node_p->children->children)[0] = DUMMY_AST_CHILD_0;
+    (children_node_p->children->children)[1] = DUMMY_AST_CHILD_1;
+    set_reallocator(mock_realloc);
+    return 0;
+}
+
+static int children_append_take_teardown(void **state) {
+    set_reallocator(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every tests:
+// Given:
+//   - when child not mentionned NULL:
+//     - child == DUMMY_AST_CHILD_TO_BE_ADDED
+//   - when parent not mentionned in "Given":
+//     - parent == children_node_p
+//       - parent->type == AST_TYPE_TRANSLATION_UNIT
+//         - parent->children->children_nb == 2
+//         - parent->children->capacity
+//                   == 2 IF NOT PUT TO 3 IN TEST
+//           - (parent->children->children)[0] == DUMMY_AST_CHILD_0
+//           - (parent->children->children)[1] == DUMMY_AST_CHILD_1
+//           - the next slot is yet allocated by the system in setup,
+//             ie capacity can move to 3,
+//             ie no segfaut with (parent->children->children)[2]
+//   - params are NULL or well-formed as the client has to ensure ;
+//     in particular children_nb and capacity fields are valid
+
+// Given:
+//   - parent == NULL
+// Expected:
+//   - MEMORY REALLOCATOR WILL NOT BE CALLED
+//   - returns false
+static void children_append_take_returns_false_when_parent_null(void **state) {
+    assert_false(ast_children_append_take(NULL, DUMMY_AST_CHILD_TO_BE_ADDED));
+}
+
+// Given:
+//   - child == NULL
+// Expected:
+//   - MEMORY REALLOCATOR WILL NOT BE CALLED
+//   - no side effect
+//   - returns false
+static void children_append_take_does_nothing_and_returns_false_when_child_null(void **state) {
+    ast_type old_type = children_node_p->type;
+    ast_children_t *old_children_info = children_node_p->children;
+    size_t old_children_nb = children_node_p->children->children_nb;
+    size_t old_capacity = children_node_p->children->capacity;
+    ast **old_children = children_node_p->children->children;
+    ast *old_child_0 = old_children[0];
+    ast *old_child_1 = old_children[1];
+    assert_false(ast_children_append_take(children_node_p, NULL));
+    assert_int_equal(old_type, children_node_p->type);
+    assert_ptr_equal(old_children_info, children_node_p->children);
+    assert_int_equal(old_children_nb, children_node_p->children->children_nb);
+    assert_int_equal(old_capacity, children_node_p->children->capacity);
+    assert_ptr_equal(old_children, children_node_p->children->children);
+    assert_ptr_equal(old_child_0, old_children[0]);
+    assert_ptr_equal(old_child_1, old_children[1]);
+}
+
+// Given:
+//   - parent->type == AST_TYPE_DATA_WRAPPER
+//     OR
+//   - parent->type == AST_TYPE_ERROR
+// Expected:
+//   - MEMORY REALLOCATOR WILL NOT BE CALLED
+//   - no side effect
+//   - returns false
+static void children_append_take_does_nothing_and_returns_false_when_parent_not_a_child_node(void **state) {
+    ast *ast_data_wrapper = NULL;
+    alloc_and_save_address_to_be_freed((void **)&ast_data_wrapper, sizeof(ast));
+    ast_data_wrapper->type = AST_TYPE_DATA_WRAPPER;
+    ast_data_wrapper->data = DUMMY_TYPED_DATA_P;
+    ast *ast_error_node = NULL;
+    alloc_and_save_address_to_be_freed((void **)&ast_error_node, sizeof(ast));
+    ast_error_node->type = AST_TYPE_ERROR;
+    ast_error_node->error = DUMMY_ERROR_INFO_P;
+
+    assert_false(ast_children_append_take(ast_data_wrapper, DUMMY_AST_CHILD_TO_BE_ADDED));
+    assert_false(ast_children_append_take(ast_error_node, DUMMY_AST_CHILD_TO_BE_ADDED));
+    assert_int_equal(ast_data_wrapper->type, AST_TYPE_DATA_WRAPPER);
+    assert_int_equal(ast_error_node->type, AST_TYPE_ERROR);
+    assert_ptr_equal(ast_data_wrapper->data, DUMMY_TYPED_DATA_P);
+    assert_ptr_equal(ast_error_node->error, DUMMY_ERROR_INFO_P);
+}
+
+// Given:
+//   - parent->children->capacity > parent->children->children_nb
+// Expected:
+//   - MEMORY REALLOCATOR WILL NOT BE CALLED
+//   - parent->children->children_nb == 3
+//   - (parent->children->children)[2] == DUMMY_AST_CHILD_TO_BE_ADDED
+//   - no other side effect
+//   - returns true
+static void children_append_take_append_child_and_returns_true_when_capacity_greater_than_children_nb(void **state) {
+
+    children_node_p->children->capacity = 3; // see paragraph "At every tests" written before these tests
+
+    ast_type old_type = children_node_p->type;
+    ast_children_t *old_children_info = children_node_p->children;
+    size_t old_children_nb = children_node_p->children->children_nb;
+    size_t old_capacity = children_node_p->children->capacity;
+    ast **old_children = children_node_p->children->children;
+    ast *old_child_0 = old_children[0];
+    ast *old_child_1 = old_children[1];
+
+    assert_true(ast_children_append_take(children_node_p, DUMMY_AST_CHILD_TO_BE_ADDED));
+    assert_int_equal(old_type, children_node_p->type);
+    assert_ptr_equal(old_children_info, children_node_p->children);
+    assert_int_equal(
+        children_node_p->children->children_nb,
+        old_children_nb + 1 );
+    assert_int_equal(old_capacity, children_node_p->children->capacity);
+    assert_ptr_equal(old_children, children_node_p->children->children);
+    assert_ptr_equal(old_children[0], old_child_0);
+    assert_ptr_equal(old_children[1], old_child_1);
+    assert_ptr_equal(
+        old_children[2],
+        DUMMY_AST_CHILD_TO_BE_ADDED );
+}
+
+// Given:
+//   - parent->children->capacity == parent->children->children_nb
+//   - realloc will fail
+// Expected:
+//   - calls realloc with:
+//     - ptr: parent->children->children
+//     - size: (1 + 2 * parent->children->capacity) * sizeof(ast *)
+//   - no side effect
+//   - returns false
+static void children_append_take_returns_false_when_realloc_fails(void **state) {
+    size_t wanted_capacity = 1 + 2 * children_node_p->children->capacity;
+    expect_value(mock_realloc, ptr, children_node_p->children->children);
+    expect_value(
+            mock_realloc,
+            size,
+            wanted_capacity * sizeof(ast *) );
+    will_return(mock_realloc, NULL);
+    ast_type old_type = children_node_p->type;
+    ast_children_t *old_children_info = children_node_p->children;
+    size_t old_children_nb = children_node_p->children->children_nb;
+    size_t old_capacity = children_node_p->children->capacity;
+    ast **old_children = children_node_p->children->children;
+    ast *old_child_0 = old_children[0];
+    ast *old_child_1 = old_children[1];
+
+    assert_false(ast_children_append_take(children_node_p, DUMMY_AST_CHILD_TO_BE_ADDED));
+    assert_int_equal(old_type, children_node_p->type);
+    assert_ptr_equal(old_children_info, children_node_p->children);
+    assert_int_equal(old_children_nb, children_node_p->children->children_nb);
+    assert_int_equal(old_capacity, children_node_p->children->capacity);
+    assert_ptr_equal(old_children, children_node_p->children->children);
+    assert_ptr_equal(old_child_0, old_children[0]);
+    assert_ptr_equal(old_child_1, old_children[1]);
+}
+
+// Given:
+//   - parent->children->capacity == parent->children->children_nb
+//   - realloc will succeed
+// Expected:
+//   - calls realloc with:
+//     - ptr: parent->children->children
+//     - size: (1 + 2 * parent->children->capacity) * sizeof(ast *)
+//   - parent->children->capacity *= 2
+//   - parent->children->children_nb += 1
+//   - parent->children->children == realloc returned value
+//   - no other side effect
+//   - returns true
+static void children_append_take_append_child_returns_true_when_realloc_succeeds(void **state) {
+    size_t wanted_capacity = 1 + 2 * children_node_p->children->capacity;
+    alloc_and_save_address_to_be_freed(
+        (void **)&fake_realloc_returned_value,
+        wanted_capacity * sizeof(ast *) );
+    expect_value(mock_realloc, ptr, children_node_p->children->children);
+    expect_value(mock_realloc, size, wanted_capacity * sizeof(ast *) );
+    will_return(mock_realloc, fake_realloc_returned_value);
+    ast_type old_type = children_node_p->type;
+    ast_children_t *old_children_info = children_node_p->children;
+    size_t old_children_nb = children_node_p->children->children_nb;
+    size_t old_capacity = children_node_p->children->capacity;
+    ast **old_children = children_node_p->children->children;
+    ast *old_child_0 = old_children[0];
+    ast *old_child_1 = old_children[1];
+
+    assert_true(ast_children_append_take(children_node_p, DUMMY_AST_CHILD_TO_BE_ADDED));
+    assert_int_equal(old_type, children_node_p->type);
+    assert_ptr_equal(old_children_info, children_node_p->children);
+    assert_int_equal(
+        children_node_p->children->children_nb,
+        old_children_nb + 1 );
+    assert_int_equal(
+        children_node_p->children->capacity,
+        1 + old_capacity * 2 );
+    assert_ptr_equal(
+        children_node_p->children->children,
+        fake_realloc_returned_value );
+    assert_ptr_equal(old_child_0, old_children[0]);
+    assert_ptr_equal(old_child_1, old_children[1]);
+    assert_ptr_equal(
+        (children_node_p->children->children)[2],
+        DUMMY_AST_CHILD_TO_BE_ADDED );
 }
 
 
@@ -3500,6 +3758,24 @@ int main(void) {
             children_reserve_setup, children_reserve_teardown),
     };
 
+    const struct CMUnitTest ast_children_append_take_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            children_append_take_returns_false_when_parent_null,
+            children_append_take_setup, children_append_take_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_append_take_does_nothing_and_returns_false_when_child_null,
+            children_append_take_setup, children_append_take_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_append_take_does_nothing_and_returns_false_when_parent_not_a_child_node,
+            children_append_take_setup, children_append_take_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_append_take_append_child_and_returns_true_when_capacity_greater_than_children_nb,
+            children_append_take_setup, children_append_take_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_append_take_returns_false_when_realloc_fails,
+            children_append_take_setup, children_append_take_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3525,6 +3801,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_symbol_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_error_node_or_sentinel_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_children_reserve_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_children_append_take_tests, NULL, NULL);
 
     return failed;
 }

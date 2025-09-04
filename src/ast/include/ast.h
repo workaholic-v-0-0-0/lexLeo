@@ -11,7 +11,7 @@ typedef enum {
 	AST_TYPE_READING,
     AST_TYPE_WRITING,
     AST_TYPE_TRANSLATION_UNIT,
-    //AST_TYPE_STATEMENT,
+    //AST_TYPE_STATEMENT, useless?
     //AST_TYPE_LIST_OF_PARAMETERS,
     //AST_TYPE_PARAMETER,
     //AST_TYPE_EVALUATION,
@@ -109,6 +109,7 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children);
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)
 void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb and capacity values correctness
 bool ast_children_reserve(ast_children_t *ast_children, size_t capacity); // return false on reallocation error or true otherwise ; client code is responsible for children_nb and capacity field values correctness
+bool ast_children_append_take(ast *parent, ast *child); // returns true on succees and false on error ; client code is responsible for passing NULL or well-formed asts with children_nb and capacity correctness
 
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
 ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb and capacity values correctness and for destroying children array (but not the ast * it contains)
