@@ -46,8 +46,8 @@ set(
 %token <string_value> STRING\n\
 %destructor { free($$); } STRING\n\
 %token <symbol_name_value> SYMBOL_NAME\n\
-%token EQUAL\n\
 %token SEMICOLON\n\
+%token EQUAL\n\
 %token READ
 %token WRITE
 "
@@ -59,8 +59,9 @@ symbol_name_atom \
 atom \
 binding \
 reading \
-writing")
-set(START_SYMBOL "binding") # might be reading now
+writing \
+statement")
+set(START_SYMBOL "statement")
 set(
     GRAMMAR_RULES_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"
