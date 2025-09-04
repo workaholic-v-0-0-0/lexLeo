@@ -25,7 +25,7 @@
 
 static list collected_ptr_to_be_freed = NULL;
 
-static char dummy[10];
+static char dummy[11];
 static const void *DUMMY_MALLOC_RETURNED_VALUE = (void*)&dummy[0];
 static const void *DUMMY_STRDUP_RETURNED_VALUE = &dummy[1];
 #define MALLOC_ERROR_CODE NULL
@@ -56,7 +56,7 @@ static ast *DUMMY_CHILDREN_ARRAY_OF_SIZE_TWO[] = {&dummy_ast_child_one, &dummy_a
 static ast_children_t *const AST_CHILDREN_T_DEFINED_IN_SETUP = (ast_children_t *)&dummy[7];
 static ast_children_t *const DUMMY_AST_CHILDREN_T_P = (ast_children_t *)&dummy[8];
 static const int UNSUPPORTED_AST_TYPE = AST_TYPE_NB_TYPES;
-static const int SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER = AST_TYPE_PROGRAM;
+static const int SUPPORTED_AST_TYPE_BUT_NOT_AST_TYPE_DATA_WRAPPER = AST_TYPE_TRANSLATION_UNIT;
 static ast *ast_not_data_wrapper = NULL;
 #define DUMMY_ERROR_TYPE 2
 static char *DUMMY_ERROR_MESSAGE = "This is a dummy error message";
@@ -65,6 +65,10 @@ static char *valid_error_message = "This is a valid error message";
 static ast *ast_error_node = NULL;
 static error_info *error = NULL;
 static ast *AST_ERROR_SENTINEL;
+static const size_t DUMMY_CAPACITY = 77;
+static ast_children_t *ast_children_p = NULL;
+static ast *const DUMMY_AST_1 = (ast *)&dummy[9];
+static ast *const DUMMY_AST_2 = (ast *)&dummy[10];
 
 
 
@@ -85,6 +89,12 @@ void mock_free(void *ptr) {
 char *mock_strdup(const char *s) {
     check_expected_ptr(s);
     return mock_type(char *);
+}
+
+void *mock_realloc(void *ptr, size_t size) {
+    check_expected_ptr(ptr);
+    check_expected(size);
+    return mock_type(void *);
 }
 
 static void *fake_malloc_returned_value_for_a_typed_data_int = NULL;
@@ -1326,7 +1336,7 @@ static void create_children_node_returns_null_when_type_data_wrapper_or_unsuppor
 // Given: type is supported and not AST_TYPE_DATA_WRAPPER, ast_children is null
 // Expected: returns null
 static void create_children_node_returns_null_when_ast_children_null(void **state) {
-    assert_null(ast_create_children_node(AST_TYPE_PROGRAM, NULL));
+    assert_null(ast_create_children_node(AST_TYPE_TRANSLATION_UNIT, NULL));
 }
 
 // Given: type is supported, ast_children is not null
@@ -1334,7 +1344,7 @@ static void create_children_node_returns_null_when_ast_children_null(void **stat
 static void create_children_node_calls_malloc_for_an_ast_when_args_valid(void **state) {
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
-    ast_create_children_node(AST_TYPE_PROGRAM, DUMMY_AST_CHILDREN_T_P);
+    ast_create_children_node(AST_TYPE_TRANSLATION_UNIT, DUMMY_AST_CHILDREN_T_P);
 }
 
 // Given: malloc fails
@@ -1342,7 +1352,7 @@ static void create_children_node_calls_malloc_for_an_ast_when_args_valid(void **
 static void create_children_node_returns_null_when_malloc_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
-    assert_null(ast_create_children_node(AST_TYPE_PROGRAM, DUMMY_AST_CHILDREN_T_P));
+    assert_null(ast_create_children_node(AST_TYPE_TRANSLATION_UNIT, DUMMY_AST_CHILDREN_T_P));
 }
 
 // Given: malloc succeeds
@@ -1351,9 +1361,9 @@ static void create_children_node_initializes_and_returns_malloced_ast_when_mallo
     alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_an_ast, sizeof(ast));
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
-    ast *ret = ast_create_children_node(AST_TYPE_PROGRAM, DUMMY_AST_CHILDREN_T_P);
+    ast *ret = ast_create_children_node(AST_TYPE_TRANSLATION_UNIT, DUMMY_AST_CHILDREN_T_P);
     assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
-    assert_int_equal(ret->type, AST_TYPE_PROGRAM);
+    assert_int_equal(ret->type, AST_TYPE_TRANSLATION_UNIT);
     assert_ptr_equal(ret->children, DUMMY_AST_CHILDREN_T_P);
 }
 
@@ -1409,7 +1419,7 @@ static void create_children_node_arr_calls_ast_create_ast_children_arr_with_last
     expect_value(mock_ast_create_ast_children_arr, children_nb, DUMMY_INT);
     expect_value(mock_ast_create_ast_children_arr, children, DUMMY_AST_CHILDREN);
     will_return(mock_ast_create_ast_children_arr, NULL); // to avoid more mock calls
-    ast_create_children_node_arr(AST_TYPE_PROGRAM, DUMMY_INT, DUMMY_AST_CHILDREN);
+    ast_create_children_node_arr(AST_TYPE_TRANSLATION_UNIT, DUMMY_INT, DUMMY_AST_CHILDREN);
 }
 
 // Given: ast_create_ast_children_arr fails (ie returns NULL)
@@ -1418,7 +1428,7 @@ static void create_children_node_arr_returns_null_when_ast_create_ast_children_a
     expect_value(mock_ast_create_ast_children_arr, children_nb, DUMMY_INT);
     expect_value(mock_ast_create_ast_children_arr, children, DUMMY_AST_CHILDREN);
     will_return(mock_ast_create_ast_children_arr, NULL);
-    assert_null(ast_create_children_node_arr(AST_TYPE_PROGRAM, DUMMY_INT, DUMMY_AST_CHILDREN));
+    assert_null(ast_create_children_node_arr(AST_TYPE_TRANSLATION_UNIT, DUMMY_INT, DUMMY_AST_CHILDREN));
 }
 
 // Given: ast_create_ast_children_arr succeeds (ie does not return NULL)
@@ -1429,7 +1439,7 @@ static void create_children_node_arr_calls_malloc_for_an_ast_when_ast_create_ast
     will_return(mock_ast_create_ast_children_arr, DUMMY_AST_CHILDREN_T_P);
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
-    ast_create_children_node_arr(AST_TYPE_PROGRAM, DUMMY_INT, DUMMY_AST_CHILDREN);
+    ast_create_children_node_arr(AST_TYPE_TRANSLATION_UNIT, DUMMY_INT, DUMMY_AST_CHILDREN);
 }
 
 // Given: calls malloc with sizeof(ast) fails
@@ -1441,7 +1451,7 @@ static void create_children_node_arr_calls_free_and_returns_null_when_malloc_fai
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
     expect_value(mock_free, ptr, DUMMY_AST_CHILDREN_T_P);
-    assert_null(ast_create_children_node_arr(AST_TYPE_PROGRAM, DUMMY_INT, DUMMY_AST_CHILDREN));
+    assert_null(ast_create_children_node_arr(AST_TYPE_TRANSLATION_UNIT, DUMMY_INT, DUMMY_AST_CHILDREN));
 }
 
 // Given: calls malloc with sizeof(ast) succeeds
@@ -1454,9 +1464,9 @@ static void create_children_node_arr_initializes_and_returns_malloced_ast_when_m
     will_return(mock_ast_create_ast_children_arr, fake_ast_create_ast_children_arr_returned_value);
     expect_value(mock_malloc, size, sizeof(ast));
     will_return(mock_malloc, fake_malloc_returned_value_for_an_ast);
-    ast * ret = ast_create_children_node_arr(AST_TYPE_PROGRAM, DUMMY_INT, DUMMY_AST_CHILDREN);
+    ast * ret = ast_create_children_node_arr(AST_TYPE_TRANSLATION_UNIT, DUMMY_INT, DUMMY_AST_CHILDREN);
     assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast);
-    assert_int_equal(ret->type, AST_TYPE_PROGRAM);
+    assert_int_equal(ret->type, AST_TYPE_TRANSLATION_UNIT);
     assert_ptr_equal(ret->children, fake_ast_create_ast_children_arr_returned_value);
 }
 
@@ -2893,6 +2903,179 @@ static void create_error_node_initializes_and_returns_error_node_when_strdup_and
 
 
 //-----------------------------------------------------------------------------
+// ast_children_reserve TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// ast_children_reserve
+
+// doubled: memory allocator
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int children_reserve_setup(void **state) {
+    alloc_and_save_address_to_be_freed((void **)&ast_children_p, sizeof(ast_children_t));
+    ast_children_p->children_nb = 2;
+    ast_children_p->capacity = 7;
+    alloc_and_save_address_to_be_freed(
+        (void **)&ast_children_p->children,
+        ast_children_p->children_nb * sizeof(ast *) );
+    (ast_children_p->children)[0] = DUMMY_AST_1;
+    (ast_children_p->children)[1] = DUMMY_AST_2;
+    set_reallocator(mock_realloc);
+    return 0;
+}
+
+static int children_reserve_teardown(void **state) {
+    set_reallocator(NULL);
+    while (collected_ptr_to_be_freed) {
+        list next = collected_ptr_to_be_freed->cdr;
+        if (collected_ptr_to_be_freed->car)
+            free(collected_ptr_to_be_freed->car);
+        free(collected_ptr_to_be_freed);
+        collected_ptr_to_be_freed = next;
+    }
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every tests but the first:
+// Given:
+//  - ast_children == ast_children_p initializes in setup such as:
+//    - ast_children_p->children_nb == 2
+//    - ast_children_p->capacity == 7
+//    - (ast_children_p->children)[0] == DUMMY_AST_1;
+//    - (ast_children_p->children)[1] == DUMMY_AST_2;
+
+// Given:
+//  - ast_children == NULL
+// Expected:
+//  - returns false
+static void children_reserve_returns_false_when_ast_children_null(void **state) {
+    assert_int_equal(false, ast_children_reserve(NULL, DUMMY_CAPACITY));
+}
+
+// Given:
+//  - capacity == ast_children_p->children_nb - 1
+// Expected:
+//  - returns false
+static void children_reserve_returns_false_when_insufficient_capacity(void **state) {
+    assert_int_equal(
+        false,
+        ast_children_reserve(
+            ast_children_p,
+            ast_children_p->children_nb - 1 ) );
+}
+
+// Given:
+//  - capacity >= ast_children_p->children_nb
+//  - capacity <= ast_children_p->capacity
+// Expected:
+//  - MEMORY REALLOCATOR WILL NOT BE CALLED
+//  - NO SIDE EFFECT ; in particular:
+//    - ast_children_p->capacity DOES NOT CHANGE
+//    - ast_children_p->children DOES NOT CHANGE
+//  - returns true
+static void children_reserve_no_side_effect_and_returns_true_when_capacity_sufficient_and_lesser_than_before(void **state) {
+    size_t old_capacity = ast_children_p->capacity;
+    ast **old_children = ast_children_p->children;
+    assert_int_equal(
+        true,
+        ast_children_reserve(
+            ast_children_p,
+            ast_children_p->children_nb + 1 ) );
+    assert_int_equal(
+        ast_children_p->capacity,
+        old_capacity );
+    assert_ptr_equal(
+        ast_children_p->children,
+        old_children );
+}
+
+// Given:
+//  - capacity > ast_children_p->capacity
+//  - realloc will fail
+// Expected:
+//  - calls realloc with:
+//    - ptr: ast_children_p->children
+//    - size: capacity * sizeof(ast *)
+//  - NO SIDE EFFECT ; in particular:
+//    - ast_children_p->capacity DOES NOT CHANGE
+//    - ast_children_p->children DOES NOT CHANGE
+//  - returns false
+static void children_reserve_no_side_effect_and_returns_false_when_realloc_fails(void **state) {
+    size_t old_capacity = ast_children_p->capacity;
+    ast **old_children = ast_children_p->children;
+    expect_value(mock_realloc, ptr, ast_children_p->children);
+    expect_value(
+        mock_realloc,
+        size,
+        (ast_children_p->capacity + 1) * sizeof(ast *) );
+    will_return(mock_realloc, NULL);
+    assert_int_equal(
+        false,
+        ast_children_reserve(
+            ast_children_p,
+            ast_children_p->capacity + 1 ) );
+    assert_int_equal(
+        ast_children_p->capacity,
+        old_capacity );
+    assert_ptr_equal(
+        ast_children_p->children,
+        old_children );
+}
+
+// Given:
+//  - capacity > ast_children_p->capacity
+//  - realloc will succeed
+// Expected:
+//  - calls realloc with:
+//    - ptr: ast_children_p->children
+//    - size: capacity * sizeof(ast *)
+//  - ast_children_p->capacity == capacity
+//  - ast_children_p->children == realloc returned value
+//  - returns true
+static void children_reserve_reallocates_children_update_capacity_and_returns_true_when_realloc_succeeds(void **state) {
+    size_t capacity_param = ast_children_p->capacity + 1;
+    expect_value(mock_realloc, ptr, ast_children_p->children);
+    expect_value(
+        mock_realloc,
+        size,
+        capacity_param * sizeof(ast *) );
+    will_return(mock_realloc, DUMMY_AST_CHILDREN);
+    assert_int_equal(
+        true,
+        ast_children_reserve(
+            ast_children_p,
+            capacity_param ) );
+    assert_int_equal(
+        ast_children_p->capacity,
+        capacity_param );
+    assert_ptr_equal(
+        ast_children_p->children,
+        DUMMY_AST_CHILDREN );
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -3299,6 +3482,24 @@ int main(void) {
             create_error_node_or_sentinel_setup, create_error_node_or_sentinel_teardown),
     };
 
+    const struct CMUnitTest ast_children_reserve_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            children_reserve_returns_false_when_ast_children_null,
+            children_reserve_setup, children_reserve_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_reserve_returns_false_when_insufficient_capacity,
+            children_reserve_setup, children_reserve_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_reserve_no_side_effect_and_returns_true_when_capacity_sufficient_and_lesser_than_before,
+            children_reserve_setup, children_reserve_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_reserve_no_side_effect_and_returns_false_when_realloc_fails,
+            children_reserve_setup, children_reserve_teardown),
+        cmocka_unit_test_setup_teardown(
+            children_reserve_reallocates_children_update_capacity_and_returns_true_when_realloc_succeeds,
+            children_reserve_setup, children_reserve_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3323,6 +3524,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_symbol_name_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_symbol_node_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_create_error_node_or_sentinel_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_children_reserve_tests, NULL, NULL);
 
     return failed;
 }
