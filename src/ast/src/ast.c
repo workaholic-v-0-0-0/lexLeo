@@ -263,8 +263,30 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 #endif
 }
 
+bool ast_children_reserve(ast_children_t *ast_children, size_t capacity) {
+    if ((!ast_children) || (capacity < ast_children->children_nb))
+        return false;
+
+    if ((capacity >= ast_children->children_nb)
+            && (capacity <= ast_children->capacity))
+        return true;
+
+    void *new_address =
+        AST_REALLOC(
+            ast_children->children,
+            capacity * sizeof(ast *) );
+    if (!new_address)
+        return false;
+
+    ast_children->children = new_address;
+    ast_children->capacity = capacity;
+
+    return true;
+}
+
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children) {
-    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
+    if ((type == AST_TYPE_DATA_WRAPPER)
+            || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children) )
         return NULL;
 
     ast *ret = AST_MALLOC(sizeof(ast));

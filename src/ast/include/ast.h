@@ -10,7 +10,7 @@ typedef enum {
     AST_TYPE_BINDING,
 	AST_TYPE_READING,
     AST_TYPE_WRITING,
-    AST_TYPE_PROGRAM,
+    AST_TYPE_TRANSLATION_UNIT,
     //AST_TYPE_STATEMENT,
     //AST_TYPE_LIST_OF_PARAMETERS,
     //AST_TYPE_PARAMETER,
@@ -48,6 +48,7 @@ typedef struct symbol symbol;
 
 typedef struct ast_children_t {
     size_t children_nb;
+    size_t capacity;
     struct ast **children;
 } ast_children_t;
 
@@ -104,13 +105,14 @@ ast *ast_create_error_node(error_type code, char *message); // client code is re
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR
 ast *ast_create_error_node_or_sentinel(error_type code, char *message); // client code is responsible for message
 
-ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying chidren array (but not the ast * it contains)
+ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb and capacity values correctness and for destroying chidren array (but not the ast * it contains)
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)
-void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb value correctness
+void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb and capacity values correctness
+bool ast_children_reserve(ast_children_t *ast_children, size_t capacity); // return false on reallocation error or true otherwise ; client code is responsible for children_nb and capacity field values correctness
 
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
-ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb value correctness and for destroying children array (but not the ast * it contains)
-ast *ast_create_children_node_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb value correctness
+ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb and capacity values correctness and for destroying children array (but not the ast * it contains)
+ast *ast_create_children_node_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb and capacity values correctness
 void ast_destroy_children_node(ast *children_node);
 
 void ast_destroy(ast *root); // the caller is responsible for passing either NULL or a well-formed ast pointer
