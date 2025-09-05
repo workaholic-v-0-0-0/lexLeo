@@ -105,9 +105,9 @@ ast *ast_create_error_node(error_type code, char *message); // client code is re
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR
 ast *ast_create_error_node_or_sentinel(error_type code, char *message); // client code is responsible for message
 
-ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb and capacity values correctness and for destroying chidren array (but not the ast * it contains)
+ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb correctness and for destroying chidren array (but not the ast * it contains)
 ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)
-void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb and capacity values correctness
+void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb correctness
 bool ast_children_reserve(ast_children_t *ast_children, size_t capacity); // return false on reallocation error or true otherwise ; client code is responsible for children_nb and capacity field values correctness
 bool ast_children_append_take(ast *parent, ast *child); // returns true on succees and false on error ; client code is responsible for passing NULL or well-formed asts with children_nb and capacity correctness
 
