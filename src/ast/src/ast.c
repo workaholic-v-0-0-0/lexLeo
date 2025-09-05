@@ -207,13 +207,9 @@ ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) 
     if (!ret)
         return NULL;
 
-    if (children_nb == 0) {
-        ret->children_nb = 0;
-        ret->children = NULL;
-    } else {
-        ret->children_nb = children_nb;
-        ret->children = children;
-    }
+    ret->children = children;
+    ret->children_nb = children_nb;
+    ret->capacity = children_nb;
     return ret;
 #endif
 }
@@ -263,8 +259,52 @@ void ast_destroy_ast_children(ast_children_t *ast_children) {
 #endif
 }
 
+bool ast_children_reserve(ast_children_t *ast_children, size_t capacity) {
+    if ((!ast_children) || (capacity < ast_children->children_nb))
+        return false;
+
+    if (capacity <= ast_children->capacity)
+        return true;
+
+    void *new_address =
+        AST_REALLOC(
+            ast_children->children,
+            capacity * sizeof(ast *) );
+    if (!new_address)
+        return false;
+
+    ast_children->children = new_address;
+    ast_children->capacity = capacity;
+    return true;
+}
+
+static size_t next_capacity(size_t capacity) {
+    return 1 + 2 * capacity;
+}
+
+bool ast_children_append_take(ast *parent, ast *child) {
+    if (
+               (!parent)
+            || (!child)
+            || (parent->type == AST_TYPE_DATA_WRAPPER)
+            || (parent->type == AST_TYPE_ERROR))
+        return false;
+
+    ast_children_t *children = parent->children;
+    if (children->capacity == children->children_nb) {
+        if (!ast_children_reserve(
+                parent->children,
+                next_capacity(children->capacity) ) )
+            return false;
+    }
+
+    (children->children)[children->children_nb++] = child;
+    return true;
+}
+
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children) {
-    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
+    if ((type == AST_TYPE_DATA_WRAPPER)
+            || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children) )
         return NULL;
 
     ast *ret = AST_MALLOC(sizeof(ast));
