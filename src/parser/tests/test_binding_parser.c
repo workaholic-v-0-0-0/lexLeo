@@ -112,6 +112,7 @@ parser_ctx mock_ctx;
 //  - functions of the ast module which are used:
 //    - ast_create_children_node_var
 //    - ast_create_error_node_or_sentinel
+//    - ast_destroy
 //  - function of the lexer module which are used:
 //    - yylex
 
@@ -154,7 +155,7 @@ static int binding_parse_teardown(void **state) {
 //    - STRING("chaine")
 //    - SEMICOLON
 // Expected:
-//  - calls _create_children_node_var with:
+//  - calls ast_create_children_node_var with:
 //    - type: AST_TYPE_BINDING
 //    - children_nb: 2
 //    - first optionnal arg: symbol_name_atom's semantic value

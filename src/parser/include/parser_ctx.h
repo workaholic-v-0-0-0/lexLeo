@@ -12,6 +12,7 @@ typedef struct parser_ops {
 	ast* (*create_error_node_or_sentinel)(error_type code, char *message);
     ast *(*create_children_node_var)(ast_type type, size_t children_nb,...);
     void (*destroy)(ast *root);
+    bool (*children_append_take)(ast *parent, ast *child);
 } parser_ops;
 
 typedef struct parser_ctx {
