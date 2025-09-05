@@ -965,6 +965,7 @@ static void create_ast_children_arr_initializes_and_returns_malloced_ast_childre
     will_return(mock_malloc, fake_malloc_returned_value_for_an_ast_children_t);
     ast_children_t *ret = ast_create_ast_children_arr(params->children_nb, params->ast_children);
     assert_int_equal(ret->children_nb, params->children_nb);
+    assert_int_equal(ret->capacity, ret->children_nb);
     assert_ptr_equal(ret->children, params->ast_children);
     assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast_children_t);
 }
@@ -1107,6 +1108,7 @@ static void create_ast_children_var_initializes_and_returns_malloced_ast_childre
     will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
     ast_children_t *ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0]);
     assert_int_equal(ret->children_nb, params->children_nb);
+    assert_int_equal(ret->capacity, ret->children_nb);
     assert_ptr_equal(ret->children[0], params->ast_children[0]);
     assert_ptr_not_equal(ret->children, params->ast_children); // double pointer of ast has been malloced
     assert_ptr_equal(ret, fake_malloc_returned_value_for_an_ast_children_t);
@@ -1126,6 +1128,7 @@ static void create_ast_children_var_initializes_and_returns_malloced_ast_childre
     will_return(mock_malloc, fake_malloc_returned_value_for_a_double_ast_pointer);
     ast_children_t *ret = ast_create_ast_children_var(params->children_nb, (params->ast_children)[0], (params->ast_children)[1]);
     assert_int_equal(ret->children_nb, params->children_nb);
+    assert_int_equal(ret->capacity, ret->children_nb);
     assert_ptr_equal(ret->children[0], params->ast_children[0]);
     assert_ptr_equal(ret->children[1], params->ast_children[1]);
     assert_ptr_not_equal(ret->children, params->ast_children); // double pointer of ast has been malloced
