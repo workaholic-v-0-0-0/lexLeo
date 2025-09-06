@@ -60,8 +60,9 @@ atom \
 binding \
 reading \
 writing \
-statement")
-set(START_SYMBOL "statement")
+statement \
+translation_unit")
+set(START_SYMBOL "translation_unit")
 set(
     GRAMMAR_RULES_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/bison/grammar_rules"

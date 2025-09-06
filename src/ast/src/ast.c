@@ -219,13 +219,9 @@ ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
     if (!ret)
         return NULL;
 
-    if (children_nb == 0) {
-        ret->children_nb = 0;
-        ret->children = NULL;
-
-    } else {
-        ast **children = AST_MALLOC(children_nb * sizeof(ast *));
-            if (!children) {
+    if (children_nb > 0) {
+        ret->children = AST_MALLOC(children_nb * sizeof(ast *));
+        if (!ret->children) {
             AST_FREE(ret);
             return NULL;
         }
@@ -233,13 +229,16 @@ ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
         va_list args;
         va_start(args, children_nb);
         for (size_t i = 0; i < children_nb; i++) {
-            children[i] = va_arg(args, ast *);
+            ret->children[i] = va_arg(args, ast *);
         }
         va_end(args);
 
-        ret->children_nb = children_nb;
-        ret->children = children;
+    } else {
+        ret->children = NULL;
     }
+
+    ret->children_nb = children_nb;
+    ret->capacity = children_nb;
 
     return ret;
 }

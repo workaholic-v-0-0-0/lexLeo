@@ -29,6 +29,8 @@ function(build_unit_parser NAME)
             "${GRAMMAR_RULES_STUBS_DIR}/${NAME}_rule_dependencies_stubs_declaration.y"
             STUBS_DECLARATION
         )
+    else ()
+        message(STATUS "${NAME}_rule_dependencies_stubs_declaration.y has not been found.")
     endif ()
     if (EXISTS "${GRAMMAR_RULES_STUBS_DIR}/${NAME}_rule_dependencies.y")
         file(READ
