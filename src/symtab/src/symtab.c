@@ -81,6 +81,33 @@ int symtab_add(symtab *st, symbol *sym) {
     return hashtable_add(st->symbols, sym->name, (void *) sym);
 }
 
+int symtab_intern_symbol(symtab *st, char *name) {
+    if ((!st) || (!(st->symbols)) || (!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
+        return 1;
+
+    if (!hashtable_key_is_in_use(st->symbols, name)) {
+        symbol *sym = SYMTAB_MALLOC(sizeof(symbol));
+	    if (!sym)
+		    return 1;
+
+        sym->name = SYMTAB_STRING_DUPLICATE(name);
+    	if (!sym->name) {
+	    	SYMTAB_FREE(sym);
+		    return 1;
+	    }
+
+        if (hashtable_add(st->symbols, name, sym) == 1) {
+            SYMTAB_FREE(sym->name);
+            SYMTAB_FREE(sym);
+		    return 1;
+        }
+
+        return 0;
+    }
+
+    return 0;
+}
+
 symbol *symtab_get_local(symtab *st, const char *name) {
 #ifdef UNIT_TEST
     return symtab_get_local_mockable(st, name);

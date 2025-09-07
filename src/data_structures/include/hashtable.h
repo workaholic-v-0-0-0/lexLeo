@@ -15,6 +15,8 @@ hashtable *hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_va
 // frees values too (via callback) if callback
 void hashtable_destroy(hashtable *ht);
 
+// returns 0 if one param at least is NULL
+// otherwise:
 // returns 1 if the key is already in use, 0 otherwise
 int hashtable_key_is_in_use(hashtable *ht, const char *key);
 
