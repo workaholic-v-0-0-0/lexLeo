@@ -6,4 +6,21 @@
 
 - check if there's a memory leak due to strdup in lexer
 
-- the next rule LHS will be statement
+- except for the parser’s, the unit tests of the modules
+  below the parser layer are poorly written and need to be
+  redone, mainly because they test implementation details
+  instead of observable behavior, choose the wrong unit of
+  testing, and misuse mocks, fakes, or stubs. To avoid the
+  same mistakes again, here is a reminder of the standard
+  test-double terminology:
+    - dummy: not used by the CUT, only fills a parameter slot required by the signature
+    - stub: used by the CUT (even if only passed on to a mock inside the test), but does not behave like the real dependency; it typically returns fixed values or minimal responses
+    - fake: used by the CUT and simulates the real dependency’s behavior, but with simplified internal details (e.g. in-memory DB instead of a real DB)
+    - mock: used by the CUT; what is simulated is the interaction between the CUT and the dependency, and those interactions are configured in the test during the arrange phase
+    - spy: a special kind of stub that records the interactions between the CUT and the dependency, so the test can verify them afterwards during the assert phase
+    - test double: umbrella term for any of the above
+  and:
+    - do not double passive data structures that the CUT is supposed to mutate; use real instances so you can assert on the resulting state. (use fakes/mocks for external collaborators with behavior.)
+    - prefer spies over mocks when call ordering is not part of the contract, to keep tests resilient to refactoring. use mocks with explicit expectations when order and exact interactions are part of the protocol.
+      (for example, when creating a symbol, strdup is called after malloc for symbol in the first implementation and it's hard
+       to refactor by reversing the two calls to avoid a call to free)
