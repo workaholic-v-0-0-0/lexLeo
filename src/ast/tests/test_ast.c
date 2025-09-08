@@ -3365,6 +3365,60 @@ static void ast_type_has_children_returns_false_when_leaf_type(void **state) {
 
 
 
+//-----------------------------------------------------------------------------
+// ast_can_have_children TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//   - a == NULL
+// Expected:
+//   - return false
+static void can_have_children_returns_false_when_a_null(void **state) {
+    assert_false(ast_can_have_children(NULL));
+}
+
+// Given:
+//   - an ast of type AST_TYPE_TRANSLATION_UNIT type with 0 child
+// Expected:
+//   - return true
+static void can_have_children_returns_true_when_container_type(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_TRANSLATION_UNIT;
+    a->children = malloc(sizeof(ast_children_t));
+    a->children->children_nb = 0;
+    a->children->capacity = 0;
+    a->children->children = NULL;
+    assert_non_null(a->children);
+
+    assert_true(ast_can_have_children(a));
+
+    free(a->children);
+    free(a);
+}
+
+// Given:
+//   - an number data wrapper ast
+// Expected:
+//   - return false
+static void can_have_children_returns_false_when_data_wrapper_ast(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_DATA_WRAPPER;
+    a->data = malloc(sizeof(typed_data));
+    assert_non_null(a->data);
+    a->data->type = TYPE_INT;
+    a->data->data.int_value = 7;
+
+    assert_false(ast_can_have_children(a));
+
+    free(a->data);
+    free(a);
+}
+
+
+
 
 //-----------------------------------------------------------------------------
 // MAIN
@@ -3809,9 +3863,15 @@ int main(void) {
             children_append_take_setup, children_append_take_teardown),
     };
 
-    const struct CMUnitTest ast_ast_type_has_children_tests[] = {
+    const struct CMUnitTest ast_type_has_children_tests[] = {
         cmocka_unit_test(ast_type_has_children_returns_true_when_container_type),
         cmocka_unit_test(ast_type_has_children_returns_false_when_leaf_type),
+    };
+
+    const struct CMUnitTest ast_can_have_children_tests[] = {
+        cmocka_unit_test(can_have_children_returns_false_when_a_null),
+        cmocka_unit_test(can_have_children_returns_true_when_container_type),
+        cmocka_unit_test(can_have_children_returns_false_when_data_wrapper_ast),
     };
 
     int failed = 0;
@@ -3840,7 +3900,8 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_error_node_or_sentinel_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_children_reserve_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_children_append_take_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(ast_ast_type_has_children_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_type_has_children_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_can_have_children_tests, NULL, NULL);
 
     return failed;
 }
