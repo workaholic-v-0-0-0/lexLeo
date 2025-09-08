@@ -3337,6 +3337,36 @@ static void children_append_take_append_child_returns_true_when_realloc_succeeds
 
 
 //-----------------------------------------------------------------------------
+// ast_type_has_children TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//   - a container type
+// Expected:
+//   - return true
+static void ast_type_has_children_returns_true_when_container_type(void **state) {
+    assert_true(ast_type_has_children(AST_TYPE_BINDING));
+    assert_true(ast_type_has_children(AST_TYPE_READING));
+    assert_true(ast_type_has_children(AST_TYPE_WRITING));
+    assert_true(ast_type_has_children(AST_TYPE_TRANSLATION_UNIT));
+    assert_true(ast_type_has_children(AST_TYPE_COMPUTATION));
+    assert_true(ast_type_has_children(AST_TYPE_ADDITION));
+}
+
+// Given:
+//   - a leaf type
+// Expected:
+//   - return false
+static void ast_type_has_children_returns_false_when_leaf_type(void **state) {
+    assert_false(ast_type_has_children(AST_TYPE_DATA_WRAPPER));
+    assert_false(ast_type_has_children(AST_TYPE_ERROR));
+}
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -3779,6 +3809,11 @@ int main(void) {
             children_append_take_setup, children_append_take_teardown),
     };
 
+    const struct CMUnitTest ast_ast_type_has_children_tests[] = {
+        cmocka_unit_test(ast_type_has_children_returns_true_when_container_type),
+        cmocka_unit_test(ast_type_has_children_returns_false_when_leaf_type),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3805,6 +3840,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_create_error_node_or_sentinel_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_children_reserve_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_children_append_take_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_ast_type_has_children_tests, NULL, NULL);
 
     return failed;
 }

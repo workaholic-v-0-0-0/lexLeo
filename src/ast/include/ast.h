@@ -120,6 +120,8 @@ void ast_destroy_children_node(ast *children_node);
 
 void ast_destroy(ast *root); // the caller is responsible for passing either NULL or a well-formed ast pointer
 
+bool ast_type_has_children(ast_type type);
+
 char *ast_serialize(ast *root);
 ast *ast_deserialize(char *);
 

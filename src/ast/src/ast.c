@@ -412,6 +412,23 @@ void ast_destroy(ast *root) {
 #endif
 }
 
+bool ast_type_has_children(ast_type type) {
+    switch (type) {
+        case AST_TYPE_BINDING:
+        case AST_TYPE_READING:
+        case AST_TYPE_WRITING:
+        case AST_TYPE_TRANSLATION_UNIT:
+        case AST_TYPE_COMPUTATION:
+        case AST_TYPE_ADDITION:
+            return true;
+        case AST_TYPE_DATA_WRAPPER:
+        case AST_TYPE_ERROR:
+            return false;
+        default:
+            return false;
+    }
+}
+
 ast *ast_create_int_node(int i) {
     typed_data *td = ast_create_typed_data_int(i);
     if (!td)
