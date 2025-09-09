@@ -24,6 +24,3 @@
     - prefer spies over mocks when call ordering is not part of the contract, to keep tests resilient to refactoring. use mocks with explicit expectations when order and exact interactions are part of the protocol.
       (for example, when creating a symbol, strdup is called after malloc for symbol in the first implementation and it's hard
        to refactor by reversing the two calls to avoid a call to free)
-
-- implement in ast:
-    - bool ast_is_data_of(const ast *a, data_type dt);
