@@ -72,6 +72,7 @@ static ast *const DUMMY_AST_CHILD_1 = (ast *)&dummy[10];
 static ast *const DUMMY_AST_CHILD_TO_BE_ADDED = (ast *)&dummy[11];
 static ast *children_node_p = NULL;
 static error_info *const DUMMY_ERROR_INFO_P = (error_info *)&dummy[12];
+static const data_type STUB_DATA_TYPE = TYPE_INT;
 
 
 
@@ -3391,7 +3392,6 @@ static void can_have_children_returns_true_when_container_type(void **state) {
     a->children->children_nb = 0;
     a->children->capacity = 0;
     a->children->children = NULL;
-    assert_non_null(a->children);
 
     assert_true(ast_can_have_children(a));
 
@@ -3446,7 +3446,6 @@ static void has_any_child_returns_false_when_container_type_with_no_child(void *
     a->children->children_nb = 0;
     a->children->capacity = 0;
     a->children->children = NULL;
-    assert_non_null(a->children);
 
     assert_false(ast_has_any_child(a));
 
@@ -3473,6 +3472,80 @@ static void ast_has_any_child_returns_false_when_data_wrapper_ast(void **state) 
     free(a);
 }
 
+
+
+//-----------------------------------------------------------------------------
+// ast_is_data_of TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//   - a == NULL
+// Expected:
+//   - return false
+static void is_data_of_returns_false_when_a_null(void **state) {
+    assert_false(ast_is_data_of(NULL, STUB_DATA_TYPE));
+}
+
+// Given:
+//   - a == an ast of type AST_TYPE_TRANSLATION_UNIT type with 0 child
+// Expected:
+//   - return false
+static void is_data_of_returns_false_when_a_is_container_type(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_TRANSLATION_UNIT;
+    a->children = malloc(sizeof(ast_children_t));
+    assert_non_null(a->children);
+    a->children->children_nb = 0;
+    a->children->capacity = 0;
+    a->children->children = NULL;
+
+    assert_false(ast_is_data_of(a, STUB_DATA_TYPE));
+
+    free(a->children);
+    free(a);
+}
+
+// Given:
+//   - a == a number data wrapper ast
+//   - dt == TYPE_SYMBOL_NAME
+// Expected:
+//   - return false
+static void ast_is_data_of_returns_false_when_type_mismatch(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_DATA_WRAPPER;
+    a->data = malloc(sizeof(typed_data));
+    assert_non_null(a->data);
+    a->data->type = TYPE_INT;
+    a->data->data.int_value = 7;
+
+    assert_false(ast_is_data_of(a, TYPE_SYMBOL_NAME));
+
+    free(a->data);
+    free(a);
+}
+
+// Given:
+//   - a == a number data wrapper ast
+//   - dt == TYPE_INT
+// Expected:
+//   - return true
+static void ast_is_data_of_returns_true_when_type_match(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_DATA_WRAPPER;
+    a->data = malloc(sizeof(typed_data));
+    assert_non_null(a->data);
+    a->data->type = TYPE_INT;
+    a->data->data.int_value = 7;
+
+    assert_true(ast_is_data_of(a, TYPE_INT));
+
+    free(a->data);
+    free(a);
+}
 
 
 
@@ -3936,6 +4009,13 @@ int main(void) {
         cmocka_unit_test(ast_has_any_child_returns_false_when_data_wrapper_ast),
     };
 
+    const struct CMUnitTest ast_is_data_of_tests[] = {
+        cmocka_unit_test(is_data_of_returns_false_when_a_null),
+        cmocka_unit_test(is_data_of_returns_false_when_a_is_container_type),
+        cmocka_unit_test(ast_is_data_of_returns_false_when_type_mismatch),
+        cmocka_unit_test(ast_is_data_of_returns_true_when_type_match),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3965,6 +4045,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_type_has_children_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_can_have_children_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_has_any_child_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_is_data_of_tests, NULL, NULL);
 
     return failed;
 }

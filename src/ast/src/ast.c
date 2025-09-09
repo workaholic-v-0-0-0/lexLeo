@@ -437,6 +437,10 @@ bool ast_has_any_child(ast *a) {
     return (ast_can_have_children(a)) && (a->children->children_nb > 0);
 }
 
+bool ast_is_data_of(const ast *a, data_type dt) {
+    return (a) && (a->type == AST_TYPE_DATA_WRAPPER) && (a->data) && (a->data->type == dt);
+}
+
 ast *ast_create_int_node(int i) {
     typed_data *td = ast_create_typed_data_int(i);
     if (!td)
