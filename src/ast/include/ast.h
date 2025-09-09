@@ -122,6 +122,7 @@ void ast_destroy(ast *root); // the caller is responsible for passing either NUL
 
 bool ast_type_has_children(ast_type type);
 bool ast_can_have_children(ast *a);
+bool ast_has_any_child(ast *a);
 
 char *ast_serialize(ast *root);
 ast *ast_deserialize(char *);
