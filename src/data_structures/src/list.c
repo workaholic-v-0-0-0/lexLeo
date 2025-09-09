@@ -22,6 +22,18 @@ list list_push(list l, void * e) {
     return ret;
 }
 
+void *list_pop(list *l_p) {
+	if ((!l_p) || (!*l_p))
+		return NULL;
+
+	void *ret = (*l_p)->car;
+	list cons_to_be_freed_p = *l_p;
+	*l_p = (*l_p)->cdr;
+	DATA_STRUCTURE_FREE(cons_to_be_freed_p);
+
+	return ret;
+}
+
 void list_free_list(list l, void (*destroy_fn)(void *item, void *user_data), void *user_data) {
 	list next;
 	while (l) {

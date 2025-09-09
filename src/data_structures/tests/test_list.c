@@ -674,6 +674,103 @@ static void list_free_list_memory_leaks_at_cars_when_l_not_null_f_null_dynamical
 
 
 //-----------------------------------------------------------------------------
+// list_pop TESTS
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int list_pop_setup(void **state) {
+    set_allocators(mock_malloc, mock_free);
+    return 0;
+}
+
+static int list_pop_teardown(void **state) {
+    set_allocators(NULL, NULL);
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - l_p == NULL
+// Expected:
+//  - return NULL
+static void list_pop_returns_null_when_l_p_null(void **state) {
+    assert_null(list_pop(NULL));
+}
+
+// Given:
+//  - l_p != NULL && *l_p == NULL
+// Expected:
+//  - return NULL
+static void list_pop_returns_null_when_list_empty(void **state) {
+    list *l_p = malloc(sizeof(list *));
+    assert_non_null(l_p);
+    *l_p = NULL;
+
+    assert_null(list_pop(l_p));
+}
+
+// Given:
+//  - l_p != NULL && *l_p != NULL && (*l_p)->cdr == NULL
+// Expected:
+//  - (*l_p) == (*old_l_p)->cdr
+//  - calls free with (*old_l_p)
+//  - return (*old_l_p)->car
+static void list_pop_returns_car_and_frees_when_singleton_list(void **state) {
+    list l = malloc(sizeof(cons));
+    assert_non_null(l);
+    void *stub_element_p = (void*)0xDEADBEEF;
+    l->car = stub_element_p;
+    l->cdr = NULL;
+    expect_value(mock_free, ptr, l);
+
+    void *ret = list_pop(&l);
+
+    assert_ptr_equal(ret, stub_element_p);
+    assert_null(l);
+}
+
+// Given:
+//  - l_p points to two-element list
+// Expected:
+//  - (*l_p) == (*old_l_p)->cdr
+//  - calls free with (*old_l_p)
+//  - return (*old_l_p)->car
+static void list_pop_returns_car_and_frees_and_advances_when_two_elements(void **state) {
+    void *stub_element_1_p = (void*)0xDEADBEEE;
+    void *stub_element_2_p = (void*)0xDEADBEEF;
+    list l_end;
+    list l = malloc(sizeof(cons));
+    assert_non_null(l);
+    l->car = stub_element_2_p;
+    l->cdr = NULL;
+    l_end = l;
+    l = malloc(sizeof(cons));
+    assert_non_null(l);
+    l->car = stub_element_1_p;
+    l->cdr = l_end;
+    expect_value(mock_free, ptr, l);
+
+    void *ret = list_pop(&l);
+
+    assert_ptr_equal(ret, stub_element_1_p);
+    assert_ptr_equal(l, l_end);
+    assert_ptr_equal(l->car, stub_element_2_p);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -780,7 +877,7 @@ int main(void) {
             list_push_setup, list_push_teardown, &l_not_null_e_not_null_dynamically_allocated),
     };
 
-    const struct CMUnitTest mock_free_list_tests[] = {
+    const struct CMUnitTest list_free_list_tests[] = {
         cmocka_unit_test_prestate_setup_teardown(
             list_free_list_no_side_effect_when_l_null,
             list_free_list_setup, list_free_list_teardown, &l_null_f_null),
@@ -817,10 +914,21 @@ int main(void) {
 
     };
 
+    const struct CMUnitTest list_pop_tests[] = {
+        cmocka_unit_test(list_pop_returns_null_when_l_p_null),
+        cmocka_unit_test(list_pop_returns_null_when_list_empty),
+        cmocka_unit_test_setup_teardown(
+            list_pop_returns_car_and_frees_when_singleton_list,
+            list_pop_setup, list_pop_teardown),
+        cmocka_unit_test_setup_teardown(
+            list_pop_returns_car_and_frees_and_advances_when_two_elements,
+            list_pop_setup, list_pop_teardown),
+    };
+
     int failed = 0;
-/*
     failed += cmocka_run_group_tests(list_push_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(mock_free_list_tests, NULL, NULL);
-*/
+    failed += cmocka_run_group_tests(list_free_list_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(list_pop_tests, NULL, NULL);
+
     return failed;
 }
