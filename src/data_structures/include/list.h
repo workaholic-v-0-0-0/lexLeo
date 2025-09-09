@@ -8,6 +8,8 @@ typedef struct cons {void *car; struct cons *cdr;} cons, *list;
 //returns NULL on error
 list list_push(list l, void * e);
 
+void *list_pop(list *l_p);
+
 // precondition : if destroy_fn_t non null, it must properly frees the l'cars
 void list_free_list(list l, void (*destroy_fn_t)(void *item, void *user_data), void *user_data);
 
