@@ -3387,6 +3387,7 @@ static void can_have_children_returns_true_when_container_type(void **state) {
     assert_non_null(a);
     a->type = AST_TYPE_TRANSLATION_UNIT;
     a->children = malloc(sizeof(ast_children_t));
+    assert_non_null(a->children);
     a->children->children_nb = 0;
     a->children->capacity = 0;
     a->children->children = NULL;
@@ -3412,6 +3413,61 @@ static void can_have_children_returns_false_when_data_wrapper_ast(void **state) 
     a->data->data.int_value = 7;
 
     assert_false(ast_can_have_children(a));
+
+    free(a->data);
+    free(a);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// ast_has_any_child TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//   - a == NULL
+// Expected:
+//   - return false
+static void has_any_child_returns_false_when_a_null(void **state) {
+    assert_false(ast_has_any_child(NULL));
+}
+
+// Given:
+//   - an ast of type AST_TYPE_TRANSLATION_UNIT type with 0 child
+// Expected:
+//   - return false
+static void has_any_child_returns_false_when_container_type_with_no_child(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_TRANSLATION_UNIT;
+    a->children = malloc(sizeof(ast_children_t));
+    assert_non_null(a->children);
+    a->children->children_nb = 0;
+    a->children->capacity = 0;
+    a->children->children = NULL;
+    assert_non_null(a->children);
+
+    assert_false(ast_has_any_child(a));
+
+    free(a->children);
+    free(a);
+}
+
+// Given:
+//   - an number data wrapper ast
+// Expected:
+//   - return false
+static void ast_has_any_child_returns_false_when_data_wrapper_ast(void **state) {
+    ast *a = malloc(sizeof(ast));
+    assert_non_null(a);
+    a->type = AST_TYPE_DATA_WRAPPER;
+    a->data = malloc(sizeof(typed_data));
+    assert_non_null(a->data);
+    a->data->type = TYPE_INT;
+    a->data->data.int_value = 7;
+
+    assert_false(ast_has_any_child(a));
 
     free(a->data);
     free(a);
@@ -3874,6 +3930,12 @@ int main(void) {
         cmocka_unit_test(can_have_children_returns_false_when_data_wrapper_ast),
     };
 
+    const struct CMUnitTest ast_has_any_child_tests[] = {
+        cmocka_unit_test(has_any_child_returns_false_when_a_null),
+        cmocka_unit_test(has_any_child_returns_false_when_container_type_with_no_child),
+        cmocka_unit_test(ast_has_any_child_returns_false_when_data_wrapper_ast),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(create_typed_data_int_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_destroy_typed_data_int_tests, NULL, NULL);
@@ -3902,6 +3964,7 @@ int main(void) {
     failed += cmocka_run_group_tests(ast_children_append_take_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_type_has_children_tests, NULL, NULL);
     failed += cmocka_run_group_tests(ast_can_have_children_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(ast_has_any_child_tests, NULL, NULL);
 
     return failed;
 }

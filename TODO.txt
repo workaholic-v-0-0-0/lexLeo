@@ -26,6 +26,4 @@
        to refactor by reversing the two calls to avoid a call to free)
 
 - implement in ast:
-    - bool ast_can_have_children(ast *a);
-    - bool ast_has_any_child(ast *a);
     - bool ast_is_data_of(const ast *a, data_type dt);

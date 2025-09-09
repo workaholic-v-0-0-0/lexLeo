@@ -433,6 +433,10 @@ bool ast_can_have_children(ast *a) {
     return (a) && (ast_type_has_children(a->type));
 }
 
+bool ast_has_any_child(ast *a) {
+    return (ast_can_have_children(a)) && (a->children->children_nb > 0);
+}
+
 ast *ast_create_int_node(int i) {
     typed_data *td = ast_create_typed_data_int(i);
     if (!td)
