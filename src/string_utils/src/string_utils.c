@@ -2,6 +2,8 @@
 
 #include "string_utils.h"
 
+#include "osal.h"
+
 #include <string.h>
 
 static string_compare_t current_string_compare = strcmp;

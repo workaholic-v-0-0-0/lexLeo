@@ -1,4 +1,4 @@
-# src/lexer/tests/tests.cmake
+# src/lexer/tests/CMakeLists.txt
 
 add_executable(
     test_lexer

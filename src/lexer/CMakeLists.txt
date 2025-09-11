@@ -46,6 +46,7 @@ set(
 FLEX_TARGET(lexer ${FLEX_L} ${FLEX_OUTPUT})
 
 add_library(lexer STATIC ${FLEX_lexer_OUTPUTS})
+target_link_libraries(lexer PRIVATE osal)
 
 target_include_directories(lexer
     PRIVATE
@@ -58,6 +59,6 @@ add_dependencies(lexer parser) # lexer depends on the Bison-generated header
 #[[
 if (BUILD_TESTING)
     target_compile_definitions(lexer PRIVATE UNIT_TEST)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
 endif ()
 ]]

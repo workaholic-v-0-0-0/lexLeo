@@ -1,4 +1,4 @@
-# src/data_structures/tests/tests.cmake
+# src/data_structures/tests/CMakeLists.txt
 
 # pure unit tests
 

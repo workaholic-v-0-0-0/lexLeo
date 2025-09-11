@@ -1,4 +1,4 @@
-# src/symtab/tests/tests.cmake
+# src/symtab/tests/CMakeLists.txt
 
 add_executable(
     test_symtab

@@ -3,6 +3,7 @@
 %option header-file="lexer.yy.h"
 
 %{
+#include "osal.h"
 #include "parser.tab.h"
 #include "parser_types.h"
 %}

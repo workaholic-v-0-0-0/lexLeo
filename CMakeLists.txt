@@ -54,16 +54,16 @@ if (BUILD_TESTING)
     include(CTest)
 
     # Enable the testing functionality so CMake can prepare a test driver
-    # This command must be called in the root tests.cmake to enable integration
+    # This command must be called in the root CMakeLists.txt to enable integration
     # of test cases defined in any subdirectory of the project.
     enable_testing()
 
-    # Add the 'tests' subdirectory which contains only a tests.cmake.
+    # Add the 'tests' subdirectory which contains only a CMakeLists.txt.
     # It configures the Check and CMocka testing libraries for unit and mock
     # testing.
     # Then it defines targets to check all tests with verbose output and
     # to run specific groups of tests using labels.
-    include(tests/tests.cmake)
+    add_subdirectory(tests)
 
 endif ()
 

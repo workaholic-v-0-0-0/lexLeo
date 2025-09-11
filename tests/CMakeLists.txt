@@ -1,4 +1,4 @@
-# tests/tests.cmake
+# tests/CMakeLists.txt
 
 #------------------------------------------------------------------------------
 # CHECK LIBRARY CONFIGURATION

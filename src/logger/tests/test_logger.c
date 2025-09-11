@@ -12,7 +12,6 @@
 #include "logger.h"
 
 
-
 //-----------------------------------------------------------------------------
 // CONSTANTS
 //-----------------------------------------------------------------------------
@@ -24,8 +23,8 @@ enum {
     EPOCH_TIME_2025_06_10_MIDDAY = 1749549600,
     EPOCH_TIME_2025_05_07_MIDDAY = 1746612000,
 };
-#define APPEND_MODE "a"
 
+#define APPEND_MODE "a"
 
 
 //-----------------------------------------------------------------------------
@@ -55,11 +54,9 @@ FILE *fake_log_file; // defined in setup via fmemopen(fake_log_file_address, LOG
 // time is faked via fake_time.h
 
 
-
 //-----------------------------------------------------------------------------
 // init_logger TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -75,13 +72,12 @@ typedef struct {
 } init_logger_test_params_t;
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 static int init_logger_setup(void **state) {
-    init_logger_test_params_t *params = (init_logger_test_params_t *)(*state);
+    init_logger_test_params_t *params = (init_logger_test_params_t *) (*state);
     set_log_file(params->log_file_init);
     return 0;
 }
@@ -90,7 +86,6 @@ static int init_logger_teardown(void **state) {
     set_log_file(NULL);
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -103,7 +98,6 @@ static void expect_init_logger_result_and_effect_on_logfile(init_logger_test_par
     assert_int_equal(result, params->expected_result);
     assert_ptr_equal(get_log_file(), params->expected_log_file_after_init_logger_call);
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -147,7 +141,6 @@ static init_logger_test_params_t logPathNotNull_logFileNull_FopenSuccess = {
 };
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -156,35 +149,35 @@ static init_logger_test_params_t logPathNotNull_logFileNull_FopenSuccess = {
 // Expected : init_logger returns -1 and log_file is not changed.
 // Param : logPathNull_logFileNull
 static void init_logger_ErrorAndNoLogfileChange_WhenLogPathIsNull_AndLogfileIsNull(void **state) {
-    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *)(*state));
+    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *) (*state));
 }
 
 // Given: log_path == NULL and log_file != NULL
 // Expected : init_logger returns -1 and log_file is not changed.
 // Param : logPathNull_logFileNotNull
 static void initLogger_ErrorAndNoLogfileChange_WhenLogPathIsNull_AndLogfileIsNotNull(void **state) {
-    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *)(*state));
+    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *) (*state));
 }
 
 // Given: log_file is not NULL and log_file is not NULL
 // Expected : init_logger returns -1 and log_file is not changed.
 // Param : logPathNotNull_logFileNotNull
 static void initLogger_ErrorAndNoLogfileChange_WhenLoggerIsAlreadyInitialized(void **state) {
-    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *)(*state));
+    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *) (*state));
 }
 
 // Given: log_file is not NULL and log_file is not NULL
 // Expected : init_logger do not call fopen
 // Param : logPathNotNull_logFileNotNull
 static void initLogger_DoNotCallFopen_WhenLogPathIsNotNull_AndLogfileIsNotNull(void **state) {
-    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *)(*state));
+    expect_init_logger_result_and_effect_on_logfile((init_logger_test_params_t *) (*state));
 }
 
 // Given: log_file is not NULL and log_file is NULL
 // Expected : init_logger call fopen with right arguments (log_path and APPEND_MODE)
 // Param : logPathNotNull_logFileNull_FopenFail
 static void initLogger_CallFopenWithRightParams_WhenLogPathIsNotNull_AndLogfileIsNull(void **state) {
-    init_logger_test_params_t *params = (init_logger_test_params_t *)(*state);
+    init_logger_test_params_t *params = (init_logger_test_params_t *) (*state);
     expect_string(fopen, path, params->log_path);
     expect_string(fopen, mode, APPEND_MODE);
     will_return(fopen, NULL);
@@ -195,7 +188,7 @@ static void initLogger_CallFopenWithRightParams_WhenLogPathIsNotNull_AndLogfileI
 // Expected : init_logger returns -1 and log_file is not changed.
 // Param : logPathNotNull_logFileNull_FopenFail
 static void initLogger_ErrorAndNoLogfileChange_WhenLogPathIsNotNull_AndLogfileIsNull_AndFopenFail(void **state) {
-    init_logger_test_params_t *params = (init_logger_test_params_t *)(*state);
+    init_logger_test_params_t *params = (init_logger_test_params_t *) (*state);
     expect_string(fopen, path, params->log_path);
     expect_string(fopen, mode, APPEND_MODE);
     will_return(fopen, NULL);
@@ -206,7 +199,7 @@ static void initLogger_ErrorAndNoLogfileChange_WhenLogPathIsNotNull_AndLogfileIs
 // Expected : init_logger returns 0 and log_file value is the one returned by fopen
 // Param : logPathNotNull_logFileNull_FopenSuccess
 static void initLogger_SucessAndLogfileInitialized_WhenLogPathIsNotNull_AndLogfileIsNull_AndFopenSuccess(void **state) {
-    init_logger_test_params_t *params = (init_logger_test_params_t *)(*state);
+    init_logger_test_params_t *params = (init_logger_test_params_t *) (*state);
     expect_string(fopen, path, params->log_path);
     expect_string(fopen, mode, APPEND_MODE);
     will_return(fopen, &dummy_log_file);
@@ -214,11 +207,9 @@ static void initLogger_SucessAndLogfileInitialized_WhenLogPathIsNotNull_AndLogfi
 }
 
 
-
 //-----------------------------------------------------------------------------
 // close_logger TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -233,14 +224,13 @@ typedef struct {
 } close_logger_test_params_t;
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 static int close_logger_setup(void **state) {
     set_logger_fclose(mock_fclose);
-    close_logger_test_params_t *params = (close_logger_test_params_t *)(*state);
+    close_logger_test_params_t *params = (close_logger_test_params_t *) (*state);
     set_log_file(params->log_file_init);
     return 0;
 }
@@ -250,7 +240,6 @@ static int close_logger_teardown(void **state) {
     set_logger_fclose(fclose);
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -263,7 +252,6 @@ static void expect_close_logger_result_and_effect_on_logfile(close_logger_test_p
     assert_int_equal(result, params->expected_result);
     assert_ptr_equal(get_log_file(), params->expected_log_file_after_close_logger_call);
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -292,7 +280,6 @@ static close_logger_test_params_t logFileNotNull_FcloseSuccess = {
 };
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -301,14 +288,14 @@ static close_logger_test_params_t logFileNotNull_FcloseSuccess = {
 // Expected: close_logger returns -1 and log_file remains NULL
 // Param : logFileNull
 static void close_logger_ErrorAndNoLogfileChange_WhenLogfileIsNull(void **state) {
-    expect_close_logger_result_and_effect_on_logfile((close_logger_test_params_t *)(*state));
+    expect_close_logger_result_and_effect_on_logfile((close_logger_test_params_t *) (*state));
 }
 
 // Given: log_file != NULL
 // Expected: close_logger calls fclose with parameter log_file
 // Param : logFileNotNull_FcloseFail
 static void close_logger_CallsFcloseWithRightParam_WhenLogfileIsNotNull(void **state) {
-    close_logger_test_params_t *params = (close_logger_test_params_t *)(*state);
+    close_logger_test_params_t *params = (close_logger_test_params_t *) (*state);
     expect_value(mock_fclose, file, params->log_file_init);
     will_return(mock_fclose, EOF);
     close_logger();
@@ -318,7 +305,7 @@ static void close_logger_CallsFcloseWithRightParam_WhenLogfileIsNotNull(void **s
 // Expected: close_logger return -1 and log_file still points to the open file
 // Param : logFileNotNull_FcloseFail
 static void close_logger_ErrorAndNoLogfileChange_WhenLogfileIsNotNull_AndFcloseReturnsEOF(void **state) {
-    close_logger_test_params_t *params = (close_logger_test_params_t *)(*state);
+    close_logger_test_params_t *params = (close_logger_test_params_t *) (*state);
     expect_value(mock_fclose, file, params->log_file_init);
     will_return(mock_fclose, EOF);
     expect_close_logger_result_and_effect_on_logfile(params);
@@ -328,18 +315,16 @@ static void close_logger_ErrorAndNoLogfileChange_WhenLogfileIsNotNull_AndFcloseR
 // Expected: close_logger returns 0 and log_file is NULL
 // Param : logFileNotNull_FcloseSuccess
 static void close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseReturns0(void **state) {
-    close_logger_test_params_t *params = (close_logger_test_params_t *)(*state);
+    close_logger_test_params_t *params = (close_logger_test_params_t *) (*state);
     expect_value(mock_fclose, file, params->log_file_init);
     will_return(mock_fclose, 0);
     expect_close_logger_result_and_effect_on_logfile(params);
 }
 
 
-
 //-----------------------------------------------------------------------------
 // log_info TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -349,7 +334,7 @@ static void close_logger_SucessAndLogfileIsNull_WhenLogfileIsNotNull_AndFcloseRe
 static int log_info_setup(void **state) {
     // environnement has been configured in the following cmake files :
     // src/osal/CMakeLists.txt
-    // src/logger/tests/tests.cmake
+    // src/logger/tests/CMakeLists.txt
     // Ie "TZ=GMT-2" for Windows and "TZ=Europe/Paris" otherwise
     set_fake_time(EPOCH_TIME_2025_06_10_MIDDAY);
     if ((fake_log_file = fmemopen(fake_log_file_address, LOGGER_FILE_MAX_LENGTH, APPEND_MODE)) == NULL)
@@ -365,7 +350,6 @@ static int log_info_teardown(void **state) {
     set_log_file(NULL);
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -447,7 +431,9 @@ static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameter
 //         [2025-05-07 12:00:00] INFO: It's Sylvain's birthday!
 //     - log_info returns 0
 // note : it is an isolated integration test
-static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation_AndTwoLogInfoCalls(void **state) {
+static void
+log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation_AndTwoLogInfoCalls(
+    void **state) {
     (void) *state; // unused
     set_log_file(fake_log_file);
     memset(fake_log_file_address, 0xaa, LOGGER_FILE_MAX_LENGTH);
@@ -503,7 +489,6 @@ static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameter
 }
 
 
-
 //-----------------------------------------------------------------------------
 // log_error TESTS
 //-----------------------------------------------------------------------------
@@ -524,14 +509,13 @@ static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameter
 // -----------------------------------------------------------------------------
 
 
-
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
 int main(void) {
     const struct CMUnitTest init_logger_tests[] = {
-		cmocka_unit_test_prestate_setup_teardown(
+        cmocka_unit_test_prestate_setup_teardown(
             init_logger_ErrorAndNoLogfileChange_WhenLogPathIsNull_AndLogfileIsNull,
             init_logger_setup, init_logger_teardown, &logPathNull_logFileNull),
         cmocka_unit_test_prestate_setup_teardown(
@@ -585,7 +569,7 @@ int main(void) {
             log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation,
             log_info_setup, log_info_teardown),
         cmocka_unit_test_setup_teardown(
-        log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation_AndTwoLogInfoCalls,
+            log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation_AndTwoLogInfoCalls,
             log_info_setup, log_info_teardown),
         cmocka_unit_test_setup_teardown(
             log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndFormatOperation,

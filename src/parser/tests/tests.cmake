@@ -1,4 +1,4 @@
-# src/parser/tests/tests.cmake
+# src/parser/tests/CMakeLists.txt
 
 # build unit parsers to do TDD
 

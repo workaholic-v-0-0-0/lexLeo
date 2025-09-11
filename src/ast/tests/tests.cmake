@@ -1,4 +1,4 @@
-# src/ast/tests/tests.cmake
+# src/ast/tests/CMakeLists.txt
 
 add_executable(
     test_ast

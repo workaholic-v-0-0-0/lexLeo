@@ -1,4 +1,4 @@
-# src/logger/tests/tests.cmake
+# src/logger/tests/CMakeLists.txt
 
 add_executable(
     test_logger
