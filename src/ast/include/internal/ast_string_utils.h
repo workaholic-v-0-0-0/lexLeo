@@ -8,7 +8,7 @@
     #define AST_STRING_DUPLICATE(s) get_current_string_duplicate()(s)
 #else
     #include <string.h>
-    #define AST_STRING_DUPLICATE(s) strdup(s)
+    #define AST_STRING_DUPLICATE(s) osal_strdup(s)
 #endif
 
 #endif //AST_STRING_UTILS_H

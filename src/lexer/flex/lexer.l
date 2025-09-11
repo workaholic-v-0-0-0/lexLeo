@@ -37,7 +37,7 @@
 }
 
 [a-zA-Z_][a-zA-Z0-9_]* { // symbol name
-    char *s = strdup(yytext);
+    char *s = osal_strdup(yytext);
     if (!s) { // parser must handle this error
         yylval->string_value = NULL;
         return SYMBOL_NAME;

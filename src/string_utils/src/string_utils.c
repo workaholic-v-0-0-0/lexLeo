@@ -5,7 +5,7 @@
 #include <string.h>
 
 static string_compare_t current_string_compare = strcmp;
-static string_duplicate_t current_string_duplicate = strdup;
+static string_duplicate_t current_string_duplicate = osal_strdup;
 
 void set_string_compare(string_compare_t string_compare) {
     current_string_compare = string_compare ? string_compare : strcmp;
