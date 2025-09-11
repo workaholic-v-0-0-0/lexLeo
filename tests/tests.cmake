@@ -98,3 +98,10 @@ add_custom_target(
     test_list
     logger
 )
+
+
+#------------------------------------------------------------------------------
+# TEST SUPPORT UTILITIES
+#------------------------------------------------------------------------------
+
+add_subdirectory(test_support/fake_memory)

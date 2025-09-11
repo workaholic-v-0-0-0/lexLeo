@@ -10,7 +10,7 @@
 #else
     #include <string.h>
     #define DATA_STRUCTURE_STRING_COMPARE(s1,s2) strcmp(s1,s2)
-    #define DATA_STRUCTURE_STRING_DUPLICATE(s) strdup(s)
+    #define DATA_STRUCTURE_STRING_DUPLICATE(s) osal_strdup(s)
 #endif
 
 #endif //DATA_STRUCTURE_STRING_UTILS_H
