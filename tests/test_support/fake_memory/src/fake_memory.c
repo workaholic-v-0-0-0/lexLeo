@@ -46,6 +46,12 @@ void fake_memory_fail_only_on_call(size_t n) {
   fake_memory_fail_on_calls(1, &n);
 }
 
+void fake_memory_fail_on_all_call(void) {
+  size_t fails[MAX_FAILS];
+  for (size_t i = 0 ; i < MAX_FAILS ; ) fails[i] = ++i;
+  fake_memory_fail_on_calls(MAX_FAILS, fails);
+}
+
 static bool should_fail_now(size_t cur) {
   for (size_t i = 0; i < g_fail_points_len; ++i) {
     if (g_fail_points[i] == cur) {
