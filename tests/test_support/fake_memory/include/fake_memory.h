@@ -7,7 +7,8 @@
 #include <stdbool.h>
 
 void fake_memory_reset(void);
-void fake_memory_fail_after(size_t n);
+void fake_memory_fail_on_calls(size_t n, const size_t *idxs);
+void fake_memory_fail_only_on_call(size_t n);
 bool fake_memory_no_leak(void);
 bool fake_memory_no_invalid_free(void);
 bool fake_memory_no_double_free(void);

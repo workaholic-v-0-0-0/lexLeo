@@ -3,6 +3,7 @@
 #include "fake_memory.h"
 
 #include "osal.h"
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
@@ -14,7 +15,6 @@
 OSAL_ALIGNED_MAX static uint8_t g_arena[TEST_ARENA_SIZE];
 
 static size_t g_off;
-static size_t g_fail_after; // 0 for no fail
 static size_t g_alloc_count;
 static size_t g_in_use; // nb of octets currently allocated
 
@@ -23,6 +23,38 @@ static size_t g_in_use; // nb of octets currently allocated
 
 static size_t g_invalid_free_count;
 static size_t g_double_free_count;
+
+#define MAX_FAILS 64
+static size_t g_fail_points[MAX_FAILS];
+static size_t g_fail_points_len;
+
+static int cmp_size(const void *a, const void *b) {
+  size_t lhs = *(const size_t *)a;
+  size_t rhs = *(const size_t *)b;
+  return (lhs > rhs) - (lhs < rhs);
+}
+
+void fake_memory_fail_on_calls(size_t n, const size_t *idxs) {
+  if (n > MAX_FAILS) n = MAX_FAILS;
+  for (size_t i = 0; i < n; ++i) g_fail_points[i] = idxs[i];
+  qsort(g_fail_points, n, sizeof(size_t), cmp_size);
+  g_fail_points_len = n;
+  g_alloc_count = 0;
+}
+
+void fake_memory_fail_only_on_call(size_t n) {
+  fake_memory_fail_on_calls(1, &n);
+}
+
+static bool should_fail_now(size_t cur) {
+  for (size_t i = 0; i < g_fail_points_len; ++i) {
+    if (g_fail_points[i] == cur) {
+      g_fail_points[i] = g_fail_points[--g_fail_points_len];
+      return true;
+    }
+  }
+  return false;
+}
 
 typedef struct {
   uint32_t magic;
@@ -34,15 +66,12 @@ typedef struct {
 void fake_memory_reset(void) {
   g_off = 0;
   g_alloc_count = 0;
-  g_fail_after = 0;
   g_in_use = 0;
   g_invalid_free_count = 0;
   g_double_free_count = 0;
   memset(g_arena, 0, sizeof(g_arena));
-}
-
-void fake_memory_fail_after(size_t n) {
-  g_fail_after = n;
+  memset(g_fail_points, 0, MAX_FAILS * sizeof(size_t));
+  g_fail_points_len = 0;
 }
 
 bool fake_memory_no_leak(void) {
@@ -58,7 +87,7 @@ bool fake_memory_no_double_free(void) {
 }
 
 void *fake_malloc(size_t size) {
-  if (g_fail_after && ++g_alloc_count == g_fail_after) return NULL;
+  if (should_fail_now(++g_alloc_count)) return NULL;
   if (size == 0) size = 1; // to simplify
 
   const size_t a = OSAL_ALIGNOF_MAX;
@@ -95,7 +124,7 @@ void fake_free(void *ptr) {
     case FAKE_MAGIC_FREE:
       g_double_free_count++;
       break;
-    default: // corrupted pointer
+    default: // corrupted or not owned pointer
       g_invalid_free_count++;
   }
 }
