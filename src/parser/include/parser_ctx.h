@@ -9,7 +9,7 @@ typedef struct parser_ops {
     ast* (*create_int_node)(int);
     ast* (*create_string_node)(char *);
     ast *(*create_symbol_name_node)(char *);
-	ast* (*create_error_node_or_sentinel)(error_type code, char *message);
+	ast* (*create_error_node_or_sentinel)(ast_error_type code, char *message);
     ast *(*create_children_node_var)(ast_type type, size_t children_nb,...);
     void (*destroy)(ast *root);
     bool (*children_append_take)(ast *parent, ast *child);

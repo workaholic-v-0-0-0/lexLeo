@@ -198,9 +198,9 @@ add_subdirectory(src/ast) # depends on data_structures
 add_subdirectory(src/symtab) # depends on data_structures and ast
 add_subdirectory(src/parser) # depends on lexer and ast
 add_subdirectory(src/lexer) # depends on parser interface—opaque types
+add_subdirectory(src/resolver) # depends on ast and symtab
 
 # TO BE IMPLEMENTED
-# add_subdirectory(src/resolver)
 # add_subdirectory(src/interpreter)
 # add_subdirectory(src/compiler)
 
