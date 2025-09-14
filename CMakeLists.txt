@@ -199,10 +199,10 @@ add_subdirectory(src/symtab) # depends on data_structures and ast
 add_subdirectory(src/parser) # depends on lexer and ast
 add_subdirectory(src/lexer) # depends on parser interface—opaque types
 add_subdirectory(src/resolver) # depends on ast and symtab
-add_subdirectory(src/runtime_env) # depends on ...
+add_subdirectory(src/runtime_env) # depends on hashtable
+add_subdirectory(src/interpreter) # depends on runtime_env, ...?
 
 # TO BE IMPLEMENTED
-# add_subdirectory(src/interpreter)
 # add_subdirectory(src/compiler)
 
 

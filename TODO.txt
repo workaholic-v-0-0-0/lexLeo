@@ -6,7 +6,7 @@
 
 - check if there's a memory leak due to strdup in lexer
 
-- except for the parser’s and the resolver's, the unit tests of the modules
+- except for parser, resolver and runtime_env, the unit tests of the modules
   below the parser layer are poorly written and need to be
   redone, mainly because they test implementation details
   instead of observable behavior, choose the wrong unit of
@@ -28,39 +28,6 @@
     “unit tests” that are not integration tests are those that merely lock down
     implementation details instead of observable behavior.
 
-- scopes and closures handling:
-  - in ast: add the following types:
-      - AST_TYPE_FUNCTION
-      - AST_TYPE_FUNCTION_DEFINITION
-      - AST_TYPE_LIST_OF_PARAMETERS
-      - AST_TYPE_BLOC
-  - in parser: add grammar rules which actions are to build
-    the AST of the previous types.
-  - in resolver: modify resolver so that it winds a new scope to resolve
-    symbol which are parameters of a function
-
-- make a new module interpreter_environment:
-  - a stack of hashtable with a ref_nb to retain/release
-    the interpreter values (interpreter_value)
-    - it will stored symbol*->interpreter_value associations
-  - while unwinding of a closure:
-    - the structure of the closure won't be freed if its
-      ref_nb is greater than 0
-    - the interpreter values of the closure can have a
-      ref_nb too ; they are freed only if it's greater
-      than 0
-    - the keys type is symbol* so they are not freed
-      (see later)
-  - this is different from the resolution environment which:
-    - store char*->symbol* associations
-    - own its keys (?)
-    - always free the structure of the closure while unwinding
-      and never frees its borrowed symbol* values (see later)
-
-- modifies/clarifies memory ownerships:
-  - symbol*: owned by the global symbol_pool
-  - interpreter_value: owned by? a retain/release mecanism?
-
 - unit tests for hashtable with key type is void*
 
 - unit tests for the actions of LHS computable rules
@@ -71,13 +38,3 @@
 
 - refact grammar with:
   - rename binding with assignment
-
-- understand and manage scopes at compile time and scopes at runtime:
-  - call frames stack at runtime are needed for exemple because one of these scenarii:
-    - f:{READ x ; return x ;} ; x = f() ; y = f() ; // if not, the value of x is swept away by the y's one
-    - f:{READ x ; return x ;} ; x = f(f())
-  - at runtime, a symbol lexically unique can have several instances
-  - entries of hashtables of resolver stack are symbol_name->symbol*
-    and those of interpreter stack are symbol*->interpreter_value
-
-- remove runtime_env_destroy from runtime_env internal interface
