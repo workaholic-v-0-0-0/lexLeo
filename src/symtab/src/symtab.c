@@ -19,6 +19,7 @@ static list *symbol_pool = NULL;
 void symtab_cleanup_pool(void) {}
 
 symbol *symtab_create_symbol(char *name) {
+
 	if ((!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
 		return NULL;
 
