@@ -99,13 +99,6 @@ void *mock_hashtable_get(const hashtable *ht, const void *key) {
     return mock_type(void *);
 }
 
-int mock_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
-    check_expected(ht);
-    check_expected(key);
-    check_expected(value);
-    return mock_type(int);
-}
-
 int mock_hashtable_remove(hashtable *ht, const void *key) {
     check_expected(ht);
     check_expected(key);
@@ -143,29 +136,6 @@ symbol *spy_symtab_get(symtab *st, const char *name) {
     symtab_get_fn current_symtab_get = next_symtab_get;
     next_symtab_get = (next_symtab_get == mock_symtab_get) ? real_symtab_get : mock_symtab_get;
     return current_symtab_get(st, name);
-}
-
-int mock_symtab_reset_local(symtab *st, const char *name, ast *image) {
-    check_expected(st);
-    check_expected(name);
-    check_expected(image);
-    return mock_type(int);
-}
-
-int mock_symtab_reset(symtab *st, const char *name, ast *image) {
-    check_expected(st);
-    check_expected(name);
-    check_expected(image);
-    return mock_type(int);
-}
-
-static symtab_reset_fn next_symtab_reset = real_symtab_reset;
-
-// first call is real, second is mock, then repeats
-int spy_symtab_reset(symtab *st, const char *name, ast *image) {
-    symtab_reset_fn current_symtab_reset = next_symtab_reset;
-    next_symtab_reset = (next_symtab_reset == mock_symtab_reset) ? real_symtab_reset : mock_symtab_reset;
-    return current_symtab_reset(st, name, image);
 }
 
 int mock_symtab_contains(symtab *st, const char *name) {
@@ -514,65 +484,6 @@ static void get_local_calls_hashtable_get_and_returns_its_returned_value_when_st
 
 
 //-----------------------------------------------------------------------------
-// symtab_reset_local TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int reset_local_setup(void **state) {
-    set_hashtable_reset_value(mock_hashtable_reset_value);
-    return 0;
-}
-
-static int reset_local_teardown(void **state) {
-    set_hashtable_reset_value(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: st = NULL
-// Expected: returns 1
-static void reset_local_returns_1_when_st_null(void **state) {
-    assert_int_equal(
-        symtab_reset_local(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        1 );
-}
-
-// Given: st != NULL, image != NULL
-// Expected:
-//   - calls hashtable_reset_value(st->symbols, name, (void *) image)
-//   - returns hashtable_reset_value returned value
-static void reset_local_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null(void **state) {
-    symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
-    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
-    st->parent = (symtab *) DUMMY_SYMTAB_P;
-
-    expect_value(mock_hashtable_reset_value, ht, st->symbols);
-    expect_value(mock_hashtable_reset_value, key, (char *) DUMMY_STRING);
-    expect_value(mock_hashtable_reset_value, value, (void *) DUMMY_IMAGE);
-    will_return(mock_hashtable_reset_value, DUMMY_INT);
-
-    assert_int_equal(
-        symtab_reset_local((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        DUMMY_INT );
-}
-
-
-
-//-----------------------------------------------------------------------------
 // symtab_remove TESTS
 //-----------------------------------------------------------------------------
 
@@ -777,88 +688,6 @@ static void get_calls_itself_and_returns_value_when_symtab_contains_local_return
         symtab_get(st, DUMMY_STRING),
         DUMMY_SYMBOL_P
     );
-}
-
-
-
-//-----------------------------------------------------------------------------
-// symtab_reset TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int reset_setup(void **state) {
-    set_symtab_reset_local(mock_symtab_reset_local);
-    set_symtab_reset(spy_symtab_reset);
-    next_symtab_reset = real_symtab_reset;
-    return 0;
-}
-
-static int reset_teardown(void **state) {
-    set_symtab_reset_local(NULL);
-    set_symtab_reset(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: st = NULL
-// Expected: returns 1
-static void reset_returns_1_when_st_null(void **state) {
-    assert_int_equal(1, symtab_reset(NULL, DUMMY_STRING, (ast *) DUMMY_IMAGE));
-}
-
-// Given: st != NULL
-// Expected: calls symtab_reset_local(st, name, image)
-static void reset_calls_symtab_reset_local_when_st_not_null(void **state) {
-    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, DUMMY_INT); // DUMMY_INT is 0 so no more call (see next tests)
-    symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE);
-}
-
-// Given: symtab_reset_local(st, name, image) returns 0 (meaning the reset has been done properly)
-// Expected: returns 0
-static void reset_returns_0_when_symtab_reset_local_returns_0(void **state) {
-    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, 0);
-    assert_int_equal(0, symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE));
-}
-
-// Given: symtab_reset_local(st, name, image) returns 1 (meaning name is not a symbol name in current scope)
-// Expected:
-//  - calls symtab_reset(st->parent, name, image);
-//  - returns symtab_reset returned value
-static void reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1(void **state) {
-    symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
-    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
-    st->parent = (symtab *) DUMMY_SYMTAB_P;
-    expect_value(mock_symtab_reset_local, st, st);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, 1);
-    expect_value(mock_symtab_reset, st, st->parent);
-    expect_value(mock_symtab_reset, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset, DUMMY_INT);
-    assert_int_equal(
-        symtab_reset(st, DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        DUMMY_INT );
 }
 
 
@@ -1355,15 +1184,6 @@ int main(void) {
             get_local_setup, get_local_teardown),
     };
 
-    const struct CMUnitTest reset_local_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            reset_local_returns_1_when_st_null,
-            reset_local_setup, reset_local_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_local_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null,
-            reset_local_setup, reset_local_teardown),
-    };
-
     const struct CMUnitTest remove_tests[] = {
         cmocka_unit_test_setup_teardown(
             remove_returns_1_when_st_null,
@@ -1395,21 +1215,6 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             get_calls_itself_and_returns_value_when_symtab_contains_local_returns_false,
             get_setup, get_teardown),
-    };
-
-    const struct CMUnitTest reset_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            reset_returns_1_when_st_null,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_calls_symtab_reset_local_when_st_not_null,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_returns_0_when_symtab_reset_local_returns_0,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1,
-            reset_setup, reset_teardown),
     };
 
     const struct CMUnitTest contains_tests[] = {
@@ -1484,11 +1289,9 @@ int main(void) {
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_local_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(reset_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(remove_tests, NULL, NULL);
     failed += cmocka_run_group_tests(contains_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
     failed += cmocka_run_group_tests(contains_tests, NULL, NULL);
     failed += cmocka_run_group_tests(create_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(intern_symbol_tests, NULL, NULL);

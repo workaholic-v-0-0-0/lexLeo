@@ -23,16 +23,6 @@ symbol *real_symtab_get(symtab *st, const char *name);
 extern symtab_get_fn symtab_get_mockable;
 void set_symtab_get(symtab_get_fn f);
 
-typedef int (*symtab_reset_local_fn)(symtab *st, const char *name, ast *image);
-int real_symtab_reset_local(symtab *st, const char *name, ast *image);
-extern symtab_reset_local_fn symtab_reset_local_mockable;
-void set_symtab_reset_local(symtab_reset_local_fn f);
-
-typedef int (*symtab_reset_fn)(symtab *st, const char *name, ast *image);
-int real_symtab_reset(symtab *st, const char *name, ast *image);
-extern symtab_reset_fn symtab_reset_mockable;
-void set_symtab_reset(symtab_reset_fn f);
-
 typedef int (*symtab_contains_fn)(symtab *st, const char *name);
 int real_symtab_contains(symtab *st, const char *name);
 extern symtab_contains_fn symtab_contains_mockable;
