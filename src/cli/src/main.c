@@ -12,3 +12,6 @@ int main() {
 #endif
     return 0;
 }
+
+// near the end:
+// symtab_cleanup_pool();
