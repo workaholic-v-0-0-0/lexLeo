@@ -55,9 +55,10 @@ void set_hashtable_create(hashtable_create_fn f) {
 
 static void hashtable_destroy_entry(void *item, void *user_data) {
     entry *e = (entry *)item;
-    hashtable_destroy_value_fn_t destroy_fn =
-        (hashtable_destroy_value_fn_t) user_data;
-    DATA_STRUCTURE_FREE(e->key);
+    hashtable *ht = (hashtable *)user_data;
+    hashtable_destroy_value_fn_t destroy_fn = ht->destroy_value_fn;
+    if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
+        DATA_STRUCTURE_FREE(e->key);
     if (destroy_fn) destroy_fn(e->value);
     DATA_STRUCTURE_FREE(e);
 }
@@ -65,15 +66,18 @@ hashtable_destroy_fn hashtable_destroy_mockable = real_hashtable_destroy;
 void real_hashtable_destroy(hashtable *ht) {
     if (!ht)
         return;
+
     for (size_t i = 0 ; i < ht->size ; i++) {
         if ((ht->buckets)[i]) {
             // list_free_list will call hashtable_destroy_entry with
             // ht->destroy_value_fn for second argument in order to properly
-            // destroy the value field of each entries
+            // destroy the value field of each entry and
+            // list_free_list will free key field of each entry only
+            // if ht->key_type == HASHTABLE_KEY_TYPE_STRING
             list_free_list(
                 (ht->buckets)[i],
                 hashtable_destroy_entry,
-                ht->destroy_value_fn
+                ht
             );
         }
     }

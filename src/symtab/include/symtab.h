@@ -1,6 +1,6 @@
 // src/symtab/include/symtab.h
 
-// for resolution environment
+// for resolution environment (relative to resolver)
 
 #ifndef SYMTAB_H
 #define SYMTAB_H
@@ -13,7 +13,7 @@ typedef struct ast ast;
 
 #define MAXIMUM_SYMBOL_NAME_LENGTH 255
 typedef struct symbol {
-    char *name; // must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
+    char *name; // owned ; must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
 } symbol;
 
 // Returns NULL on error.
