@@ -1,5 +1,7 @@
 // src/symtab/include/symtab.h
 
+// for resolution environment
+
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
@@ -12,19 +14,14 @@ typedef struct ast ast;
 #define MAXIMUM_SYMBOL_NAME_LENGTH 255
 typedef struct symbol {
     char *name; // must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
-    ast *image; // must be NULL or correctly formed
 } symbol;
-// note: registrer in hashtable with an entry with
-//       key = symbol.name and *value = symbol
 
-symbol *symtab_create_symbol(char *name, ast *image); // must be interned so that it can be freed via symtab_unwind_scope
-// the caller is responsible for passing a well-formed ast pointer or NULL
+// Returns NULL on error.
+// On success, returns a symbol* that owns a strdup of `name`.
+// The caller retains ownership of the input string.
+symbol *symtab_create_symbol(char *name);
 
 typedef struct symtab symtab;
-
-// for info:
-// typedef void (*hashtable_destroy_value_fn_t)(void *value);
-void symtab_destroy_symbol(void *value);
 
 symtab *symtab_wind_scope(symtab *st); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 symtab *symtab_unwind_scope(symtab *st);  // the caller is responsible for passing either NULL or a well-formed symtab pointer

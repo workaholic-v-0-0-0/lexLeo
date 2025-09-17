@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-symbol *symtab_create_symbol(char *name, ast *image) {
+symbol *symtab_create_symbol(char *name) {
 	if ((!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
 		return NULL;
 
@@ -28,21 +28,7 @@ symbol *symtab_create_symbol(char *name, ast *image) {
 		return NULL;
 	}
 
-	ret->image = image;
-
 	return ret;
-}
-
-void symtab_destroy_symbol(void *value) {
-    symbol *s = (symbol *) value;
-    if ((s) && (s->image)) {
-        if (s->image->type == AST_TYPE_DATA_WRAPPER)
-            ast_destroy_typed_data_wrapper(s->image);
-        else
-            ast_destroy_children_node(s->image);
-    }
-    // s->name must not be freed here because it's key in hashtable
-    // and hashtable owns memory of its keys
 }
 
 symtab *symtab_wind_scope(symtab *st) {
@@ -51,7 +37,7 @@ symtab *symtab_wind_scope(symtab *st) {
     if (!ret)
         return NULL;
 
-    hashtable *ht = hashtable_create(SYMTAB_SIZE, symtab_destroy_symbol);
+    hashtable *ht = hashtable_create(SYMTAB_SIZE, NULL);
     if (!ht) {
         SYMTAB_FREE(ret);
         return NULL;
