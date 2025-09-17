@@ -233,95 +233,6 @@ static void free_saved_addresses_to_be_freed(void) {
 
 
 //-----------------------------------------------------------------------------
-// symtab_destroy_symbol TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int destroy_symbol_setup(void **state) {
-    set_allocators(mock_malloc, mock_free);
-    return 0;
-}
-
-static int destroy_symbol_teardown(void **state) {
-    set_allocators(NULL, NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: symbol = NULL
-// Expected: do nothing
-static void destroy_symbol_do_nothing_when_symbol_null(void **state) {
-    symtab_destroy_symbol(NULL);
-}
-
-// Given: symbol != NULL, symbol->image = NULL
-// Expected:
-//  - frees symbol->name
-//  - frees symbol
-static void destroy_symbol_frees_name_and_symbol_when_image_null(void **state) {
-    symbol *s;
-    alloc_and_save_address_to_be_freed((void **)&s, sizeof(symbol));
-    s->name = (char *) DUMMY_STRING;
-    s->image = NULL;
-
-    symtab_destroy_symbol((void *) s);
-}
-
-// Given:
-//  - symbol != NULL
-//  - symbol->image != NULL
-//  - symbol->image->type = AST_TYPE_DATA_WRAPPER
-// Expected:
-//  - calls ast_destroy_typed_data_wrapper with symbol->image
-//  - symbol->name IS NOT FREED because hashtable owns its keys memory
-static void destroy_symbol_calls_ast_destroy_typed_data_wrapper_when_image_is_data_wrapper(void **state) {
-    symbol *s;
-    alloc_and_save_address_to_be_freed((void **)&s, sizeof(symbol));
-    s->name = (char *) DUMMY_STRING;
-    alloc_and_save_address_to_be_freed((void **)&(s->image), sizeof(ast));
-    s->image->type = AST_TYPE_DATA_WRAPPER;
-    s->image->data = (typed_data *) DUMMY_TYPED_DATA_P;
-
-    expect_value(ast_destroy_typed_data_wrapper, ast_data_wrapper, s->image);
-
-    symtab_destroy_symbol((void *) s);
-}
-
-// Given:
-//  - symbol != NULL
-//  - symbol->image != NULL
-//  - symbol->image->type != AST_TYPE_DATA_WRAPPER
-// Expected:
-//  - calls ast_destroy_children_node with symbol->image
-//  - symbol->name IS NOT FREED because hashtable owns its keys memory
-static void destroy_symbol_calls_ast_destroy_children_node_when_image_is_not_data_wrapper(void **state) {
-    symbol *s;
-    alloc_and_save_address_to_be_freed((void **)&s, sizeof(symbol));
-    s->name = (char *) DUMMY_STRING;
-    alloc_and_save_address_to_be_freed((void **)&(s->image), sizeof(ast));
-    s->image->type = AST_TYPE_ADDITION;
-    s->image->children = (ast_children_t *) DUMMY_CHILDREN_INFO_P;
-
-    expect_value(ast_destroy_children_node, children_node, s->image);
-
-    symtab_destroy_symbol((void *) s);
-}
-
-
-
-//-----------------------------------------------------------------------------
 // symtab_wind_scope TESTS
 //-----------------------------------------------------------------------------
 
@@ -377,7 +288,7 @@ static void wind_scope_calls_hashtable_create_when_malloc_succeds(void **state) 
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
-    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    expect_value(mock_hashtable_create, destroy_value_fn, NULL);
 
     // finish a scenario tested further to avoid segmentation fault
     will_return(mock_hashtable_create, NULL);
@@ -394,7 +305,7 @@ static void wind_scope_returns_null_when_hashtable_create_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
-    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    expect_value(mock_hashtable_create, destroy_value_fn, NULL);
     will_return(mock_hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
 
@@ -410,7 +321,7 @@ static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashta
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, fake_malloc_returned_value_for_a_symtab);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
-    expect_value(mock_hashtable_create, destroy_value_fn, symtab_destroy_symbol);
+    expect_value(mock_hashtable_create, destroy_value_fn, NULL);
     will_return(mock_hashtable_create, fake_hashtable_create_returned_value);
 
     symtab *ret = symtab_wind_scope((symtab *) DUMMY_SYMTAB_P);
@@ -533,7 +444,6 @@ static void add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_n
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
     sym->name = (char *) DUMMY_STRING;
-    sym->image = (ast *) DUMMY_IMAGE;
 
     expect_value(mock_hashtable_add, ht, st->symbols);
     expect_value(mock_hashtable_add, key, sym->name);
@@ -1063,13 +973,13 @@ static int create_symbol_teardown(void **state) {
 // Given: name == NULL
 // Expected: returns NULL
 static void create_symbol_returns_null_when_name_null(void **state) {
-    assert_null(symtab_create_symbol(NULL, DUMMY_AST_P));
+    assert_null(symtab_create_symbol(NULL));
 }
 
 // Given: name length exceeds MAXIMUM_SYMBOL_NAME_LENGTH
 // Expected: returns NULL
 static void create_symbol_returns_null_when_name_is_too_long(void **state) {
-    assert_null(symtab_create_symbol(too_long_symbol_name, DUMMY_AST_P));
+    assert_null(symtab_create_symbol(too_long_symbol_name));
 }
 
 // Given: name is valid
@@ -1077,7 +987,7 @@ static void create_symbol_returns_null_when_name_is_too_long(void **state) {
 static void create_symbol_calls_malloc_for_a_symbol_when_name_is_valid(void **state) {
 	expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
-    symtab_create_symbol(valid_symbol_name, DUMMY_AST_P);
+    symtab_create_symbol(valid_symbol_name);
 }
 
 // Given: malloc fails
@@ -1085,7 +995,7 @@ static void create_symbol_calls_malloc_for_a_symbol_when_name_is_valid(void **st
 static void create_symbol_returns_null_when_malloc_fails(void **state) {
 	expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
-    assert_null(symtab_create_symbol(valid_symbol_name, DUMMY_AST_P));
+    assert_null(symtab_create_symbol(valid_symbol_name));
 }
 
 // Given: malloc succeeds
@@ -1097,7 +1007,7 @@ static void create_symbol_calls_strdup_when_malloc_succeeds(void **state) {
 	expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, STRDUP_ERROR_CODE); // to avoid some mock calls
 	expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_symbol);
-	symtab_create_symbol(valid_symbol_name, DUMMY_AST_P);
+	symtab_create_symbol(valid_symbol_name);
 }
 
 // Given: strdup fails
@@ -1111,7 +1021,7 @@ static void create_symbol_cleanup_and_returns_null_when_strdup_fails(void **stat
 	expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, STRDUP_ERROR_CODE);
 	expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_symbol);
-	assert_null(symtab_create_symbol(valid_symbol_name, DUMMY_AST_P));
+	assert_null(symtab_create_symbol(valid_symbol_name));
 }
 
 // Given: strdup succeeds
@@ -1124,11 +1034,10 @@ static void create_symbol_initializes_and_returns_malloced_typed_data_when_strdu
 	expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, fake_strdup_returned_value_for_symbol_name);
 
-	symbol *ret = symtab_create_symbol(valid_symbol_name, DUMMY_AST_P);
+	symbol *ret = symtab_create_symbol(valid_symbol_name);
 
 	assert_ptr_equal(ret, fake_malloc_returned_value_for_a_symbol);
 	assert_ptr_equal(ret->name, fake_strdup_returned_value_for_symbol_name);
-    assert_ptr_equal(ret->image, DUMMY_AST_P);
 }
 
 
@@ -1394,18 +1303,6 @@ static void intern_symbol_interns_new_symbol_when_hashtable_add_succeeds(void **
 //-----------------------------------------------------------------------------
 
 int main(void) {
-    const struct CMUnitTest destroy_symbol_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            destroy_symbol_do_nothing_when_symbol_null,
-            destroy_symbol_setup, destroy_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            destroy_symbol_frees_name_and_symbol_when_image_null,
-            destroy_symbol_setup, destroy_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            destroy_symbol_calls_ast_destroy_children_node_when_image_is_not_data_wrapper,
-            destroy_symbol_setup, destroy_symbol_teardown),
-    };
-
     const struct CMUnitTest wind_scope_tests[] = {
         cmocka_unit_test_setup_teardown(
             wind_scope_calls_malloc_for_a_symtab,
@@ -1579,7 +1476,6 @@ int main(void) {
     };
 
     int failed = 0;
-    failed += cmocka_run_group_tests(destroy_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(add_tests, NULL, NULL);
