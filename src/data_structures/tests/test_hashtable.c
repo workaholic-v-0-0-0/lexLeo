@@ -73,6 +73,8 @@ static key_value_pair key_value_pairs_with_key_null = {
     .value = DUMMY_VALUE,
 };
 
+static hashtable_key_type STUB_KEY_TYPE = HASHTABLE_KEY_TYPE_STRING;
+
 
 
 //-----------------------------------------------------------------------------
@@ -113,13 +115,13 @@ char *mock_strdup(const char *s) {
 
 static char *fake_strdup_returned_value_for_key_of_hashtable;
 
-unsigned long mock_hash_djb2(const char *str) {
+unsigned long mock_hash_djb2(const void *key, hashtable_key_type key_type) {
     return INDEX_OF_A_KEY_IN_USE;
 }
-unsigned long mock_hash_djb2_dummy_return_0(const char *str) {
+unsigned long mock_hash_djb2_dummy_return_0(const void *key, hashtable_key_type key_type) {
     return 0;
 }
-unsigned long mock_hash_djb2_dummy_return_1(const char *str) {
+unsigned long mock_hash_djb2_dummy_return_1(const void *key, hashtable_key_type key_type) {
     return 1;
 }
 
@@ -754,6 +756,7 @@ static void initialize_hashtable(hashtable_params_t *params) {
         alloc_and_save_address_to_be_freed((void *)&ht, sizeof(hashtable));
 		assert_non_null(ht);
 		ht->size = s;
+	    ht->key_type = HASHTABLE_KEY_TYPE_STRING;
         ht->destroy_value_fn = (params->config).f;
 		alloc_and_save_address_to_be_freed((void *)&(ht->buckets), sizeof(list) * s);
 		assert_non_null(ht->buckets);
@@ -989,7 +992,7 @@ static int create_teardown(void **state) {
 //	- create_s_0_f_null
 //	- create_s_0_f_dummy_not_null
 static void create_returns_null_when_s_0(void **state) {
-    assert_null(hashtable_create(param_s(state), param_f(state)));
+    assert_null(hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state)));
 }
 
 // Given: s == 0
@@ -998,7 +1001,7 @@ static void create_returns_null_when_s_0(void **state) {
 //	- create_s_0_f_null
 //	- create_s_0_f_dummy_not_null
 static void create_calls_neither_malloc_nor_free_when_s_0(void **state) {
-    hashtable_create(param_s(state), param_f(state));
+    hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
 }
 
 // Given: s > 0
@@ -1011,7 +1014,7 @@ static void create_calls_neither_malloc_nor_free_when_s_0(void **state) {
 static void create_calls_malloc_for_hashtable_with_right_params_when_s_not_0(void **state) {
     expect_value(mock_malloc, size, sizeof(hashtable));
     will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid an other mock call
-    hashtable_create(param_s(state), param_f(state));
+    hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
 }
 
 // Given: malloc call for hashtable fail
@@ -1024,7 +1027,7 @@ static void create_calls_malloc_for_hashtable_with_right_params_when_s_not_0(voi
 static void create_returns_null_when_malloc_for_hashtable_fail(void **state) {
     expect_value(mock_malloc, size, sizeof(hashtable));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
-    assert_null(hashtable_create(param_s(state), param_f(state)));
+    assert_null(hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state)));
 }
 
 // Given: malloc call for hashtable success
@@ -1047,7 +1050,7 @@ static void create_calls_malloc_for_buckets_with_right_params_when_malloc_for_ha
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(list));
     will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
-    hashtable_create(param_s(state), param_f(state));
+    hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
 }
 
 // Given: malloc call for buckets field fail
@@ -1064,7 +1067,7 @@ static void create_calls_malloc_for_buckets_with_right_params_when_malloc_for_ha
     expect_value(mock_malloc, size, param_s(state) * sizeof(list));
     will_return(mock_malloc, MALLOC_ERROR_CODE);
     expect_value(mock_free, ptr, fake_malloc_returned_value_for_hashtable);
-    hashtable_create(param_s(state), param_f(state));
+    hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
 }
 
 // Given: malloc call for buckets success
@@ -1081,7 +1084,7 @@ static void create_returns_hashtable_pointer_with_correctly_initialized_buckets_
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(list));
     will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
-    hashtable *ret = hashtable_create(param_s(state), param_f(state));
+    hashtable *ret = hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
     assert_non_null(ret);
     assert_ptr_equal(ret->buckets, fake_malloc_returned_value_for_buckets);
     size_t memory_area_size = param_s(state) * sizeof(list);
@@ -1104,7 +1107,7 @@ static void create_returns_hashtable_pointer_with_correctly_initialized_size_fie
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(list));
     will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
-    hashtable *ret = hashtable_create(param_s(state), param_f(state));
+    hashtable *ret = hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
     assert_non_null(ret);
     assert_int_equal(ret->size, param_s(state));
 }
@@ -1123,7 +1126,7 @@ static void create_returns_hashtable_pointer_with_correctly_initialized_destroy_
     will_return(mock_malloc, fake_malloc_returned_value_for_hashtable);
     expect_value(mock_malloc, size, param_s(state) * sizeof(list));
     will_return(mock_malloc, fake_malloc_returned_value_for_buckets);
-    hashtable *ret = hashtable_create(param_s(state), param_f(state));
+    hashtable *ret = hashtable_create(param_s(state), STUB_KEY_TYPE, param_f(state));
     assert_non_null(ret);
     assert_ptr_equal(ret->destroy_value_fn, param_f(state));
 }
@@ -2188,6 +2191,7 @@ static void remove_returns_1_when_when_ht_not_null_key_null(void **state) {
 //  - hashtable_params_template_s_2_n_3_collision_static,
 //  - hashtable_params_template_s_2_n_3_collision_dynamic
 static void remove_returns_1_when_key_not_in_use(void **state) {
+printf("here-2\n");
     assert_int_equal(
         1,
         hashtable_remove(

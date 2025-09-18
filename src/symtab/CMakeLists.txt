@@ -7,6 +7,7 @@ add_library(
     symtab
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_internal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_test_utils.c
 )
 

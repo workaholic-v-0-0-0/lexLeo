@@ -4,28 +4,24 @@
 #define HASHTABLE_INTERNAL_H
 
 #include "hashtable.h"
-
 #include "list.h"
 
 typedef struct entry {
-    char *key;
+    void *key;
     void *value;
 } entry;
-// Note: The 'key' field in 'entry' is defined as 'char *' instead of 'const char *'
-// because the hashtable internally duplicates the provided key (using strdup)
-// and is responsible for freeing it when the entry is removed or destroyed.
-// This prevents accidental double-free or use-after-free bugs
-// and ensures the hash table fully owns the memory for each key.
 
 struct hashtable {
+    hashtable_key_type key_type;
     list *buckets;
     size_t size;
-    hashtable_destroy_value_fn_t destroy_value_fn;
+    hashtable_destroy_value_fn_t destroy_value_fn; // eg a fct that checks
+         // ref_nb to know if an interpreter environment must be destroyed
 };
 
 #ifndef UNIT_TEST
 static
 #endif
-unsigned long hash_djb2(const char *str);
+unsigned long hash_djb2(const void *key, hashtable_key_type key_type);
 
 #endif //HASHTABLE_INTERNAL_H

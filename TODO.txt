@@ -27,3 +27,39 @@
   remember: a unit test can also be an integration test, and the only so-called
     “unit tests” that are not integration tests are those that merely lock down
     implementation details instead of observable behavior.
+
+- scopes and closures handling:
+  - in ast: add the following types:
+      - AST_TYPE_FUNCTION
+      - AST_TYPE_FUNCTION_DEFINITION
+      - AST_TYPE_LIST_OF_PARAMETERS
+      - AST_TYPE_BLOC
+  - in parser: add grammar rules which actions are to build
+    the AST of the previous types.
+  - in resolver: modify resolver so that it winds a new scope to resolve
+    symbol which are parameters of a function
+
+- make a new module interpreter_environment:
+  - a stack of hashtable with a ref_nb to retain/release
+    the interpreter values (interpreter_value)
+    - it will stored symbol*->interpreter_value associations
+  - while unwinding of a closure:
+    - the structure of the closure won't be freed if its
+      ref_nb is greater than 0
+    - the interpreter values of the closure can have a
+      ref_nb too ; they are freed only if it's greater
+      than 0
+    - the keys type is symbol* so they are not freed
+      (see later)
+  - this is different from the resolution environment which:
+    - store char*->symbol* associations
+    - own its keys (?)
+    - always free the structure of the closure while unwinding
+      and never frees its borrowed symbol* values (see later)
+
+- modifies/clarifies memory ownerships:
+  - symbol*: owned by the global symbol_pool
+  - interpreter_value: owned by? a retain/release mecanism?
+
+- unit tests for hashtable with key type is void*
+

@@ -3,22 +3,32 @@
 #ifdef UNIT_TEST
 
 #include <string.h>
+#include <stdint.h>
 
 #include "internal/hashtable_test_utils.h"
 
 hash_djb2_fn hash_djb2_mockable = real_hash_djb2;
-unsigned long real_hash_djb2(const char *str) {
-    unsigned long hash = 5381;
-    int c;
-    while ((c = *str++)) hash = ((hash << 5) + hash) + c;
-    return hash;
+unsigned long real_hash_djb2(const void *key, hashtable_key_type key_type) {
+    if (!key)
+        return (unsigned long)0;
+
+    if (key_type == HASHTABLE_KEY_TYPE_STRING) {
+        const unsigned char *str = (const unsigned char *)key;
+        unsigned long hash = 5381;
+        int c;
+        while ((c = *str++))
+            hash = ((hash << 5) + hash) + c;
+        return hash;
+    } else {
+        return (unsigned long)(uintptr_t)key;
+    }
 }
 void set_hash_djb2(hash_djb2_fn f) {
     hash_djb2_mockable = f ? f : real_hash_djb2;
 }
 
 hashtable_create_fn hashtable_create_mockable = real_hashtable_create;
-hashtable *real_hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
+hashtable *real_hashtable_create(size_t size, hashtable_key_type key_type, hashtable_destroy_value_fn_t destroy_value_fn) {
     if (size == 0)
         return NULL;
 
@@ -34,6 +44,7 @@ hashtable *real_hashtable_create(size_t size, hashtable_destroy_value_fn_t destr
     memset(ret->buckets, 0, size * sizeof(list));
 
     ret->size = size;
+    ret->key_type = key_type;
     ret->destroy_value_fn = destroy_value_fn;
 
     return ret;
@@ -76,20 +87,32 @@ void set_hashtable_destroy(hashtable_destroy_fn f) {
 }
 
 hashtable_get_fn hashtable_get_mockable = real_hashtable_get;
-void *real_hashtable_get(const hashtable *ht, const char *key) {
-	if ((!ht) || (!key))
+void *real_hashtable_get(const hashtable *ht, const void *key) {
+    if ((!ht) || (!key))
         return NULL;
-    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
-    while (bucket) {
-        if (
-                DATA_STRUCTURE_STRING_COMPARE(
-                    key,
-                    ((entry *) (bucket->car))->key )
-                    ==
-                    0 )
-            return ((entry *) (bucket->car))->value;
-        bucket = bucket->cdr;
+    list bucket = (ht->buckets)[hash_djb2(key, ht->key_type) % ht->size];
+
+
+    if (ht->key_type == HASHTABLE_KEY_TYPE_STRING) {
+        while (bucket) {
+            if (
+                    DATA_STRUCTURE_STRING_COMPARE(
+                        key,
+                        ((entry *) (bucket->car))->key )
+                        ==
+                        0 )
+                return ((entry *) (bucket->car))->value;
+            bucket = bucket->cdr;
+        }
+
+    } else if (ht->key_type == HASHTABLE_KEY_TYPE_POINTER) {
+        while (bucket) {
+            if (key == ((entry *) (bucket->car))->key)
+                return ((entry *) (bucket->car))->value;
+            bucket = bucket->cdr;
+        }
     }
+
     return NULL;
 }
 void set_hashtable_get(hashtable_get_fn f) {
@@ -97,7 +120,7 @@ void set_hashtable_get(hashtable_get_fn f) {
 }
 
 hashtable_add_fn hashtable_add_mockable = real_hashtable_add;
-int real_hashtable_add(hashtable *ht, const char *key, void *value) {
+int real_hashtable_add(hashtable *ht, const void *key, void *value) {
     if ((!ht) || (!key) || (hashtable_key_is_in_use(ht, key)))
         return 1;
 
@@ -105,7 +128,10 @@ int real_hashtable_add(hashtable *ht, const char *key, void *value) {
     if (!new_entry)
         return 1;
 
-    new_entry->key = DATA_STRUCTURE_STRING_DUPLICATE(key);
+    new_entry->key = ((ht->key_type == HASHTABLE_KEY_TYPE_STRING)) ?
+        (void *) DATA_STRUCTURE_STRING_DUPLICATE((const char *) key)
+        :
+        (void *) key;
     if (!new_entry->key) {
         DATA_STRUCTURE_FREE(new_entry);
         return 1;
@@ -115,14 +141,15 @@ int real_hashtable_add(hashtable *ht, const char *key, void *value) {
 
     cons *c = DATA_STRUCTURE_MALLOC(sizeof(cons));
     if (!c) {
-        DATA_STRUCTURE_FREE(new_entry->key);
+        if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
+            DATA_STRUCTURE_FREE(new_entry->key);
         DATA_STRUCTURE_FREE(new_entry);
         return 1;
     }
 
     c->car = new_entry;
 
-    list *bucket = &((ht->buckets)[hash_djb2(key) % ht->size]);
+    list *bucket = &((ht->buckets)[hash_djb2(key, ht->key_type) % ht->size]);
     c->cdr = *bucket;
     *bucket = c;
 
@@ -133,22 +160,33 @@ void set_hashtable_add(hashtable_add_fn f) {
 }
 
 hashtable_reset_value_fn hashtable_reset_value_mockable = real_hashtable_reset_value;
-int real_hashtable_reset_value(hashtable *ht, const char *key, void *value) {
-    if ((!ht) || (!hashtable_key_is_in_use(ht, key)))
+int real_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
+    if (!ht || !key || ht->size == 0)
         return 1;
 
-    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
+    list bucket = (ht->buckets)[hash_djb2(key, ht->key_type) % ht->size];
     entry *entry_p = NULL;
-    while (bucket) {
-        if (
-                DATA_STRUCTURE_STRING_COMPARE(
-                    key,
-                    ((entry *) (bucket->car))->key )
-                 ==
-                 0 )
-            entry_p = (entry *) (bucket->car);
-        bucket = bucket->cdr;
+
+    if (ht->key_type == HASHTABLE_KEY_TYPE_STRING) {
+        while (bucket) {
+            if (
+                    DATA_STRUCTURE_STRING_COMPARE(
+                        key,
+                        ((entry *) (bucket->car))->key )
+                        ==
+                        0 )
+                entry_p = (entry *) (bucket->car);
+            bucket = bucket->cdr;
+        }
+
+    } else if (ht->key_type == HASHTABLE_KEY_TYPE_POINTER) {
+        while (bucket) {
+            if (key == ((entry *) (bucket->car))->key)
+                entry_p = (entry *) (bucket->car);
+            bucket = bucket->cdr;
+        }
     }
+
     if (!entry_p)
         return 1;
 
@@ -164,44 +202,73 @@ void set_hashtable_reset_value(hashtable_reset_value_fn f) {
 }
 
 hashtable_remove_fn hashtable_remove_mockable = real_hashtable_remove;
-int real_hashtable_remove(hashtable *ht, const char *key) {
-    if ((!ht) || (!hashtable_key_is_in_use(ht, key))) {
+int real_hashtable_remove(hashtable *ht, const void *key) {
+    if (!ht || !key || ht->size == 0) {
 		return 1;
 	}
 
     // find the cons cell to be removed ;
     // if it's not the first, keep track of the previous cell
     // (before_to_be_removed) to update the bucket list after removal
-    size_t index = hash_djb2(key) % ht->size;
+    size_t index = hash_djb2(key, ht->key_type) % ht->size;
     list bucket = (ht->buckets)[index];
+    if (!bucket)
+        return 1;
+
     list before_to_be_removed = NULL;
-    if (strcmp(((entry*)(bucket->car))->key, key) != 0) {
+
+    if ( // not the first element of the bucket
+            (
+                (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
+                &&
+                (DATA_STRUCTURE_STRING_COMPARE(
+                    ((entry*) (bucket->car))->key,
+                    key) != 0 ) )
+            ||
+            (
+                (ht->key_type == HASHTABLE_KEY_TYPE_POINTER)
+                &&
+                (((entry*) (bucket->car))->key != key) ) ) {
+
         before_to_be_removed = bucket;
-        bucket = bucket->cdr;
-        while (
-                DATA_STRUCTURE_STRING_COMPARE(
-                    ((entry*)(bucket->car))->key,
-                    key )
-                    !=
-                    0 ) {
-            before_to_be_removed = bucket;
-            bucket = bucket->cdr;
+        if (!(bucket = bucket->cdr))
+            return 1;
+
+        if (ht->key_type == HASHTABLE_KEY_TYPE_STRING) {
+            while (
+                    DATA_STRUCTURE_STRING_COMPARE(
+                        ((entry*)(bucket->car))->key,
+                        key )
+                        !=
+                        0 ) {
+                before_to_be_removed = bucket;
+                if (!(bucket = bucket->cdr))
+                    return 1;
+            }
+
+        } else if (ht->key_type == HASHTABLE_KEY_TYPE_POINTER) {
+            while (((entry*)(bucket->car))->key != key) {
+                before_to_be_removed = bucket;
+                if (!(bucket = bucket->cdr))
+                    return 1;
+            }
         }
     }
-
-    // cleanup of all dynamically allocated memory associated with the
-    // entry to be removed
-    if (ht->destroy_value_fn)
-        DATA_STRUCTURE_FREE(((entry *) (bucket->car))->value);
-    DATA_STRUCTURE_FREE(((entry *) (bucket->car))->key);
-    DATA_STRUCTURE_FREE(bucket->car);
-    DATA_STRUCTURE_FREE(bucket);
 
     // update the bucket list to remove the targeted cons cell
     if (!before_to_be_removed)
         (ht->buckets)[index] = bucket->cdr; // removed head of the list
     else
         before_to_be_removed->cdr = bucket->cdr; // bypass the removed cell
+
+    // cleanup of all dynamically allocated memory associated with the
+    // entry to be removed
+    if (ht->destroy_value_fn)
+        ht->destroy_value_fn(((entry *) (bucket->car))->value);
+    if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
+        DATA_STRUCTURE_FREE(((entry *) (bucket->car))->key);
+    DATA_STRUCTURE_FREE(bucket->car);
+    DATA_STRUCTURE_FREE(bucket);
 
     return 0;
 }
@@ -210,19 +277,29 @@ void set_hashtable_remove(hashtable_remove_fn f) {
 }
 
 hashtable_key_is_in_use_fn hashtable_key_is_in_use_mockable = real_hashtable_key_is_in_use;
-int real_hashtable_key_is_in_use(hashtable *ht, const char *key) {
+int real_hashtable_key_is_in_use(hashtable *ht, const void *key) {
     if ((!ht) || (!key))
         return 0;
-    list bucket = (ht->buckets)[hash_djb2(key) % ht->size];
-    while (bucket) {
-        if (
-                DATA_STRUCTURE_STRING_COMPARE(
-                    key,
-                    ((entry *) (bucket->car))->key )
-                    ==
-                    0 )
-            return 1;
-        bucket = bucket->cdr;
+
+    list bucket = (ht->buckets)[hash_djb2(key, ht->key_type) % ht->size];
+
+    if (ht->key_type == HASHTABLE_KEY_TYPE_STRING) {
+        while (bucket) {
+            if (
+                    DATA_STRUCTURE_STRING_COMPARE(
+                        key,
+                        ((entry *) (bucket->car))->key )
+                        ==
+                        0 )
+                return 1;
+            bucket = bucket->cdr;
+        }
+    } else if (ht->key_type == HASHTABLE_KEY_TYPE_POINTER) {
+        while (bucket) {
+            if (key == ((entry *) (bucket->car))->key)
+                return 1;
+            bucket = bucket->cdr;
+        }
     }
     return 0;
 }

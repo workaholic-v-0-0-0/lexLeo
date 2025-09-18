@@ -37,7 +37,7 @@ symtab *symtab_wind_scope(symtab *st) {
     if (!ret)
         return NULL;
 
-    hashtable *ht = hashtable_create(SYMTAB_SIZE, NULL);
+    hashtable *ht = hashtable_create(SYMTAB_SIZE, SYMTAB_KEY_TYPE, NULL);
     if (!ht) {
         SYMTAB_FREE(ret);
         return NULL;
