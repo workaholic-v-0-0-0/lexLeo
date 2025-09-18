@@ -2191,7 +2191,6 @@ static void remove_returns_1_when_when_ht_not_null_key_null(void **state) {
 //  - hashtable_params_template_s_2_n_3_collision_static,
 //  - hashtable_params_template_s_2_n_3_collision_dynamic
 static void remove_returns_1_when_key_not_in_use(void **state) {
-printf("here-2\n");
     assert_int_equal(
         1,
         hashtable_remove(

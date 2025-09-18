@@ -85,41 +85,89 @@ typedef struct ast {
 ast *ast_error_sentinel(void);
 
 typed_data *ast_create_typed_data_int(int i);
+
+/**
+ * Frees the typed_data container holding an int.
+ */
 void ast_destroy_typed_data_int(typed_data *typed_data_int);
 
-typed_data *ast_create_typed_data_string(char *s); // s can be NULL
+// the caller must always frees s
+typed_data *ast_create_typed_data_string(char *s);
+
+/**
+ * Frees the typed_data container and its owned string.
+ */
 void ast_destroy_typed_data_string(typed_data *typed_data_string);
 
+// the caller must always frees s
 typed_data *ast_create_typed_data_symbol_name(char *s);
+
+/**
+ * Frees the typed_data container and its owned string.
+ */
 void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name);
 
-typed_data *ast_create_typed_data_symbol(symbol *s); // client code is responsible for s
-void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol); // does not destroy the symbol* (owned by the symtab)
+// the caller must always free s
+typed_data *ast_create_typed_data_symbol(symbol *s);
 
-ast *ast_create_typed_data_wrapper(typed_data *data); // client code is responsible for data
+/**
+ * Frees the typed_data container.
+ * Does not free the underlying symbol* (owned by the symtab).
+ */
+void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol);
+
+// the caller must not free data
+ast *ast_create_typed_data_wrapper(typed_data *data);
+
+/**
+ * Frees the ast typed_data container by freeing it typed_data
+ * with the appropriate ast_destroy_typed_data_*
+ */
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
 ast *ast_create_int_node(int i);
-ast *ast_create_string_node(char *str); // client code is responsible for str
-ast *ast_create_symbol_name_node(char *str); // client code is responsible for str
-ast *ast_create_symbol_node(symbol *sym); // client code is responsible for s
+
+// the caller must always frees str
+ast *ast_create_string_node(char *str);
+
+// the caller must always frees str
+ast *ast_create_symbol_name_node(char *str);
+
+// the caller must always frees sym
+ast *ast_create_symbol_node(symbol *sym);
 
 ast *ast_create_error_node(ast_error_type code, char *message); // client code is responsible for message
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR
 ast *ast_create_error_node_or_sentinel(ast_error_type code, char *message); // client code is responsible for message
 
-ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children); // client code is responsible for children_nb correctness and for destroying chidren array (but not the ast * it contains)
-ast_children_t *ast_create_ast_children_var(size_t children_nb,...); // client code is responsible for the argument number correctness ; a double pointer of ast can be malloced (eg when no child)
-void ast_destroy_ast_children(ast_children_t *ast_children); // client code is responsible for children_nb correctness
-bool ast_children_reserve(ast_children_t *ast_children, size_t capacity); // return false on reallocation error or true otherwise ; client code is responsible for children_nb and capacity field values correctness
-bool ast_children_append_take(ast *parent, ast *child); // returns true on succees and false on error ; client code is responsible for passing NULL or well-formed asts with children_nb and capacity correctness
+// caller is responsible for children_nb correctness
+ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children);
 
-ast *ast_create_children_node(ast_type type, ast_children_t *ast_children); // client code is responsible for providing a correctly formed ast_children
-ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children); // client code is responsible for children_nb and capacity values correctness and for destroying children array (but not the ast * it contains)
-ast *ast_create_children_node_var(ast_type type, size_t children_nb,...); // client code is responsible for children_nb and capacity values correctness
+// client code is responsible for the argument number correctness
+ast_children_t *ast_create_ast_children_var(size_t children_nb,...);
+
+// client code is responsible for children_nb correctness
+void ast_destroy_ast_children(ast_children_t *ast_children);
+
+// return false on reallocation error or true otherwise ; client code is responsible for children_nb and capacity field values correctness
+bool ast_children_reserve(ast_children_t *ast_children, size_t capacity);
+
+// returns true on succees and false on error ; client code is responsible for passing NULL or well-formed asts with children_nb and capacity correctness
+bool ast_children_append_take(ast *parent, ast *child);
+
+// client code is responsible for providing a correctly formed ast_children
+ast *ast_create_children_node(ast_type type, ast_children_t *ast_children);
+
+// client code is responsible for children_nb and capacity values correctness
+ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children);
+
+// client code is responsible for children_nb and capacity values correctness
+ast *ast_create_children_node_var(ast_type type, size_t children_nb,...);
+
 void ast_destroy_children_node(ast *children_node);
 
-void ast_destroy(ast *root); // the caller is responsible for passing either NULL or a well-formed ast pointer
+// the caller is responsible for passing either NULL or a well-formed ast pointer
+void ast_destroy(ast *root);
 
 bool ast_type_has_children(ast_type type);
 bool ast_can_have_children(ast *a);
