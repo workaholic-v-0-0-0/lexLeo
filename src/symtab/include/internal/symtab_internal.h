@@ -19,4 +19,6 @@ typedef struct symtab {
     struct symtab *parent;
 } symtab;
 
+extern const hashtable_key_type SYMTAB_KEY_TYPE;
+
 #endif //SYMTAB_INTERNAL_H

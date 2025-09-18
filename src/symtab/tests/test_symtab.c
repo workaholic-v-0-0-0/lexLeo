@@ -73,8 +73,9 @@ void ast_destroy_children_node(ast *children_node) {
     check_expected(children_node);
 }
 
-hashtable *mock_hashtable_create(size_t size, hashtable_destroy_value_fn_t destroy_value_fn) {
+hashtable *mock_hashtable_create(size_t size, hashtable_key_type key_type, hashtable_destroy_value_fn_t destroy_value_fn) {
     check_expected(size);
+    check_expected(key_type);
     check_expected(destroy_value_fn);
     return mock_type(hashtable *);
 }
@@ -85,33 +86,33 @@ void mock_hashtable_destroy(hashtable *ht) {
     check_expected(ht);
 }
 
-int mock_hashtable_add(hashtable *ht, const char *key, void *value) {
+int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
     check_expected(ht);
     check_expected(key);
     check_expected(value);
     return mock_type(int);
 }
 
-void *mock_hashtable_get(const hashtable *ht, const char *key) {
+void *mock_hashtable_get(const hashtable *ht, const void *key) {
     check_expected(ht);
     check_expected(key);
     return mock_type(void *);
 }
 
-int mock_hashtable_reset_value(hashtable *ht, const char *key, void *value) {
+int mock_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
     check_expected(ht);
     check_expected(key);
     check_expected(value);
     return mock_type(int);
 }
 
-int mock_hashtable_remove(hashtable *ht, const char *key) {
+int mock_hashtable_remove(hashtable *ht, const void *key) {
     check_expected(ht);
     check_expected(key);
     return mock_type(int);
 }
 
-int mock_hashtable_key_is_in_use(hashtable *ht, const char *key) {
+int mock_hashtable_key_is_in_use(hashtable *ht, const void *key) {
     check_expected(ht);
     check_expected(key);
     return mock_type(int);
@@ -288,6 +289,7 @@ static void wind_scope_calls_hashtable_create_when_malloc_succeds(void **state) 
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, key_type, HASHTABLE_KEY_TYPE_STRING);
     expect_value(mock_hashtable_create, destroy_value_fn, NULL);
 
     // finish a scenario tested further to avoid segmentation fault
@@ -305,6 +307,7 @@ static void wind_scope_returns_null_when_hashtable_create_fails(void **state) {
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, DUMMY_MALLOC_RETURNED_VALUE);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, key_type, HASHTABLE_KEY_TYPE_STRING);
     expect_value(mock_hashtable_create, destroy_value_fn, NULL);
     will_return(mock_hashtable_create, NULL);
     expect_value(mock_free, ptr, DUMMY_MALLOC_RETURNED_VALUE);
@@ -321,6 +324,7 @@ static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashta
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, fake_malloc_returned_value_for_a_symtab);
     expect_value(mock_hashtable_create, size, SYMTAB_SIZE);
+    expect_value(mock_hashtable_create, key_type, HASHTABLE_KEY_TYPE_STRING);
     expect_value(mock_hashtable_create, destroy_value_fn, NULL);
     will_return(mock_hashtable_create, fake_hashtable_create_returned_value);
 

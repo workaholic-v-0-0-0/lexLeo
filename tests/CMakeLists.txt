@@ -105,3 +105,13 @@ add_custom_target(
 #------------------------------------------------------------------------------
 
 add_subdirectory(test_support/fake_memory)
+
+
+#------------------------------------------------------------------------------
+# DEV UTILITIES
+#------------------------------------------------------------------------------
+
+add_custom_target(check_quick
+    COMMAND ${CMAKE_CTEST_COMMAND} -LE memory --stop-on-failure --output-on-failure
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
