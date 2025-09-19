@@ -14,9 +14,18 @@
 
 %%
 
+"{"                 { return LBRACE; }
+"}"                 { return RBRACE; }
+"("                 { return LPARENTHESES; }
+")"                 { return RPARENTHESES; }
+
 ";"           { return SEMICOLON; }
 "="           { return EQUAL; }
+
 "read"           { return READ; }
+"write"             { return WRITE; }
+"define"            { return DEFINE; }
+"call"              { return CALL; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);
