@@ -68,6 +68,7 @@ reading \
 writing \
 statement \
 block_items \
+block \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(
