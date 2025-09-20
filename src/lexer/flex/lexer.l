@@ -16,8 +16,8 @@
 
 "{"                 { return LBRACE; }
 "}"                 { return RBRACE; }
-"("                 { return LPARENTHESES; }
-")"                 { return RPARENTHESES; }
+"("                 { return LPARENTHESIS; }
+")"                 { return RPARENTHESIS; }
 
 ";"           { return SEMICOLON; }
 "="           { return EQUAL; }

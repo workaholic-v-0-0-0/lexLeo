@@ -46,10 +46,16 @@ set(
 %token <string_value> STRING\n\
 %destructor { free($$); } STRING\n\
 %token <symbol_name_value> SYMBOL_NAME\n\
+%token LBRACE
+%token RBRACE
+%token LPARENTHESIS
+%token RPARENTHESIS
 %token SEMICOLON\n\
 %token EQUAL\n\
 %token READ
 %token WRITE
+%token DEFINE
+%token CALL
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -61,6 +67,7 @@ binding \
 reading \
 writing \
 statement \
+block_items \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(
