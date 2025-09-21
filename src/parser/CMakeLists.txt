@@ -48,8 +48,8 @@ set(
 %token <symbol_name_value> SYMBOL_NAME\n\
 %token LBRACE
 %token RBRACE
-%token LPARENTHESIS
-%token RPARENTHESIS
+%token LPAREN
+%token RPAREN
 %token SEMICOLON\n\
 %token EQUAL\n\
 %token READ
