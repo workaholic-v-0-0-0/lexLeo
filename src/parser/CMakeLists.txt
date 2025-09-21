@@ -69,6 +69,7 @@ writing \
 statement \
 block_items \
 block \
+parameters \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(

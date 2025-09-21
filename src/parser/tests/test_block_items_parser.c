@@ -19,25 +19,23 @@
 //-----------------------------------------------------------------------------
 
 
-
 static ast *parsed_ast;
 
 static const char DUMMY[7];
 static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[0];
 static ast *const DUMMY_CHILDREN_NODE_P = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_ERROR_OR_BINDING_NODE_P = (ast *) &DUMMY[2];
-static error_info *const DUMMY_ERROR_INFO_P = (error_info *) &DUMMY[3];
+static ast *const DUMMY_AST_BLOCK_ITEMS_NODE_P = (ast *) &DUMMY[3];
+static error_info *const DUMMY_ERROR_INFO_P = (error_info *) &DUMMY[4];
 static ast FAKE_AST_ERROR = {AST_TYPE_ERROR, .error = DUMMY_ERROR_INFO_P};
-static ast *const DUMMY_AST_BLOCK_ITEMS_NODE_P = (ast *) &DUMMY[4];
-static ast *const DUMMY_AST_ERROR_OR_READING_NODE_P = (ast *) &DUMMY[2];
-static ast *const DUMMY_AST_ERROR_OR_WRITING_NODE_P = (ast *) &DUMMY[2];
+static ast *const DUMMY_AST_ERROR_OR_READING_NODE_P = (ast *) &DUMMY[5];
+static ast *const DUMMY_AST_ERROR_OR_WRITING_NODE_P = (ast *) &DUMMY[6];
 
 
 
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
-
 
 
 mock_token seq_0_statement[] = {
@@ -65,8 +63,6 @@ mock_token seq_3_statements[] = {
     {SEMICOLON, {0}},
     {0, {0}}
 };
-
-static ast *fake_ast_error_p = NULL;
 
 ast *stub_binding_statement_action(void) {
     return mock_type(ast *);
