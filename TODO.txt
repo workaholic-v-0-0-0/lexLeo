@@ -63,3 +63,7 @@
 
 - unit tests for hashtable with key type is void*
 
+- refact grammar with:
+  - rename binding with assignment
+
+

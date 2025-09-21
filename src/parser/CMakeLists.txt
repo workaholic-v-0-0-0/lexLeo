@@ -75,6 +75,7 @@ function \
 function_definition \
 numbers \
 list_of_numbers \
+function_call \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(
