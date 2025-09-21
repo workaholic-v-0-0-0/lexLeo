@@ -91,6 +91,7 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
+
 //-----------------------------------------------------------------------------
 // binding_parse TESTS
 //-----------------------------------------------------------------------------

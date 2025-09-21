@@ -71,6 +71,7 @@ block_items \
 block \
 parameters \
 list_of_parameters \
+function \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(
