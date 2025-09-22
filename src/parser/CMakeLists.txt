@@ -50,6 +50,10 @@ set(
 %token RBRACE
 %token LPAREN
 %token RPAREN
+%token ADD
+%token SUBTRACT
+%token MULTIPLY
+%token DIVIDE
 %token SEMICOLON\n\
 %token EQUAL\n\
 %token READ
@@ -76,6 +80,7 @@ function_definition \
 numbers \
 list_of_numbers \
 function_call \
+computable \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(
