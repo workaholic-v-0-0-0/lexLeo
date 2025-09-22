@@ -19,6 +19,11 @@
 "("                 { return LPAREN; }
 ")"                 { return RPAREN; }
 
+"+"                 { return ADD; }
+"-"                 { return SUBTRACT; }
+"*"                 { return MULTIPLY; }
+"/"                 { return DIVIDE; }
+
 ";"           { return SEMICOLON; }
 "="           { return EQUAL; }
 

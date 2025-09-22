@@ -63,6 +63,8 @@
 
 - unit tests for hashtable with key type is void*
 
+- unit tests for the actions of LHS computable rules
+
 - complete unit tests for the actions of the following rules:
   - statement: function_definition
   - statement: function_call SEMICOLON

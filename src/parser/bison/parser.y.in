@@ -36,6 +36,10 @@ ast *ast;
 
 @TERMINAL_LEXEMS_DECLARATION@
 
+%left ADD SUBTRACT
+%left MULTIPLY DIVIDE
+%right UMINUS
+
 %type <ast> @NON_TERMINAL_LEXEMS_LIST@
 
 %start start
