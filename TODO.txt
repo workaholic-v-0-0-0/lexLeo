@@ -63,6 +63,10 @@
 
 - unit tests for hashtable with key type is void*
 
+- complete unit tests for the actions of the following rules:
+  - statement: function_definition
+  - statement: function_call SEMICOLON
+
 - refact grammar with:
   - rename binding with assignment
 
