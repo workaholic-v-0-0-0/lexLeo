@@ -81,6 +81,7 @@ numbers \
 list_of_numbers \
 function_call \
 computable \
+evaluable \
 translation_unit")
 set(START_SYMBOL "translation_unit")
 set(

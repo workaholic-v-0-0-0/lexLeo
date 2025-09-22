@@ -39,6 +39,7 @@ ast *ast;
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE
 %right UMINUS
+%right QUOTE
 
 %type <ast> @NON_TERMINAL_LEXEMS_LIST@
 
