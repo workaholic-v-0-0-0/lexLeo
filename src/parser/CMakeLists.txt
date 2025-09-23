@@ -80,6 +80,7 @@ function_definition \
 numbers \
 list_of_numbers \
 function_call \
+computable_core \
 computable \
 evaluable \
 translation_unit")
