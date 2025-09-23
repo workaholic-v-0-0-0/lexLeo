@@ -68,6 +68,14 @@ ast *stub_reading_action(void) {
     return mock_type(ast *);
 }
 
+ast *stub_function_definition_action(void) {
+    return mock_type(ast *);
+}
+
+ast *stub_function_call_action(void) {
+    return mock_type(ast *);
+}
+
 
 
 //-----------------------------------------------------------------------------

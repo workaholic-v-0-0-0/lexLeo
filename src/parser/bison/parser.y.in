@@ -4,6 +4,10 @@
 
 %define api.pure full
 
+// Note: expected RR conflict: INTEGER can reduce via atom or computable.
+// Both alternatives yield the same AST pointer (number_atom action).
+%expect-rr 1
+
 %lex-param   { yyscan_t scanner }
 
 %parse-param { yyscan_t scanner }
@@ -35,6 +39,11 @@ ast *ast;
 }
 
 @TERMINAL_LEXEMS_DECLARATION@
+
+%left ADD SUBTRACT
+%left MULTIPLY DIVIDE
+%right UMINUS
+%right QUOTE
 
 %type <ast> @NON_TERMINAL_LEXEMS_LIST@
 

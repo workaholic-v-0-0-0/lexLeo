@@ -14,9 +14,23 @@
 
 %%
 
+"{"                 { return LBRACE; }
+"}"                 { return RBRACE; }
+"("                 { return LPAREN; }
+")"                 { return RPAREN; }
+
+"+"                 { return ADD; }
+"-"                 { return SUBTRACT; }
+"*"                 { return MULTIPLY; }
+"/"                 { return DIVIDE; }
+
 ";"           { return SEMICOLON; }
 "="           { return EQUAL; }
+
 "read"           { return READ; }
+"write"             { return WRITE; }
+"define"            { return DEFINE; }
+"call"              { return CALL; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);
