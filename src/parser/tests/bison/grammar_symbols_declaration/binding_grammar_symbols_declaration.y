@@ -8,7 +8,7 @@
 
 %type <ast>
 symbol_name_atom
-atom
+evaluable
 binding
 
 %token EQUAL
