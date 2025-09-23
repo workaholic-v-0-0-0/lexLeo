@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/binding_rule.y
 
 binding
-  : symbol_name_atom EQUAL atom SEMICOLON {
+  : symbol_name_atom EQUAL evaluable SEMICOLON {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_BINDING,
             2,
