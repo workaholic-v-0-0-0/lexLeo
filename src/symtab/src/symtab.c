@@ -67,6 +67,11 @@ int symtab_intern_symbol(symtab *st, char *name) {
 	    if (!sym)
 		    return 1;
 
+        list l = list_push(symbol_pool, sym);
+        if (!l)
+            return 1;
+        symbol_pool = l;
+
         sym->name = SYMTAB_STRING_DUPLICATE(name);
     	if (!sym->name) {
 	    	SYMTAB_FREE(sym);
