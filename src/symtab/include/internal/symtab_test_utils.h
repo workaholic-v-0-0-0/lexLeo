@@ -8,6 +8,8 @@
 #include "internal/symtab_memory_allocator.h"
 #include "internal/symtab_string_utils.h"
 
+#include "list.h"
+
 typedef symbol *(*symtab_get_local_fn)(symtab *st, const char *name);
 symbol *real_symtab_get_local(symtab *st, const char *name);
 extern symtab_get_local_fn symtab_get_local_mockable;
@@ -27,5 +29,10 @@ typedef int (*symtab_contains_fn)(symtab *st, const char *name);
 int real_symtab_contains(symtab *st, const char *name);
 extern symtab_contains_fn symtab_contains_mockable;
 void set_symtab_contains(symtab_contains_fn f);
+
+list get_symbol_pool(void);
+void set_symbol_pool(list);
+typedef void (*symtab_destroy_value_fn_t)(void *);
+symtab_destroy_value_fn_t get_symtab_destroy_symbol(void);
 
 #endif //SYMTAB_TEST_UTILS_H

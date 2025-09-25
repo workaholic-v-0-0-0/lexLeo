@@ -1,38 +1,32 @@
 // src/symtab/src/symtab.c
 
-//#include "symtab.h"
-
 #ifdef UNIT_TEST
 #include "internal/symtab_test_utils.h"
 #endif
 
 #include "internal/symtab_internal.h"
+#include "internal/symtab_internal.c"
 #include "internal/symtab_memory_allocator.h"
 #include "internal/symtab_string_utils.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-//static list *symbol_pool = NULL;
+static list symbol_pool = NULL;
 
-//void symtab_cleanup_pool(void) {}
-
-symbol *symtab_create_symbol(char *name) {
-
-	if ((!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
-		return NULL;
-
-	symbol *ret = SYMTAB_MALLOC(sizeof(symbol));
-	if (!ret)
-		return NULL;
-
-	ret->name = SYMTAB_STRING_DUPLICATE(name);
-	if (!ret->name) {
-		SYMTAB_FREE(ret);
-		return NULL;
+static void symtab_destroy_symbol_adapter(void *item, void *user_data) {
+	if (item) {
+		SYMTAB_FREE(((symbol *) item)->name);
+		SYMTAB_FREE(item);
 	}
+}
 
-	return ret;
+void symtab_cleanup_pool(void) {
+    list_free_list(
+        symbol_pool,
+        symtab_destroy_symbol_adapter,
+        NULL );
+    symbol_pool = NULL;
 }
 
 symtab *symtab_wind_scope(symtab *st) {
@@ -62,13 +56,6 @@ symtab *symtab_unwind_scope(symtab *st) {
     SYMTAB_FREE(st);
 
     return ret;
-}
-
-int symtab_add(symtab *st, symbol *sym) {
-    if ((!st) || (!sym))
-        return 1;
-
-    return hashtable_add(st->symbols, sym->name, (void *) sym);
 }
 
 int symtab_intern_symbol(symtab *st, char *name) {
@@ -155,3 +142,12 @@ int symtab_contains(symtab *st, const char *name) {
     return symtab_contains(st->parent, name);
 #endif
 }
+
+#ifdef UNIT_TEST
+list get_symbol_pool() {
+    return symbol_pool;
+}
+void set_symbol_pool(list l) {
+    symbol_pool = l;
+}
+#endif
