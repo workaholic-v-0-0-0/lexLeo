@@ -7,6 +7,7 @@ add_library(
     data_structures
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/list_test_utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashtable.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/hashtable_test_utils.c
 )
