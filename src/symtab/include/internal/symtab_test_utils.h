@@ -35,4 +35,6 @@ void set_symbol_pool(list);
 typedef void (*symtab_destroy_value_fn_t)(void *);
 symtab_destroy_value_fn_t get_symtab_destroy_symbol(void);
 
+list *get_symbol_pool_address(void);
+
 #endif //SYMTAB_TEST_UTILS_H

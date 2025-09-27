@@ -25,6 +25,8 @@
 
 
 static symtab *top_level = NULL;
+static symtab *local_level = NULL;
+static symtab *current_level = NULL;
 
 
 
@@ -179,6 +181,7 @@ static void cleanup_pool_successful_when_symbol_pool_has_two_elements(void **sta
 //-----------------------------------------------------------------------------
 
 
+
 // int symtab_intern_symbol(symtab *st, char *name)
 // static list *symbol_pool;
 // list list_push(list l, void * e);
@@ -264,6 +267,107 @@ static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
 
 
 
+//-----------------------------------------------------------------------------
+// symtab_unwind_scope TESTS
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// symtab *symtab_unwind_scope(symtab *st);
+// static list symbol_pool;
+// symtab *symtab_wind_scope(symtab *st);
+// int symtab_intern_symbol(symtab *st, char *name);
+// int symtab_contains_local(symtab *st, const char *name);
+// symbol *symtab_get_local(symtab *st, const char *name)
+// void symtab_cleanup_pool(void);
+// symtab *symtab_unwind_scope(symtab *st);
+
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free, strdup
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int unwind_scope_setup(void **state) {
+    (void)state;
+
+    // real
+    set_symbol_pool(NULL);
+    assert_null(get_symbol_pool());
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int unwind_scope_teardown(void **state) {
+    (void)state;
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - a two-level symtab with a symbol interned in the local level
+//  - st == the local scope
+// Expected:
+//  - the local scope is cleaned up but not the interned symbol
+static void unwind_scope_destroy_local_scope_but_not_destroy_symbol(void **state) {
+    (void)state;
+    top_level = symtab_wind_scope(NULL);
+    assert_non_null(top_level);
+    local_level = symtab_wind_scope(top_level);
+    assert_non_null(local_level);
+    assert_ptr_equal(local_level->parent, top_level);
+    current_level = local_level;
+    assert_int_equal(
+        symtab_intern_symbol(current_level, "symbol_name"),
+        0 );
+    assert_true(symtab_contains_local(local_level, "symbol_name"));
+    assert_false(symtab_contains_local(top_level, "symbol_name"));
+    symbol *sym = symtab_get_local(local_level, "symbol_name");
+    assert_non_null(sym);
+
+    list symbol_pool = get_symbol_pool();
+    assert_non_null(symbol_pool);
+    assert_non_null(((symbol *) symbol_pool->car));
+    assert_ptr_equal(symbol_pool->car, sym);
+
+    current_level = symtab_unwind_scope(current_level);
+
+    assert_non_null(symbol_pool);
+    assert_non_null(((symbol *) symbol_pool->car));
+    assert_ptr_equal(symbol_pool->car, sym);
+    symtab_cleanup_pool();
+    assert_non_null(top_level);
+    current_level = symtab_unwind_scope(current_level);
+    assert_null(current_level);
+
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+}
 
 
 
@@ -291,9 +395,16 @@ int main(void) {
             intern_symbol_setup, intern_symbol_teardown),
     };
 
+    const struct CMUnitTest unwind_scope_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            unwind_scope_destroy_local_scope_but_not_destroy_symbol,
+            unwind_scope_setup, unwind_scope_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(cleanup_pool_tests, NULL, NULL);
     failed += cmocka_run_group_tests(intern_symbol_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
 
     return failed;
 }

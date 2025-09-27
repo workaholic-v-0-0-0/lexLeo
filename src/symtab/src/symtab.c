@@ -67,18 +67,22 @@ int symtab_intern_symbol(symtab *st, char *name) {
 	    if (!sym)
 		    return 1;
 
-        list l = list_push(symbol_pool, sym);
-        if (!l)
-            return 1;
-        symbol_pool = l;
-
         sym->name = SYMTAB_STRING_DUPLICATE(name);
     	if (!sym->name) {
 	    	SYMTAB_FREE(sym);
 		    return 1;
 	    }
 
+        list l = list_push(symbol_pool, sym);
+        if (!l) {
+			SYMTAB_FREE(sym->name);
+			SYMTAB_FREE(sym);
+            return 1;
+		}
+        symbol_pool = l;
+
         if (hashtable_add(st->symbols, name, sym) == 1) {
+			list_pop(&symbol_pool);
             SYMTAB_FREE(sym->name);
             SYMTAB_FREE(sym);
 		    return 1;
@@ -154,5 +158,9 @@ list get_symbol_pool() {
 }
 void set_symbol_pool(list l) {
     symbol_pool = l;
+}
+
+list *get_symbol_pool_address() {
+	return &symbol_pool;
 }
 #endif
