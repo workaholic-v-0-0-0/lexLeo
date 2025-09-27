@@ -35,7 +35,11 @@ symtab *symtab_wind_scope(symtab *st) {
     if (!ret)
         return NULL;
 
+	// Passing NULL as the third parameter ensures that symbols are not destroyed
+	// when unwinding scopes. Symbols are only released explicitly via
+	// symtab_cleanup_pool().
     hashtable *ht = hashtable_create(SYMTAB_SIZE, SYMTAB_KEY_TYPE, NULL);
+
     if (!ht) {
         SYMTAB_FREE(ret);
         return NULL;
