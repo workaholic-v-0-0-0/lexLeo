@@ -9,16 +9,11 @@
 
 #define SYMTAB_SIZE 256
 
-// list of symbol tables, one per scope ;
-// the root hashtable is the global scope where
-// for example resolver intern symbols with NULL
-// value from symbol_name of ast provided by the
-// ast module
+extern const hashtable_key_type SYMTAB_KEY_TYPE;
+
 typedef struct symtab {
     hashtable *symbols;
     struct symtab *parent;
 } symtab;
-
-extern const hashtable_key_type SYMTAB_KEY_TYPE;
 
 #endif //SYMTAB_INTERNAL_H
