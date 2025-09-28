@@ -167,4 +167,47 @@ void set_symbol_pool(list l) {
 list *get_symbol_pool_address() {
 	return &symbol_pool;
 }
+
+// DEBUG TOOLS
+
+#include <stdio.h>
+
+char *symbol_pool_to_string() {
+    // buffer initial
+    size_t capacity = 128;
+    size_t length = 0;
+    char *buf = malloc(capacity);
+    if (!buf) return NULL;
+
+    // header
+    int written = snprintf(buf, capacity, "Symbol pool [length=%zu]:", list_length(symbol_pool));
+    if (written < 0) { free(buf); return NULL; }
+    length = (size_t)written;
+
+    size_t idx = 0;
+    for (list it = symbol_pool; it != NULL; it = it->cdr, idx++) {
+        symbol *s = (symbol *)it->car;
+
+        // ligne à ajouter
+        const char *name = (s && s->name) ? s->name : "(null symbol)";
+        written = snprintf(NULL, 0, "\n  [%zu] %s", idx, name);
+
+        // resize si nécessaire
+        if (length + (size_t)written + 1 > capacity) {
+            while (length + (size_t)written + 1 > capacity) {
+                capacity *= 2;
+            }
+            char *tmp = realloc(buf, capacity);
+            if (!tmp) { free(buf); return NULL; }
+            buf = tmp;
+        }
+
+        // append
+        snprintf(buf + length, capacity - length, "\n  [%zu] %s", idx, name);
+        length += (size_t)written;
+    }
+
+    return buf;
+}
+
 #endif

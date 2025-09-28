@@ -422,6 +422,17 @@ bool ast_type_has_children(ast_type type) {
         case AST_TYPE_READING:
         case AST_TYPE_WRITING:
         case AST_TYPE_TRANSLATION_UNIT:
+        case AST_TYPE_BLOCK_ITEMS:
+        case AST_TYPE_BLOCK:
+        case AST_TYPE_PARAMETERS:
+        case AST_TYPE_LIST_OF_PARAMETERS:
+        case AST_TYPE_FUNCTION:
+        case AST_TYPE_FUNCTION_DEFINITION:
+        case AST_TYPE_NUMBERS:
+        case AST_TYPE_LIST_OF_NUMBERS:
+        case AST_TYPE_FUNCTION_CALL:
+        case AST_TYPE_QUOTE:
+        case AST_TYPE_NEGATION:
         case AST_TYPE_COMPUTATION:
         case AST_TYPE_ADDITION:
             return true;
@@ -505,4 +516,33 @@ ast *ast_create_symbol_node(symbol *sym) {
     }
 
 	return ret;
+}
+
+
+// DEBUG TOOLS
+
+const char *ast_type_to_string(ast_type t) {
+    switch (t) {
+        case AST_TYPE_BINDING:             return "BINDING";
+        case AST_TYPE_READING:             return "READING";
+        case AST_TYPE_WRITING:             return "WRITING";
+        case AST_TYPE_TRANSLATION_UNIT:    return "TRANSLATION_UNIT";
+        case AST_TYPE_BLOCK_ITEMS:         return "BLOCK_ITEMS";
+        case AST_TYPE_BLOCK:               return "BLOCK";
+        case AST_TYPE_PARAMETERS:          return "PARAMETERS";
+        case AST_TYPE_LIST_OF_PARAMETERS:  return "LIST_OF_PARAMETERS";
+        case AST_TYPE_FUNCTION:            return "FUNCTION";
+        case AST_TYPE_FUNCTION_DEFINITION: return "FUNCTION_DEFINITION";
+        case AST_TYPE_NUMBERS:             return "NUMBERS";
+        case AST_TYPE_LIST_OF_NUMBERS:     return "LIST_OF_NUMBERS";
+        case AST_TYPE_FUNCTION_CALL:       return "FUNCTION_CALL";
+        case AST_TYPE_QUOTE:               return "QUOTE";
+        case AST_TYPE_NEGATION:            return "NEGATION";
+        case AST_TYPE_COMPUTATION:         return "COMPUTATION";
+        case AST_TYPE_ADDITION:            return "ADDITION";
+        case AST_TYPE_DATA_WRAPPER:        return "DATA_WRAPPER";
+        case AST_TYPE_ERROR:               return "ERROR";
+        case AST_TYPE_NB_TYPES:            return "NB_TYPES";
+        default:                           return "<UNKNOWN_AST_TYPE>";
+    }
 }

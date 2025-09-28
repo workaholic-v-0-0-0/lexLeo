@@ -22,11 +22,11 @@ typedef enum {
     AST_TYPE_FUNCTION_CALL,
     AST_TYPE_QUOTE,
 	AST_TYPE_NEGATION,
-    //AST_TYPE_STATEMENT, useless?
-    //AST_TYPE_LIST_OF_PARAMETERS,
-    //AST_TYPE_PARAMETER,
-    //AST_TYPE_EVALUATION,
-    //AST_TYPE_EXECUTION,
+    //AST_TYPE_STATEMENT, ?
+    //AST_TYPE_LIST_OF_PARAMETERS, ?
+    //AST_TYPE_PARAMETER, ?
+    //AST_TYPE_EVALUATION, ?
+    //AST_TYPE_EXECUTION, ?
     AST_TYPE_COMPUTATION,
     AST_TYPE_ADDITION,
     // other elementary operations
@@ -208,5 +208,8 @@ bool ast_is_data_of(const ast *a, data_type dt);
 
 char *ast_serialize(ast *root);
 ast *ast_deserialize(char *);
+
+// DEBUG TOOLS
+const char *ast_type_to_string(ast_type t);
 
 #endif //AST_H

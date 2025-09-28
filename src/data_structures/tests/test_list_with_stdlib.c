@@ -24,7 +24,7 @@ static const boolean FALSE = 0;
 
 static list l;
 #define EMPTY_LIST NULL
-static size_t list_length;
+static size_t list_len;
 static const char STATIC_CHAR_A = 'A';
 static const char STATIC_CHAR_B = 'B';
 static const char STATIC_CHAR_C = 'C';
@@ -184,15 +184,15 @@ static list_push_test_params_t lNotNull_eNotNull_dynamicAllocation = {
 static int list_push_setup(void **state) {
     list_push_test_params_t *params = (list_push_test_params_t *) (*state);
     if (params->l == LIST_DEFINED_IN_SETUP) {
-        list_length = 2;
+        list_len = 2;
         if (params->chars_are_dynamically_allocated) {
-            params->char_ptrs = create_dynamic_char_ptr_array_n(list_length, 'A', 'B');
+            params->char_ptrs = create_dynamic_char_ptr_array_n(list_len, 'A', 'B');
         }
         else {
-            params->char_ptrs = create_static_char_ptr_array_n(list_length, &STATIC_CHAR_A, &STATIC_CHAR_B);
+            params->char_ptrs = create_static_char_ptr_array_n(list_len, &STATIC_CHAR_A, &STATIC_CHAR_B);
         }
         assert_non_null(params->char_ptrs);
-        params->l = make_list_n((void **) params->char_ptrs, list_length);
+        params->l = make_list_n((void **) params->char_ptrs, list_len);
     }
     if (params->e == ELEMENT_DEFINED_IN_SETUP) {
         if (params->chars_are_dynamically_allocated) {
@@ -213,7 +213,7 @@ static int list_push_teardown(void **state) {
             params->l = next;
         }
         if (params->chars_are_dynamically_allocated)
-            destroy_dynamic_char_ptr_array_n(params->char_ptrs, list_length);
+            destroy_dynamic_char_ptr_array_n(params->char_ptrs, list_len);
         else
             free(params->char_ptrs);
     }

@@ -27,4 +27,10 @@ int symtab_contains_local(symtab *st, const char *name);
 symbol *symtab_get(symtab *st, const char *name); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 int symtab_contains(symtab *st, const char *name);  // the caller is responsible for passing either NULL or a well-formed symtab pointer
 
+
+
+// DEBUG TOOLS
+
+char *symbol_pool_to_string(void);
+
 #endif //SYMTAB_H

@@ -56,3 +56,15 @@ void list_free_list(list l, void (*destroy_fn)(void *item, void *user_data), voi
 		l = next;
 	}
 }
+
+
+
+// DEBUG TOOLS
+
+size_t list_length(list l) {
+	size_t len = 0;
+	for (cons *cur = l; cur != NULL; cur = cur->cdr) {
+		++len;
+	}
+	return len;
+}
