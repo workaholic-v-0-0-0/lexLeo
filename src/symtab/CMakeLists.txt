@@ -3,20 +3,29 @@
 cmake_minimum_required(VERSION 3.27)
 project(symtab LANGUAGES C)
 
-add_library(
-    symtab
-    STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_internal.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_test_utils.c
-)
+if (BUILD_TESTING)
+    add_library(
+        symtab
+        STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/symtab_test_utils.c
+    )
+    target_compile_definitions(symtab PRIVATE UNIT_TEST)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
+else ()
+    add_library(
+        symtab
+        STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/symtab.c
+    )
+endif ()
 
 target_include_directories(
     symtab
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_SOURCE_DIR}/src/ast/include
 )
-target_link_libraries(symtab PUBLIC data_structures)
+target_link_libraries(symtab PUBLIC data_structures ast)
 target_compile_definitions(symtab PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 # optional logger injection "at cmake scope"
@@ -42,7 +51,9 @@ if (USE_STRING_UTILS)
     target_link_libraries(symtab PUBLIC ${STRING_UTILS_TARGET})
 endif ()
 
+#[[
 if (BUILD_TESTING)
     target_compile_definitions(symtab PRIVATE UNIT_TEST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()
+]]

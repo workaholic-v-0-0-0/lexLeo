@@ -72,4 +72,10 @@
 - refact grammar with:
   - rename binding with assignment
 
-
+- understand and manage scopes at compile time and scopes at runtime:
+  - call frames stack at runtime are needed for exemple because one of these scenarii:
+    - f:{READ x ; return x ;} ; x = f() ; y = f() ; // if not, the value of x is swept away by the y's one
+    - f:{READ x ; return x ;} ; x = f(f())
+  - at runtime, a symbol lexically unique can have several instances
+  - entries of hashtables of resolver stack are symbol_name->symbol*
+    and those of interpreter stack are symbol*->interpreter_value

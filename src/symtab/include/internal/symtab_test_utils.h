@@ -8,6 +8,8 @@
 #include "internal/symtab_memory_allocator.h"
 #include "internal/symtab_string_utils.h"
 
+#include "list.h"
+
 typedef symbol *(*symtab_get_local_fn)(symtab *st, const char *name);
 symbol *real_symtab_get_local(symtab *st, const char *name);
 extern symtab_get_local_fn symtab_get_local_mockable;
@@ -23,19 +25,16 @@ symbol *real_symtab_get(symtab *st, const char *name);
 extern symtab_get_fn symtab_get_mockable;
 void set_symtab_get(symtab_get_fn f);
 
-typedef int (*symtab_reset_local_fn)(symtab *st, const char *name, ast *image);
-int real_symtab_reset_local(symtab *st, const char *name, ast *image);
-extern symtab_reset_local_fn symtab_reset_local_mockable;
-void set_symtab_reset_local(symtab_reset_local_fn f);
-
-typedef int (*symtab_reset_fn)(symtab *st, const char *name, ast *image);
-int real_symtab_reset(symtab *st, const char *name, ast *image);
-extern symtab_reset_fn symtab_reset_mockable;
-void set_symtab_reset(symtab_reset_fn f);
-
 typedef int (*symtab_contains_fn)(symtab *st, const char *name);
 int real_symtab_contains(symtab *st, const char *name);
 extern symtab_contains_fn symtab_contains_mockable;
 void set_symtab_contains(symtab_contains_fn f);
+
+list get_symbol_pool(void);
+void set_symbol_pool(list);
+typedef void (*symtab_destroy_value_fn_t)(void *);
+symtab_destroy_value_fn_t get_symtab_destroy_symbol(void);
+
+list *get_symbol_pool_address(void);
 
 #endif //SYMTAB_TEST_UTILS_H

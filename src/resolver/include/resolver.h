@@ -3,6 +3,7 @@
 #ifndef LEXLEO_RESOLVER_H
 #define LEXLEO_RESOLVER_H
 
+#include "ast.h"
 #include "symtab.h"
 #include "resolver_ctx.h"
 

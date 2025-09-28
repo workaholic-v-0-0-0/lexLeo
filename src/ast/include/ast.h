@@ -122,23 +122,22 @@ typed_data *ast_create_typed_data_int(int i);
  */
 void ast_destroy_typed_data_int(typed_data *typed_data_int);
 
-// the caller must always frees s
-typed_data *ast_create_typed_data_string(char *s);
+typed_data *ast_create_typed_data_string(const char *s);
 
 /**
  * Frees the typed_data container and its owned string.
  */
 void ast_destroy_typed_data_string(typed_data *typed_data_string);
 
-// the caller must always frees s
-typed_data *ast_create_typed_data_symbol_name(char *s);
+typed_data *ast_create_typed_data_symbol_name(const char *s);
 
 /**
  * Frees the typed_data container and its owned string.
  */
 void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name);
 
-// the caller must always free s
+// borrowed symbol*: not freed by the caller nor by the AST
+// lifetime managed by the symtab (symtab_cleanup_pool)
 typed_data *ast_create_typed_data_symbol(symbol *s);
 
 /**
@@ -158,13 +157,15 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper);
 
 ast *ast_create_int_node(int i);
 
-// the caller must always frees str
-ast *ast_create_string_node(char *str);
+// Copies `str` internally (strdup). The AST owns the copy.
+// The caller remains responsible for the original pointer (if any).
+ast *ast_create_string_node(const char *str);
 
-// the caller must always frees str
-ast *ast_create_symbol_name_node(char *str);
+// Copies `str` internally (strdup). The AST owns the copy.
+ast *ast_create_symbol_name_node(const char *str);
 
-// the caller must always frees sym
+// Borrowed symbol pointer (NOT owned by the AST).
+// Freed via symtab_cleanup_pool(), not by ast_destroy().
 ast *ast_create_symbol_node(symbol *sym);
 
 ast *ast_create_error_node(ast_error_type code, char *message); // client code is responsible for message

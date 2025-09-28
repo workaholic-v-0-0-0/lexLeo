@@ -1,4 +1,4 @@
-// src/symtab/test/test_symtab.h
+// src/symtab/test/test_symtab.c
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -18,6 +18,8 @@
 #include "internal/symtab_internal.h"
 #include "internal/symtab_test_utils.h"
 #include "internal/hashtable_test_utils.h"
+#include "internal/list_test_utils.h"
+
 
 
 //-----------------------------------------------------------------------------
@@ -25,7 +27,7 @@
 //-----------------------------------------------------------------------------
 
 
-static const char DUMMY[10];
+static const char DUMMY[12];
 static const void *const DUMMY_MALLOC_RETURNED_VALUE = (void *) &DUMMY[0];
 static const char *const DUMMY_STRING = (char *) &DUMMY[1];
 #define MALLOC_ERROR_CODE NULL
@@ -43,8 +45,11 @@ static char too_long_symbol_name[MAXIMUM_SYMBOL_NAME_LENGTH +2];
 static char *valid_symbol_name = "valid_symbol_name";
 static const void *DUMMY_STRDUP_RETURNED_VALUE = (void *) &DUMMY[10];
 #define STRDUP_ERROR_CODE NULL
+static const list *DUMMY_SYMBOL_POOL = (void *) &DUMMY[11];
 
 static list collected_ptr_to_be_freed = NULL;
+
+symtab_destroy_value_fn_t symtab_destroy_symbol;
 
 
 
@@ -99,13 +104,6 @@ void *mock_hashtable_get(const hashtable *ht, const void *key) {
     return mock_type(void *);
 }
 
-int mock_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
-    check_expected(ht);
-    check_expected(key);
-    check_expected(value);
-    return mock_type(int);
-}
-
 int mock_hashtable_remove(hashtable *ht, const void *key) {
     check_expected(ht);
     check_expected(key);
@@ -143,29 +141,6 @@ symbol *spy_symtab_get(symtab *st, const char *name) {
     symtab_get_fn current_symtab_get = next_symtab_get;
     next_symtab_get = (next_symtab_get == mock_symtab_get) ? real_symtab_get : mock_symtab_get;
     return current_symtab_get(st, name);
-}
-
-int mock_symtab_reset_local(symtab *st, const char *name, ast *image) {
-    check_expected(st);
-    check_expected(name);
-    check_expected(image);
-    return mock_type(int);
-}
-
-int mock_symtab_reset(symtab *st, const char *name, ast *image) {
-    check_expected(st);
-    check_expected(name);
-    check_expected(image);
-    return mock_type(int);
-}
-
-static symtab_reset_fn next_symtab_reset = real_symtab_reset;
-
-// first call is real, second is mock, then repeats
-int spy_symtab_reset(symtab *st, const char *name, ast *image) {
-    symtab_reset_fn current_symtab_reset = next_symtab_reset;
-    next_symtab_reset = (next_symtab_reset == mock_symtab_reset) ? real_symtab_reset : mock_symtab_reset;
-    return current_symtab_reset(st, name, image);
 }
 
 int mock_symtab_contains(symtab *st, const char *name) {
@@ -206,6 +181,17 @@ static void *stub_malloc_returned_value_for_symbol = (void *) DUMMY_SYMBOL_P;
 static char *malloc_ret_block_for_symbol;
 static char *strdup_ret_block;
 
+list mock_list_push(list l, void * e) {
+    check_expected(l);
+    check_expected(e);
+    return mock_type(list);
+}
+
+void *mock_list_pop(list *l_p) {
+    check_expected(l_p);
+    return mock_type(void *);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -217,7 +203,10 @@ static void alloc_and_save_address_to_be_freed(void **ptr, size_t size) {
     *ptr = malloc(size);
     assert_non_null(*ptr);
     set_allocators(NULL, NULL);
+    list_push_fn f = get_list_push();
+    set_list_push(NULL);
     collected_ptr_to_be_freed = list_push(collected_ptr_to_be_freed, *ptr);
+    set_list_push(f);
     set_allocators(mock_malloc, mock_free);
 }
 
@@ -396,70 +385,6 @@ static void unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_whe
 
 
 //-----------------------------------------------------------------------------
-// symtab_add TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int add_setup(void **state) {
-    set_hashtable_add(mock_hashtable_add);
-    return 0;
-}
-
-static int add_teardown(void **state) {
-    set_hashtable_add(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: st = NULL
-// Expected: returns 1
-static void add_returns_1_when_st_null(void **state) {
-    assert_int_equal(1, symtab_add(NULL, (symbol *) DUMMY_SYMBOL_P));
-}
-
-// Given: st != NULL, sym = NULL
-// Expected: returns 1
-static void add_returns_1_when_st_not_null_sym_null(void **state) {
-    assert_int_equal(1, symtab_add((symtab *) DUMMY_SYMTAB_P, NULL));
-}
-
-// Given: st != NULL, sym != NULL
-// Expected:
-//  - calls hashtable_add(st->symbols, sym->name, (void *) sym)
-//  - returns hashtable_add returned value
-static void add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_null_sym_not_null(void **state) {
-    symtab *st = NULL;
-    symbol *sym = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
-    alloc_and_save_address_to_be_freed((void **)&sym, sizeof(symbol));
-    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
-    st->parent = (symtab *) DUMMY_SYMTAB_P;
-    sym->name = (char *) DUMMY_STRING;
-
-    expect_value(mock_hashtable_add, ht, st->symbols);
-    expect_value(mock_hashtable_add, key, sym->name);
-    expect_value(mock_hashtable_add, value, (void *) sym);
-    will_return(mock_hashtable_add, DUMMY_INT);
-
-    assert_int_equal(symtab_add(st, sym), DUMMY_INT);
-}
-
-
-
-//-----------------------------------------------------------------------------
 // symtab_get_local TESTS
 //-----------------------------------------------------------------------------
 
@@ -509,65 +434,6 @@ static void get_local_calls_hashtable_get_and_returns_its_returned_value_when_st
     will_return(mock_hashtable_get, DUMMY_VOID_POINTER);
 
     assert_ptr_equal(symtab_get_local(st, (char *) DUMMY_STRING), DUMMY_VOID_POINTER);
-}
-
-
-
-//-----------------------------------------------------------------------------
-// symtab_reset_local TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int reset_local_setup(void **state) {
-    set_hashtable_reset_value(mock_hashtable_reset_value);
-    return 0;
-}
-
-static int reset_local_teardown(void **state) {
-    set_hashtable_reset_value(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: st = NULL
-// Expected: returns 1
-static void reset_local_returns_1_when_st_null(void **state) {
-    assert_int_equal(
-        symtab_reset_local(NULL, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        1 );
-}
-
-// Given: st != NULL, image != NULL
-// Expected:
-//   - calls hashtable_reset_value(st->symbols, name, (void *) image)
-//   - returns hashtable_reset_value returned value
-static void reset_local_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null(void **state) {
-    symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
-    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
-    st->parent = (symtab *) DUMMY_SYMTAB_P;
-
-    expect_value(mock_hashtable_reset_value, ht, st->symbols);
-    expect_value(mock_hashtable_reset_value, key, (char *) DUMMY_STRING);
-    expect_value(mock_hashtable_reset_value, value, (void *) DUMMY_IMAGE);
-    will_return(mock_hashtable_reset_value, DUMMY_INT);
-
-    assert_int_equal(
-        symtab_reset_local((symtab *) st, (char *) DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        DUMMY_INT );
 }
 
 
@@ -782,88 +648,6 @@ static void get_calls_itself_and_returns_value_when_symtab_contains_local_return
 
 
 //-----------------------------------------------------------------------------
-// symtab_reset TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int reset_setup(void **state) {
-    set_symtab_reset_local(mock_symtab_reset_local);
-    set_symtab_reset(spy_symtab_reset);
-    next_symtab_reset = real_symtab_reset;
-    return 0;
-}
-
-static int reset_teardown(void **state) {
-    set_symtab_reset_local(NULL);
-    set_symtab_reset(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: st = NULL
-// Expected: returns 1
-static void reset_returns_1_when_st_null(void **state) {
-    assert_int_equal(1, symtab_reset(NULL, DUMMY_STRING, (ast *) DUMMY_IMAGE));
-}
-
-// Given: st != NULL
-// Expected: calls symtab_reset_local(st, name, image)
-static void reset_calls_symtab_reset_local_when_st_not_null(void **state) {
-    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, DUMMY_INT); // DUMMY_INT is 0 so no more call (see next tests)
-    symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE);
-}
-
-// Given: symtab_reset_local(st, name, image) returns 0 (meaning the reset has been done properly)
-// Expected: returns 0
-static void reset_returns_0_when_symtab_reset_local_returns_0(void **state) {
-    expect_value(mock_symtab_reset_local, st, DUMMY_SYMTAB_P);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, 0);
-    assert_int_equal(0, symtab_reset((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING, (ast *) DUMMY_IMAGE));
-}
-
-// Given: symtab_reset_local(st, name, image) returns 1 (meaning name is not a symbol name in current scope)
-// Expected:
-//  - calls symtab_reset(st->parent, name, image);
-//  - returns symtab_reset returned value
-static void reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1(void **state) {
-    symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
-    st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
-    st->parent = (symtab *) DUMMY_SYMTAB_P;
-    expect_value(mock_symtab_reset_local, st, st);
-    expect_value(mock_symtab_reset_local, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset_local, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset_local, 1);
-    expect_value(mock_symtab_reset, st, st->parent);
-    expect_value(mock_symtab_reset, name, DUMMY_STRING);
-    expect_value(mock_symtab_reset, image, DUMMY_IMAGE);
-    will_return(mock_symtab_reset, DUMMY_INT);
-    assert_int_equal(
-        symtab_reset(st, DUMMY_STRING, (ast *) DUMMY_IMAGE),
-        DUMMY_INT );
-}
-
-
-
-//-----------------------------------------------------------------------------
 // symtab_contains TESTS
 //-----------------------------------------------------------------------------
 
@@ -942,111 +726,6 @@ static void contains_calls_symtab_contains_and_returns_value_when_symtab_contain
 
 
 //-----------------------------------------------------------------------------
-// symtab_create_symbol TESTS
-//-----------------------------------------------------------------------------
-
-
-
-//-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int create_symbol_setup(void **state) {
-	memset(too_long_symbol_name, 'a', MAXIMUM_SYMBOL_NAME_LENGTH + 1);
-	too_long_symbol_name[256] = '\0';
-    set_allocators(mock_malloc, mock_free);
-	set_string_duplicate(mock_strdup);
-    return 0;
-}
-
-static int create_symbol_teardown(void **state) {
-    set_allocators(NULL, NULL);
-	set_string_duplicate(NULL);
-    free_saved_addresses_to_be_freed();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
-//-----------------------------------------------------------------------------
-
-
-// Given: name == NULL
-// Expected: returns NULL
-static void create_symbol_returns_null_when_name_null(void **state) {
-    assert_null(symtab_create_symbol(NULL));
-}
-
-// Given: name length exceeds MAXIMUM_SYMBOL_NAME_LENGTH
-// Expected: returns NULL
-static void create_symbol_returns_null_when_name_is_too_long(void **state) {
-    assert_null(symtab_create_symbol(too_long_symbol_name));
-}
-
-// Given: name is valid
-// Expected: calls malloc with sizeof(symbol)
-static void create_symbol_calls_malloc_for_a_symbol_when_name_is_valid(void **state) {
-	expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, MALLOC_ERROR_CODE); // to avoid more mock call
-    symtab_create_symbol(valid_symbol_name);
-}
-
-// Given: malloc fails
-// Expected: return NULL
-static void create_symbol_returns_null_when_malloc_fails(void **state) {
-	expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, MALLOC_ERROR_CODE);
-    assert_null(symtab_create_symbol(valid_symbol_name));
-}
-
-// Given: malloc succeeds
-// Expected: calls strdup with name
-static void create_symbol_calls_strdup_when_malloc_succeeds(void **state) {
-	alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symbol, sizeof(struct symbol));
-	expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, fake_malloc_returned_value_for_a_symbol);
-	expect_value(mock_strdup, s, valid_symbol_name);
-    will_return(mock_strdup, STRDUP_ERROR_CODE); // to avoid some mock calls
-	expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_symbol);
-	symtab_create_symbol(valid_symbol_name);
-}
-
-// Given: strdup fails
-// Expected:
-//  - frees malloc'ed symbol
-//  - returns NULL
-static void create_symbol_cleanup_and_returns_null_when_strdup_fails(void **state) {
-	alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symbol, sizeof(struct symbol));
-	expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, fake_malloc_returned_value_for_a_symbol);
-	expect_value(mock_strdup, s, valid_symbol_name);
-    will_return(mock_strdup, STRDUP_ERROR_CODE);
-	expect_value(mock_free, ptr, fake_malloc_returned_value_for_a_symbol);
-	assert_null(symtab_create_symbol(valid_symbol_name));
-}
-
-// Given: strdup succeeds
-// Expected: the malloc'ed symbol is initialized and returned
-static void create_symbol_initializes_and_returns_malloced_typed_data_when_strdup_succeds(void **state) {
-	alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symbol, sizeof(struct symbol));
-	expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, fake_malloc_returned_value_for_a_symbol);
-	alloc_and_save_address_to_be_freed((void **)&fake_strdup_returned_value_for_symbol_name, strlen(valid_symbol_name)+1);
-	expect_value(mock_strdup, s, valid_symbol_name);
-    will_return(mock_strdup, fake_strdup_returned_value_for_symbol_name);
-
-	symbol *ret = symtab_create_symbol(valid_symbol_name);
-
-	assert_ptr_equal(ret, fake_malloc_returned_value_for_a_symbol);
-	assert_ptr_equal(ret->name, fake_strdup_returned_value_for_symbol_name);
-}
-
-
-
-//-----------------------------------------------------------------------------
 // symtab_intern_symbol TESTS
 //-----------------------------------------------------------------------------
 
@@ -1059,10 +738,13 @@ static void create_symbol_initializes_and_returns_malloced_typed_data_when_strdu
 
 // symtab_intern_symbol
 
-// doubled:
+// doubled:{
+
 //  - hashtable_add (mock)
 //  - hashtable_key_is_in_use (mock)
-//  - malloc, free, strdup  (mock and/or (?) fake)
+//  - malloc, free, strdup  (mock)
+//  - list_push (mock)
+//  - list_pop (mock)
 //  - symtab *st param (stub)
 
 
@@ -1083,6 +765,8 @@ static int intern_symbol_setup(void **state) {
 	set_string_duplicate(mock_strdup);
     set_hashtable_key_is_in_use(mock_hashtable_key_is_in_use);
     set_hashtable_add(mock_hashtable_add);
+    set_list_push(mock_list_push);
+    set_list_pop(mock_list_pop);
     return 0;
 }
 
@@ -1090,6 +774,8 @@ static int intern_symbol_teardown(void **state) {
     set_allocators(NULL, NULL);
 	set_string_duplicate(NULL);
     set_hashtable_key_is_in_use(NULL);
+    set_list_push(NULL);
+	set_list_pop(NULL);
     set_hashtable_add(NULL);
     free_saved_addresses_to_be_freed();
     return 0;
@@ -1221,7 +907,7 @@ static void intern_symbol_cleanup_and_error_when_strdup_fails(void **state) {
 //  - hashtable_key_is_in_use will return false
 //  - allocation for symbol will succeed
 //  - duplication of name will succeed
-//  - new entry creation in st->symbols will fail
+//  - list_push for symbol registration in symbol_pool will fail
 // Expected:
 //  - calls hashtable_key_is_in_use with:
 //    - ht: st->symbols
@@ -1230,16 +916,15 @@ static void intern_symbol_cleanup_and_error_when_strdup_fails(void **state) {
 //    - size: sizeof(symbol)
 //  - calls strdup with:
 //    - s: name
-//  - calls hashtable_add:
-//    - ht: st->symbols
-//    - key: name
-//    - value: malloc returned value for symbol
+//  - call list_push with:
+//    - l: symbol_pool
+//    - e: malloc returned value for symbol
 //  - calls free with:
-//    - ptr: malloc returned value for the duplicated string
+//    - ptr: strdup returned value
 //  - calls free with:
 //    - ptr: malloc returned value for symbol
 //  - returns 1
-static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **state) {
+static void intern_symbol_cleanup_and_error_when_list_push_fails(void **state) {
     expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
     expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
     will_return(mock_hashtable_key_is_in_use, false);
@@ -1249,10 +934,9 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
     alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
     expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
-    expect_value(mock_hashtable_add, ht, stub_symtab.symbols);
-    expect_value(mock_hashtable_add, key, valid_symbol_name);
-    expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
-    will_return(mock_hashtable_add, 1);
+    expect_value(mock_list_push, l, get_symbol_pool());
+    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
+    will_return(mock_list_push, NULL);
     expect_value(mock_free, ptr, strdup_ret_block);
     expect_value(mock_free, ptr, malloc_ret_block_for_symbol);
 
@@ -1266,7 +950,8 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
 //  - hashtable_key_is_in_use will return false
 //  - allocation for symbol will succeed
 //  - duplication of name will succeed
-//  - new entry creation in st->symbols will succeed
+//  - list_push will succeed
+//  - hashtable_add will fail
 // Expected:
 //  - calls hashtable_key_is_in_use with:
 //    - ht: st->symbols
@@ -1275,6 +960,65 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
 //    - size: sizeof(symbol)
 //  - calls strdup with:
 //    - s: name
+//  - call list_push with:
+//    - l: symbol_pool
+//    - e: malloc returned value for symbol
+//  - calls hashtable_add:
+//    - ht: st->symbols
+//    - key: name
+//    - value: malloc returned value for symbol
+//  - calls free with:
+//    - ptr: malloc returned value for the duplicated string
+//  - calls free with:
+//    - ptr: malloc returned value for symbol
+//  - calls list_pop with:
+//    - &symbol_pool
+//  - returns 1
+static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **state) {
+    expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
+    expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
+    will_return(mock_hashtable_key_is_in_use, false);
+    alloc_and_save_address_to_be_freed((void **)&malloc_ret_block_for_symbol, sizeof(symbol));
+    expect_value(mock_malloc, size, sizeof(symbol));
+    will_return(mock_malloc, malloc_ret_block_for_symbol);
+    alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
+    expect_value(mock_strdup, s, valid_symbol_name);
+    will_return(mock_strdup, strdup_ret_block);
+    expect_value(mock_list_push, l, get_symbol_pool());
+    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
+    will_return(mock_list_push, DUMMY_SYMBOL_POOL);
+    expect_value(mock_hashtable_add, ht, stub_symtab.symbols);
+    expect_value(mock_hashtable_add, key, valid_symbol_name);
+    expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
+    will_return(mock_hashtable_add, 1);
+	expect_value(mock_list_pop, l_p, get_symbol_pool_address());
+	will_return(mock_list_pop, malloc_ret_block_for_symbol);
+    expect_value(mock_free, ptr, strdup_ret_block);
+    expect_value(mock_free, ptr, malloc_ret_block_for_symbol);
+
+    assert_int_equal(
+        symtab_intern_symbol(&stub_symtab, valid_symbol_name),
+        1 );
+}
+
+// Given:
+//  - arguments are valid
+//  - hashtable_key_is_in_use will return false
+//  - allocation for symbol will succeed
+//  - duplication of name will succeed
+//  - list_push will succeed
+//  - hashtable_add will succeed
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: st->symbols
+//    - key: name
+//  - calls malloc with:
+//    - size: sizeof(symbol)
+//  - calls strdup with:
+//    - s: name
+//  - call list_push with:
+//    - l: symbol_pool
+//    - e: malloc returned value for symbol
 //  - calls hashtable_add:
 //    - ht: st->symbols
 //    - key: name
@@ -1290,8 +1034,11 @@ static void intern_symbol_interns_new_symbol_when_hashtable_add_succeeds(void **
     alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
     expect_string(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
+    expect_value(mock_list_push, l, get_symbol_pool());
+    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
+    will_return(mock_list_push, DUMMY_SYMBOL_POOL);
     expect_value(mock_hashtable_add, ht, stub_symtab.symbols);
-    expect_string(mock_hashtable_add, key, valid_symbol_name);
+    expect_value(mock_hashtable_add, key, valid_symbol_name);
     expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
     will_return(mock_hashtable_add, 0);
 
@@ -1334,18 +1081,6 @@ int main(void) {
             unwind_scope_setup, unwind_scope_teardown),
     };
 
-    const struct CMUnitTest add_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            add_returns_1_when_st_null,
-            add_setup, add_teardown),
-        cmocka_unit_test_setup_teardown(
-            add_returns_1_when_st_not_null_sym_null,
-            add_setup, add_teardown),
-        cmocka_unit_test_setup_teardown(
-            add_calls_hashtable_add_and_returns_its_returned_value_when_st_not_null_sym_not_null,
-            add_setup, add_teardown),
-    };
-
     const struct CMUnitTest get_local_tests[] = {
         cmocka_unit_test_setup_teardown(
             get_local_returns_null_when_st_null,
@@ -1353,15 +1088,6 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             get_local_calls_hashtable_get_and_returns_its_returned_value_when_st_not_null,
             get_local_setup, get_local_teardown),
-    };
-
-    const struct CMUnitTest reset_local_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            reset_local_returns_1_when_st_null,
-            reset_local_setup, reset_local_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_local_calls_hashtable_reset_value_and_returns_its_returned_value_when_st_not_null_image_not_null,
-            reset_local_setup, reset_local_teardown),
     };
 
     const struct CMUnitTest remove_tests[] = {
@@ -1397,21 +1123,6 @@ int main(void) {
             get_setup, get_teardown),
     };
 
-    const struct CMUnitTest reset_tests[] = {
-        cmocka_unit_test_setup_teardown(
-            reset_returns_1_when_st_null,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_calls_symtab_reset_local_when_st_not_null,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_returns_0_when_symtab_reset_local_returns_0,
-            reset_setup, reset_teardown),
-        cmocka_unit_test_setup_teardown(
-            reset_calls_symtab_reset_and_returns_value_when_symtab_reset_local_returns_1,
-            reset_setup, reset_teardown),
-    };
-
     const struct CMUnitTest contains_tests[] = {
         cmocka_unit_test_setup_teardown(
             contains_returns_0_when_st_null,
@@ -1425,28 +1136,6 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             contains_calls_symtab_contains_and_returns_value_when_symtab_contains_local_returns_0,
             contains_setup, contains_teardown),
-    };
-
-    const struct CMUnitTest create_symbol_tests[] = {
-        cmocka_unit_test(create_symbol_returns_null_when_name_null),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_returns_null_when_name_is_too_long,
-            create_symbol_setup, create_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_calls_malloc_for_a_symbol_when_name_is_valid,
-            create_symbol_setup, create_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_returns_null_when_malloc_fails,
-            create_symbol_setup, create_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_calls_strdup_when_malloc_succeeds,
-            create_symbol_setup, create_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_cleanup_and_returns_null_when_strdup_fails,
-            create_symbol_setup, create_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            create_symbol_initializes_and_returns_malloced_typed_data_when_strdup_succeds,
-            create_symbol_setup, create_symbol_teardown),
     };
 
     const struct CMUnitTest intern_symbol_tests[] = {
@@ -1472,6 +1161,9 @@ int main(void) {
             intern_symbol_cleanup_and_error_when_strdup_fails,
             intern_symbol_setup, intern_symbol_teardown),
         cmocka_unit_test_setup_teardown(
+            intern_symbol_cleanup_and_error_when_list_push_fails,
+            intern_symbol_setup, intern_symbol_teardown),
+        cmocka_unit_test_setup_teardown(
             intern_symbol_cleanup_and_error_when_hashtable_add_fails,
             intern_symbol_setup, intern_symbol_teardown),
         cmocka_unit_test_setup_teardown(
@@ -1482,15 +1174,11 @@ int main(void) {
     int failed = 0;
     failed += cmocka_run_group_tests(wind_scope_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_scope_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(add_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_local_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(reset_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(remove_tests, NULL, NULL);
     failed += cmocka_run_group_tests(contains_local_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(reset_tests, NULL, NULL);
     failed += cmocka_run_group_tests(contains_tests, NULL, NULL);
-    failed += cmocka_run_group_tests(create_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(intern_symbol_tests, NULL, NULL);
 
     return failed;

@@ -47,7 +47,7 @@ void ast_destroy_typed_data_int(typed_data *typed_data_int) {
 #endif
 }
 
-typed_data *ast_create_typed_data_string(char *s) {
+typed_data *ast_create_typed_data_string(const char *s) {
     typed_data *ret = AST_MALLOC(sizeof(typed_data));
     if (!ret)
         return NULL;
@@ -73,7 +73,7 @@ void ast_destroy_typed_data_string(typed_data *typed_data_string) {
 #endif
 }
 
-typed_data *ast_create_typed_data_symbol_name(char *s) {
+typed_data *ast_create_typed_data_symbol_name(const char *s) {
 	if (!s)
 		return NULL;
 
@@ -114,6 +114,9 @@ void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
     ast_destroy_typed_data_symbol_mockable(typed_data_symbol);
 #else
     AST_FREE(typed_data_symbol);
+	// Only frees the typed_data container itself.
+	// Does not free the underlying symbol*, which is owned and freed
+	// by the global symbol_pool via symtab_cleanup_pool().
 #endif
 }
 
@@ -456,7 +459,7 @@ ast *ast_create_int_node(int i) {
     return ret;
 }
 
-ast *ast_create_string_node(char *str) {
+ast *ast_create_string_node(const char *str) {
     typed_data *td = ast_create_typed_data_string(str);
     if (!td)
         return NULL;
@@ -470,7 +473,7 @@ ast *ast_create_string_node(char *str) {
     return ret;
 }
 
-ast *ast_create_symbol_name_node(char *str) {
+ast *ast_create_symbol_name_node(const char *str) {
 	if (!str)
 		return NULL;
 

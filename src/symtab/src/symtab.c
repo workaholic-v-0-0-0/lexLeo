@@ -1,34 +1,32 @@
 // src/symtab/src/symtab.c
 
-//#include "symtab.h"
-
 #ifdef UNIT_TEST
 #include "internal/symtab_test_utils.h"
 #endif
 
-#include "ast.h"
 #include "internal/symtab_internal.h"
+#include "internal/symtab_internal.c"
 #include "internal/symtab_memory_allocator.h"
 #include "internal/symtab_string_utils.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-symbol *symtab_create_symbol(char *name) {
-	if ((!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
-		return NULL;
+static list symbol_pool = NULL;
 
-	symbol *ret = SYMTAB_MALLOC(sizeof(symbol));
-	if (!ret)
-		return NULL;
-
-	ret->name = SYMTAB_STRING_DUPLICATE(name);
-	if (!ret->name) {
-		SYMTAB_FREE(ret);
-		return NULL;
+static void symtab_destroy_symbol_adapter(void *item, void *user_data) {
+	if (item) {
+		SYMTAB_FREE(((symbol *) item)->name);
+		SYMTAB_FREE(item);
 	}
+}
 
-	return ret;
+void symtab_cleanup_pool(void) {
+    list_free_list(
+        symbol_pool,
+        symtab_destroy_symbol_adapter,
+        NULL );
+    symbol_pool = NULL;
 }
 
 symtab *symtab_wind_scope(symtab *st) {
@@ -37,7 +35,11 @@ symtab *symtab_wind_scope(symtab *st) {
     if (!ret)
         return NULL;
 
+	// Passing NULL as the third parameter ensures that symbols are not destroyed
+	// when unwinding scopes. Symbols are only released explicitly via
+	// symtab_cleanup_pool().
     hashtable *ht = hashtable_create(SYMTAB_SIZE, SYMTAB_KEY_TYPE, NULL);
+
     if (!ht) {
         SYMTAB_FREE(ret);
         return NULL;
@@ -60,13 +62,6 @@ symtab *symtab_unwind_scope(symtab *st) {
     return ret;
 }
 
-int symtab_add(symtab *st, symbol *sym) {
-    if ((!st) || (!sym))
-        return 1;
-
-    return hashtable_add(st->symbols, sym->name, (void *) sym);
-}
-
 int symtab_intern_symbol(symtab *st, char *name) {
     if ((!st) || (!(st->symbols)) || (!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
         return 1;
@@ -82,7 +77,16 @@ int symtab_intern_symbol(symtab *st, char *name) {
 		    return 1;
 	    }
 
+        list l = list_push(symbol_pool, sym);
+        if (!l) {
+			SYMTAB_FREE(sym->name);
+			SYMTAB_FREE(sym);
+            return 1;
+		}
+        symbol_pool = l;
+
         if (hashtable_add(st->symbols, name, sym) == 1) {
+			list_pop(&symbol_pool);
             SYMTAB_FREE(sym->name);
             SYMTAB_FREE(sym);
 		    return 1;
@@ -102,17 +106,6 @@ symbol *symtab_get_local(symtab *st, const char *name) {
         return NULL;
 
     return hashtable_get(st->symbols, name);
-#endif
-}
-
-int symtab_reset_local(symtab *st, const char *name, ast *image) {
-#ifdef UNIT_TEST
-    return symtab_reset_local_mockable(st, name, image);
-#else
-    if (!st)
-        return 1;
-
-    return hashtable_reset_value(st->symbols, name, (void *) image);
 #endif
 }
 
@@ -149,20 +142,6 @@ symbol *symtab_get(symtab *st, const char *name) {
 #endif
 }
 
-int symtab_reset(symtab *st, const char *name, ast *image) {
-#ifdef UNIT_TEST
-    return symtab_reset_mockable(st, name, image);
-#else
-    if (!st)
-        return 1;
-
-    if (symtab_reset_local(st, name, image) == 0)
-        return 0;
-
-    return symtab_reset(st->parent, name, image);
-#endif
-}
-
 int symtab_contains(symtab *st, const char *name) {
 #ifdef UNIT_TEST
     return symtab_contains_mockable(st, name);
@@ -176,3 +155,16 @@ int symtab_contains(symtab *st, const char *name) {
     return symtab_contains(st->parent, name);
 #endif
 }
+
+#ifdef UNIT_TEST
+list get_symbol_pool() {
+    return symbol_pool;
+}
+void set_symbol_pool(list l) {
+    symbol_pool = l;
+}
+
+list *get_symbol_pool_address() {
+	return &symbol_pool;
+}
+#endif
