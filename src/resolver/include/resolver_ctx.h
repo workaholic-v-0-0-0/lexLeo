@@ -11,6 +11,8 @@ typedef struct resolver_ops {
     void *(*pop)(list *l_p);
     int (*intern_symbol)(symtab *st, char *name);
     symbol *(*get)(symtab *st, const char *name);
+    symtab *(*wind_scope)(symtab *st);
+    symtab *(*unwind_scope)(symtab *st);
 } resolver_ops;
 
 extern const resolver_ops RESOLVER_OPS_DEFAULT;

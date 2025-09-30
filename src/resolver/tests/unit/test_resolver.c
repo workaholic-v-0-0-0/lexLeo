@@ -75,11 +75,11 @@ int initialize_ast_to_promote_with_data_wrapper_ast_not_yet_resolved(void) {
     return 0;
 }
 
-int initialize_ast_to_promote_with_string_data_wrapper_ast(void) {
+int initialize_ast_to_promote_with_string_data_wrapper_ast(const char *str) {
     if (initialize_ast_to_promote_with_data_wrapper_ast_not_yet_resolved() == 1)
         return 1;
 
-    if (!(ast_to_promote->data->data.string_value = FAKABLE_STRDUP("string"))) {
+    if (!(ast_to_promote->data->data.string_value = FAKABLE_STRDUP(str))) {
         FAKABLE_FREE(ast_to_promote->data);
         FAKABLE_FREE(ast_to_promote);
         ast_to_promote = NULL;
@@ -90,11 +90,11 @@ int initialize_ast_to_promote_with_string_data_wrapper_ast(void) {
     return 0;
 }
 
-int initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(void) {
+int initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(const char *symbol_name) {
     if (initialize_ast_to_promote_with_data_wrapper_ast_not_yet_resolved() == 1)
         return 1;
 
-    if (!(ast_to_promote->data->data.string_value = FAKABLE_STRDUP("symbol_name"))) {
+    if (!(ast_to_promote->data->data.string_value = FAKABLE_STRDUP(symbol_name))) {
         FAKABLE_FREE(ast_to_promote->data);
         FAKABLE_FREE(ast_to_promote);
         ast_to_promote = NULL;
@@ -105,10 +105,10 @@ int initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(void) {
     return 0;
 }
 
-int initialize_ast_to_promote_with_binding_node(void) {
-    if (initialize_ast_to_promote_with_symbol_name_data_wrapper_ast() != 0) return 1;
+int initialize_ast_to_promote_with_binding_node(const char *lhs, const char *rhs) {
+    if (initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(lhs) != 0) return 1;
     ast *symbol_name_data_wrapper_ast = ast_to_promote;
-    if (initialize_ast_to_promote_with_string_data_wrapper_ast() != 0) {
+    if (initialize_ast_to_promote_with_string_data_wrapper_ast(rhs) != 0) {
         ast_destroy(symbol_name_data_wrapper_ast);
         return 1;
     }
@@ -229,12 +229,12 @@ static int resolve_ast_teardown(void **state) {
 //  - a == NULL
 // Expected:
 //  - do nothing
-//  - returns 1
-static void resolve_ast_returns_1_when_a_null(void **state) {
+//  - returns false
+static void resolve_ast_returns_false_when_a_null(void **state) {
     (void)state;
     assert_int_equal(
         resolver_resolve_ast(NULL, ctx),
-        1 );
+        false );
 }
 
 // Given:
@@ -251,15 +251,15 @@ static void resolve_ast_returns_1_when_a_null(void **state) {
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_root_pointer_is_null_and_first_alloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_make_error_node_sentinel_and_returns_false_when_root_pointer_is_null_and_first_alloc_fails(void **state) {
     (void)state;
     ast_to_promote = NULL;
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
 
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -280,14 +280,14 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_root_pointer
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_root_pointer_is_null_and_malloc_never_fails(void **state) {
+//  - returns false
+static void resolve_ast_make_error_node_not_sentinel_and_returns_false_when_root_pointer_is_null_and_malloc_never_fails(void **state) {
     (void)state;
     ast_to_promote = NULL;
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_is_error_not_sentinel(
@@ -303,93 +303,48 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_root_poi
 //  - allocation always fails
 //    i.e:
 //      - allocation of the root frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
 // Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_string_data_wrapper_and_malloc_always_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_malloc_always_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast("string"), 0);
     fake_memory_fail_on_all_call();
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
 // Given:
 //  - *a == <a string data wrapper ast>
-//  - the first allocation is the only one that fails
+//  - the first allocation will fail
 //    i.e:
 //      - allocation of the root frame will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED
-//  - (*a)->error->message same string as "resolver: out of memory while allocating root traversal frame"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_string_data_wrapper_and_only_first_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_only_first_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast("string"), 0);
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED,
-        "resolver: out of memory while allocating root traversal frame" );
-    ast_destroy(ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a string data wrapper ast>
-//  - the failing allocation indexes: {2, 3}
-//    i.e.:
-//      - allocation of the root frame will succeed
-//      - allocation inside list_push (for the traversal stack) will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-// Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_string_data_wrapper_and_allocations_2_3_fail(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast(), 0);
-    size_t fails[2] = { 2, 3 };
-    fake_memory_fail_on_calls(2, fails);
-
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -399,31 +354,23 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_string_data_
 //    i.e.:
 //      - allocation of the root frame will succeed
 //      - allocation inside list_push (for the traversal stack) will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED
-//  - (*a)->error->message same string as "resolver: failed to initialize traversal stack"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_string_data_wrapper_and_only_second_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_only_second_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast("string"), 0);
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED,
-        "resolver: failed to initialize traversal stack" );
-    ast_destroy(ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -438,10 +385,10 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_string_d
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 0
+//  - returns true
 static void resolve_ast_success_with_no_side_effect_when_string_data_wrapper_and_string_data_wrapper_ast(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_string_data_wrapper_ast("string"), 0);
     ast *old_ast = ast_to_promote;
     ast_type old_type = ast_to_promote->type;
     typed_data *old_data = ast_to_promote->data;
@@ -451,7 +398,7 @@ static void resolve_ast_success_with_no_side_effect_when_string_data_wrapper_and
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        0 );
+        true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_ptr_equal(ast_to_promote, old_ast);
@@ -466,97 +413,26 @@ static void resolve_ast_success_with_no_side_effect_when_string_data_wrapper_and
 
 // Given:
 //  - *a == <a symbol data wrapper ast>
-//  - allocation always fails
-//    i.e.:
-//    i.e:
-//      - allocation of the root frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-// Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_malloc_always_fails(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
-    fake_memory_fail_on_all_call();
-
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a symbol data wrapper ast>
 //  - the first allocation is the only one that fails
 //    i.e:
 //      - allocation of the root frame will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED
-//  - (*a)->error->message same string as "resolver: out of memory while allocating root traversal frame"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_only_first_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_wrapper_and_only_first_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED,
-        "resolver: out of memory while allocating root traversal frame" );
-    ast_destroy(ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a symbol data wrapper ast>
-//  - the failing allocation indexes: {2, 3}
-//    i.e.:
-//      - allocation of the root frame will succeed
-//      - allocation inside list_push (for the traversal stack) will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-// Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_allocations_2_3_fail(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
-    size_t fails[2] = { 2, 3 };
-    fake_memory_fail_on_calls(2, fails);
-
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -566,31 +442,23 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_
 //    i.e.:
 //      - allocation of the root frame will succeed
 //      - allocation inside list_push (for the traversal stack) will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED
-//  - (*a)->error->message same string as "resolver: failed to initialize traversal stack"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_only_second_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_wrapper_and_only_second_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED,
-        "resolver: failed to initialize traversal stack" );
-    ast_destroy(ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -615,10 +483,10 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_n
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_intern_symbol_fails_and_only_third_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_intern_symbol_fails_and_only_third_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     expect_value(mock_intern_symbol, st, &STUB_SYMTAB_INSTANCE);
     expect_string(mock_intern_symbol, name, "symbol_name");
     will_return(mock_intern_symbol, 1);
@@ -626,7 +494,7 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_is_sentinel_error(&ast_to_promote);
@@ -659,10 +527,10 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_get_fails_and_allocations_3_fail(void **state) {
+//  - returns false
+static void resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_get_fails_and_allocations_3_fail(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     expect_value(mock_intern_symbol, st, &STUB_SYMTAB_INSTANCE);
     expect_string(mock_intern_symbol, name, "symbol_name");
     will_return(mock_intern_symbol, 0);
@@ -673,7 +541,7 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_is_sentinel_error(&ast_to_promote);
@@ -705,10 +573,10 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_get_fails_and_malloc_never_fail(void **state) {
+//  - returns false
+static void resolve_ast_make_error_node_not_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_get_fails_and_malloc_never_fail(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     expect_value(mock_intern_symbol, st, &STUB_SYMTAB_INSTANCE);
     expect_string(mock_intern_symbol, name, "symbol_name");
     will_return(mock_intern_symbol, 0);
@@ -718,7 +586,7 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_n
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_is_error_not_sentinel(
@@ -754,10 +622,10 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_n
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 0
+//  - returns true
 static void resolve_ast_success_with_promotion_into_symbol_data_wrapper_when_symbol_name_data_wrapper(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_symbol_name_data_wrapper_ast("symbol_name"), 0);
     expect_value(mock_intern_symbol, st, &STUB_SYMTAB_INSTANCE);
     expect_string(mock_intern_symbol, name, "symbol_name");
     will_return(mock_intern_symbol, 0);
@@ -770,7 +638,7 @@ static void resolve_ast_success_with_promotion_into_symbol_data_wrapper_when_sym
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        0 );
+        true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_ptr_equal(ast_to_promote, old_ast);
@@ -784,95 +652,26 @@ static void resolve_ast_success_with_promotion_into_symbol_data_wrapper_when_sym
 
 // Given:
 //  - *a == <a binding node>
-//  - allocation always fails
-//    i.e:
-//      - allocation of the root frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-// Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_binding_node_and_malloc_always_fails(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
-    fake_memory_fail_on_all_call();
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a binding node>
 //  - the first allocation is the only one that fails
 //    i.e:
 //      - allocation of the root frame will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED
-//  - (*a)->error->message same string as "resolver: out of memory while allocating root traversal frame"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_binding_node_and_only_first_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_only_first_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_binding_node("symbol_name", "string"), 0);
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_ALLOC_FRAME_FAILED,
-        "resolver: out of memory while allocating root traversal frame" );
-    ast_destroy(ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a binding node>
-//  - the failing allocation indexes: {2, 3}
-//    i.e.:
-//      - allocation of the root frame will succeed
-//      - allocation inside list_push (for the traversal stack) will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-// Expected:
-//  - *a == ast_error_sentinel() ie:
-//    - (*a)->type == AST_TYPE_ERROR
-//    - (*a)->error->code == AST_UNRETRIEVABLE_ERROR_CODE
-//    - (*a)->error->message same string as "AST error sentinel: original cause lost due to allocation failure while constructing error node"
-//    - (*a)->error->is_sentinel == true
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_sentinel_and_returns_1_when_binding_node_and_allocations_2_3_fail(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
-    size_t fails[2] = { 2, 3 };
-    fake_memory_fail_on_calls(2, fails);
-
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_is_sentinel_error(&ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -882,167 +681,50 @@ static void resolve_ast_make_error_node_sentinel_and_returns_1_when_binding_node
 //    i.e.:
 //      - allocation of the root frame will succeed
 //      - allocation inside list_push (for the traversal stack) will fail
-//      - allocations inside ast_create_error_node_or_sentinel will succeed (malloc and strdup)
 // Expected:
-//  - (*a)->type == AST_TYPE_ERROR
-//  - (*a)->error->code == RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED
-//  - (*a)->error->message same string as "resolver: failed to initialize traversal stack"
-//  - (*a)->error->is_sentinel == false
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_make_error_node_not_sentinel_and_returns_1_when_binding_node_and_only_second_malloc_fails(void **state) {
+//  - returns false
+static void resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_only_second_malloc_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_binding_node("symbol_name", "string"), 0);
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_is_error_not_sentinel(
-        ast_to_promote,
-        RESOLVER_ERROR_CODE_TRAVERSAL_STACK_INIT_FAILED,
-        "resolver: failed to initialize traversal stack" );
-    ast_destroy(ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
 // Given:
 //  - *a == <a binding node>
-//  - the failing allocation indexes: {3,...,7}
+//  - the third allocation is the only one that fails
 //    i.e.:
 //      - allocation of the root frame will succeed
 //      - allocation inside list_push (for the traversal stack) will succeed
 //      - allocation of the second child frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-//      - allocation of the first child frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
 // Expected:
-//  - are unchanged:
-//    - *a
-//    - (*a)->type
-//    - (*a)->children
-//    - (*a)->children->children_nb
-//    - (*a)->children->capacity
-//    - (*a)->children->children
-//  - are modified:
-//    - (*a)->children->children[0] == ast_error_sentinel()
-//    - (*a)->children->children[1] == ast_error_sentinel()
+//  - *a == NULL
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 1
-static void resolve_ast_turns_children_into_error_node_sentinel_and_returns_1_when_binding_node_and_allocations_fail_since_third(void **state) {
+//  - returns false
+static void resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_first_child_into_symbol_data_wrapper_and_returns_false_when_binding_node_and_allocations_3_4_fail(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
-    ast *old_ast = ast_to_promote;
-    ast_type old_type = ast_to_promote->type;
-    ast_children_t *old_children_info = ast_to_promote->children;
-    size_t old_children_nb = ast_to_promote->children->children_nb;
-    size_t old_capacity = ast_to_promote->children->capacity;
-    ast **old_children = ast_to_promote->children->children;
-
-    fake_memory_fail_since(3);
+    assert_int_equal(initialize_ast_to_promote_with_binding_node("symbol_name", "string"), 0);
+    fake_memory_fail_only_on_call(3);
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
+        false );
+    assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
-    assert_ptr_equal(ast_to_promote, old_ast);
-    assert_int_equal(ast_to_promote->type, old_type);
-    assert_ptr_equal(ast_to_promote->children, old_children_info);
-    assert_int_equal(ast_to_promote->children->children_nb, old_children_nb);
-    assert_int_equal(ast_to_promote->children->capacity, old_capacity);
-    assert_ptr_equal(ast_to_promote->children->children, old_children);
-    assert_is_sentinel_error(ast_to_promote->children->children);
-    assert_is_sentinel_error(ast_to_promote->children->children + 1);
-    ast_destroy(ast_to_promote);
-    assert_true(fake_memory_no_leak());
-}
-
-// Given:
-//  - *a == <a binding node>
-//  - the failing allocation indexes: { 3, 4 }
-//    i.e.:
-//      - allocation of the root frame will succeed
-//      - allocation inside list_push (for the traversal stack) will succeed
-//      - allocation of the second child frame will fail
-//      - allocation inside ast_create_error_node_or_sentinel will fail
-//      - allocation of the first child frame will succeed
-//  - intern_symbol will succeed
-//  - get will succeed
-// Expected:
-//  - calls intern_symbol with:
-//    - st: ctx.st
-//    - name: "symbol_name"
-//    - returned value: 0
-//  - calls get with:
-//    - st: ctx.st
-//    - name: "symbol_name"
-//    - returned value: a non null symbol pointer pointing to well-formed symbol
-//  - are unchanged:
-//    - *a
-//    - (*a)->type
-//    - (*a)->children
-//    - (*a)->children->children_nb
-//    - (*a)->children->capacity
-//    - (*a)->children->children
-//    - (*a)->children->children[0]
-//    - (*a)->children->children[0]->type
-//    - (*a)->children->children[0]->data
-//  - are modified:
-//    - (*a)->children->children[0] is promoted into a symbol data wrapper:
-//      - (*a)->children->children[0]->data->type == TYPE_SYMBOL
-//      - (*a)->children->children[0]->data->symbol_value == symbol pointer returned by get
-//    - (*a)->children->children[1] == ast_error_sentinel()
-//  - no invalid free
-//  - no double free
-//  - no memory leak
-//  - returns 1
-static void resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_first_child_into_symbol_data_wrapper_and_returns_1_when_binding_node_and_allocations_3_4_fail(void **state) {
-    (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
-    ast *old_ast = ast_to_promote;
-    ast_type old_type = ast_to_promote->type;
-    ast_children_t *old_children_info = ast_to_promote->children;
-    size_t old_children_nb = ast_to_promote->children->children_nb;
-    size_t old_capacity = ast_to_promote->children->capacity;
-    ast **old_children = ast_to_promote->children->children;
-    ast *old_child_0 = ast_to_promote->children->children[0];
-    ast_type old_child_0_type = old_child_0->type;
-    typed_data *old_child_0_data = old_child_0->data;
-    expect_value(mock_intern_symbol, st, &STUB_SYMTAB_INSTANCE);
-    expect_string(mock_intern_symbol, name, "symbol_name");
-    will_return(mock_intern_symbol, 0);
-    expect_value(mock_get, st, &STUB_SYMTAB_INSTANCE);
-    expect_string(mock_get, name, "symbol_name");
-    will_return(mock_get, &STUB_SYMBOL);
-    size_t fails[2] = { 3, 4 };
-    fake_memory_fail_on_calls(2, fails);
-
-    assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
-        1 );
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_ptr_equal(ast_to_promote, old_ast);
-    assert_int_equal(ast_to_promote->type, old_type);
-    assert_ptr_equal(ast_to_promote->children, old_children_info);
-    assert_int_equal(ast_to_promote->children->children_nb, old_children_nb);
-    assert_int_equal(ast_to_promote->children->capacity, old_capacity);
-    assert_ptr_equal(ast_to_promote->children->children, old_children);
-    ast *new_child_0 = ast_to_promote->children->children[0];
-    assert_ptr_equal(new_child_0, old_child_0);
-    assert_int_equal(new_child_0->type, old_child_0_type);
-    assert_ptr_equal(new_child_0->data, old_child_0_data);
-    assert_int_equal(new_child_0->data->type, TYPE_SYMBOL);
-    assert_ptr_equal(new_child_0->data->data.symbol_value, &STUB_SYMBOL);
-    assert_is_sentinel_error(ast_to_promote->children->children + 1);
-    ast_destroy(ast_to_promote);
     assert_true(fake_memory_no_leak());
 }
 
@@ -1084,10 +766,10 @@ static void resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_
 //  - no invalid free
 //  - no double free
 //  - no memory leak
-//  - returns 0
+//  - returns true
 static void resolve_ast_success_with_a_symbol_promotion_when_binding_node_and_allocation_never_fails(void **state) {
     (void)state;
-    assert_int_equal(initialize_ast_to_promote_with_binding_node(), 0);
+    assert_int_equal(initialize_ast_to_promote_with_binding_node("symbol_name", "string"), 0);
     ast *old_ast = ast_to_promote;
     ast_type old_type = ast_to_promote->type;
     ast_children_t *old_children_info = ast_to_promote->children;
@@ -1111,7 +793,7 @@ static void resolve_ast_success_with_a_symbol_promotion_when_binding_node_and_al
 
     assert_int_equal(
         resolver_resolve_ast(&ast_to_promote, ctx),
-        0 );
+        true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_ptr_equal(ast_to_promote, old_ast);
@@ -1147,29 +829,26 @@ int main(void) {
     const struct CMUnitTest resolve_ast_tests[] = {
         // a == NULL
         cmocka_unit_test_setup_teardown(
-            resolve_ast_returns_1_when_a_null,
+            resolve_ast_returns_false_when_a_null,
             resolve_ast_setup, resolve_ast_teardown),
 
         // a != NULL && *a == NULL
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_root_pointer_is_null_and_first_alloc_fails,
+            resolve_ast_make_error_node_sentinel_and_returns_false_when_root_pointer_is_null_and_first_alloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_root_pointer_is_null_and_malloc_never_fails,
+            resolve_ast_make_error_node_not_sentinel_and_returns_false_when_root_pointer_is_null_and_malloc_never_fails,
             resolve_ast_setup, resolve_ast_teardown),
 
         // string data wrapper
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_string_data_wrapper_and_malloc_always_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_malloc_always_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_string_data_wrapper_and_only_first_malloc_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_only_first_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_string_data_wrapper_and_allocations_2_3_fail,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_string_data_wrapper_and_only_second_malloc_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapper_and_only_second_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
             resolve_ast_success_with_no_side_effect_when_string_data_wrapper_and_string_data_wrapper_ast,
@@ -1177,25 +856,19 @@ int main(void) {
 
         // symbol name data wrapper
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_malloc_always_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_wrapper_and_only_first_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_only_first_malloc_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_wrapper_and_only_second_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_allocations_2_3_fail,
+            resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_intern_symbol_fails_and_only_third_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_only_second_malloc_fails,
+            resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_get_fails_and_allocations_3_fail,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_intern_symbol_fails_and_only_third_malloc_fails,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_get_fails_and_allocations_3_fail,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_symbol_name_data_wrapper_and_get_fails_and_malloc_never_fail,
+            resolve_ast_make_error_node_not_sentinel_and_returns_false_when_symbol_name_data_wrapper_and_get_fails_and_malloc_never_fail,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
             resolve_ast_success_with_promotion_into_symbol_data_wrapper_when_symbol_name_data_wrapper,
@@ -1203,22 +876,13 @@ int main(void) {
 
         // binding node
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_binding_node_and_malloc_always_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_only_first_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_binding_node_and_only_first_malloc_fails,
+            resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_only_second_malloc_fails,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_sentinel_and_returns_1_when_binding_node_and_allocations_2_3_fail,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_make_error_node_not_sentinel_and_returns_1_when_binding_node_and_only_second_malloc_fails,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_turns_children_into_error_node_sentinel_and_returns_1_when_binding_node_and_allocations_fail_since_third,
-            resolve_ast_setup, resolve_ast_teardown),
-        cmocka_unit_test_setup_teardown(
-            resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_first_child_into_symbol_data_wrapper_and_returns_1_when_binding_node_and_allocations_3_4_fail,
+            resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_first_child_into_symbol_data_wrapper_and_returns_false_when_binding_node_and_allocations_3_4_fail,
             resolve_ast_setup, resolve_ast_teardown),
         cmocka_unit_test_setup_teardown(
             resolve_ast_success_with_a_symbol_promotion_when_binding_node_and_allocation_never_fails,
