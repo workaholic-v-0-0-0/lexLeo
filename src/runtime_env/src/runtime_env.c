@@ -15,6 +15,25 @@ runtime_env_value *runtime_env_make_number(int i) {
     return ret;
 }
 
+runtime_env_value *runtime_env_make_string(const char *s) {
+    if (!s)
+        return NULL;
+
+    runtime_env_value *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
+    if (!ret)
+        return NULL;
+
+    ret->as.s = RUNTIME_ENV_STRING_DUPLICATE(s);
+    if (!ret->as.s) {
+        RUNTIME_ENV_FREE(ret);
+        return NULL;
+    }
+
+    ret->type = RUNTIME_VALUE_STRING;
+
+    return ret;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);
