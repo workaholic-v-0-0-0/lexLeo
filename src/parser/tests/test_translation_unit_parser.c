@@ -32,7 +32,6 @@ static ast *const DUMMY_AST_ERROR_OR_READING_NODE_P = (ast *) &DUMMY[2];
 static ast *const DUMMY_AST_ERROR_OR_WRITING_NODE_P = (ast *) &DUMMY[2];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
@@ -55,10 +54,10 @@ mock_token seq_3_statements[] = {
     {EQUAL, {0}},
     {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {0, {0}}
@@ -114,7 +113,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // translation_unit_parse TESTS
 //-----------------------------------------------------------------------------
@@ -125,11 +123,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // translation_unit: /* empty */ | translation_unit statement
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - statement: binding | writing | reading
 //    - binding: symbol_name_atom EQUAL atom SEMICOLON
 //    - writing: WRITE symbol_name_atom SEMICOLON
@@ -147,14 +145,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int translation_unit_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.children_append_take = mock_children_append_take;
@@ -165,12 +162,11 @@ static int translation_unit_parse_setup(void **state) {
 }
 
 static int translation_unit_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -191,7 +187,8 @@ static int translation_unit_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_TRANSLATION_UNIT_NODE_CREATION_FAILED
 //    - message: "ast creation for a translation unit node failed"
 //  - gives create_error_node_or_sentinel returned value for the translation_unit's semantic value
-static void translation_unit_parse_create_error_node_for_LHS_when_0_statement_and_create_children_node_var_fails(void **state) {
+static void translation_unit_parse_create_error_node_for_LHS_when_0_statement_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_0_statement, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -215,7 +212,9 @@ static void translation_unit_parse_create_error_node_for_LHS_when_0_statement_an
 //    - children_nb: 0
 //    - no more arg
 //  - gives ast_create_children_node_var returned value for the translation_unit's semantic value
-static void translation_unit_parse_create_translation_unit_node_for_LHS_when_0_statement_and_create_children_node_var_succeeds(void **state) {
+static void
+translation_unit_parse_create_translation_unit_node_for_LHS_when_0_statement_and_create_children_node_var_succeeds(
+    void **state) {
     mock_lex_set(seq_0_statement, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -249,7 +248,9 @@ static void translation_unit_parse_create_translation_unit_node_for_LHS_when_0_s
 //    - NO CALL TO ast_children_append_take must occur, since $1 is already an error node
 //    - ast_destroy is called with $2 (the statement returned by the stub)
 //    - the semantic value of the LHS translation_unit is the same error node as $1
-static void translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_create_children_node_var_fails(void **state) {
+static void
+translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -294,7 +295,9 @@ static void translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_
 //      - code: AST_ERROR_CODE_TRANSLATION_UNIT_APPEND_FAILED
 //      - message: "ast append failed when adding a statement to the translation unit"
 //    - the returned value of create_error_node_or_sentinel becomes the semantic value of the LHS translation_unit
-static void translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_children_append_take_fails(void **state) {
+static void
+translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_children_append_take_fails(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -306,7 +309,8 @@ static void translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_
     expect_value(mock_destroy, root, DUMMY_AST_TRANSLATION_UNIT_NODE_P);
     expect_value(mock_destroy, root, DUMMY_AST_ERROR_OR_BINDING_NODE_P);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_TRANSLATION_UNIT_APPEND_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast append failed when adding a statement to the translation unit");
+    expect_string(mock_create_error_node_or_sentinel, message,
+                  "ast append failed when adding a statement to the translation unit");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
     translation_unit_parse(NULL, &parsed_ast, &mock_ctx);
@@ -336,7 +340,9 @@ static void translation_unit_parse_cleans_up_and_create_error_node_for_LHS_when_
 //      - parent: $1 (returned value of ast_create_children_node_var)
 //      - child: $2 (provided by stub)
 //    - the returned value of ast_children_append_take becomes the semantic value of the LHS translation_unit
-static void translation_unit_parse_create_translation_unit_node_for_LHS_when_1_statement_and_children_append_take_succeeds(void **state) {
+static void
+translation_unit_parse_create_translation_unit_node_for_LHS_when_1_statement_and_children_append_take_succeeds(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -380,7 +386,9 @@ static void translation_unit_parse_create_translation_unit_node_for_LHS_when_1_s
 //    - $$ = stub_writing_statement_action()
 //  - translation_unit statement -> translation_unit
 //    - $$ = ctx->ops.children_append_take($1, $2)
-static void translation_unit_parse_create_translation_unit_node_for_LHS_when_3_statement_and_children_append_take_succeeds_3_times(void **state) {
+static void
+translation_unit_parse_create_translation_unit_node_for_LHS_when_3_statement_and_children_append_take_succeeds_3_times(
+    void **state) {
     mock_lex_set(seq_3_statements, 11);
     expect_value(mock_create_children_node_var, type, AST_TYPE_TRANSLATION_UNIT);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -402,7 +410,6 @@ static void translation_unit_parse_create_translation_unit_node_for_LHS_when_3_s
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_TRANSLATION_UNIT_NODE_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

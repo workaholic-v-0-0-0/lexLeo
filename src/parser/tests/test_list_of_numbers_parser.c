@@ -15,7 +15,6 @@
 #include "list.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -27,7 +26,6 @@ static const char DUMMY[3];
 static ast *const DUMMY_AST_ERROR_OR_NUMBERS_NODE = (ast *) &DUMMY[0];
 static ast *const DUMMY_AST_ERROR = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_LIST_OF_NUMBERS_NODE = (ast *) &DUMMY[2];
-
 
 
 //-----------------------------------------------------------------------------
@@ -77,7 +75,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // list_of_numbers_parse TESTS
 //-----------------------------------------------------------------------------
@@ -88,11 +85,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // list_of_numbers: LPAREN numbers RPAREN
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - numbers: | numbers number_atom
 //    - number_atom: INTEGER
 //  - functions of the ast module which are used:
@@ -103,14 +100,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int list_of_numbers_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_lex_set(seq_list_of_numbers, 5);
@@ -121,12 +117,11 @@ static int list_of_numbers_parse_setup(void **state) {
 }
 
 static int list_of_numbers_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -134,7 +129,7 @@ static int list_of_numbers_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At any test:
+// At any tests:
 // Given:
 //  - lexer returns:
 //    - LPAREN
@@ -160,7 +155,8 @@ static int list_of_numbers_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_LIST_OF_NUMBERS_NODE_CREATION_FAILED
 //    - message: "ast creation for a node for a list of numbers failed"
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
-static void list_of_numbers_parse_cleans_up_and_create_error_node_for_LHS_when_create_children_node_var_fails(void **state) {
+static void list_of_numbers_parse_cleans_up_and_create_error_node_for_LHS_when_create_children_node_var_fails(
+    void **state) {
     will_return(stub_numbers_action, DUMMY_AST_ERROR_OR_NUMBERS_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_LIST_OF_NUMBERS);
     expect_value(mock_create_children_node_var, children_nb, 1);
@@ -191,7 +187,6 @@ static void list_of_numbers_parse_creates_a_list_of_numbers_node_when_create_chi
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_LIST_OF_NUMBERS_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

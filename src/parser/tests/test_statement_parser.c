@@ -28,7 +28,6 @@ static ast *const DUMMY_AST_WRITING_P = (ast *) &DUMMY[2];
 static ast *const DUMMY_AST_READING_P = (ast *) &DUMMY[3];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
@@ -43,14 +42,14 @@ mock_token seq_binding_statement[] = {
 };
 
 mock_token seq_writing_statement[] = {
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {0, {0}}
 };
 
 mock_token seq_reading_statement[] = {
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {0, {0}}
@@ -77,7 +76,6 @@ ast *stub_function_call_action(void) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // statement_parse TESTS
 //-----------------------------------------------------------------------------
@@ -88,17 +86,16 @@ ast *stub_function_call_action(void) {
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // statement: binding | writing | reading
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - binding: symbol_name_atom EQUAL atom SEMICOLON
 //    - writing: WRITE symbol_name_atom SEMICOLON
 //    - reading: READ symbol_name_atom SEMICOLON
 //  - function of the lexer module which are used:
 //    - yylex
-
 
 
 //-----------------------------------------------------------------------------
@@ -107,19 +104,18 @@ ast *stub_function_call_action(void) {
 
 
 static int statement_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     return 0;
 }
 
 static int statement_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -135,7 +131,8 @@ static int statement_parse_teardown(void **state) {
 // Expected:
 //  - the action of "binding: symbol_name_atom EQUAL atom SEMICOLON" is executed
 //  - the semantic value of binding is propagated to statement's semantic value
-static void statement_parse_executes_binding_action_and_propagates_value_when_lexer_returns_binding_sequence(void **state) {
+static void statement_parse_executes_binding_action_and_propagates_value_when_lexer_returns_binding_sequence(
+    void **state) {
     mock_lex_set(seq_binding_statement, 5);
     will_return(stub_binding_action, DUMMY_AST_BINDING_P);
 
@@ -152,7 +149,8 @@ static void statement_parse_executes_binding_action_and_propagates_value_when_le
 // Expected:
 //  - the action of "writing: symbol_name_atom SEMICOLON" is executed
 //  - the semantic value of writing is propagated to statement's semantic value
-static void statement_parse_executes_writing_action_and_propagates_value_when_lexer_returns_writing_sequence(void **state) {
+static void statement_parse_executes_writing_action_and_propagates_value_when_lexer_returns_writing_sequence(
+    void **state) {
     mock_lex_set(seq_writing_statement, 4);
     will_return(stub_writing_action, DUMMY_AST_WRITING_P);
 
@@ -168,7 +166,8 @@ static void statement_parse_executes_writing_action_and_propagates_value_when_le
 // Expected:
 //  - the action of "reading : SYMBOL_NAME" is executed
 //  - the semantic value of reading is propagated to statement's semantic value
-static void statement_parse_executes_reading_action_and_propagates_value_when_lexer_returns_reading_sequence(void **state) {
+static void statement_parse_executes_reading_action_and_propagates_value_when_lexer_returns_reading_sequence(
+    void **state) {
     mock_lex_set(seq_reading_statement, 4);
     will_return(stub_reading_action, DUMMY_AST_READING_P);
 
@@ -176,7 +175,6 @@ static void statement_parse_executes_reading_action_and_propagates_value_when_le
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_READING_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

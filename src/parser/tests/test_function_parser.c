@@ -30,7 +30,6 @@ static ast *const DUMMY_AST_ERROR_OR_BLOCK_NODE = (ast *) &DUMMY[4];
 static ast *const DUMMY_AST_FUNCTION_NODE = (ast *) &DUMMY[5];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
@@ -52,10 +51,10 @@ mock_token seq_function[] = {
     {EQUAL, {0}},
     {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {RBRACE, {0}},
@@ -105,7 +104,6 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // function_parse TESTS
 //-----------------------------------------------------------------------------
@@ -116,11 +114,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // function: symbol_name_atom list_of_parameters block
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 //    - list_of_parameters: LPAREN parameters RPAREN
 //    - parameters: | parameters symbol_name_atom
@@ -142,14 +140,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int function_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_ctx.ops.create_children_node_var = mock_create_children_node_var;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
@@ -160,12 +157,11 @@ static int function_parse_setup(void **state) {
 }
 
 static int function_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -173,7 +169,7 @@ static int function_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At any test:
+// At any tests:
 // Given:
 //  - lexer returns:
 //    - SYMBOL_NAME("function_name")
@@ -226,7 +222,6 @@ static int function_parse_teardown(void **state) {
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
 static void function_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
     void **state) {
-
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
     will_return(stub_list_of_parameters_action, DUMMY_AST_ERROR_OR_LIST_OF_PARAMETERS_NODE);
     will_return(stub_block_action, DUMMY_AST_ERROR_OR_BLOCK_NODE);
@@ -252,7 +247,8 @@ static void function_parse_cleans_up_and_create_error_node_for_LHS_semantic_valu
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void function_parse_create_function_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void function_parse_create_function_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
+    void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
     will_return(stub_list_of_parameters_action, DUMMY_AST_ERROR_OR_LIST_OF_PARAMETERS_NODE);
     will_return(stub_block_action, DUMMY_AST_ERROR_OR_BLOCK_NODE);
@@ -267,7 +263,6 @@ static void function_parse_create_function_node_for_LHS_semantic_value_when_crea
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_FUNCTION_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

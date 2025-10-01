@@ -27,14 +27,13 @@ static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P = (ast *) &DUMMY[2];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
 
 mock_token seq[] = {
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {0, {0}}
@@ -75,7 +74,6 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // reading_parse TESTS
 //-----------------------------------------------------------------------------
@@ -86,11 +84,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // reading: READ symbol_name_atom SEMICOLON
 
 // mocked:
-//  - action of grammar rule that the rule under test depends on:
+//  - action of grammar rule that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 // mocked:
 //  - functions of the ast module which are used:
@@ -98,7 +96,6 @@ parser_ctx mock_ctx;
 //    - ast_create_error_node_or_sentinel
 //  - function of the lexer module which are used:
 //    - yylex
-
 
 
 //-----------------------------------------------------------------------------
@@ -125,13 +122,12 @@ static int reading_parse_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
 
 
-// At every test
+// At every tests
 // Given:
 //  - lexer returns:
 //    - READ
@@ -175,7 +171,8 @@ static void reading_parse_cleans_up_and_create_error_node_for_LHS_semantic_value
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void reading_parse_create_reading_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void reading_parse_create_reading_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
+    void **state) {
     expect_string(stub_symbol_name_atom_action, symbol_name, "symbol_name");
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_DATA_WRAPPER_P);
     expect_value(mock_create_children_node_var, type, AST_TYPE_READING);
@@ -187,7 +184,6 @@ static void reading_parse_create_reading_node_for_LHS_semantic_value_when_create
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

@@ -402,7 +402,7 @@ static void log_info_ErrorAndNoLogfileChange_WhenFormatIsNull(void **state) {
 // Expected:
 //     - fake_log_file contains "[2025-06-10 12:00:00] INFO: no format operation\n"
 //     - log_info returns 0
-// note : it is an isolated integration test
+// note : it is an isolated integration tests
 static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation(void **state) {
     (void) *state; // unused
     set_log_file(fake_log_file);
@@ -430,7 +430,7 @@ static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameter
 //         [2025-06-10 12:00:00] INFO: It's Adeline's birthday!
 //         [2025-05-07 12:00:00] INFO: It's Sylvain's birthday!
 //     - log_info returns 0
-// note : it is an isolated integration test
+// note : it is an isolated integration tests
 static void
 log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoFormatOperation_AndTwoLogInfoCalls(
     void **state) {
@@ -466,7 +466,7 @@ log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndNoForma
 // Expected:
 //     - fake_log_file contains "[2025-06-10 12:00:00] INFO: an int and a string: 20250610, It's Adeline's birthday!\n"
 //     - log_info returns 0
-// note : it is an isolated integration test
+// note : it is an isolated integration tests
 static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameters_AndFormatOperation(void **state) {
     (void) *state; // unused
     set_log_file(fake_log_file);
@@ -500,7 +500,7 @@ static void log_info_SuccessAndLogfileContainsCorrectlyFilled_WhenValidParameter
 // All relevant cases (success, error, argument handling) are already
 // covered by the tests for log_info, which uses the same logic.
 //
-// A minimal test could be added to check that "ERROR" appears in the log line,
+// A minimal tests could be added to check that "ERROR" appears in the log line,
 // but as it stands, this would mainly duplicate existing coverage.
 //
 // If log_error evolves independently in the future, it would then make sense

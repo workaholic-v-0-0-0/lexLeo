@@ -15,7 +15,6 @@
 #include "list.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -27,7 +26,6 @@ static const char DUMMY[3];
 static ast *const DUMMY_AST_ERROR_OR_FUNCTION_NODE = (ast *) &DUMMY[0];
 static ast *const DUMMY_AST_ERROR = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_FUNCTION_DEFINITION_NODE = (ast *) &DUMMY[2];
-
 
 
 //-----------------------------------------------------------------------------
@@ -53,10 +51,10 @@ mock_token seq_function_definition[] = {
     {EQUAL, {0}},
     {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {RBRACE, {0}},
@@ -98,11 +96,9 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // function_definition_parse TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -110,11 +106,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // function_definition: DEFINE function
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - function: symbol_name_atom list_of_parameters block
 //    - symbol_name_atom: SYMBOL_NAME
 //    - list_of_parameters: LPAREN parameters RPAREN
@@ -136,14 +132,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int function_definition_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_lex_set(seq_function_definition, 19);
@@ -154,12 +149,11 @@ static int function_definition_parse_setup(void **state) {
 }
 
 static int function_definition_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -167,7 +161,7 @@ static int function_definition_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At any test:
+// At any tests:
 // Given:
 //    - DEFINE
 //
@@ -209,7 +203,8 @@ static int function_definition_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_FUNCTION_DEFINITION_NODE_CREATION_FAILED
 //    - message: "ast creation for a function definition node failed"
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
-static void function_definition_parse_cleans_up_and_create_error_node_for_LHS_when_create_children_node_var_fails(void **state) {
+static void function_definition_parse_cleans_up_and_create_error_node_for_LHS_when_create_children_node_var_fails(
+    void **state) {
     will_return(stub_function_action, DUMMY_AST_ERROR_OR_FUNCTION_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_FUNCTION_DEFINITION);
     expect_value(mock_create_children_node_var, children_nb, 1);
@@ -229,7 +224,9 @@ static void function_definition_parse_cleans_up_and_create_error_node_for_LHS_wh
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void function_definition_parse_create_function_definition_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void
+function_definition_parse_create_function_definition_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
+    void **state) {
     will_return(stub_function_action, DUMMY_AST_ERROR_OR_FUNCTION_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_FUNCTION_DEFINITION);
     expect_value(mock_create_children_node_var, children_nb, 1);
@@ -240,7 +237,6 @@ static void function_definition_parse_create_function_definition_node_for_LHS_se
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_FUNCTION_DEFINITION_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// src/symtab/test/test_symtab.c
+// src/symtab/tests/test_symtab.c
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -600,10 +600,10 @@ static void get_returns_null_when_st_null(void **state) {
 static void get_calls_symtab_contains_local_when_st_not_null(void **state) {
     expect_value(mock_symtab_contains_local, st, DUMMY_SYMTAB_P);
     expect_value(mock_symtab_contains_local, name, DUMMY_STRING);
-    will_return(mock_symtab_contains_local, true); // see next test
-    expect_value(mock_symtab_get_local, st, DUMMY_SYMTAB_P); // see next test
-    expect_value(mock_symtab_get_local, name, DUMMY_STRING); // see next test
-    will_return(mock_symtab_get_local, DUMMY_SYMBOL_P); // see next test
+    will_return(mock_symtab_contains_local, true); // see next tests
+    expect_value(mock_symtab_get_local, st, DUMMY_SYMTAB_P); // see next tests
+    expect_value(mock_symtab_get_local, name, DUMMY_STRING); // see next tests
+    will_return(mock_symtab_get_local, DUMMY_SYMBOL_P); // see next tests
     symtab_get((symtab *) DUMMY_SYMTAB_P, DUMMY_STRING);
 }
 

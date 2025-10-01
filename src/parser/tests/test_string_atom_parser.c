@@ -15,7 +15,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -28,15 +27,14 @@ static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[0];
 static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
 
 static mock_token seq[] = {
-    { STRING, { .string_value = "chaine" } },
-    { 0,       { 0 } }
+    {STRING, {.string_value = "chaine"}},
+    {0, {0}}
 };
 
 ast *mock_create_string_node(char *str) {
@@ -53,11 +51,9 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // string_atom_parse TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -75,14 +71,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int string_atom_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_ctx.ops.create_string_node = mock_create_string_node;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
@@ -92,12 +87,11 @@ static int string_atom_parse_setup(void **state) {
 }
 
 static int string_atom_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -105,7 +99,7 @@ static int string_atom_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At every test
+// At every tests
 // Given: lexer returns STRING("chaine")
 // Expected: calls ast_create_string_node("chaine")
 
@@ -115,7 +109,9 @@ static int string_atom_parse_teardown(void **state) {
 // Expected:
 //  - calls create_error_node_or_sentinel
 //  - gives create_error_node_or_sentinel returned value for the semantic value string_atom lexeme
-static void string_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_string_node_fails(void **state) {
+static void
+string_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_string_node_fails(
+    void **state) {
     expect_value(mock_create_string_node, str, "chaine");
     will_return(mock_create_string_node, NULL);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_STRING_NODE_CREATION_FAILED);
@@ -131,7 +127,8 @@ static void string_atom_parse_calls_create_error_node_or_sentinel_and_returns_it
 //  - create_string_node succeeds
 // Expected:
 //  - gives create_string_node returned value for the semantic value string_atom lexeme
-static void string_atom_parse_calls_create_string_node_and_returns_its_returned_value_when_create_string_node_succeeds(void **state) {
+static void string_atom_parse_calls_create_string_node_and_returns_its_returned_value_when_create_string_node_succeeds(
+    void **state) {
     expect_string(mock_create_string_node, str, "chaine");
     will_return(mock_create_string_node, DUMMY_AST_NOT_ERROR_P);
 
@@ -139,7 +136,6 @@ static void string_atom_parse_calls_create_string_node_and_returns_its_returned_
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_NOT_ERROR_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

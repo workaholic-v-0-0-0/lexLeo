@@ -13,7 +13,6 @@
 #include "list.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS
 //-----------------------------------------------------------------------------
@@ -31,9 +30,8 @@ static const char STATIC_CHAR_C = 'C';
 
 
 static char dummy;
-static const list LIST_DEFINED_IN_SETUP = (list) &dummy;
+static const list LIST_DEFINED_IN_SETUP = (list) & dummy;
 static void *const ELEMENT_DEFINED_IN_SETUP = (void *) &dummy;
-
 
 
 //-----------------------------------------------------------------------------
@@ -41,7 +39,6 @@ static void *const ELEMENT_DEFINED_IN_SETUP = (void *) &dummy;
 //-----------------------------------------------------------------------------
 
 static char dummy; // ???
-
 
 
 //-----------------------------------------------------------------------------
@@ -63,7 +60,7 @@ list make_list_n(void **ptrs, size_t n) {
 }
 
 // optionals are char
-char **create_dynamic_char_ptr_array_n(size_t size,...) {
+char **create_dynamic_char_ptr_array_n(size_t size, ...) {
     va_list args;
     va_start(args, size);
     char **ptrs = malloc(sizeof(char *) * size);
@@ -71,13 +68,13 @@ char **create_dynamic_char_ptr_array_n(size_t size,...) {
     for (size_t i = 0; i < size; ++i) {
         ptrs[i] = malloc(sizeof(char));
         assert_non_null(ptrs[i]);
-        * ptrs[i] = (char) va_arg(args, int);
+        *ptrs[i] = (char) va_arg(args, int);
     }
     va_end(args);
     return ptrs;
 }
 
-void destroy_dynamic_char_ptr_array_n(char ** ptrs, size_t size) {
+void destroy_dynamic_char_ptr_array_n(char **ptrs, size_t size) {
     for (size_t i = 0; i < size; ++i) {
         free(ptrs[i]);
     }
@@ -85,7 +82,7 @@ void destroy_dynamic_char_ptr_array_n(char ** ptrs, size_t size) {
 }
 
 // optionals are char * on statically allocated octet
-char **create_static_char_ptr_array_n(size_t size,...) {
+char **create_static_char_ptr_array_n(size_t size, ...) {
     va_list args;
     va_start(args, size);
     char **ptrs = malloc(sizeof(char *) * size);
@@ -98,11 +95,9 @@ char **create_static_char_ptr_array_n(size_t size,...) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // list_push TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -113,11 +108,10 @@ char **create_static_char_ptr_array_n(size_t size,...) {
 typedef struct {
     const char *label;
     boolean chars_are_dynamically_allocated;
-	char **char_ptrs;
+    char **char_ptrs;
     list l;
     void *e;
 } list_push_test_params_t;
-
 
 
 //-----------------------------------------------------------------------------
@@ -175,7 +169,6 @@ static list_push_test_params_t lNotNull_eNotNull_dynamicAllocation = {
 };
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
@@ -187,8 +180,7 @@ static int list_push_setup(void **state) {
         list_len = 2;
         if (params->chars_are_dynamically_allocated) {
             params->char_ptrs = create_dynamic_char_ptr_array_n(list_len, 'A', 'B');
-        }
-        else {
+        } else {
             params->char_ptrs = create_static_char_ptr_array_n(list_len, &STATIC_CHAR_A, &STATIC_CHAR_B);
         }
         assert_non_null(params->char_ptrs);
@@ -217,7 +209,7 @@ static int list_push_teardown(void **state) {
         else
             free(params->char_ptrs);
     }
-/*
+    /*
     if (params->e == ELEMENT_DEFINED_IN_SETUP)
         free(params->e);
 */
@@ -225,13 +217,12 @@ static int list_push_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
 
 // Note:
-// This quasi-unit test (integrating standard library).
+// This quasi-unit tests (integrating standard library).
 // Assume all malloc call success.
 
 /* tests list
@@ -278,22 +269,6 @@ static void list_push_lIsCorrectlyPrepended_WhenLNotNull_AndENotNull(void **stat
     assert_memory_equal((params->l)->cdr, &cons_before, sizeof(cons));
 }
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*
@@ -369,14 +344,13 @@ static void list_push_ReturnConsWithRightValues_WhenLNotNull_AndENotNull(void **
 */
 
 
-
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
 int main(void) {
     const struct CMUnitTest list_push_tests[] = {
-/*
+        /*
         cmocka_unit_test_prestate_setup_teardown(
             list_push_lIsNotModified_WhenLNotNull_AndENull,
             list_push_setup, list_push_teardown, &lNotNull_eNull_staticAllocation),
@@ -390,7 +364,7 @@ int main(void) {
             list_push_lIsCorrectlyPrepended_WhenLNotNull_AndENotNull,
             list_push_setup, list_push_teardown, &lNotNull_eNotNull_dynamicAllocation),
 */
-/*        cmocka_unit_test_setup_teardown(
+        /*        cmocka_unit_test_setup_teardown(
             list_push_ReturnsAValidPointer_WhenLNotNull_AndENotNull,
             list_push_setup, list_push_teardown),
         cmocka_unit_test_setup_teardown(
