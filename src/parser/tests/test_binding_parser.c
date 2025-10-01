@@ -79,7 +79,6 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // binding_parse TESTS
 //-----------------------------------------------------------------------------
@@ -90,11 +89,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // binding: symbol_name_atom EQUAL evaluable SEMICOLON
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 //    - evaluable: function_call | atom | computable | QUOTE evaluable
 //    - function_call: symbol_name_atom list_of_numbers
@@ -111,7 +110,6 @@ parser_ctx mock_ctx;
 //    - ast_destroy
 //  - function of the lexer module which are used:
 //    - yylex
-
 
 
 //-----------------------------------------------------------------------------
@@ -143,7 +141,7 @@ static int binding_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At every test
+// At every tests
 // Given:
 //  - lexer returns:
 //    - SYMBOL_NAME("symbol_name")
@@ -193,7 +191,8 @@ static void binding_parse_cleans_up_and_create_error_node_for_LHS_semantic_value
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void binding_parse_create_binding_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void binding_parse_create_binding_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
+    void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
     will_return(stub_evaluable_action, DUMMY_AST_ERROR_OR_EVALUABLE_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BINDING);

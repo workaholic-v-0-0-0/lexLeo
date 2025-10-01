@@ -32,7 +32,6 @@ static ast *const DUMMY_AST_ERROR_OR_READING_NODE_P = (ast *) &DUMMY[5];
 static ast *const DUMMY_AST_ERROR_OR_WRITING_NODE_P = (ast *) &DUMMY[6];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
@@ -55,10 +54,10 @@ mock_token seq_3_statements[] = {
     {EQUAL, {0}},
     {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {0, {0}}
@@ -112,7 +111,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // block_items_parse TESTS
 //-----------------------------------------------------------------------------
@@ -123,11 +121,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // "block_items: /* empty */ | block_items statement
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - statement: binding | writing | reading
 //    - binding: symbol_name_atom EQUAL atom SEMICOLON
 //    - writing: WRITE symbol_name_atom SEMICOLON
@@ -145,14 +143,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int block_items_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.children_append_take = mock_children_append_take;
@@ -163,12 +160,11 @@ static int block_items_parse_setup(void **state) {
 }
 
 static int block_items_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -189,7 +185,8 @@ static int block_items_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_BLOCK_ITEMS_NODE_CREATION_FAILED
 //    - message: "ast creation for the content of a block node failed"
 //  - gives create_error_node_or_sentinel returned value for the block_items's semantic value
-static void block_items_parse_create_error_node_for_LHS_when_0_statement_and_create_children_node_var_fails(void **state) {
+static void block_items_parse_create_error_node_for_LHS_when_0_statement_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_0_statement, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -213,7 +210,8 @@ static void block_items_parse_create_error_node_for_LHS_when_0_statement_and_cre
 //    - children_nb: 0
 //    - no more arg
 //  - gives ast_create_children_node_var returned value for the block_items's semantic value
-static void block_items_parse_create_block_items_node_for_LHS_when_0_statement_and_create_children_node_var_succeeds(void **state) {
+static void block_items_parse_create_block_items_node_for_LHS_when_0_statement_and_create_children_node_var_succeeds(
+    void **state) {
     mock_lex_set(seq_0_statement, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -247,7 +245,9 @@ static void block_items_parse_create_block_items_node_for_LHS_when_0_statement_a
 //    - NO CALL TO ast_children_append_take must occur, since $1 is already an error node
 //    - ast_destroy is called with $2 (the statement returned by the stub)
 //    - the semantic value of the LHS block_items is the same error node as $1
-static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_create_children_node_var_fails(void **state) {
+static void
+block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -292,7 +292,8 @@ static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_sta
 //      - code: AST_ERROR_CODE_BLOCK_ITEMS_APPEND_FAILED
 //      - message: "ast append failed when adding a statement to the content of a block"
 //    - the returned value of create_error_node_or_sentinel becomes the semantic value of the LHS block_items
-static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_children_append_take_fails(void **state) {
+static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_statement_and_children_append_take_fails(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -304,7 +305,8 @@ static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_sta
     expect_value(mock_destroy, root, DUMMY_AST_BLOCK_ITEMS_NODE_P);
     expect_value(mock_destroy, root, DUMMY_AST_ERROR_OR_BINDING_NODE_P);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_BLOCK_ITEMS_APPEND_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast append failed when adding a statement to the content of a block");
+    expect_string(mock_create_error_node_or_sentinel, message,
+                  "ast append failed when adding a statement to the content of a block");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
     block_items_parse(NULL, &parsed_ast, &mock_ctx);
@@ -334,7 +336,8 @@ static void block_items_parse_cleans_up_and_create_error_node_for_LHS_when_1_sta
 //      - parent: $1 (returned value of ast_create_children_node_var)
 //      - child: $2 (provided by stub)
 //    - the returned value of ast_children_append_take becomes the semantic value of the LHS block_items
-static void block_items_parse_create_block_items_node_for_LHS_when_1_statement_and_children_append_take_succeeds(void **state) {
+static void block_items_parse_create_block_items_node_for_LHS_when_1_statement_and_children_append_take_succeeds(
+    void **state) {
     mock_lex_set(seq_1_statement, 5);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -378,7 +381,9 @@ static void block_items_parse_create_block_items_node_for_LHS_when_1_statement_a
 //    - $$ = stub_writing_statement_action()
 //  - block_items statement -> block_items
 //    - $$ = ctx->ops.children_append_take($1, $2)
-static void block_items_parse_create_block_items_node_for_LHS_when_3_statement_and_children_append_take_succeeds_3_times(void **state) {
+static void
+block_items_parse_create_block_items_node_for_LHS_when_3_statement_and_children_append_take_succeeds_3_times(
+    void **state) {
     mock_lex_set(seq_3_statements, 11);
     expect_value(mock_create_children_node_var, type, AST_TYPE_BLOCK_ITEMS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -400,7 +405,6 @@ static void block_items_parse_create_block_items_node_for_LHS_when_3_statement_a
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_BLOCK_ITEMS_NODE_P);
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -428,7 +432,7 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             block_items_parse_create_block_items_node_for_LHS_when_3_statement_and_children_append_take_succeeds_3_times,
             block_items_parse_setup, block_items_parse_teardown),
-        };
+    };
 
     int failed = 0;
     failed += cmocka_run_group_tests(block_items_parse_tests, NULL, NULL);

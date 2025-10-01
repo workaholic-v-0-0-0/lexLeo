@@ -1,4 +1,4 @@
-// src/symtab/test/test_symtab_external_doubling.c
+// src/symtab/tests/test_symtab_external_doubling.c
 
 #include <stddef.h>
 #include <stdarg.h>
@@ -18,7 +18,6 @@
 #include "memory_allocator.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS NOT DOUBLES
 //-----------------------------------------------------------------------------
@@ -27,7 +26,6 @@
 static symtab *top_level = NULL;
 static symtab *local_level = NULL;
 static symtab *current_level = NULL;
-
 
 
 //-----------------------------------------------------------------------------
@@ -41,19 +39,14 @@ static symtab *current_level = NULL;
 #define FAKABLE_STRDUP(s) (get_current_string_duplicate()(s))
 
 
-
 //-----------------------------------------------------------------------------
 // HELPERS
 //-----------------------------------------------------------------------------
 
 
-
-
-
 //-----------------------------------------------------------------------------
 // symtab_cleanup_pool TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -71,14 +64,13 @@ static symtab *current_level = NULL;
 //    - malloc, free, strdup
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int cleanup_pool_setup(void **state) {
-    (void)state;
+    (void) state;
 
     // real
     set_symbol_pool(NULL);
@@ -92,13 +84,12 @@ static int cleanup_pool_setup(void **state) {
 }
 
 static int cleanup_pool_teardown(void **state) {
-    (void)state;
+    (void) state;
     set_allocators(NULL, NULL);
     set_string_duplicate(NULL);
     fake_memory_reset();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -111,7 +102,7 @@ static int cleanup_pool_teardown(void **state) {
 // Expected:
 //  - do nothing
 static void cleanup_pool_do_nothing_when_symbol_pool_is_null(void **state) {
-    (void)state;
+    (void) state;
     assert_null(get_symbol_pool());
 
     symtab_cleanup_pool();
@@ -129,7 +120,7 @@ static void cleanup_pool_do_nothing_when_symbol_pool_is_null(void **state) {
 //  - no double free
 //  - no memory leak
 static void cleanup_pool_successful_when_symbol_pool_has_one_element(void **state) {
-    (void)state;
+    (void) state;
     symbol *s = FAKABLE_MALLOC(sizeof(symbol));
     s->name = FAKABLE_STRDUP("symbol_name");
     set_symbol_pool(list_push(NULL, s));
@@ -150,7 +141,7 @@ static void cleanup_pool_successful_when_symbol_pool_has_one_element(void **stat
 //  - no double free
 //  - no memory leak
 static void cleanup_pool_successful_when_symbol_pool_has_two_elements(void **state) {
-    (void)state;
+    (void) state;
     list l = NULL;
     symbol *s1 = FAKABLE_MALLOC(sizeof(symbol));
     s1->name = FAKABLE_STRDUP("symbol_name_1");
@@ -169,17 +160,14 @@ static void cleanup_pool_successful_when_symbol_pool_has_two_elements(void **sta
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_intern_symbol TESTS
 //-----------------------------------------------------------------------------
 
 
-
 //-----------------------------------------------------------------------------
 // ISOLATED UNIT
 //-----------------------------------------------------------------------------
-
 
 
 // int symtab_intern_symbol(symtab *st, char *name)
@@ -194,14 +182,13 @@ static void cleanup_pool_successful_when_symbol_pool_has_two_elements(void **sta
 //    - malloc, free, strdup
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int intern_symbol_setup(void **state) {
-    (void)state;
+    (void) state;
 
     // real
     set_symbol_pool(NULL);
@@ -216,13 +203,12 @@ static int intern_symbol_setup(void **state) {
 }
 
 static int intern_symbol_teardown(void **state) {
-    (void)state;
+    (void) state;
     set_allocators(NULL, NULL);
     set_string_duplicate(NULL);
     fake_memory_reset();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -236,13 +222,13 @@ static int intern_symbol_teardown(void **state) {
 // Expected:
 //  - a new symbol with name "symbol_name" has been registred into symbol_pool
 static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
-    (void)state;
+    (void) state;
     top_level = symtab_wind_scope(NULL);
     assert_non_null(top_level);
 
     assert_int_equal(
         symtab_intern_symbol(top_level, "symbol_name"),
-        0 );
+        0);
     assert_true(symtab_contains_local(top_level, "symbol_name"));
 
     symbol *sym = symtab_get_local(top_level, "symbol_name");
@@ -253,7 +239,7 @@ static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
     assert_ptr_equal(symbol_pool->car, sym);
     assert_string_equal(
         ((symbol *) symbol_pool->car)->name,
-        "symbol_name" );
+        "symbol_name");
 
     fake_free(sym->name);
     fake_free(sym);
@@ -266,11 +252,9 @@ static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_unwind_scope TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -292,14 +276,13 @@ static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
 //    - malloc, free, strdup
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int unwind_scope_setup(void **state) {
-    (void)state;
+    (void) state;
 
     // real
     set_symbol_pool(NULL);
@@ -314,13 +297,12 @@ static int unwind_scope_setup(void **state) {
 }
 
 static int unwind_scope_teardown(void **state) {
-    (void)state;
+    (void) state;
     set_allocators(NULL, NULL);
     set_string_duplicate(NULL);
     fake_memory_reset();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -334,7 +316,7 @@ static int unwind_scope_teardown(void **state) {
 // Expected:
 //  - the local scope is cleaned up but not the interned symbol
 static void unwind_scope_destroy_local_scope_but_not_destroy_symbol(void **state) {
-    (void)state;
+    (void) state;
     top_level = symtab_wind_scope(NULL);
     assert_non_null(top_level);
     local_level = symtab_wind_scope(top_level);
@@ -343,7 +325,7 @@ static void unwind_scope_destroy_local_scope_but_not_destroy_symbol(void **state
     current_level = local_level;
     assert_int_equal(
         symtab_intern_symbol(current_level, "symbol_name"),
-        0 );
+        0);
     assert_true(symtab_contains_local(local_level, "symbol_name"));
     assert_false(symtab_contains_local(top_level, "symbol_name"));
     symbol *sym = symtab_get_local(local_level, "symbol_name");
@@ -368,7 +350,6 @@ static void unwind_scope_destroy_local_scope_but_not_destroy_symbol(void **state
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
 }
-
 
 
 //-----------------------------------------------------------------------------

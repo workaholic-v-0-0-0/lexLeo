@@ -14,7 +14,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -28,7 +27,6 @@ static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[1];
 static ast *const DUMMY_FUNCTION_CALL_NODE = (ast *) &DUMMY[2];
 static ast *const DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE = (ast *) &DUMMY[3];
 static ast *const DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE = (ast *) &DUMMY[4];
-
 
 
 //-----------------------------------------------------------------------------
@@ -83,7 +81,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // function_call_parse TESTS
 //-----------------------------------------------------------------------------
@@ -94,11 +91,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // function_call: symbol_name_atom list_of_numbers
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 //    - list_of_numbers: LPAREN numbers RPAREN
 //    - numbers: | numbers number_atom
@@ -109,7 +106,6 @@ parser_ctx mock_ctx;
 //    - ast_destroy
 //  - function of the lexer module which are used:
 //    - yylex
-
 
 
 //-----------------------------------------------------------------------------
@@ -141,7 +137,7 @@ static int function_call_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At every test
+// At every tests
 // Given:
 //  - lexer returns:
 //    - SYMBOL_NAME("function_name")
@@ -168,7 +164,8 @@ static int function_call_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_FUNCTION_CALL_NODE_CREATION_FAILED
 //    - message: "ast creation for a function call node failed"
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
-static void function_call_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
+static void
+function_call_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
     void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
     will_return(stub_list_of_numbers_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
@@ -192,7 +189,8 @@ static void function_call_parse_cleans_up_and_create_error_node_for_LHS_semantic
 //  - ast_create_children_node_var will succeed
 // Expected:
 //  - gives ast_create_children_node_var returned value for the LHS semantic value
-static void function_call_parse_create_function_call_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(void **state) {
+static void function_call_parse_create_function_call_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
+    void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
     will_return(stub_list_of_numbers_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_FUNCTION_CALL);
@@ -205,7 +203,6 @@ static void function_call_parse_create_function_call_node_for_LHS_semantic_value
 
     assert_ptr_equal(parsed_ast, DUMMY_FUNCTION_CALL_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

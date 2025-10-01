@@ -15,7 +15,6 @@
 #include "list.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -29,7 +28,6 @@ static ast *const DUMMY_AST_ERROR = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_BLOCK_NODE = (ast *) &DUMMY[2];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
@@ -41,10 +39,10 @@ mock_token seq_block[] = {
     {EQUAL, {0}},
     {STRING, {.string_value = "chaine"}},
     {SEMICOLON, {0}},
-    {READ, { 0 }},
+    {READ, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
-    {WRITE, { 0 }},
+    {WRITE, {0}},
     {SYMBOL_NAME, {.symbol_name_value = "symbol_name"}},
     {SEMICOLON, {0}},
     {RBRACE, {0}},
@@ -85,11 +83,9 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // block_parse TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -97,11 +93,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // block: LBRACE block_items RBRACE
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - block_items: | block_items statement
 //    - statement: binding | writing | reading
 //    - binding: symbol_name_atom EQUAL atom SEMICOLON
@@ -119,14 +115,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int block_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.create_children_node_var = mock_create_children_node_var;
@@ -136,12 +131,11 @@ static int block_parse_setup(void **state) {
 }
 
 static int block_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -149,7 +143,7 @@ static int block_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At any test:
+// At any tests:
 // Given:
 //  - lexer returns:
 //    - LBRACE
@@ -216,7 +210,6 @@ static void block_parse_creates_a_block_node_when_create_children_node_var_succe
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_BLOCK_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

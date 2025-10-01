@@ -45,17 +45,17 @@ if (BUILD_TESTING)
 
     # The include(CTest) command loads the CTest module from CMake's standard
     # module directory. This module provides functions to manage and run tests
-    # as part of the build process. CTest manages test case registration and
+    # as part of the build process. CTest manages tests case registration and
     # execution, integrating seamlessly with CMake to enable commands like
     # add_test(). It searches for the CTest.cmake script in the default CMake
     # Modules directory, pre-packaged with the CMake installation. This setup
     # facilitates creating, managing, and running tests across different
-    # platforms and configurations, ensuring consistent test behavior.
+    # platforms and configurations, ensuring consistent tests behavior.
     include(CTest)
 
-    # Enable the testing functionality so CMake can prepare a test driver
+    # Enable the testing functionality so CMake can prepare a tests driver
     # This command must be called in the root CMakeLists.txt to enable integration
-    # of test cases defined in any subdirectory of the project.
+    # of tests cases defined in any subdirectory of the project.
     enable_testing()
 
     # Add the 'tests' subdirectory which contains only a CMakeLists.txt.
@@ -199,6 +199,7 @@ add_subdirectory(src/symtab) # depends on data_structures and ast
 add_subdirectory(src/parser) # depends on lexer and ast
 add_subdirectory(src/lexer) # depends on parser interface—opaque types
 add_subdirectory(src/resolver) # depends on ast and symtab
+add_subdirectory(src/runtime_env) # depends on ...
 
 # TO BE IMPLEMENTED
 # add_subdirectory(src/interpreter)

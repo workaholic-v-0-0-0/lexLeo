@@ -14,7 +14,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -31,7 +30,6 @@ static error_info *const DUMMY_ERROR_INFO_P = (error_info *) &DUMMY[4];
 static ast FAKE_AST_ERROR = {AST_TYPE_ERROR, .error = DUMMY_ERROR_INFO_P};
 static ast *const DUMMY_SYMBOL_NAME_NODE_1 = (ast *) &DUMMY[5];
 static ast *const DUMMY_SYMBOL_NAME_NODE_2 = (ast *) &DUMMY[6];
-
 
 
 //-----------------------------------------------------------------------------
@@ -94,7 +92,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // parameters_parse TESTS
 //-----------------------------------------------------------------------------
@@ -105,11 +102,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // "parameters: /* empty */ | parameters symbol_name_atom
 
 // mocked:
-//  - action of grammar rule that the rule under test depends on:
+//  - action of grammar rule that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 //  - functions of the ast module which are used:
 //    - ast_children_append_take
@@ -120,14 +117,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int parameters_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.children_append_take = mock_children_append_take;
@@ -138,12 +134,11 @@ static int parameters_parse_setup(void **state) {
 }
 
 static int parameters_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -164,7 +159,8 @@ static int parameters_parse_teardown(void **state) {
 //    - code: AST_ERROR_CODE_PARAMETERS_NODE_CREATION_FAILED
 //    - message: "ast creation for parameters node failed"
 //  - gives create_error_node_or_sentinel returned value for the parameters's semantic value
-static void parameters_parse_create_error_node_for_LHS_when_0_parameter_and_create_children_node_var_fails(void **state) {
+static void
+parameters_parse_create_error_node_for_LHS_when_0_parameter_and_create_children_node_var_fails(void **state) {
     mock_lex_set(seq_0_parameter, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -188,7 +184,8 @@ static void parameters_parse_create_error_node_for_LHS_when_0_parameter_and_crea
 //    - children_nb: 0
 //    - no more arg
 //  - gives ast_create_children_node_var returned value for the parameters's semantic value
-static void parameters_parse_creates_parameters_node_for_LHS_when_0_parameter_and_create_children_node_var_succeeds(void **state) {
+static void parameters_parse_creates_parameters_node_for_LHS_when_0_parameter_and_create_children_node_var_succeeds(
+    void **state) {
     mock_lex_set(seq_0_parameter, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -219,7 +216,9 @@ static void parameters_parse_creates_parameters_node_for_LHS_when_0_parameter_an
 //    - NO CALL TO ast_children_append_take must occur, since $1 is already an error node
 //    - ast_destroy is called with $2 (the symbol_name_atom returned by the stub)
 //    - the semantic value of the LHS parameters is the same error node as $1
-static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_parameter_and_create_children_node_var_fails(void **state) {
+static void
+parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_parameter_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_1_parameter, 2);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -261,7 +260,8 @@ static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_para
 //      - code: AST_ERROR_CODE_PARAMETERS_APPEND_FAILED
 //      - message: "ast append failed when adding a parameter to a list of parameters"
 //    - the returned value of create_error_node_or_sentinel becomes the semantic value of the LHS parameters
-static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_parameter_and_children_append_take_fails(void **state) {
+static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_parameter_and_children_append_take_fails(
+    void **state) {
     mock_lex_set(seq_1_parameter, 2);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -273,7 +273,8 @@ static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_para
     expect_value(mock_destroy, root, DUMMY_PARAMETERS_NODE);
     expect_value(mock_destroy, root, DUMMY_SYMBOL_NAME_NODE);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_PARAMETERS_APPEND_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast append failed when adding a parameter to a list of parameters");
+    expect_string(mock_create_error_node_or_sentinel, message,
+                  "ast append failed when adding a parameter to a list of parameters");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
     parameters_parse(NULL, &parsed_ast, &mock_ctx);
@@ -300,7 +301,8 @@ static void parameters_parse_cleans_up_and_create_error_node_for_LHS_when_1_para
 //      - parent: $1 (returned value of ast_create_children_node_var)
 //      - child: $2 (provided by stub)
 //    - the returned value of ast_children_append_take becomes the semantic value of the LHS parameters
-static void parameters_parse_create_parameters_node_for_LHS_when_1_parameter_and_children_append_take_succeeds(void **state) {
+static void parameters_parse_create_parameters_node_for_LHS_when_1_parameter_and_children_append_take_succeeds(
+    void **state) {
     mock_lex_set(seq_1_parameter, 2);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -332,7 +334,8 @@ static void parameters_parse_create_parameters_node_for_LHS_when_1_parameter_and
 //    - $$ = stub_symbol_name_atom_action()
 //  - parameters symbol_name_atom -> parameters
 //    - $$ = ctx->ops.children_append_take($1, $2)
-static void parameters_parse_create_parameters_node_for_LHS_when_2_parameters_and_children_append_take_succeeds_2_times(void **state) {
+static void parameters_parse_create_parameters_node_for_LHS_when_2_parameters_and_children_append_take_succeeds_2_times(
+    void **state) {
     mock_lex_set(seq_2_parameters, 3);
     expect_value(mock_create_children_node_var, type, AST_TYPE_PARAMETERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -350,7 +353,6 @@ static void parameters_parse_create_parameters_node_for_LHS_when_2_parameters_an
 
     assert_ptr_equal(parsed_ast, DUMMY_PARAMETERS_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

@@ -15,7 +15,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -28,15 +27,14 @@ static ast *const DUMMY_AST_ERROR_P = (ast *) &DUMMY[0];
 static ast *const DUMMY_AST_NOT_ERROR_P = (ast *) &DUMMY[1];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
 
 static mock_token seq[] = {
-    { SYMBOL_NAME, { .string_value = "symbol_name" } },
-    { 0,       { 0 } }
+    {SYMBOL_NAME, {.string_value = "symbol_name"}},
+    {0, {0}}
 };
 
 ast *mock_create_symbol_name_node(char *str) {
@@ -51,7 +49,6 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
 }
 
 parser_ctx mock_ctx;
-
 
 
 //-----------------------------------------------------------------------------
@@ -74,14 +71,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int symbol_name_atom_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_ctx.ops.create_symbol_name_node = mock_create_symbol_name_node;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
@@ -91,12 +87,11 @@ static int symbol_name_atom_parse_setup(void **state) {
 }
 
 static int symbol_name_atom_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -104,7 +99,7 @@ static int symbol_name_atom_parse_teardown(void **state) {
 //-----------------------------------------------------------------------------
 
 
-// At every test
+// At every tests
 // Given: lexer returns SYMBOL_NAME("symbol_name")
 // Expected: calls ast_create_symbol_name_node("symbol_name")
 
@@ -114,7 +109,9 @@ static int symbol_name_atom_parse_teardown(void **state) {
 // Expected:
 //  - calls create_error_node_or_sentinel
 //  - gives create_error_node_or_sentinel returned value for the semantic value of the symbol_name_atom lexeme
-static void symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(void **state) {
+static void
+symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(
+    void **state) {
     expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, NULL);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_SYMBOL_NAME_NODE_CREATION_FAILED);
@@ -130,7 +127,9 @@ static void symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_retur
 //  - create_symbol_name_node succeeds
 // Expected:
 //  - gives create_symbol_name_node returned value for the semantic value of the symbol_name_atom lexeme
-static void symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(void **state) {
+static void
+symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(
+    void **state) {
     expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, DUMMY_AST_NOT_ERROR_P);
 
@@ -138,7 +137,6 @@ static void symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_NOT_ERROR_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

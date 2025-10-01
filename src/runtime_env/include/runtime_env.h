@@ -3,6 +3,9 @@
 #ifndef LEXLEO_RUNTIME_ENV_H
 #define LEXLEO_RUNTIME_ENV_H
 
+#include "internal/runtime_env_memory_allocator.h"
+#include "internal/runtime_env_string_utils.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 

@@ -15,7 +15,6 @@
 #include "list.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -29,7 +28,6 @@ static ast *const DUMMY_AST_ERROR_OR_ATOM_NODE = (ast *) &DUMMY[1];
 static ast *const DUMMY_AST_ERROR_OR_COMPUTABLE_NODE = (ast *) &DUMMY[2];
 static ast *const DUMMY_AST_ERROR_OR_QUOTE_NODE = (ast *) &DUMMY[3];
 static ast *const DUMMY_AST_ERROR = (ast *) &DUMMY[4];
-
 
 
 //-----------------------------------------------------------------------------
@@ -47,8 +45,8 @@ static mock_token seq_function_call[] = {
 };
 
 static mock_token seq_atom[] = {
-    { SYMBOL_NAME, { .string_value = "symbol_name" } },
-    { 0,       { 0 } }
+    {SYMBOL_NAME, {.string_value = "symbol_name"}},
+    {0, {0}}
 };
 
 static mock_token seq_computable[] = {
@@ -116,11 +114,9 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // evaluable_parse TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -128,11 +124,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // evaluable: function_call | atom | computable | QUOTE evaluable
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - function_call: symbol_name_atom list_of_numbers
 //    - symbol_name_atom: SYMBOL_NAME
 //    - list_of_numbers: LPAREN numbers RPAREN
@@ -156,14 +152,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int evaluable_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.create_children_node_var = mock_create_children_node_var;
@@ -173,12 +168,11 @@ static int evaluable_parse_setup(void **state) {
 }
 
 static int evaluable_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -196,7 +190,8 @@ static int evaluable_parse_teardown(void **state) {
 // Expected:
 //  - the action of "function_call: symbol_name_atom list_of_numbers" is executed
 //  - the semantic value of function_call is propagated to evaluable's semantic value
-static void evaluable_parse_executes_function_call_action_and_propagates_value_when_lexer_returns_function_call(void **state) {
+static void evaluable_parse_executes_function_call_action_and_propagates_value_when_lexer_returns_function_call(
+    void **state) {
     mock_lex_set(seq_function_call, 6);
     will_return(stub_function_call_action, DUMMY_AST_ERROR_OR_FUNCTION_CALL_NODE);
 
@@ -241,7 +236,8 @@ static void evaluable_parse_executes_atom_action_and_propagates_value_when_lexer
 //        | number_atom"
 //    is executed
 //  - the semantic value of computable is propagated to evaluable's semantic value
-static void evaluable_parse_executes_computable_action_and_propagates_value_when_lexer_returns_computable(void **state) {
+static void
+evaluable_parse_executes_computable_action_and_propagates_value_when_lexer_returns_computable(void **state) {
     mock_lex_set(seq_computable, 8);
     will_return(stub_computable_action, DUMMY_AST_ERROR_OR_COMPUTABLE_NODE);
 
@@ -283,7 +279,8 @@ static void evaluable_parse_executes_computable_action_and_propagates_value_when
 //    - code: AST_ERROR_CODE_QUOTE_NODE_CREATION_FAILED
 //    - message: "ast creation for a quote node failed"
 //  - gives create_error_node_or_sentinel returned value for the LHS semantic value
-static void evaluable_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(void **state) {
+static void evaluable_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_quote, 9);
     will_return(stub_computable_action, DUMMY_AST_ERROR_OR_COMPUTABLE_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_QUOTE);
@@ -340,7 +337,6 @@ static void evaluable_parse_creates_a_quote_node_when_create_children_node_var_s
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_OR_QUOTE_NODE);
 }
-
 
 
 //-----------------------------------------------------------------------------

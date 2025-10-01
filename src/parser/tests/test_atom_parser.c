@@ -13,7 +13,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -25,25 +24,24 @@ static const char DUMMY[1];
 static ast *const DUMMY_AST_P = (ast *) &DUMMY[0];
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS AND FAKES
 //-----------------------------------------------------------------------------
 
 
 static mock_token seq_integer[] = {
-    { INTEGER, { .int_value = 5 } },
-    { 0,       { 0 } }
+    {INTEGER, {.int_value = 5}},
+    {0, {0}}
 };
 
 mock_token seq_string[] = {
-    { STRING, { .string_value = "chaine" } },
-    { 0,      { 0 } }
+    {STRING, {.string_value = "chaine"}},
+    {0, {0}}
 };
 
 static mock_token seq_symbol_name[] = {
-    { SYMBOL_NAME, { .string_value = "symbol_name" } },
-    { 0,       { 0 } }
+    {SYMBOL_NAME, {.string_value = "symbol_name"}},
+    {0, {0}}
 };
 
 ast *stub_number_atom_action(int i) {
@@ -62,11 +60,9 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // atom_parse TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -74,17 +70,16 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // atom : number_atom | string_atom | symbol_name_atom
 
 // mocked:
-//  - actions of grammar rules that the rule under test depends on:
+//  - actions of grammar rules that the rule under tests depends on:
 //    - number_atom: INTEGER
 //    - string_atom: STRING
 //    - symbol_name_atom: SYMBOL_NAME
 //  - function of the lexer module which are used:
 //    - yylex
-
 
 
 //-----------------------------------------------------------------------------
@@ -93,19 +88,18 @@ ast *stub_symbol_name_atom_action(char *symbol_name) {
 
 
 static int atom_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     return 0;
 }
 
 static int atom_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -148,7 +142,8 @@ static void atom_parse_executes_string_atom_action_and_propagates_value_when_lex
 // Expected:
 //  - the action of "symbol_name_atom : SYMBOL_NAME" is executed
 //  - the semantic value of symbol_name_atom is propagated to atom's semantic value
-static void atom_parse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME(void **state) {
+static void atom_parse_executes_symbol_name_atom_action_and_propagates_value_when_lexer_returns_SYMBOL_NAME(
+    void **state) {
     mock_lex_set(seq_symbol_name, 2);
     expect_string(stub_symbol_name_atom_action, symbol_name, "symbol_name");
     will_return(stub_symbol_name_atom_action, DUMMY_AST_P);
@@ -157,7 +152,6 @@ static void atom_parse_executes_symbol_name_atom_action_and_propagates_value_whe
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_P);
 }
-
 
 
 //-----------------------------------------------------------------------------

@@ -47,7 +47,7 @@ add_test(
 set_tests_properties(test_hashtable_memory PROPERTIES LABELS "memory")
 
 
-# quasi-unit test (integrating standard library)
+# quasi-unit tests (integrating standard library)
 
 add_executable(
     test_list_with_stdlib

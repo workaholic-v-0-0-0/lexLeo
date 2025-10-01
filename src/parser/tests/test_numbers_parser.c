@@ -14,7 +14,6 @@
 #include "mock_lexer.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -31,7 +30,6 @@ static error_info *const DUMMY_ERROR_INFO_P = (error_info *) &DUMMY[4];
 static ast FAKE_AST_ERROR = {AST_TYPE_ERROR, .error = DUMMY_ERROR_INFO_P};
 static ast *const DUMMY_NUMBER_NODE_1 = (ast *) &DUMMY[5];
 static ast *const DUMMY_NUMBER_NODE_2 = (ast *) &DUMMY[6];
-
 
 
 //-----------------------------------------------------------------------------
@@ -94,7 +92,6 @@ void mock_destroy(ast *root) {
 parser_ctx mock_ctx;
 
 
-
 //-----------------------------------------------------------------------------
 // numbers_parse TESTS
 //-----------------------------------------------------------------------------
@@ -105,11 +102,11 @@ parser_ctx mock_ctx;
 //-----------------------------------------------------------------------------
 
 
-// Action under test via injected stubs:
+// Action under tests via injected stubs:
 // "numbers: /* empty */ | numbers number_atom
 
 // mocked:
-//  - action of grammar rule that the rule under test depends on:
+//  - action of grammar rule that the rule under tests depends on:
 //    - number_atom: INTEGER
 //  - functions of the ast module which are used:
 //    - ast_children_append_take
@@ -120,14 +117,13 @@ parser_ctx mock_ctx;
 //    - yylex
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int numbers_parse_setup(void **state) {
-    (void)state;
+    (void) state;
     parsed_ast = NULL;
     mock_lex_reset();
     mock_ctx.ops.children_append_take = mock_children_append_take;
@@ -138,12 +134,11 @@ static int numbers_parse_setup(void **state) {
 }
 
 static int numbers_parse_teardown(void **state) {
-    (void)state;
+    (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -188,7 +183,8 @@ static void numbers_parse_create_error_node_for_LHS_when_0_number_and_create_chi
 //    - children_nb: 0
 //    - no more arg
 //  - gives ast_create_children_node_var returned value for the numbers's semantic value
-static void numbers_parse_creates_numbers_node_for_LHS_when_0_number_and_create_children_node_var_succeeds(void **state) {
+static void
+numbers_parse_creates_numbers_node_for_LHS_when_0_number_and_create_children_node_var_succeeds(void **state) {
     mock_lex_set(seq_0_number, 1);
     expect_value(mock_create_children_node_var, type, AST_TYPE_NUMBERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -219,7 +215,8 @@ static void numbers_parse_creates_numbers_node_for_LHS_when_0_number_and_create_
 //    - NO CALL TO ast_children_append_take must occur, since $1 is already an error node
 //    - ast_destroy is called with $2 (the number_atom returned by the stub)
 //    - the semantic value of the LHS numbers is the same error node as $1
-static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_and_create_children_node_var_fails(void **state) {
+static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_and_create_children_node_var_fails(
+    void **state) {
     mock_lex_set(seq_1_number, 2);
     expect_value(mock_create_children_node_var, type, AST_TYPE_NUMBERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -261,7 +258,8 @@ static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_
 //      - code: AST_ERROR_CODE_NUMBERS_APPEND_FAILED
 //      - message: "ast append failed when adding a number to a list of numbers"
 //    - the returned value of create_error_node_or_sentinel becomes the semantic value of the LHS numbers
-static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_and_children_append_take_fails(void **state) {
+static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_and_children_append_take_fails(
+    void **state) {
     mock_lex_set(seq_1_number, 2);
     expect_value(mock_create_children_node_var, type, AST_TYPE_NUMBERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -273,7 +271,8 @@ static void numbers_parse_cleans_up_and_create_error_node_for_LHS_when_1_number_
     expect_value(mock_destroy, root, DUMMY_NUMBERS_NODE);
     expect_value(mock_destroy, root, DUMMY_NUMBER_NODE);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_NUMBERS_APPEND_FAILED);
-    expect_string(mock_create_error_node_or_sentinel, message, "ast append failed when adding a number to a list of numbers");
+    expect_string(mock_create_error_node_or_sentinel, message,
+                  "ast append failed when adding a number to a list of numbers");
     will_return(mock_create_error_node_or_sentinel, DUMMY_AST_ERROR_P);
 
     numbers_parse(NULL, &parsed_ast, &mock_ctx);
@@ -332,7 +331,8 @@ static void numbers_parse_create_numbers_node_for_LHS_when_1_number_and_children
 //    - $$ = stub_number_atom_action()
 //  - numbers number_atom -> numbers
 //    - $$ = ctx->ops.children_append_take($1, $2)
-static void numbers_parse_create_numbers_node_for_LHS_when_2_numbers_and_children_append_take_succeeds_2_times(void **state) {
+static void numbers_parse_create_numbers_node_for_LHS_when_2_numbers_and_children_append_take_succeeds_2_times(
+    void **state) {
     mock_lex_set(seq_2_numbers, 3);
     expect_value(mock_create_children_node_var, type, AST_TYPE_NUMBERS);
     expect_value(mock_create_children_node_var, children_nb, 0);
@@ -350,8 +350,6 @@ static void numbers_parse_create_numbers_node_for_LHS_when_2_numbers_and_childre
 
     assert_ptr_equal(parsed_ast, DUMMY_NUMBERS_NODE);
 }
-
-
 
 
 //-----------------------------------------------------------------------------
