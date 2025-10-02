@@ -79,6 +79,14 @@ runtime_env_value *runtime_env_make_function(
     return ret;
 }
 
+runtime_env *runtime_env_wind(runtime_env *parent) {
+	runtime_env *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env));
+    if (!ret)
+        return NULL;
+
+	return (runtime_env *)-2;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);
