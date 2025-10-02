@@ -700,6 +700,188 @@ static void unwind_success_when_parent_not_null(void **state) {
 
 
 //-----------------------------------------------------------------------------
+// TESTS void runtime_env_value_destroy(runtime_env_value *value);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_value_destroy
+// owned or retained/released resources of value
+// runtime_env_make_number
+// runtime_env_make_string
+// runtime_env_make_symbol
+// runtime_env_make_error
+// runtime_env_make_function
+// runtime_env_release
+// runtime_env_unwind
+
+// dummy
+//  - borrowed resources of value (those of type ast* or symbol*):
+//    - value->as.sym
+//    - value->as.fn.function_node
+//  - observed-only:
+//    - value->as.fn.closure.parent
+//  - sentinel passed to the mock (owned by closure, not freed here):
+//    - value->as.fn.closure.bindings
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_destroy
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int value_destroy_setup(void **state) {
+    (void)state;
+
+	// mock
+    set_hashtable_destroy(mock_hashtable_destroy);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int value_destroy_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_hashtable_destroy(NULL);
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - value == NULL
+static void value_destroy_do_nothing_when_value_null(void **state) {
+    (void)state;
+    runtime_env_value_destroy(NULL);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_NUMBER
+static void value_destroy_success_when_type_number(void **state) {
+    (void)state;
+    runtime_env_value *value = runtime_env_make_number(A_INT);
+
+    runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_STRING
+static void value_destroy_success_when_type_string(void **state) {
+    (void)state;
+    runtime_env_value *value = runtime_env_make_string(A_NON_NULL_STRING);
+
+    runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_SYMBOL
+// Expected:
+//  - value->as.sym is not freed
+static void value_destroy_success_when_type_symbol(void **state) {
+    (void)state;
+    runtime_env_value *value = runtime_env_make_symbol(DUMMY_SYMBOL_P);
+
+    runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_ERROR
+static void value_destroy_success_when_type_error(void **state) {
+    (void)state;
+    runtime_env_value *value = runtime_env_make_error(AN_ERROR_CODE, AN_ERROR_MESSAGE);
+
+    runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_FUNCTION
+//  - value->as.fn.closure->refcount == 2
+//  - value->as.fn.closure->is_root == false
+// WHEN DENOTING:
+//  - closure = value->as.fn.closure
+//  - function_node = value->as.fn.function_node
+// Expected:
+//  - function_node is not freed
+//  - closure is not freed
+//  - closure->refcount == 1
+//  - value is freed
+static void value_destroy_success_when_type_function_and_closure_refcount_2_and_not_root(void **state) {
+    (void)state;
+	runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
+	fake_closure->bindings = DUMMY_HASHTABLE_P;
+	fake_closure->refcount = 2;
+	fake_closure->is_root = false;
+	fake_closure->parent = DUMMY_RUNTIME_ENV_P;
+	runtime_env_value *fake_runtime_value_function = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
+
+	runtime_env_value_destroy(fake_runtime_value_function);
+
+	assert_int_equal(fake_closure->refcount, 1);
+
+	fake_free(fake_closure);
+}
+
+// Given:
+//  - value->type == RUNTIME_VALUE_FUNCTION
+//  - value->as.fn.closure->refcount == 1
+//  - value->as.fn.closure->is_root == false
+// Expected:
+//  - value->as.fn.function_node is not freed
+//  - value->as.fn.closure is freed
+
+
+// Given:
+//  - value->type == RUNTIME_VALUE_FUNCTION
+//  - value->as.fn.closure->refcount == 1
+//  - value->as.fn.closure->is_root == true
+// Expected:
+//  - value->as.fn.function_node is not freed
+//  - value->as.fn.closure is not freed
+//  - value->as.fn.closure->refcount == 1
+
+
+
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -771,6 +953,27 @@ int main(void) {
             unwind_setup, unwind_teardown),
     };
 
+    const struct CMUnitTest value_destroy_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            value_destroy_do_nothing_when_value_null,
+            value_destroy_setup, value_destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            value_destroy_success_when_type_number,
+            value_destroy_setup, value_destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            value_destroy_success_when_type_string,
+            value_destroy_setup, value_destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            value_destroy_success_when_type_symbol,
+            value_destroy_setup, value_destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            value_destroy_success_when_type_error,
+            value_destroy_setup, value_destroy_teardown),
+        cmocka_unit_test_setup_teardown(
+            value_destroy_success_when_type_function_and_closure_refcount_2_and_not_root,
+            value_destroy_setup, value_destroy_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
@@ -778,6 +981,7 @@ int main(void) {
     failed += cmocka_run_group_tests(make_error_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_function_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(value_destroy_tests, NULL, NULL);
 
     return failed;
 }
