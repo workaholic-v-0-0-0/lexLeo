@@ -13,6 +13,7 @@
 #include "fake_memory.h"
 #include "memory_allocator.h"
 #include "string_utils.h"
+#include "internal/hashtable_test_utils.h"
 
 
 
@@ -25,6 +26,7 @@ static const int A_INT = 7;
 static const char *A_NON_NULL_STRING = "a non null string";
 static const int AN_ERROR_CODE = 2;
 static const char *AN_ERROR_MESSAGE = "an error message";
+static bool A_BOOLEAN_VALUE = true;
 
 
 
@@ -34,8 +36,9 @@ static const char *AN_ERROR_MESSAGE = "an error message";
 
 
 // mocks
-
-
+void mock_hashtable_destroy(hashtable *ht) {
+    check_expected(ht);
+}
 
 // stubs
 
@@ -48,7 +51,9 @@ static const max_align_t DUMMY_FUNCTION_NODE;
 static const struct ast *const DUMMY_FUNCTION_NODE_P = (const struct ast *)&DUMMY_FUNCTION_NODE;
 static runtime_env DUMMY_CLOSURE = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = NULL};
 static runtime_env *const DUMMY_CLOSURE_P = &DUMMY_CLOSURE;
-
+static runtime_env *const DUMMY_RUNTIME_ENV_P = &DUMMY_CLOSURE;
+static max_align_t DUMMY_HASHTABLE;
+static struct hashtable *DUMMY_HASHTABLE_P = (struct hashtable *)&DUMMY_HASHTABLE;
 
 // fakes
 #define FAKABLE_MALLOC(n) (get_current_malloc()(n))
@@ -596,6 +601,103 @@ static void make_function_success_when_first_allocation_succeeds(void **state) {
 
 
 
+//-----------------------------------------------------------------------------
+// TESTS runtime_env *runtime_env_unwind(runtime_env *e);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_unwind
+
+// dummy:
+//  - e->bindings
+//  - e->parent
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_destroy
+// fake:hashtable_destroy
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int unwind_setup(void **state) {
+    (void)state;
+
+	// mock
+    set_hashtable_destroy(mock_hashtable_destroy);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int unwind_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_hashtable_destroy(NULL);
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - e == NULL
+// Expected:
+//  - returns NULL
+static void unwind_returns_null_when_parent_null(void **state) {
+    (void)state;
+
+    assert_null(runtime_env_unwind(NULL));
+}
+
+// Given:
+//  - e != NULL
+// Expected:
+//  - calls hashtable_destroy with:
+//    - ht: e->bindings
+//  - frees e
+//  - returns e->parent
+static void unwind_success_when_parent_not_null(void **state) {
+    (void)state;
+	runtime_env *fake_runtime_env_p = fake_malloc(sizeof(runtime_env));
+	fake_runtime_env_p->bindings = DUMMY_HASHTABLE_P;
+	fake_runtime_env_p->refcount = A_INT;
+	fake_runtime_env_p->is_root  = A_BOOLEAN_VALUE;
+	fake_runtime_env_p->parent = DUMMY_RUNTIME_ENV_P;
+    expect_value(mock_hashtable_destroy, ht, fake_runtime_env_p->bindings);
+
+    assert_ptr_equal(runtime_env_unwind(fake_runtime_env_p), DUMMY_RUNTIME_ENV_P);
+}
+
+
 
 //-----------------------------------------------------------------------------
 // MAIN
@@ -660,12 +762,22 @@ int main(void) {
             make_function_setup, make_function_teardown),
     };
 
+    const struct CMUnitTest unwind_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            unwind_returns_null_when_parent_null,
+            unwind_setup, unwind_teardown),
+        cmocka_unit_test_setup_teardown(
+            unwind_success_when_parent_not_null,
+            unwind_setup, unwind_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_error_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_function_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(unwind_tests, NULL, NULL);
 
     return failed;
 }

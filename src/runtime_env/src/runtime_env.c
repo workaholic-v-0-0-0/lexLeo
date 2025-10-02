@@ -79,6 +79,18 @@ runtime_env_value *runtime_env_make_function(
     return ret;
 }
 
+runtime_env *runtime_env_unwind(runtime_env *e) {
+	if (!e)
+		return NULL;
+
+	hashtable_destroy(e->bindings);
+
+	runtime_env *ret = e->parent;
+	RUNTIME_ENV_FREE(e);
+
+	return ret;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);
