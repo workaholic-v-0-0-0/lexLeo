@@ -39,6 +39,11 @@ static const char *A_NON_NULL_STRING = "a non null string";
 
 
 
+// dummies
+static const max_align_t DUMMY_SYMBOL;
+static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY_SYMBOL;
+
+
 // fakes
 #define FAKABLE_MALLOC(n) (get_current_malloc()(n))
 #define FAKABLE_FREE(p) (get_current_free()(p))
@@ -277,6 +282,101 @@ static void make_string_success_when_two_allocations_succeed_and_s_non_null(void
 
 
 
+//-----------------------------------------------------------------------------
+// TESTS runtime_env_value *runtime_env_make_symbol(const struct symbol *sym);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_make_symbol
+
+// mock:
+//  - none
+// stub:
+//  - none
+// dummy:
+//  - sym
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int make_symbol_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int make_symbol_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Given:
+//  - sym == DUMMY_SYMBOL_P
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - first allocation will fail
+// Expected:
+//  - ret == NULL
+static void make_symbol_returns_null_when_first_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(1);
+
+    assert_null(runtime_env_make_symbol(DUMMY_SYMBOL_P));
+}
+
+// Given:
+//  - first allocation will succeed
+// Expected:
+//  - ret != NULL
+//  - ret->type == RUNTIME_VALUE_SYMBOL
+//  - ret->as.sym == DUMMY_SYMBOL_P
+static void make_symbol_success_when_first_allocation_succeeds(void **state) {
+    (void)state;
+
+    runtime_env_value *ret = runtime_env_make_symbol(DUMMY_SYMBOL_P);
+
+    assert_non_null(ret);
+    assert_int_equal(ret->type, RUNTIME_VALUE_SYMBOL);
+    assert_ptr_equal(ret->as.sym, DUMMY_SYMBOL_P);
+
+    fake_free(ret);
+}
+
+
 
 
 
@@ -311,9 +411,19 @@ int main(void) {
             make_string_setup, make_string_teardown),
     };
 
+    const struct CMUnitTest make_symbol_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            make_symbol_returns_null_when_first_allocation_fails,
+            make_symbol_setup, make_symbol_teardown),
+        cmocka_unit_test_setup_teardown(
+            make_symbol_success_when_first_allocation_succeeds,
+            make_symbol_setup, make_symbol_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(make_symbol_tests, NULL, NULL);
 
     return failed;
 }

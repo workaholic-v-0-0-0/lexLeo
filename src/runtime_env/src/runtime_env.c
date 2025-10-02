@@ -34,6 +34,17 @@ runtime_env_value *runtime_env_make_string(const char *s) {
     return ret;
 }
 
+runtime_env_value *runtime_env_make_symbol(const struct symbol *sym) {
+    runtime_env_value *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
+    if (!ret)
+        return NULL;
+
+    ret->type = RUNTIME_VALUE_SYMBOL;
+    ret->as.sym = sym;
+
+    return ret;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);
