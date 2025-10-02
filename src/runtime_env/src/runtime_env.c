@@ -1,8 +1,33 @@
 // src/runtime_env/src/runtime_env.c
 
+#include "runtime_env.h"
 #include "internal/runtime_env_internal.h"
+#include "internal/runtime_env_ctx.h"
+
+#include "hashtable.h"
 
 #include <stdbool.h>
+
+const runtime_env_ops RUNTIME_ENV_OPS_DEFAULT = {
+    .destroy_bindings = hashtable_destroy,
+};
+
+static runtime_env_ctx g_runtime_env_ctx = {
+    .ops = &RUNTIME_ENV_OPS_DEFAULT
+};
+
+void runtime_env_set_destroy_bindings(destroy_bindings_fn_t destroy_bindings) {
+    static runtime_env_ops applied;
+    applied = *g_runtime_env_ctx.ops;
+    applied.destroy_bindings =
+        destroy_bindings ?
+        destroy_bindings : RUNTIME_ENV_OPS_DEFAULT.destroy_bindings;
+    g_runtime_env_ctx.ops = &applied;
+}
+
+destroy_bindings_fn_t runtime_env_get_destroy_bindings(void) {
+    return g_runtime_env_ctx.ops->destroy_bindings;
+}
 
 runtime_env_value *runtime_env_make_number(int i) {
     runtime_env_value * ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
@@ -89,6 +114,43 @@ runtime_env *runtime_env_unwind(runtime_env *e) {
 	RUNTIME_ENV_FREE(e);
 
 	return ret;
+}
+
+void runtime_env_release(runtime_env *e) {
+	if (!e || e->refcount <= 0 || e->is_root)
+        return;
+
+	if (--e->refcount == 0) {
+        g_runtime_env_ctx.ops->destroy_bindings(e->bindings);
+        RUNTIME_ENV_FREE(e);
+	}
+}
+
+void runtime_env_value_destroy(runtime_env_value *value) {
+	if (!value)
+		return;
+    switch (value->type) {
+    case RUNTIME_VALUE_NUMBER:
+        RUNTIME_ENV_FREE(value);
+        break;
+    case RUNTIME_VALUE_STRING:
+		RUNTIME_ENV_FREE(value->as.s);
+        RUNTIME_ENV_FREE(value);
+        break;
+    case RUNTIME_VALUE_SYMBOL:
+        RUNTIME_ENV_FREE(value);
+        break;
+    case RUNTIME_VALUE_ERROR:
+		RUNTIME_ENV_FREE(value->as.err.msg);
+        RUNTIME_ENV_FREE(value);
+        break;
+    case RUNTIME_VALUE_FUNCTION:
+        runtime_env_release(value->as.fn.closure);
+		RUNTIME_ENV_FREE(value);
+        break;
+    default:
+        // do nothing
+    }
 }
 
 /*

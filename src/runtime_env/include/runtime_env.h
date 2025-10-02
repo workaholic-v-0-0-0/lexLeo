@@ -33,13 +33,13 @@ typedef struct runtime_env_value {
     union {
         int i;
         char *s; //owned
-        const struct symbol *sym; // borrowed
+        const struct symbol *sym; // borrowed from symtab module
         struct {
             runtime_env_error_code code;
             char *msg; // owned
         } err; // owned container
         struct {
-            const struct ast *function_node; // borrowed in AST
+            const struct ast *function_node; // borrowed from ast module
             struct runtime_env *closure; // retained/released
         } fn; // owned container
     } as; // owned container
