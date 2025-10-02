@@ -65,6 +65,20 @@ runtime_env_value *runtime_env_make_error(int code, const char *msg) {
     return ret;
 }
 
+runtime_env_value *runtime_env_make_function(
+        const struct ast *function_node,
+        runtime_env *closure) {
+    runtime_env_value *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
+    if (!ret)
+        return NULL;
+
+    ret->type = RUNTIME_VALUE_FUNCTION;
+    ret->as.fn.function_node = function_node;
+    ret->as.fn.closure = closure;
+
+    return ret;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);

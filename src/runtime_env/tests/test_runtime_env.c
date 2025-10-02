@@ -44,6 +44,10 @@ static const char *AN_ERROR_MESSAGE = "an error message";
 // dummies
 static const max_align_t DUMMY_SYMBOL;
 static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY_SYMBOL;
+static const max_align_t DUMMY_FUNCTION_NODE;
+static const struct ast *const DUMMY_FUNCTION_NODE_P = (const struct ast *)&DUMMY_FUNCTION_NODE;
+static runtime_env DUMMY_CLOSURE = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = NULL};
+static runtime_env *const DUMMY_CLOSURE_P = &DUMMY_CLOSURE;
 
 
 // fakes
@@ -498,6 +502,102 @@ static void make_error_success_when_two_allocations_succeed_and_msg_non_null(voi
 
 
 //-----------------------------------------------------------------------------
+// TESTS runtime_env_value *runtime_env_make_function(const struct ast *function_node, runtime_env *closure);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_make_function
+
+// dummy:
+//  - function_node
+//  - closure
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int make_function_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int make_function_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+// At every test:
+// Given:
+//  - function_node == DUMMY_FUNCTION_NODE_P
+//  - closure == DUMMY_CLOSURE_P
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - first allocation will fail
+// Expected:
+//  - ret == NULL
+static void make_function_returns_null_when_first_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(1);
+
+    assert_null(runtime_env_make_function(DUMMY_FUNCTION_NODE_P, DUMMY_CLOSURE_P));
+}
+
+// Given:
+//  - first allocation will succeed
+// Expected:
+//  - ret != NULL
+//  - ret->type == RUNTIME_VALUE_FUNCTION
+//  - ret->as.fn.function_node == function_node
+//  - ret->as.fn.closure == closure
+static void make_function_success_when_first_allocation_succeeds(void **state) {
+    (void)state;
+
+    runtime_env_value *ret = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, DUMMY_CLOSURE_P);
+
+    assert_non_null(ret);
+    assert_int_equal(ret->type, RUNTIME_VALUE_FUNCTION);
+    assert_ptr_equal(ret->as.fn.function_node, DUMMY_FUNCTION_NODE_P);
+    assert_ptr_equal(ret->as.fn.closure, DUMMY_CLOSURE_P);
+
+    fake_free(ret);
+}
+
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -551,11 +651,21 @@ int main(void) {
             make_error_setup, make_error_teardown),
     };
 
+    const struct CMUnitTest make_function_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            make_function_returns_null_when_first_allocation_fails,
+            make_function_setup, make_function_teardown),
+        cmocka_unit_test_setup_teardown(
+            make_function_success_when_first_allocation_succeeds,
+            make_function_setup, make_function_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_symbol_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_error_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(make_function_tests, NULL, NULL);
 
     return failed;
 }
