@@ -18,6 +18,11 @@ typedef enum {
     RUNTIME_VALUE_TYPE_NB_TYPES,
 } runtime_env_value_type;
 
+typedef enum {
+    RUNTIME_ENV_ERROR_NOT_A_FUNCTION,
+    RUNTIME_ERROR_TYPE_NB_TYPES,
+} runtime_env_error_code;
+
 struct ast; // borrowed
 struct symbol; // borrowed; lifetime managed by symtab
 struct runtime_env; // opaque
@@ -30,7 +35,7 @@ typedef struct runtime_env_value {
         char *s; //owned
         const struct symbol *sym; // borrowed
         struct {
-            int code;
+            runtime_env_error_code code;
             char *msg; // owned
         } err; // owned container
         struct {

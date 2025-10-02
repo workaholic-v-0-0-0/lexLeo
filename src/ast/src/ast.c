@@ -157,7 +157,7 @@ void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 #endif
 }
 
-ast *ast_create_error_node(ast_error_type code, char *message) {
+ast *ast_create_error_node(ast_error_type code, const char *message) {
 	if ((!message) || (strlen(message) > MAXIMUM_ERROR_MESSAGE_LENGTH))
 		return NULL;
 
@@ -189,7 +189,7 @@ ast *ast_create_error_node(ast_error_type code, char *message) {
 	return ret;
 }
 
-ast *ast_create_error_node_or_sentinel(ast_error_type code, char *message) {
+ast *ast_create_error_node_or_sentinel(ast_error_type code, const char *message) {
 	ast *error_node = ast_create_error_node(code, message);
 	return (error_node) ? error_node : ast_error_sentinel();
 }

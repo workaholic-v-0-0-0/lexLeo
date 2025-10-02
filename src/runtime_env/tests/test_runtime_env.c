@@ -17,12 +17,14 @@
 
 
 //-----------------------------------------------------------------------------
-// GLOBALS NOT DOUBLES
+// GLOBALS NOT DOUBLES, MAGIC NUMBER KILLERS
 //-----------------------------------------------------------------------------
 
 
 static const int A_INT = 7;
 static const char *A_NON_NULL_STRING = "a non null string";
+static const int AN_ERROR_CODE = 2;
+static const char *AN_ERROR_MESSAGE = "an error message";
 
 
 
@@ -70,10 +72,6 @@ static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY
 
 // runtime_env_make_number
 
-// mock:
-//  - none
-// stub:
-//  - none
 // fake:
 //  - functions of standard libray which are used:
 //    - malloc, free
@@ -164,10 +162,6 @@ static void make_number_success_when_first_allocation_succeeds(void **state) {
 
 // runtime_env_make_string
 
-// mock:
-//  - none
-// stub:
-//  - none
 // fake:
 //  - functions of standard libray which are used:
 //    - malloc, free, strdup
@@ -294,10 +288,6 @@ static void make_string_success_when_two_allocations_succeed_and_s_non_null(void
 
 // runtime_env_make_symbol
 
-// mock:
-//  - none
-// stub:
-//  - none
 // dummy:
 //  - sym
 // fake:
@@ -378,6 +368,132 @@ static void make_symbol_success_when_first_allocation_succeeds(void **state) {
 
 
 
+//-----------------------------------------------------------------------------
+// TESTS runtime_env_value *runtime_env_make_error(int code, const char *msg);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_make_error
+
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free, strdup
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int make_error_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int make_error_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+//  - code == AN_ERROR_CODE
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - msg == NULL
+// Expected:
+//  - ret == NULL
+static void make_error_returns_null_when_msg_null(void **state) {
+    (void)state;
+    assert_null(runtime_env_make_error(AN_ERROR_CODE, NULL));
+
+    fake_memory_fail_only_on_call(1);
+    assert_null(runtime_env_make_error(AN_ERROR_CODE, NULL));
+
+    fake_memory_fail_only_on_call(2);
+    assert_null(runtime_env_make_error(AN_ERROR_CODE, NULL));
+}
+
+// Given:
+//  - msg != NULL
+//  - first allocation will fail
+// Expected:
+//  - ret == NULL
+static void make_error_returns_null_when_first_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(1);
+
+    assert_null(runtime_env_make_error(AN_ERROR_CODE, AN_ERROR_MESSAGE));
+}
+
+// Given:
+//  - msg != NULL
+//  - the failing allocation indexes: {2}
+//    i.e.:
+//      - allocation for runtime_env_value will succeed
+//      - allocation for string duplication will fail
+// Expected:
+//  - ret == NULL
+static void make_error_returns_null_when_second_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(2);
+
+    assert_null(runtime_env_make_error(AN_ERROR_CODE, AN_ERROR_MESSAGE));
+}
+
+// Given:
+//  - msg != NULL
+//  - all allocations will succeed
+//    i.e.:
+//      - allocation for runtime_env_value will succeed
+//      - allocation for string duplication will succeed
+// Expected:
+//  - ret != NULL
+//  - ret->type == RUNTIME_VALUE_ERROR
+//  - ret->as.err.code == code
+//  - ret->as.err.msg is a copy of msg
+static void make_error_success_when_two_allocations_succeed_and_msg_non_null(void **state) {
+    (void)state;
+
+    runtime_env_value *ret = runtime_env_make_error(AN_ERROR_CODE, AN_ERROR_MESSAGE);
+
+    assert_non_null(ret);
+    assert_int_equal(ret->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal(ret->as.err.code, AN_ERROR_CODE);
+    assert_string_equal(ret->as.err.msg, AN_ERROR_MESSAGE);
+
+    fake_free(ret->as.err.msg);
+    fake_free(ret);
+}
 
 
 
@@ -420,10 +536,26 @@ int main(void) {
             make_symbol_setup, make_symbol_teardown),
     };
 
+    const struct CMUnitTest make_error_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            make_error_returns_null_when_msg_null,
+            make_error_setup, make_error_teardown),
+        cmocka_unit_test_setup_teardown(
+            make_error_returns_null_when_first_allocation_fails,
+            make_error_setup, make_error_teardown),
+        cmocka_unit_test_setup_teardown(
+            make_error_returns_null_when_first_allocation_fails,
+            make_error_setup, make_error_teardown),
+        cmocka_unit_test_setup_teardown(
+            make_error_success_when_two_allocations_succeed_and_msg_non_null,
+            make_error_setup, make_error_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_symbol_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(make_error_tests, NULL, NULL);
 
     return failed;
 }

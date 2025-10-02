@@ -168,9 +168,9 @@ ast *ast_create_symbol_name_node(const char *str);
 // Freed via symtab_cleanup_pool(), not by ast_destroy().
 ast *ast_create_symbol_node(symbol *sym);
 
-ast *ast_create_error_node(ast_error_type code, char *message); // client code is responsible for message
+ast *ast_create_error_node(ast_error_type code, const char *message); // client code is responsible for message
 void ast_destroy_error_node(ast *ast_error_node); // client code is responsible for providing either NULL or a correctly formed ast of type AST_TYPE_ERROR
-ast *ast_create_error_node_or_sentinel(ast_error_type code, char *message); // client code is responsible for message
+ast *ast_create_error_node_or_sentinel(ast_error_type code, const char *message); // client code is responsible for message
 
 // caller is responsible for children_nb correctness
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children);
