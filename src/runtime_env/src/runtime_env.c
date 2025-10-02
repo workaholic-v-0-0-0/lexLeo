@@ -45,6 +45,26 @@ runtime_env_value *runtime_env_make_symbol(const struct symbol *sym) {
     return ret;
 }
 
+runtime_env_value *runtime_env_make_error(int code, const char *msg) {
+    if (!msg)
+        return NULL;
+
+    runtime_env_value *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
+    if (!ret)
+        return NULL;
+
+    ret->as.err.msg = RUNTIME_ENV_STRING_DUPLICATE(msg);
+    if (!ret->as.err.msg) {
+        RUNTIME_ENV_FREE(ret);
+        return NULL;
+    }
+
+    ret->type = RUNTIME_VALUE_ERROR;
+    ret->as.err.code = code;
+
+    return ret;
+}
+
 /*
 runtime_env *runtime_env_make_toplevel(void) {
     runtime_env *ret = runtime_env_wind(NULL);
