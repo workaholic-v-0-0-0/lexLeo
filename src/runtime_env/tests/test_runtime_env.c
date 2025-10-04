@@ -36,9 +36,11 @@ static bool A_BOOLEAN_VALUE = true;
 
 
 // mocks
+
 void mock_hashtable_destroy(hashtable *ht) {
     check_expected(ht);
 }
+
 hashtable *mock_hashtable_create(
         size_t size,
         hashtable_key_type key_type,
@@ -49,10 +51,13 @@ hashtable *mock_hashtable_create(
     return mock_type(hashtable *);
 }
 
+
 // stubs
 
 
+
 // dummies
+
 static const max_align_t DUMMY_SYMBOL;
 static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY_SYMBOL;
 static const max_align_t DUMMY_FUNCTION_NODE;
@@ -64,6 +69,7 @@ static max_align_t DUMMY_HASHTABLE;
 static struct hashtable *DUMMY_HASHTABLE_P = (struct hashtable *)&DUMMY_HASHTABLE;
 
 // fakes
+
 #define FAKABLE_MALLOC(n) (get_current_malloc()(n))
 #define FAKABLE_FREE(p) (get_current_free()(p))
 #define FAKABLE_STRDUP(s) (get_current_string_duplicate()(s))
@@ -642,7 +648,7 @@ static int unwind_setup(void **state) {
     (void)state;
 
 	// mock
-    set_hashtable_destroy(mock_hashtable_destroy);
+    runtime_env_set_destroy_bindings(mock_hashtable_destroy);
 
     // fake
     set_allocators(fake_malloc, fake_free);
@@ -656,7 +662,7 @@ static int unwind_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
-    set_hashtable_destroy(NULL);
+    runtime_env_set_destroy_bindings(NULL);
     set_allocators(NULL, NULL);
     fake_memory_reset();
     return 0;
@@ -949,7 +955,7 @@ static int wind_setup(void **state) {
     (void)state;
 
 	// mock
-    set_hashtable_create(mock_hashtable_create);
+    runtime_env_set_create_bindings(mock_hashtable_create);
 
     // fake
     set_allocators(fake_malloc, fake_free);
@@ -963,7 +969,7 @@ static int wind_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
-    set_hashtable_create(NULL);
+    runtime_env_set_create_bindings(mock_hashtable_create);
     set_allocators(NULL, NULL);
     fake_memory_reset();
     return 0;
@@ -1110,6 +1116,40 @@ static void wind_success_when_parent_not_null_and_hashtable_create_succeeds(void
 
     fake_free(ret);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS bool runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_set_local
+
+// dummy:
+//  -
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_key_is_in_use
+//    - hashtable_get
+//    - hashtable_add
+//    - hashtable_reset_value
+//    - hashtable_remove
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
 
 
 

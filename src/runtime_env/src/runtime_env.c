@@ -12,22 +12,23 @@ void runtime_env_value_destroy_adapter(void *value) {
     runtime_env_value_destroy((runtime_env_value *)value);
 }
 
-hashtable *create_bindings_default() {
-    return
-        hashtable_create(
-            RUNTIME_ENV_SIZE,
-            RUNTIME_ENV_KEY_TYPE,
-            runtime_env_value_destroy_adapter );
-}
-
 const runtime_env_ops RUNTIME_ENV_OPS_DEFAULT = {
-    .create_bindings = create_bindings_default,
+    .create_bindings = hashtable_create,
     .destroy_bindings = hashtable_destroy,
 };
 
 static runtime_env_ctx g_runtime_env_ctx = {
     .ops = &RUNTIME_ENV_OPS_DEFAULT
 };
+
+void runtime_env_set_create_bindings(create_bindings_fn_t create_bindings) {
+    static runtime_env_ops applied;
+    applied = *g_runtime_env_ctx.ops;
+    applied.create_bindings =
+        create_bindings ?
+        create_bindings : RUNTIME_ENV_OPS_DEFAULT.create_bindings;
+    g_runtime_env_ctx.ops = &applied;
+}
 
 void runtime_env_set_destroy_bindings(destroy_bindings_fn_t destroy_bindings) {
     static runtime_env_ops applied;
@@ -36,6 +37,10 @@ void runtime_env_set_destroy_bindings(destroy_bindings_fn_t destroy_bindings) {
         destroy_bindings ?
         destroy_bindings : RUNTIME_ENV_OPS_DEFAULT.destroy_bindings;
     g_runtime_env_ctx.ops = &applied;
+}
+
+create_bindings_fn_t runtime_env_get_create_bindings(void) {
+    return g_runtime_env_ctx.ops->create_bindings;
 }
 
 destroy_bindings_fn_t runtime_env_get_destroy_bindings(void) {
@@ -49,7 +54,12 @@ runtime_env *runtime_env_make_toplevel(void) {
     if (!g_runtime_env_toplevel)
         return NULL;
 
-    g_runtime_env_toplevel->bindings = g_runtime_env_ctx.ops->create_bindings();
+    g_runtime_env_toplevel->bindings =
+        g_runtime_env_ctx.ops->create_bindings(
+            RUNTIME_ENV_SIZE,
+            RUNTIME_ENV_KEY_TYPE,
+            runtime_env_value_destroy_adapter
+        );
     if (!g_runtime_env_toplevel->bindings) {
         RUNTIME_ENV_FREE(g_runtime_env_toplevel);
         g_runtime_env_toplevel = NULL;
@@ -142,7 +152,7 @@ runtime_env *runtime_env_unwind(runtime_env *e) {
 	if (!e)
 		return NULL;
 
-	hashtable_destroy(e->bindings);
+	g_runtime_env_ctx.ops->destroy_bindings(e->bindings);
 
 	runtime_env *ret = e->parent;
 	RUNTIME_ENV_FREE(e);
@@ -195,7 +205,12 @@ runtime_env *runtime_env_wind(runtime_env *parent) {
     if (!ret)
         return NULL;
 
-    ret->bindings = g_runtime_env_ctx.ops->create_bindings();
+    ret->bindings =
+        g_runtime_env_ctx.ops->create_bindings(
+            RUNTIME_ENV_SIZE,
+            RUNTIME_ENV_KEY_TYPE,
+            runtime_env_value_destroy_adapter
+        );
     if (!ret->bindings) {
         RUNTIME_ENV_FREE(ret);
         return NULL;
