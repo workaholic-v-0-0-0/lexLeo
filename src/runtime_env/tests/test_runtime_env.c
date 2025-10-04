@@ -39,9 +39,17 @@ static bool A_BOOLEAN_VALUE = true;
 void mock_hashtable_destroy(hashtable *ht) {
     check_expected(ht);
 }
+hashtable *mock_hashtable_create(
+        size_t size,
+        hashtable_key_type key_type,
+        hashtable_destroy_value_fn_t destroy_value_fn ) {
+    check_expected(size);
+    check_expected(key_type);
+    check_expected(destroy_value_fn);
+    return mock_type(hashtable *);
+}
 
 // stubs
-
 
 
 // dummies
@@ -619,7 +627,7 @@ static void make_function_success_when_first_allocation_succeeds(void **state) {
 // mock:
 //  - functions of the hashtable module which are used:
 //    - hashtable_destroy
-// fake:hashtable_destroy
+// fake:
 //  - functions of standard libray which are used:
 //    - malloc, free
 
@@ -909,6 +917,203 @@ static void value_destroy_success_when_type_function_and_closure_refcount_1_and_
 
 
 //-----------------------------------------------------------------------------
+// TESTS runtime_env *runtime_env_wind(runtime_env *parent);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_wind
+
+// dummy:
+//  - parent
+//  - ret->bindings
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_create
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int wind_setup(void **state) {
+    (void)state;
+
+	// mock
+    set_hashtable_create(mock_hashtable_create);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int wind_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_hashtable_create(NULL);
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - parent == NULL
+//  - first allocation will fail
+// Expected:
+//  - ret == NULL
+static void wind_returns_null_when_parent_null_and_first_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(1);
+
+    assert_null(runtime_env_wind(NULL));
+}
+
+// Given:
+//  - parent == NULL
+//  - first allocation will succeed
+//  - hashtable_create will fail
+// Expected:
+//  - calls hashtable_create with:
+//    - size: RUNTIME_ENV_SIZE
+//    - key_type: RUNTIME_ENV_KEY_TYPE
+//    - destroy_value_fn: runtime_env_value_destroy_adapter
+//  - ret == NULL
+static void wind_returns_null_when_parent_null_and_hashtable_create_fails(void **state) {
+    (void)state;
+    expect_value(mock_hashtable_create, size, RUNTIME_ENV_SIZE);
+    expect_value(mock_hashtable_create, key_type, RUNTIME_ENV_KEY_TYPE);
+    expect_value(mock_hashtable_create, destroy_value_fn, runtime_env_value_destroy_adapter);
+    will_return(mock_hashtable_create, NULL);
+
+    assert_null(runtime_env_wind(NULL));
+}
+
+// Given:
+//  - parent == NULL
+//  - first allocation will succeed
+//  - hashtable_create will succeed
+// Expected:
+//  - calls hashtable_create with:
+//    - size: RUNTIME_ENV_SIZE
+//    - key_type: RUNTIME_ENV_KEY_TYPE
+//    - destroy_value_fn: runtime_env_value_destroy_adapter
+//  - ret != NULL
+//  - ret->bindings == <hashtable_create returned value>
+//  - ret->refcount == 1
+//  - ret->is_root = true
+//  - ret->parent == NULL
+static void wind_success_when_parent_null_and_hashtable_create_succeeds(void **state) {
+    (void)state;
+    expect_value(mock_hashtable_create, size, RUNTIME_ENV_SIZE);
+    expect_value(mock_hashtable_create, key_type, RUNTIME_ENV_KEY_TYPE);
+    expect_value(mock_hashtable_create, destroy_value_fn, runtime_env_value_destroy_adapter);
+    will_return(mock_hashtable_create, DUMMY_HASHTABLE_P);
+
+    runtime_env *ret = runtime_env_wind(NULL);
+
+    assert_non_null(ret);
+    assert_ptr_equal(ret->bindings, DUMMY_HASHTABLE_P);
+    assert_int_equal(ret->refcount, 1);
+    assert_true(ret->is_root);
+    assert_ptr_equal(ret->parent, NULL);
+
+    fake_free(ret);
+}
+
+// Given:
+//  - parent != NULL
+//  - first allocation will fail
+// Expected:
+//  - ret == NULL
+static void wind_returns_null_when_parent_not_null_and_first_allocation_fails(void **state) {
+    (void)state;
+    fake_memory_fail_only_on_call(1);
+
+    assert_null(runtime_env_wind(DUMMY_CLOSURE_P));
+}
+
+// Given:
+//  - parent != NULL
+//  - first allocation will succeed
+//  - hashtable_create will fail
+// Expected:
+//  - calls hashtable_create with:
+//    - size: RUNTIME_ENV_SIZE
+//    - key_type: RUNTIME_ENV_KEY_TYPE
+//    - destroy_value_fn: runtime_env_value_destroy_adapter
+//  - ret == NULL
+static void wind_returns_null_when_parent_not_null_and_hashtable_create_fails(void **state) {
+    (void)state;
+    expect_value(mock_hashtable_create, size, RUNTIME_ENV_SIZE);
+    expect_value(mock_hashtable_create, key_type, RUNTIME_ENV_KEY_TYPE);
+    expect_value(mock_hashtable_create, destroy_value_fn, runtime_env_value_destroy_adapter);
+    will_return(mock_hashtable_create, NULL);
+
+    assert_null(runtime_env_wind(DUMMY_CLOSURE_P));
+}
+
+// Given:
+//  - parent != NULL
+//  - first allocation will succeed
+//  - hashtable_create will succeed
+// Expected:
+//  - calls hashtable_create with:
+//    - size: RUNTIME_ENV_SIZE
+//    - key_type: RUNTIME_ENV_KEY_TYPE
+//    - destroy_value_fn: runtime_env_value_destroy_adapter
+//  - ret != NULL
+//  - ret->bindings == <hashtable_create returned value>
+//  - ret->refcount == 1
+//  - ret->is_root = false
+//  - ret->parent == parent
+static void wind_success_when_parent_not_null_and_hashtable_create_succeeds(void **state) {
+    (void)state;
+    expect_value(mock_hashtable_create, size, RUNTIME_ENV_SIZE);
+    expect_value(mock_hashtable_create, key_type, RUNTIME_ENV_KEY_TYPE);
+    expect_value(mock_hashtable_create, destroy_value_fn, runtime_env_value_destroy_adapter);
+    will_return(mock_hashtable_create, DUMMY_HASHTABLE_P);
+
+    runtime_env *ret = runtime_env_wind(DUMMY_CLOSURE_P);
+
+    assert_non_null(ret);
+    assert_ptr_equal(ret->bindings, DUMMY_HASHTABLE_P);
+    assert_int_equal(ret->refcount, 1);
+    assert_false(ret->is_root);
+    assert_ptr_equal(ret->parent, DUMMY_CLOSURE_P);
+
+    fake_free(ret);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -1007,6 +1212,27 @@ int main(void) {
             value_destroy_setup, value_destroy_teardown),
     };
 
+    const struct CMUnitTest wind_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            wind_returns_null_when_parent_null_and_first_allocation_fails,
+            wind_setup, wind_teardown),
+        cmocka_unit_test_setup_teardown(
+            wind_returns_null_when_parent_null_and_hashtable_create_fails,
+            wind_setup, wind_teardown),
+        cmocka_unit_test_setup_teardown(
+            wind_success_when_parent_null_and_hashtable_create_succeeds,
+            wind_setup, wind_teardown),
+        cmocka_unit_test_setup_teardown(
+            wind_returns_null_when_parent_not_null_and_first_allocation_fails,
+            wind_setup, wind_teardown),
+        cmocka_unit_test_setup_teardown(
+            wind_returns_null_when_parent_not_null_and_hashtable_create_fails,
+            wind_setup, wind_teardown),
+        cmocka_unit_test_setup_teardown(
+            wind_success_when_parent_not_null_and_hashtable_create_succeeds,
+            wind_setup, wind_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
@@ -1015,6 +1241,7 @@ int main(void) {
     failed += cmocka_run_group_tests(make_function_tests, NULL, NULL);
     failed += cmocka_run_group_tests(unwind_tests, NULL, NULL);
     failed += cmocka_run_group_tests(value_destroy_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(wind_tests, NULL, NULL);
 
     return failed;
 }

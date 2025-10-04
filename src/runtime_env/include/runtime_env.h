@@ -56,7 +56,6 @@ void runtime_env_value_destroy(runtime_env_value *value);
 
 runtime_env *runtime_env_wind(runtime_env *parent);
 runtime_env *runtime_env_unwind(runtime_env *e);
-runtime_env *runtime_env_make_toplevel(void);
 
 bool runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value);
 const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
