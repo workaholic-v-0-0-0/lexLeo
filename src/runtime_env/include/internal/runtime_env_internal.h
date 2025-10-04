@@ -21,6 +21,8 @@ struct runtime_env {
     struct runtime_env *parent;
 };
 
+runtime_env *runtime_env_make_toplevel(void);
+
 bool runtime_env_value_copy(runtime_env_value *dst, const runtime_env_value *src);
 void runtime_env_destroy(runtime_env *e);
 void runtime_env_retain(runtime_env *e);

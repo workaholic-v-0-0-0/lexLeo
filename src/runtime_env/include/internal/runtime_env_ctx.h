@@ -5,9 +5,11 @@
 
 typedef struct hashtable hashtable;
 
+typedef hashtable *(*create_bindings_fn_t)(void);
 typedef void (*destroy_bindings_fn_t)(hashtable *ht);
 
 typedef struct runtime_env_ops {
+    create_bindings_fn_t create_bindings;
     destroy_bindings_fn_t destroy_bindings;
 } runtime_env_ops;
 

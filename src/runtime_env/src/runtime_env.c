@@ -8,7 +8,20 @@
 
 #include <stdbool.h>
 
+void runtime_env_value_destroy_adapter(void *value) {
+    runtime_env_value_destroy((runtime_env_value *)value);
+}
+
+hashtable *create_bindings_default() {
+    return
+        hashtable_create(
+            RUNTIME_ENV_SIZE,
+            RUNTIME_ENV_KEY_TYPE,
+            runtime_env_value_destroy_adapter );
+}
+
 const runtime_env_ops RUNTIME_ENV_OPS_DEFAULT = {
+    .create_bindings = create_bindings_default,
     .destroy_bindings = hashtable_destroy,
 };
 
@@ -27,6 +40,27 @@ void runtime_env_set_destroy_bindings(destroy_bindings_fn_t destroy_bindings) {
 
 destroy_bindings_fn_t runtime_env_get_destroy_bindings(void) {
     return g_runtime_env_ctx.ops->destroy_bindings;
+}
+
+static runtime_env *g_runtime_env_toplevel = NULL;
+
+runtime_env *runtime_env_make_toplevel(void) {
+    g_runtime_env_toplevel = RUNTIME_ENV_MALLOC(sizeof(runtime_env));
+    if (!g_runtime_env_toplevel)
+        return NULL;
+
+    g_runtime_env_toplevel->bindings = g_runtime_env_ctx.ops->create_bindings();
+    if (!g_runtime_env_toplevel->bindings) {
+        RUNTIME_ENV_FREE(g_runtime_env_toplevel);
+        g_runtime_env_toplevel = NULL;
+        return NULL;
+    }
+
+    g_runtime_env_toplevel->refcount = 1;
+    g_runtime_env_toplevel->is_root = true;
+    g_runtime_env_toplevel->parent = NULL;
+
+    return g_runtime_env_toplevel;
 }
 
 runtime_env_value *runtime_env_make_number(int i) {
@@ -153,12 +187,23 @@ void runtime_env_value_destroy(runtime_env_value *value) {
     }
 }
 
-/*
-runtime_env *runtime_env_make_toplevel(void) {
-    runtime_env *ret = runtime_env_wind(NULL);
+runtime_env *runtime_env_wind(runtime_env *parent) {
+    if (!parent)
+        return runtime_env_make_toplevel();
+
+	runtime_env *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env));
     if (!ret)
         return NULL;
-    ret->is_root = true; // makes the toplevel immortal
-    return ret;
+
+    ret->bindings = g_runtime_env_ctx.ops->create_bindings();
+    if (!ret->bindings) {
+        RUNTIME_ENV_FREE(ret);
+        return NULL;
+    }
+
+    ret->refcount = 1;
+    ret->is_root = false;
+    ret->parent = parent;
+
+	return ret;
 }
-*/
