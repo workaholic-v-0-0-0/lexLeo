@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "internal/runtime_env_internal.h"
 #include "internal/runtime_env_ctx.h"
@@ -35,6 +36,24 @@ static bool A_BOOLEAN_VALUE = true;
 //-----------------------------------------------------------------------------
 
 
+// dummies
+
+static const max_align_t DUMMY_SYMBOL;
+static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY_SYMBOL;
+static const max_align_t DUMMY_SYMBOL_2;
+static const struct symbol *const DUMMY_SYMBOL_2_P = (const struct symbol *)&DUMMY_SYMBOL_2;
+static const max_align_t DUMMY_FUNCTION_NODE;
+static const struct ast *const DUMMY_FUNCTION_NODE_P = (const struct ast *)&DUMMY_FUNCTION_NODE;
+static runtime_env DUMMY_CLOSURE = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = NULL};
+static runtime_env *const DUMMY_CLOSURE_P = &DUMMY_CLOSURE;
+static runtime_env *const DUMMY_RUNTIME_ENV_P = &DUMMY_CLOSURE;
+static max_align_t DUMMY_HASHTABLE;
+static struct hashtable *DUMMY_HASHTABLE_P = (struct hashtable *)&DUMMY_HASHTABLE;
+static bool DUMMY_BOOL = false;
+static runtime_env_value DUMMY_RUNTIME_ENV_VALUE;
+static runtime_env_value *DUMMY_RUNTIME_ENV_VALUE_P = &DUMMY_RUNTIME_ENV_VALUE;
+
+
 // mocks
 
 void mock_hashtable_destroy(hashtable *ht) {
@@ -51,23 +70,47 @@ hashtable *mock_hashtable_create(
     return mock_type(hashtable *);
 }
 
+int mock_hashtable_key_is_in_use(hashtable *ht, const void *key) {
+    check_expected(ht);
+    check_expected(key);
+    return mock_type(int);
+}
+
+void *mock_hashtable_get(const hashtable *ht, const void *key) {
+    check_expected(ht);
+    check_expected(key);
+    return mock_type(void *);
+}
+
+int mock_hashtable_remove(hashtable *ht, const void *key) {
+    check_expected(ht);
+    check_expected(key);
+    return mock_type(int);
+}
+
+
+// spies
+
+static runtime_env_value *spy_value = NULL;
+
+int spy_hashtable_add(hashtable *ht, const void *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    spy_value = value;
+    return mock_type(int);
+}
+
+int spy_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    spy_value = value;
+    return mock_type(int);
+}
+
 
 // stubs
 
-
-
-// dummies
-
-static const max_align_t DUMMY_SYMBOL;
-static const struct symbol *const DUMMY_SYMBOL_P = (const struct symbol *)&DUMMY_SYMBOL;
-static const max_align_t DUMMY_FUNCTION_NODE;
-static const struct ast *const DUMMY_FUNCTION_NODE_P = (const struct ast *)&DUMMY_FUNCTION_NODE;
-static runtime_env DUMMY_CLOSURE = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = NULL};
-static runtime_env *const DUMMY_CLOSURE_P = &DUMMY_CLOSURE;
-static runtime_env *const DUMMY_RUNTIME_ENV_P = &DUMMY_CLOSURE;
-static max_align_t DUMMY_HASHTABLE;
-static struct hashtable *DUMMY_HASHTABLE_P = (struct hashtable *)&DUMMY_HASHTABLE;
-static bool DUMMY_BOOL = false;
+void stub_hashtable_destroy(hashtable *ht) {}
 
 
 // fakes
@@ -79,7 +122,7 @@ static bool DUMMY_BOOL = false;
 
 
 //-----------------------------------------------------------------------------
-// HELPERS
+// GENERAL HELPERS
 //-----------------------------------------------------------------------------
 
 
@@ -1155,19 +1198,152 @@ static void wind_success_when_parent_not_null_and_hashtable_create_succeeds(void
 
 
 // runtime_env_set_local
+// in cases (value->type != RUNTIME_VALUE_FUNCTION)
+//   - value
+// in case (value->type == RUNTIME_VALUE_FUNCTION)
+//   - value->type
+//   - value->as.fn.closure->refcount
+// runtime_env_make_number
+// runtime_env_make_string
+// runtime_env_make_symbol
+// runtime_env_make_error
+// runtime_env_make_function
+// runtime_env_value_destroy
 
 // dummy:
-//  -
+//  - e->bindings
+//  - e->refcount
+//  - e->is_root
+//  - e->parent
+//  - key
+//  - in case (value->type == RUNTIME_VALUE_FUNCTION)
+//    - value->as.fn.closure->bindings
+//    - value->as.fn.closure->is_root
+//    - value->as.fn.closure->parent
+//    - value->as.fn.function_node
 // mock:
 //  - functions of the hashtable module which are used:
 //    - hashtable_key_is_in_use
-//    - hashtable_get
 //    - hashtable_add
 //    - hashtable_reset_value
-//    - hashtable_remove
+// spy:
+//    - hashtable_add
+//    - hashtable_reset_value
+// stub:
+//    - hashtable_destroy
 // fake:
+//  - in case (value->type == RUNTIME_VALUE_FUNCTION)
+//    - value
 //  - functions of standard libray which are used:
-//    - malloc, free
+//    - malloc, free, strdup
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASE STRUCTURE
+//-----------------------------------------------------------------------------
+
+
+typedef struct {
+    const char *label;
+    runtime_env_value *(*original)(void);
+    void (*assert_runtime_env_value_equal)(const runtime_env_value *v1, const runtime_env_value *v2);
+} set_local_case;
+
+
+
+//-----------------------------------------------------------------------------
+// HELPERS
+//-----------------------------------------------------------------------------
+
+
+static runtime_env_value *a_runtime_env_number() { return runtime_env_make_number(A_INT); }
+static runtime_env_value *a_runtime_env_string() { return runtime_env_make_string(A_NON_NULL_STRING); }
+static runtime_env_value *a_runtime_env_symbol() { return runtime_env_make_symbol(DUMMY_SYMBOL_2_P); }
+static runtime_env_value *a_runtime_env_error() { return runtime_env_make_error(AN_ERROR_CODE, AN_ERROR_MESSAGE); }
+static runtime_env_value *a_runtime_env_function() {
+	runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
+    fake_closure->bindings = DUMMY_HASHTABLE_P;
+    fake_closure->refcount = 0;
+    fake_closure->is_root = DUMMY_BOOL;
+    fake_closure->parent = DUMMY_RUNTIME_ENV_P;
+    return runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
+}
+
+void assert_runtime_env_number_equal(const runtime_env_value *v1, const runtime_env_value *v2) {
+	assert_non_null(v1);
+	assert_non_null(v2);
+	assert_int_equal(v1->type, RUNTIME_VALUE_NUMBER);
+	assert_int_equal(v1->type, v2->type);
+	assert_int_equal(v1->as.i, v2->as.i);
+}
+void assert_runtime_env_string_equal(const runtime_env_value *v1, const runtime_env_value *v2) {
+	assert_non_null(v1);
+	assert_non_null(v2);
+	assert_int_equal(v1->type, RUNTIME_VALUE_STRING);
+	assert_int_equal(v1->type, v2->type);
+	assert_string_equal(v1->as.s, v2->as.s);
+}
+void assert_runtime_env_symbol_equal(const runtime_env_value *v1, const runtime_env_value *v2) {
+	assert_non_null(v1);
+	assert_non_null(v2);
+	assert_int_equal(v1->type, RUNTIME_VALUE_SYMBOL);
+	assert_int_equal(v1->type, v2->type);
+	assert_ptr_equal(v1->as.sym, v2->as.sym);
+}
+void assert_runtime_env_error_equal(const runtime_env_value *v1, const runtime_env_value *v2) {
+	assert_non_null(v1);
+	assert_non_null(v2);
+	assert_int_equal(v1->type, RUNTIME_VALUE_ERROR);
+	assert_int_equal(v1->type, v2->type);
+	assert_int_equal(v1->as.err.code, v2->as.err.code);
+	assert_string_equal(v1->as.err.msg, v2->as.err.msg);
+}
+void assert_runtime_env_function_equal(const runtime_env_value *v1, const runtime_env_value *v2) {
+	assert_non_null(v1);
+	assert_non_null(v2);
+	assert_int_equal(v1->type, RUNTIME_VALUE_FUNCTION);
+	assert_int_equal(v1->type, v2->type);
+	assert_ptr_equal(v1->as.fn.function_node, v2->as.fn.function_node);
+	assert_ptr_equal(v1->as.fn.closure, v2->as.fn.closure);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+static const set_local_case SET_LOCAL_NUMBER_CASE = {
+	.label = "RUNTIME_VALUE_NUMBER",
+	.original = a_runtime_env_number,
+	.assert_runtime_env_value_equal = assert_runtime_env_number_equal,
+};
+
+static const set_local_case SET_LOCAL_STRING_CASE = {
+	.label = "RUNTIME_VALUE_STRING",
+	.original = a_runtime_env_string,
+	.assert_runtime_env_value_equal = assert_runtime_env_string_equal,
+};
+
+static const set_local_case SET_LOCAL_SYMBOL_CASE = {
+	.label = "RUNTIME_VALUE_SYMBOL",
+	.original = a_runtime_env_symbol,
+	.assert_runtime_env_value_equal = assert_runtime_env_symbol_equal,
+};
+
+static const set_local_case SET_LOCAL_ERROR_CASE = {
+	.label = "RUNTIME_VALUE_ERROR",
+	.original = a_runtime_env_error,
+	.assert_runtime_env_value_equal = assert_runtime_env_error_equal,
+};
+
+static const set_local_case SET_LOCAL_FUNCTION_CASE = {
+	.label = "RUNTIME_VALUE_FUNCTION",
+	.original = a_runtime_env_function,
+	.assert_runtime_env_value_equal = assert_runtime_env_function_equal,
+};
 
 
 
@@ -1175,6 +1351,234 @@ static void wind_success_when_parent_not_null_and_hashtable_create_succeeds(void
 // FIXTURES
 //-----------------------------------------------------------------------------
 
+
+static int set_local_setup(void **state) {
+    (void)state;
+
+    runtime_env_set_ops(&(runtime_env_ops){
+
+	// mock
+        .hashtable_key_is_in_use = mock_hashtable_key_is_in_use,
+
+    // spy (they are mocks too)
+        .hashtable_add = spy_hashtable_add,
+        .hashtable_reset_value = spy_hashtable_reset_value,
+    });
+	spy_value = NULL;
+
+	// stub
+    runtime_env_set_destroy_bindings(stub_hashtable_destroy);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int set_local_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    runtime_env_reset_ops();
+    runtime_env_set_destroy_bindings(NULL);
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - (e == NULL) || (key == NULL) || (value == NULL)
+// Expected:
+//  - ret == false
+static void set_local_returns_false_when_e_or_key_or_value_null(void **state) {
+    (void)state;
+    assert_false(runtime_env_set_local(NULL, DUMMY_SYMBOL_P, DUMMY_RUNTIME_ENV_VALUE_P));
+	assert_false(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, NULL, DUMMY_RUNTIME_ENV_VALUE_P));
+    assert_false(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, NULL));
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+//  - value returned by a a_runtime_env_* helpers following the param cases
+//  - first allocation will fail (for the clone of value)
+// Expected:
+//  - ret == false
+static void set_local_returns_false_when_first_malloc_fails(void **state) {
+    const set_local_case *param = * (const set_local_case **) state;
+    printf("[PARAM CASE] %s\n", param->label);
+
+	runtime_env_value *value = param->original();
+    fake_memory_fail_only_on_call(1);
+
+    assert_false(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, value));
+
+	runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+//  - value returned by a a_runtime_env_* helpers following the param cases
+//  - first allocation will succeed (for the clone of value)
+//  - DUMMY_SYMBOL_P is not a key of the hashtable DUMMY_RUNTIME_ENV_P->bindings
+//  - hashtable_add will fail
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_add with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//    - value: clone such as
+//      - clone is a clone of param called 'value' of runtime_env_set_local
+//  - ret == false
+static void set_local_returns_false_when_key_not_in_use_and_add_fails(void **state) {
+    const set_local_case *param = * (const set_local_case **) state;
+    printf("[PARAM CASE] %s\n", param->label);
+
+	runtime_env_value *value = param->original();
+	expect_value(mock_hashtable_key_is_in_use, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, false);
+	expect_value(spy_hashtable_add, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(spy_hashtable_add, key, DUMMY_SYMBOL_P);
+	will_return(spy_hashtable_add, 1); // hashtable_add fails
+
+    assert_false(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, value));
+
+	param->assert_runtime_env_value_equal(value, spy_value);
+
+	runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+//  - value returned by a a_runtime_env_* helpers following the param cases
+//  - first allocation will succeed (for the clone of value)
+//  - DUMMY_SYMBOL_P is not a key of the hashtable DUMMY_RUNTIME_ENV_P->bindings
+//  - hashtable_add will succeed
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_add with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//    - value: clone such as
+//      - clone is a clone of param called 'value' of runtime_env_set_local
+//  - ret == true
+static void set_local_returns_true_when_key_not_in_use_and_add_succeeds(void **state) {
+    const set_local_case *param = * (const set_local_case **) state;
+    printf("[PARAM CASE] %s\n", param->label);
+
+	runtime_env_value *value = param->original();
+	expect_value(mock_hashtable_key_is_in_use, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, false);
+	expect_value(spy_hashtable_add, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(spy_hashtable_add, key, DUMMY_SYMBOL_P);
+	will_return(spy_hashtable_add, 0); // hashtable_add succeeds
+
+    assert_true(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, value));
+
+	param->assert_runtime_env_value_equal(value, spy_value);
+
+	runtime_env_value_destroy(spy_value);
+	runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+//  - value returned by a a_runtime_env_* helpers following the param cases
+//  - first allocation will succeed (for the clone of value)
+//  - DUMMY_SYMBOL_P is a key of the hashtable DUMMY_RUNTIME_ENV_P->bindings
+//  - hashtable_reset_value will fail
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_reset_value with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//    - value: clone such as
+//      - clone is a clone of param called 'value' of runtime_env_set_local
+//  - ret == false
+static void set_local_returns_false_when_key_in_use_and_reset_fails(void **state) {
+    const set_local_case *param = * (const set_local_case **) state;
+    printf("[PARAM CASE] %s\n", param->label);
+
+	runtime_env_value *value = param->original();
+	expect_value(mock_hashtable_key_is_in_use, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, true);
+	expect_value(spy_hashtable_reset_value, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(spy_hashtable_reset_value, key, DUMMY_SYMBOL_P);
+	will_return(spy_hashtable_reset_value, 1); // hashtable_reset_value fails
+
+    assert_false(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, value));
+
+	param->assert_runtime_env_value_equal(value, spy_value);
+
+	runtime_env_value_destroy(value);
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+//  - value returned by a a_runtime_env_* helpers following the param cases
+//  - first allocation will succeed (for the clone of value)
+//  - DUMMY_SYMBOL_P is a key of the hashtable DUMMY_RUNTIME_ENV_P->bindings
+//  - hashtable_reset_value will succeed
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_reset_value with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//    - value: clone such as
+//      - clone is a clone of param called 'value' of runtime_env_set_local
+//  - ret == true
+static void set_local_returns_true_when_key_in_use_and_reset_succeeds(void **state) {
+    const set_local_case *param = * (const set_local_case **) state;
+    printf("[PARAM CASE] %s\n", param->label);
+
+	runtime_env_value *value = param->original();
+	expect_value(mock_hashtable_key_is_in_use, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, true);
+	expect_value(spy_hashtable_reset_value, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(spy_hashtable_reset_value, key, DUMMY_SYMBOL_P);
+	will_return(spy_hashtable_reset_value, 0); // hashtable_reset_value succeeds
+
+    assert_true(runtime_env_set_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P, value));
+
+	param->assert_runtime_env_value_equal(value, spy_value);
+
+	runtime_env_value_destroy(spy_value);
+	runtime_env_value_destroy(value);
+}
 
 
 
@@ -1298,6 +1702,119 @@ int main(void) {
             wind_setup, wind_teardown),
     };
 
+    const struct CMUnitTest set_local_no_parametric_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            set_local_returns_false_when_e_or_key_or_value_null,
+            set_local_setup, set_local_teardown),
+    };
+
+    const struct CMUnitTest set_local_parametric_tests[] = {
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_first_malloc_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_NUMBER_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_first_malloc_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_STRING_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_first_malloc_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_SYMBOL_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_first_malloc_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_ERROR_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_first_malloc_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_FUNCTION_CASE),
+
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_not_in_use_and_add_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_NUMBER_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_not_in_use_and_add_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_STRING_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_not_in_use_and_add_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_SYMBOL_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_not_in_use_and_add_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_ERROR_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_not_in_use_and_add_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_FUNCTION_CASE),
+
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_not_in_use_and_add_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_NUMBER_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_not_in_use_and_add_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_STRING_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_not_in_use_and_add_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_SYMBOL_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_not_in_use_and_add_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_ERROR_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_not_in_use_and_add_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_FUNCTION_CASE),
+
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_in_use_and_reset_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_NUMBER_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_in_use_and_reset_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_STRING_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_in_use_and_reset_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_SYMBOL_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_in_use_and_reset_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_ERROR_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_false_when_key_in_use_and_reset_fails,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_FUNCTION_CASE),
+
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_in_use_and_reset_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_NUMBER_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_in_use_and_reset_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_STRING_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_in_use_and_reset_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_SYMBOL_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_in_use_and_reset_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_ERROR_CASE),
+        cmocka_unit_test_prestate_setup_teardown(
+            set_local_returns_true_when_key_in_use_and_reset_succeeds,
+            set_local_setup, set_local_teardown,
+			(void *) &SET_LOCAL_FUNCTION_CASE),
+	    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
@@ -1307,6 +1824,8 @@ int main(void) {
     failed += cmocka_run_group_tests(unwind_tests, NULL, NULL);
     failed += cmocka_run_group_tests(value_destroy_tests, NULL, NULL);
     failed += cmocka_run_group_tests(wind_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(set_local_no_parametric_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(set_local_parametric_tests, NULL, NULL);
 
     return failed;
 }

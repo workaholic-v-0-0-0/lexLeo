@@ -12,40 +12,19 @@ void runtime_env_value_destroy_adapter(void *value) {
     runtime_env_value_destroy((runtime_env_value *)value);
 }
 
-const runtime_env_ops RUNTIME_ENV_OPS_DEFAULT = {
+static const runtime_env_ops RUNTIME_ENV_OPS_DEFAULT = {
     .create_bindings = hashtable_create,
     .destroy_bindings = hashtable_destroy,
+    .hashtable_key_is_in_use = hashtable_key_is_in_use,
+    .hashtable_get = hashtable_get,
+    .hashtable_add = hashtable_add,
+    .hashtable_reset_value = hashtable_reset_value,
+    .hashtable_remove = hashtable_remove,
 };
 
 static runtime_env_ctx g_runtime_env_ctx = {
     .ops = &RUNTIME_ENV_OPS_DEFAULT
 };
-
-void runtime_env_set_create_bindings(create_bindings_fn_t create_bindings) {
-    static runtime_env_ops applied;
-    applied = *g_runtime_env_ctx.ops;
-    applied.create_bindings =
-        create_bindings ?
-        create_bindings : RUNTIME_ENV_OPS_DEFAULT.create_bindings;
-    g_runtime_env_ctx.ops = &applied;
-}
-
-void runtime_env_set_destroy_bindings(destroy_bindings_fn_t destroy_bindings) {
-    static runtime_env_ops applied;
-    applied = *g_runtime_env_ctx.ops;
-    applied.destroy_bindings =
-        destroy_bindings ?
-        destroy_bindings : RUNTIME_ENV_OPS_DEFAULT.destroy_bindings;
-    g_runtime_env_ctx.ops = &applied;
-}
-
-create_bindings_fn_t runtime_env_get_create_bindings(void) {
-    return g_runtime_env_ctx.ops->create_bindings;
-}
-
-destroy_bindings_fn_t runtime_env_get_destroy_bindings(void) {
-    return g_runtime_env_ctx.ops->destroy_bindings;
-}
 
 static runtime_env *g_runtime_env_toplevel = NULL;
 
@@ -227,4 +206,166 @@ runtime_env *runtime_env_wind(runtime_env *parent) {
     ret->parent = parent;
 
 	return ret;
+}
+
+runtime_env_value *runtime_env_value_clone(const runtime_env_value *value) {
+    if (!value)
+        return NULL;
+
+	switch (value->type) {
+	case RUNTIME_VALUE_NUMBER:
+		return runtime_env_make_number(value->as.i);
+	case RUNTIME_VALUE_STRING:
+		return runtime_env_make_string(value->as.s);
+	case RUNTIME_VALUE_SYMBOL:
+		return runtime_env_make_symbol(value->as.sym);
+	case RUNTIME_VALUE_ERROR:
+		return runtime_env_make_error(value->as.err.code, value->as.err.msg);
+	case RUNTIME_VALUE_FUNCTION:
+		return runtime_env_make_function(value->as.fn.function_node, value->as.fn.closure);
+	default:
+		return NULL;
+	}
+}
+
+bool runtime_env_set_local(
+        runtime_env *e,
+        const struct symbol *key,
+        const runtime_env_value *value ) {
+    if (!e || !key || !value)
+        return false;
+
+	runtime_env_value *clone = runtime_env_value_clone(value);
+	if (!clone)
+		return false;
+
+    const bool in_use =
+		g_runtime_env_ctx.ops->hashtable_key_is_in_use(e->bindings, key);
+
+	bool ok =
+		in_use ?
+			(
+				g_runtime_env_ctx.ops->hashtable_reset_value(
+					e->bindings,
+					key,
+					clone )
+				==
+				0 )
+			:
+			(
+				g_runtime_env_ctx.ops->hashtable_add(
+					e->bindings,
+					key,
+					clone )
+				==
+				0 )
+			;
+
+	if (!ok) {
+		runtime_env_value_destroy(clone);
+		return false;
+	}
+
+    return true;
+}
+
+
+
+// setters and getters
+
+void runtime_env_set_ops(const runtime_env_ops *overrides) {
+    static runtime_env_ops applied;
+    applied = *g_runtime_env_ctx.ops;
+
+    if (overrides) {
+        if (overrides->create_bindings)
+            applied.create_bindings = overrides->create_bindings;
+        if (overrides->destroy_bindings)
+            applied.destroy_bindings = overrides->destroy_bindings;
+        if (overrides->hashtable_key_is_in_use)
+            applied.hashtable_key_is_in_use = overrides->hashtable_key_is_in_use;
+        if (overrides->hashtable_get)
+            applied.hashtable_get = overrides->hashtable_get;
+        if (overrides->hashtable_add)
+            applied.hashtable_add = overrides->hashtable_add;
+        if (overrides->hashtable_reset_value)
+            applied.hashtable_reset_value = overrides->hashtable_reset_value;
+        if (overrides->hashtable_remove)
+            applied.hashtable_remove = overrides->hashtable_remove;
+    }
+    g_runtime_env_ctx.ops = &applied;
+}
+
+void runtime_env_reset_ops(void) {
+    g_runtime_env_ctx.ops = &RUNTIME_ENV_OPS_DEFAULT;
+}
+
+void runtime_env_set_create_bindings(create_bindings_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .create_bindings = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.create_bindings
+    });
+}
+
+void runtime_env_set_destroy_bindings(destroy_bindings_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .destroy_bindings = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.destroy_bindings
+    });
+}
+
+void runtime_env_set_hashtable_key_is_in_use(hashtable_key_is_in_use_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .hashtable_key_is_in_use = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.hashtable_key_is_in_use
+    });
+}
+
+void runtime_env_set_hashtable_get(hashtable_get_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .hashtable_get = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.hashtable_get
+    });
+}
+
+void runtime_env_set_hashtable_add(hashtable_add_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .hashtable_add = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.hashtable_add
+    });
+}
+
+void runtime_env_set_hashtable_reset_value(hashtable_reset_value_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .hashtable_reset_value = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.hashtable_reset_value
+    });
+}
+
+void runtime_env_set_hashtable_remove(hashtable_remove_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops){
+        .hashtable_remove = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.hashtable_remove
+    });
+}
+
+create_bindings_fn_t runtime_env_get_create_bindings(void) {
+    return g_runtime_env_ctx.ops->create_bindings;
+}
+
+destroy_bindings_fn_t runtime_env_get_destroy_bindings(void) {
+    return g_runtime_env_ctx.ops->destroy_bindings;
+}
+
+hashtable_key_is_in_use_fn_t runtime_env_get_hashtable_key_is_in_use(void) {
+    return g_runtime_env_ctx.ops->hashtable_key_is_in_use;
+}
+
+hashtable_get_fn_t runtime_env_get_hashtable_get(void) {
+    return g_runtime_env_ctx.ops->hashtable_get;
+}
+
+hashtable_add_fn_t runtime_env_get_hashtable_add(void) {
+    return g_runtime_env_ctx.ops->hashtable_add;
+}
+
+hashtable_reset_value_fn_t runtime_env_get_hashtable_reset_value(void) {
+    return g_runtime_env_ctx.ops->hashtable_reset_value;
+}
+
+hashtable_remove_fn_t runtime_env_get_hashtable_remove(void) {
+    return g_runtime_env_ctx.ops->hashtable_remove;
 }
