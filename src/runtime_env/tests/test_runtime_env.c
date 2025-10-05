@@ -67,6 +67,8 @@ static runtime_env *const DUMMY_CLOSURE_P = &DUMMY_CLOSURE;
 static runtime_env *const DUMMY_RUNTIME_ENV_P = &DUMMY_CLOSURE;
 static max_align_t DUMMY_HASHTABLE;
 static struct hashtable *DUMMY_HASHTABLE_P = (struct hashtable *)&DUMMY_HASHTABLE;
+static bool DUMMY_BOOL = false;
+
 
 // fakes
 
@@ -531,10 +533,13 @@ static void make_error_success_when_two_allocations_succeed_and_msg_non_null(voi
 
 
 // runtime_env_make_function
+// closure->refcount
 
 // dummy:
 //  - function_node
-//  - closure
+//  - closure->bindings
+//  - closure->is_root
+//  - closure->parent
 // fake:
 //  - functions of standard libray which are used:
 //    - malloc, free
@@ -575,7 +580,7 @@ static int make_function_teardown(void **state) {
 // At every test:
 // Given:
 //  - function_node == DUMMY_FUNCTION_NODE_P
-//  - closure == DUMMY_CLOSURE_P
+//  - closure->refcount == A_INT
 // Expected:
 //  - no invalid free
 //  - no double free
@@ -588,9 +593,20 @@ static int make_function_teardown(void **state) {
 //  - ret == NULL
 static void make_function_returns_null_when_first_allocation_fails(void **state) {
     (void)state;
+    runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
+    fake_closure->bindings = DUMMY_HASHTABLE_P;
+    fake_closure->refcount = A_INT;
+    fake_closure->is_root = DUMMY_BOOL;
+    fake_closure->parent = DUMMY_RUNTIME_ENV_P;
     fake_memory_fail_only_on_call(1);
 
-    assert_null(runtime_env_make_function(DUMMY_FUNCTION_NODE_P, DUMMY_CLOSURE_P));
+    runtime_env_value *ret = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
+
+    assert_null(ret);
+    assert_non_null(fake_closure);
+    assert_int_equal(fake_closure->refcount, A_INT);
+
+    fake_free(fake_closure);
 }
 
 // Given:
@@ -600,16 +616,25 @@ static void make_function_returns_null_when_first_allocation_fails(void **state)
 //  - ret->type == RUNTIME_VALUE_FUNCTION
 //  - ret->as.fn.function_node == function_node
 //  - ret->as.fn.closure == closure
+//  - closure->refcount == A_INT + 1
 static void make_function_success_when_first_allocation_succeeds(void **state) {
     (void)state;
+    runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
+    fake_closure->bindings = DUMMY_HASHTABLE_P;
+    fake_closure->refcount = A_INT;
+    fake_closure->is_root = DUMMY_BOOL;
+    fake_closure->parent = DUMMY_RUNTIME_ENV_P;
 
-    runtime_env_value *ret = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, DUMMY_CLOSURE_P);
+    runtime_env_value *ret = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
 
     assert_non_null(ret);
     assert_int_equal(ret->type, RUNTIME_VALUE_FUNCTION);
     assert_ptr_equal(ret->as.fn.function_node, DUMMY_FUNCTION_NODE_P);
-    assert_ptr_equal(ret->as.fn.closure, DUMMY_CLOSURE_P);
+    assert_ptr_equal(ret->as.fn.closure, fake_closure);
+    assert_non_null(fake_closure);
+    assert_int_equal(fake_closure->refcount, A_INT + 1);
 
+    fake_free(fake_closure);
     fake_free(ret);
 }
 
@@ -856,7 +881,7 @@ static void value_destroy_success_when_type_function_and_closure_refcount_2_and_
     (void)state;
 	runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
 	fake_closure->bindings = DUMMY_HASHTABLE_P;
-	fake_closure->refcount = 2;
+	fake_closure->refcount = 1; // will be 2 after runtime_env_make_function call
 	fake_closure->is_root = false;
 	fake_closure->parent = DUMMY_RUNTIME_ENV_P;
 	runtime_env_value *fake_runtime_value_function = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
@@ -883,7 +908,7 @@ static void value_destroy_success_when_type_function_and_closure_refcount_1_and_
     (void)state;
 	runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
 	fake_closure->bindings = DUMMY_HASHTABLE_P;
-	fake_closure->refcount = 1;
+	fake_closure->refcount = 0; // will be 1 after runtime_env_make_function call
 	fake_closure->is_root = false;
 	fake_closure->parent = DUMMY_RUNTIME_ENV_P;
 	runtime_env_value *fake_runtime_value_function = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);
@@ -908,7 +933,7 @@ static void value_destroy_success_when_type_function_and_closure_refcount_1_and_
     (void)state;
 	runtime_env *fake_closure = fake_malloc(sizeof(runtime_env));
 	fake_closure->bindings = DUMMY_HASHTABLE_P;
-	fake_closure->refcount = 1;
+	fake_closure->refcount = 0; // will be 1 after runtime_env_make_function call
 	fake_closure->is_root = true;
 	fake_closure->parent = DUMMY_RUNTIME_ENV_P;
 	runtime_env_value *fake_runtime_value_function = runtime_env_make_function(DUMMY_FUNCTION_NODE_P, fake_closure);

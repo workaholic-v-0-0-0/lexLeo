@@ -145,6 +145,8 @@ runtime_env_value *runtime_env_make_function(
     ret->as.fn.function_node = function_node;
     ret->as.fn.closure = closure;
 
+    runtime_env_retain(closure);
+
     return ret;
 }
 
@@ -158,6 +160,10 @@ runtime_env *runtime_env_unwind(runtime_env *e) {
 	RUNTIME_ENV_FREE(e);
 
 	return ret;
+}
+
+void runtime_env_retain(runtime_env *e) {
+    if (e) e->refcount++;
 }
 
 void runtime_env_release(runtime_env *e) {
