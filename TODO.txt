@@ -79,3 +79,5 @@
   - at runtime, a symbol lexically unique can have several instances
   - entries of hashtables of resolver stack are symbol_name->symbol*
     and those of interpreter stack are symbol*->interpreter_value
+
+- remove runtime_env_destroy from runtime_env internal interface
