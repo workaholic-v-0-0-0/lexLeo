@@ -1583,6 +1583,107 @@ static void set_local_returns_true_when_key_in_use_and_reset_succeeds(void **sta
 
 
 //-----------------------------------------------------------------------------
+// TESTS const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_value
+
+// dummy:
+//  - e->bindings
+//  - e->refcount
+//  - e->is_root
+//  - e->parent
+//  - key
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_get
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int get_local_setup(void **state) {
+    (void)state;
+
+	// mock
+	runtime_env_set_hashtable_get(mock_hashtable_get);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int get_local_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    runtime_env_reset_ops();
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - (e == NULL) || (key == NULL)
+// Expected:
+//  - ret == NULL
+static void get_local_returns_null_when_e_or_key_null(void **state) {
+    (void)state;
+    assert_null(runtime_env_get_local(NULL, DUMMY_SYMBOL_P));
+	assert_null(runtime_env_get_local(DUMMY_RUNTIME_ENV_P, NULL));
+}
+
+// Given:
+//  - e == DUMMY_RUNTIME_ENV_P
+//  - key == DUMMY_SYMBOL_P
+// Expected:
+//  - calls hashtable_get with:
+//    - ht: DUMMY_RUNTIME_ENV_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - ret == <returned value of hashtable_get>
+static void get_local_success_when_e_and_key_not_null(void **state) {
+    (void)state;
+	expect_value(mock_hashtable_get, ht, DUMMY_RUNTIME_ENV_P->bindings);
+	expect_value(mock_hashtable_get, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
+
+    const runtime_env_value *ret = runtime_env_get_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P);
+
+	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
+}
+
+
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
@@ -1815,6 +1916,15 @@ int main(void) {
 			(void *) &SET_LOCAL_FUNCTION_CASE),
 	    };
 
+    const struct CMUnitTest get_local_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            get_local_returns_null_when_e_or_key_null,
+            get_local_setup, get_local_teardown),
+        cmocka_unit_test_setup_teardown(
+            get_local_success_when_e_and_key_not_null,
+            get_local_setup, get_local_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
@@ -1826,6 +1936,7 @@ int main(void) {
     failed += cmocka_run_group_tests(wind_tests, NULL, NULL);
     failed += cmocka_run_group_tests(set_local_no_parametric_tests, NULL, NULL);
     failed += cmocka_run_group_tests(set_local_parametric_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(get_local_tests, NULL, NULL);
 
     return failed;
 }

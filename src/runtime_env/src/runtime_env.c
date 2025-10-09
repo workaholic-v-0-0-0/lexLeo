@@ -269,6 +269,15 @@ bool runtime_env_set_local(
     return true;
 }
 
+const runtime_env_value *runtime_env_get_local(
+		const runtime_env *e,
+		const struct symbol *key) {
+	if (!e || !key)
+		return NULL;
+
+	return g_runtime_env_ctx.ops->hashtable_get(e->bindings, key);
+}
+
 
 
 // setters and getters
