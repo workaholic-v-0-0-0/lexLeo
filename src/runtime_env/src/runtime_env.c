@@ -278,6 +278,20 @@ const runtime_env_value *runtime_env_get_local(
 	return g_runtime_env_ctx.ops->hashtable_get(e->bindings, key);
 }
 
+const runtime_env_value *runtime_env_get(
+		const runtime_env *e,
+		const struct symbol *key) {
+	if (!e || !key)
+		return NULL;
+
+	return
+		g_runtime_env_ctx.ops->hashtable_key_is_in_use(e->bindings, key) ?
+		g_runtime_env_ctx.ops->hashtable_get(e->bindings, key)
+		:
+		runtime_env_get(e->parent, key)
+		;
+}
+
 
 
 // setters and getters

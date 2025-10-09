@@ -112,19 +112,17 @@ int spy_hashtable_reset_value(hashtable *ht, const void *key, void *value) {
 
 void stub_hashtable_destroy(hashtable *ht) {}
 
+static runtime_env STUB_RUNTIME_ENV_ROOT = {.bindings = NULL, .refcount = 1, .is_root = true, .parent = NULL};
+static runtime_env *const STUB_RUNTIME_ENV_ROOT_P = &STUB_RUNTIME_ENV_ROOT;
+static runtime_env STUB_RUNTIME_ENV_CHILD_OF_ROOT = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = STUB_RUNTIME_ENV_ROOT_P};
+static runtime_env *const STUB_RUNTIME_ENV_CHILD_OF_ROOT_P = &STUB_RUNTIME_ENV_CHILD_OF_ROOT;
+
 
 // fakes
 
 #define FAKABLE_MALLOC(n) (get_current_malloc()(n))
 #define FAKABLE_FREE(p) (get_current_free()(p))
 #define FAKABLE_STRDUP(s) (get_current_string_duplicate()(s))
-
-
-
-//-----------------------------------------------------------------------------
-// GENERAL HELPERS
-//-----------------------------------------------------------------------------
-
 
 
 
@@ -1592,7 +1590,7 @@ static void set_local_returns_true_when_key_in_use_and_reset_succeeds(void **sta
 //-----------------------------------------------------------------------------
 
 
-// runtime_env_value
+// runtime_env_get_local
 
 // dummy:
 //  - e->bindings
@@ -1679,6 +1677,175 @@ static void get_local_success_when_e_and_key_not_null(void **state) {
     const runtime_env_value *ret = runtime_env_get_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P);
 
 	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS const runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+// runtime_env_get
+
+// - for arguments validity test:
+//   - dummy:
+//     - e
+// - for not arguments validity tests:
+//   - stub:
+//     - e
+// mock:
+//  - functions of the hashtable module which are used:
+//    - hashtable_key_is_in_use
+//    - hashtable_get
+// fake:
+//  - functions of standard libray which are used:
+//    - malloc, free
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int get_setup(void **state) {
+    (void)state;
+
+	// mock
+	runtime_env_set_hashtable_key_is_in_use(mock_hashtable_key_is_in_use);
+	runtime_env_set_hashtable_get(mock_hashtable_get);
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    fake_memory_reset();
+
+    return 0;
+}
+
+static int get_teardown(void **state) {
+    (void)state;
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    runtime_env_reset_ops();
+    set_allocators(NULL, NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+// Given:
+//  - (e == NULL) || (key == NULL)
+// Expected:
+//  - ret == NULL
+static void get_returns_null_when_e_or_key_null(void **state) {
+    (void)state;
+    assert_null(runtime_env_get(NULL, DUMMY_SYMBOL_P));
+	assert_null(runtime_env_get(DUMMY_RUNTIME_ENV_P, NULL));
+}
+
+// Given:
+//  - e == STUB_RUNTIME_ENV_CHILD_OF_ROOT_P
+//  - key == DUMMY_SYMBOL_P
+//  - DUMMY_SYMBOL_P is a key of the hashtable STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_get with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - ret == <returned value of hashtable_get>
+static void get_success_when_key_in_use_in_current_scope(void **state) {
+    (void)state;
+	expect_value(mock_hashtable_key_is_in_use, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, true);
+	expect_value(mock_hashtable_get, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings);
+	expect_value(mock_hashtable_get, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
+
+	const runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
+
+	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
+}
+
+// Given:
+//  - e == STUB_RUNTIME_ENV_CHILD_OF_ROOT_P
+//  - key == DUMMY_SYMBOL_P
+//  - DUMMY_SYMBOL_P is a key of the parent's scope
+//    - ie it's a key of the hashtable STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_key_is_in_use with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_get with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - ret == <returned value of hashtable_get>
+static void get_success_when_key_in_use_in_parent_scope(void **state) {
+    (void)state;
+	expect_value(mock_hashtable_key_is_in_use, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, false);
+	expect_value(mock_hashtable_key_is_in_use, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, true);
+	expect_value(mock_hashtable_get, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings);
+	expect_value(mock_hashtable_get, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
+
+	const runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
+
+	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
+}
+
+// Given:
+//  - e == STUB_RUNTIME_ENV_CHILD_OF_ROOT_P
+//  - key == DUMMY_SYMBOL_P
+//  - DUMMY_SYMBOL_P is not a resolved symbol
+//    - ie, it's not a key of the hashtable STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings,
+//      nor of the hashtable STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings
+// Expected:
+//  - calls hashtable_key_is_in_use with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - calls hashtable_key_is_in_use with:
+//    - ht: STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings
+//    - key: DUMMY_SYMBOL_P
+//  - ret == NULL
+static void get_returns_null_when_key_not_a_resolved_symbol(void **state) {
+    (void)state;
+	expect_value(mock_hashtable_key_is_in_use, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, false);
+	expect_value(mock_hashtable_key_is_in_use, ht, STUB_RUNTIME_ENV_CHILD_OF_ROOT_P->parent->bindings);
+	expect_value(mock_hashtable_key_is_in_use, key, DUMMY_SYMBOL_P);
+	will_return(mock_hashtable_key_is_in_use, false);
+
+	assert_null(runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P));
 }
 
 
@@ -1925,6 +2092,21 @@ int main(void) {
             get_local_setup, get_local_teardown),
     };
 
+    const struct CMUnitTest get_tests[] = {
+        cmocka_unit_test_setup_teardown(
+            get_returns_null_when_e_or_key_null,
+            get_setup, get_teardown),
+        cmocka_unit_test_setup_teardown(
+            get_success_when_key_in_use_in_current_scope,
+            get_setup, get_teardown),
+        cmocka_unit_test_setup_teardown(
+            get_success_when_key_in_use_in_parent_scope,
+            get_setup, get_teardown),
+        cmocka_unit_test_setup_teardown(
+            get_returns_null_when_key_not_a_resolved_symbol,
+            get_setup, get_teardown),
+    };
+
     int failed = 0;
     failed += cmocka_run_group_tests(make_number_tests, NULL, NULL);
     failed += cmocka_run_group_tests(make_string_tests, NULL, NULL);
@@ -1937,6 +2119,7 @@ int main(void) {
     failed += cmocka_run_group_tests(set_local_no_parametric_tests, NULL, NULL);
     failed += cmocka_run_group_tests(set_local_parametric_tests, NULL, NULL);
     failed += cmocka_run_group_tests(get_local_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(get_tests, NULL, NULL);
 
     return failed;
 }
