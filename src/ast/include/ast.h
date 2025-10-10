@@ -40,7 +40,6 @@ typedef enum {
     TYPE_STRING, // can be code snippet
     TYPE_SYMBOL_NAME,
     TYPE_SYMBOL, // can be unbound or bound to another symbol
-    //TYPE_FUNCTION,
 } data_type;
 
 typedef enum {

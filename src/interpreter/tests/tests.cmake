@@ -8,13 +8,13 @@ add_executable(
 target_include_directories(
     unit_test_interpreter
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
-    #PRIVATE "${CMAKE_SOURCE_DIR}/src/ast/include"
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/runtime_env/include
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
 
 target_link_libraries(
     unit_test_interpreter
-    PRIVATE interpreter ${CMOCKA_LIBRARY} fake_memory #ast
+    PRIVATE interpreter ${CMOCKA_LIBRARY} fake_memory runtime_env #ast
 )
 target_compile_definitions(unit_test_interpreter PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 add_test(NAME unit_test_interpreter COMMAND unit_test_interpreter)

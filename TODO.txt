@@ -38,3 +38,5 @@
 
 - refact grammar with:
   - rename binding with assignment
+
+- fix memory leaks caused by the list module
