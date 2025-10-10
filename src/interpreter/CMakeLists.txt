@@ -22,10 +22,10 @@ endif ()
 target_include_directories(
     interpreter
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/ast/include
-    #PRIVATE ${CMAKE_SOURCE_DIR}/src/data_structures/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/runtime_env/include
+    #PRIVATE ${CMAKE_SOURCE_DIR}/src/ast/include
 )
-target_link_libraries(interpreter PUBLIC ast)
+target_link_libraries(interpreter PUBLIC ast runtime_env)
 target_compile_definitions(interpreter PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 # optional logger injection "at cmake scope"

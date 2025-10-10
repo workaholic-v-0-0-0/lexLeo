@@ -16,9 +16,6 @@ typedef enum {
     INTERPRETER_STATUS_OOM
 } interpreter_status;
 
-struct runtime_env *interpreter_create_runtime_env(void);
-bool interpreter_destroy_runtime_env(struct runtime_env * env);
-
 interpreter_status interpreter_eval(
     struct runtime_env *env,
     const struct ast *root,
