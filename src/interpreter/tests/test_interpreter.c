@@ -26,7 +26,9 @@
 static const int A_INT = 7;
 static runtime_env_value **out = NULL;
 static runtime_env *env = NULL;
-static const char *A_CONSTANT_STRING = "a_string";
+static const char *A_CONSTANT_STRING = "a string";
+static ast_error_type AN_AST_ERROR_TYPE = AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED;
+static const char *A_CONSTANT_ERROR_MESSAGE = "an error message";
 
 
 
@@ -258,7 +260,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
 }
 
 // Given:
-//  - args are not NULL
+//  - args are valid
 //  - root is a number node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
@@ -309,7 +311,7 @@ static void eval_success_when_int_node_and_malloc_succeeds(void **state) {
 }
 
 // Given:
-//  - args are not NULL
+//  - args are valid
 //  - root is a string node registering the value of the constant string A_CONSTANT_STRING
 //  - all allocations will fail during interpreter_eval call
 // Expected:
@@ -345,7 +347,7 @@ static void eval_error_oom_when_string_node_and_malloc_fails(void **state) {
 // Expected:
 //  - *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_STRING
-//    && (assert_string_equal((*out)->as.s, A_CONSTANT_STRING)
+//    && string_equal((*out)->as.s, A_CONSTANT_STRING)
 //  - returns INTERPRETER_STATUS_OK
 static void eval_success_when_string_node_and_malloc_succeeds(void **state) {
     (void)state;
@@ -362,7 +364,7 @@ static void eval_success_when_string_node_and_malloc_succeeds(void **state) {
 }
 
 // Given:
-//  - args are not NULL
+//  - args are valid
 //  - root is a symbol node registering DUMMY_SYMBOL_P
 //  - all allocations will fail during interpreter_eval call
 // Expected:
@@ -413,6 +415,114 @@ static void eval_success_when_symbol_node_and_malloc_succeeds(void **state) {
 
     ast_destroy(symbol_node);
 }
+
+// Given:
+//  - args are valid
+//  - root is an error node distinct from the sentinel
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_error_node_not_sentinel_and_malloc_fails(void **state) {
+    (void)state;
+    ast *error_node_not_sentinel = ast_create_error_node(AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED, A_CONSTANT_ERROR_MESSAGE);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, error_node_not_sentinel, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(error_node_not_sentinel);
+}
+
+// Given:
+//  - args are valid
+//  - root is an error node distinct from the sentinel
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  -     *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_ERROR
+//    && (*out)->as.err.code == root->error->code
+//    && string_equal((*out)->as.err.msg, root->error->message)
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_error_node_not_sentinel_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *error_node_not_sentinel = ast_create_error_node(AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED, A_CONSTANT_ERROR_MESSAGE);
+
+    interpreter_status status = interpreter_eval(env, error_node_not_sentinel, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*out)->as.err.code, error_node_not_sentinel->error->code);
+    assert_string_equal((*out)->as.err.msg, error_node_not_sentinel->error->message);
+
+    ast_destroy(error_node_not_sentinel);
+}
+
+// Given:
+//  - args are valid
+//  - root is the error node sentinel
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_error_node_sentinel_and_malloc_fails(void **state) {
+    (void)state;
+    ast *error_node_sentinel = ast_error_sentinel();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, error_node_sentinel, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+}
+
+// Given:
+//  - args are valid
+//  - root is the error node sentinel
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_ERROR
+//    && (*out)->as.err.code == root->error->code
+//    && string_equal((*out)->as.err.msg, root->error->message)
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_error_node_sentinel_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *error_node_sentinel = ast_error_sentinel();
+
+    interpreter_status status = interpreter_eval(env, error_node_sentinel, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*out)->as.err.code, error_node_sentinel->error->code);
+    assert_string_equal((*out)->as.err.msg, error_node_sentinel->error->message);
+}
+
 
 
 
@@ -470,6 +580,20 @@ int main(void) {
             eval_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_symbol_node_and_malloc_succeeds,
+            eval_setup, eval_teardown),
+
+        // AST_TYPE_ERROR
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_error_node_not_sentinel_and_malloc_fails,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_error_node_not_sentinel_and_malloc_succeeds,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_error_node_sentinel_and_malloc_fails,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_error_node_sentinel_and_malloc_succeeds,
             eval_setup, eval_teardown),
     };
 

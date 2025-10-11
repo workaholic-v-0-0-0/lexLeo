@@ -48,10 +48,18 @@ interpreter_status interpreter_eval(
             break;
 
         default:
-            //
+            // should never append due precondition
+            return INTERPRETER_STATUS_OOM;
         }
-
     break;
+
+
+    case AST_TYPE_ERROR:
+        value = runtime_env_make_error(root->error->code, root->error->message);
+        if (!value)
+            return INTERPRETER_STATUS_OOM;
+        *out = value;
+        break;
 
     default:
         //

@@ -20,6 +20,7 @@ typedef enum {
 
 typedef enum {
     RUNTIME_ENV_ERROR_NOT_A_FUNCTION,
+    RUNTIME_ENV_ERROR_UNRETRIEVABLE,
     RUNTIME_ERROR_TYPE_NB_TYPES,
 } runtime_env_error_code;
 
