@@ -61,6 +61,13 @@ interpreter_status interpreter_eval(
         *out = value;
         break;
 
+    case AST_TYPE_FUNCTION:
+        value = runtime_env_make_function(root, env);
+        if (!value)
+            return INTERPRETER_STATUS_OOM;
+        *out = value;
+        break;
+
     default:
         //
     }

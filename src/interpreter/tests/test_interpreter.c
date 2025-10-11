@@ -65,6 +65,39 @@ static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 
 
 //-----------------------------------------------------------------------------
+// HELPERS
+//-----------------------------------------------------------------------------
+
+
+ast *an_empty_function_node_with_dummy_name() {
+    // function name
+    ast *dummy_function_name = ast_create_symbol_node(DUMMY_SYMBOL_P);
+
+    // list of params
+    ast *empty_list_of_params =
+        ast_create_children_node_var(
+            AST_TYPE_LIST_OF_PARAMETERS,
+            0 );
+
+    // body
+    ast *empty_body =
+        ast_create_children_node_var(
+            AST_TYPE_BLOCK,
+            0 );
+
+    // function
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            dummy_function_name,
+            empty_list_of_params,
+            empty_body );
+}
+
+
+
+//-----------------------------------------------------------------------------
 // TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
 //-----------------------------------------------------------------------------
 
@@ -523,6 +556,60 @@ static void eval_success_when_error_node_sentinel_and_malloc_succeeds(void **sta
     assert_string_equal((*out)->as.err.msg, error_node_sentinel->error->message);
 }
 
+// Given:
+//  - args are valid
+//  - root is an empty function node
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
+    (void)state;
+    ast *function_node = an_empty_function_node_with_dummy_name();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_node);
+}
+
+// Given:
+//  - args are valid
+//  - root is an empty function node
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_FUNCTION
+//    && (*out)->as.fn.function_node == root
+//    && (*out)->as.fn.closure == env
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_function_node_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *function_node = an_empty_function_node_with_dummy_name();
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_FUNCTION);
+    assert_ptr_equal((*out)->as.fn.function_node, function_node);
+    assert_ptr_equal((*out)->as.fn.closure, env);
+
+    ast_destroy(function_node);
+}
 
 
 
@@ -594,6 +681,14 @@ int main(void) {
             eval_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_error_node_sentinel_and_malloc_succeeds,
+            eval_setup, eval_teardown),
+
+        // AST_TYPE_FUNCTION
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_function_node_and_malloc_fails,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_function_node_and_malloc_succeeds,
             eval_setup, eval_teardown),
     };
 
