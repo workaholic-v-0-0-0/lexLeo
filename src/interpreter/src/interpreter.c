@@ -18,6 +18,8 @@ interpreter_status interpreter_eval(
             || root->type < 0 || root->type >= AST_TYPE_NB_TYPES )
         return INTERPRETER_STATUS_ERROR;
 
+    runtime_env_value *value = NULL;
+
     switch (root->type) {
 
     case AST_TYPE_DATA_WRAPPER:
@@ -25,7 +27,21 @@ interpreter_status interpreter_eval(
         switch (root->data->type) {
 
         case TYPE_INT:
-            runtime_env_value *value = runtime_env_make_number(root->data->data.int_value);
+            value = runtime_env_make_number(root->data->data.int_value);
+            if (!value)
+                return INTERPRETER_STATUS_OOM;
+            *out = value;
+            break;
+
+        case TYPE_STRING:
+            value = runtime_env_make_string(root->data->data.string_value);
+            if (!value)
+                return INTERPRETER_STATUS_OOM;
+            *out = value;
+            break;
+
+        case TYPE_SYMBOL:
+            value = runtime_env_make_symbol(root->data->data.symbol_value);
             if (!value)
                 return INTERPRETER_STATUS_OOM;
             *out = value;

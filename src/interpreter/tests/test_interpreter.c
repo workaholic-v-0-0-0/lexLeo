@@ -12,8 +12,10 @@
 #include "interpreter.h"
 #include "fake_memory.h"
 #include "memory_allocator.h"
+#include "string_utils.h"
 #include "internal/runtime_env_internal.h"
 #include "ast.h"
+#include "symtab.h"
 
 
 
@@ -24,6 +26,7 @@
 static const int A_INT = 7;
 static runtime_env_value **out = NULL;
 static runtime_env *env = NULL;
+static const char *A_CONSTANT_STRING = "a_string";
 
 
 
@@ -41,6 +44,9 @@ static ast *DUMMY_AST_P = &DUMMY_AST;
 static ast *DUMMY_AST_CHILDREN_ARR[1] = { &DUMMY_AST };
 static ast_children_t DUMMMY_AST_CHILDREN = {.children_nb = 1, .capacity = 1, .children = DUMMY_AST_CHILDREN_ARR,};
 static ast_children_t *DUMMY_AST_CHILDREN_P = &DUMMMY_AST_CHILDREN;
+static symbol DUMMY_SYMBOL = {.name = "symbol",};
+static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
+
 
 
 // mocks
@@ -67,19 +73,22 @@ static ast_children_t *DUMMY_AST_CHILDREN_P = &DUMMMY_AST_CHILDREN;
 
 
 /*
-core:
+core of the isolated unit:
     interpreter_status interpreter_eval(
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
-other elements:
+other elements of the isolated unit:
  - module runtime_env
  - module ast
+ - module symtab
+ - module hashtable
+ - module list
 */
 
 // fake:
 //  - functions of standard libray which are used:
-//    - malloc, free
+//    - malloc, free, strdup
 
 
 
@@ -93,6 +102,7 @@ static int eval_setup(void **state) {
 
     // fake
     set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
     fake_memory_reset();
 
     env = runtime_env_wind(NULL);
@@ -122,6 +132,7 @@ static int eval_teardown(void **state) {
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
     set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
     fake_memory_reset();
     return 0;
 }
@@ -266,7 +277,7 @@ static void eval_error_oom_when_int_node_and_malloc_fails(void **state) {
     interpreter_status status = interpreter_eval(env, number_node, out);
 
     // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL); // memory allocation ???
+    fake_memory_fail_on_calls(0, NULL);
 
     assert_int_equal(status, INTERPRETER_STATUS_OOM);
     assert_ptr_equal(out, old_out);
@@ -296,6 +307,114 @@ static void eval_success_when_int_node_and_malloc_succeeds(void **state) {
 
     ast_destroy(number_node);
 }
+
+// Given:
+//  - args are not NULL
+//  - root is a string node registering the value of the constant string A_CONSTANT_STRING
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_string_node_and_malloc_fails(void **state) {
+    (void)state;
+    ast *string_node = ast_create_string_node(A_CONSTANT_STRING);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, string_node, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(string_node);
+}
+
+// Given:
+//  - args are valid
+//  - root is a string node registering the value of the constant string A_CONSTANT_STRING
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_STRING
+//    && (assert_string_equal((*out)->as.s, A_CONSTANT_STRING)
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_string_node_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *string_node = ast_create_string_node(A_CONSTANT_STRING);
+
+    interpreter_status status = interpreter_eval(env, string_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_STRING);
+    assert_string_equal((*out)->as.s, A_CONSTANT_STRING);
+
+    ast_destroy(string_node);
+}
+
+// Given:
+//  - args are not NULL
+//  - root is a symbol node registering DUMMY_SYMBOL_P
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_symbol_node_and_malloc_fails(void **state) {
+    (void)state;
+    ast *symbol_node = ast_create_symbol_node(DUMMY_SYMBOL_P);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, symbol_node, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(symbol_node);
+}
+
+// Given:
+//  - args are valid
+//  - root is a symbol node registering DUMMY_SYMBOL_P
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_SYMBOL
+//    && (*out)->as.sym == DUMMY_SYMBOL_P
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_symbol_node_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *symbol_node = ast_create_symbol_node(DUMMY_SYMBOL_P);
+
+    interpreter_status status = interpreter_eval(env, symbol_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_SYMBOL);
+    assert_ptr_equal((*out)->as.sym, DUMMY_SYMBOL_P);
+
+    ast_destroy(symbol_node);
+}
+
+
 
 // here
 
@@ -335,6 +454,22 @@ int main(void) {
             eval_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_int_node_and_malloc_succeeds,
+            eval_setup, eval_teardown),
+
+        // AST_TYPE_DATA_WRAPPER ; TYPE_STRING
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_string_node_and_malloc_fails,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_string_node_and_malloc_succeeds,
+            eval_setup, eval_teardown),
+
+        // AST_TYPE_DATA_WRAPPER ; TYPE_SYMBOL
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_symbol_node_and_malloc_fails,
+            eval_setup, eval_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_symbol_node_and_malloc_succeeds,
             eval_setup, eval_teardown),
     };
 
