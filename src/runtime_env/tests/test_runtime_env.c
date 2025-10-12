@@ -1353,7 +1353,7 @@ static const set_local_case SET_LOCAL_FUNCTION_CASE = {
 static int set_local_setup(void **state) {
     (void)state;
 
-    runtime_env_set_ops(&(runtime_env_ops){
+    runtime_env_set_hashtable_ops(&(hashtable_ops_t){
 
 	// mock
         .hashtable_key_is_in_use = mock_hashtable_key_is_in_use,
@@ -1380,7 +1380,7 @@ static int set_local_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
-    runtime_env_reset_ops();
+    runtime_env_reset_hashtable_ops();
     runtime_env_set_destroy_bindings(NULL);
     set_allocators(NULL, NULL);
     set_string_duplicate(NULL);
@@ -1630,7 +1630,7 @@ static int get_local_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
-    runtime_env_reset_ops();
+    runtime_env_reset_hashtable_ops();
     set_allocators(NULL, NULL);
     fake_memory_reset();
     return 0;
@@ -1733,7 +1733,7 @@ static int get_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
-    runtime_env_reset_ops();
+    runtime_env_reset_hashtable_ops();
     set_allocators(NULL, NULL);
     fake_memory_reset();
     return 0;

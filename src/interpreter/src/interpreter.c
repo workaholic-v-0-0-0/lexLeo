@@ -4,12 +4,8 @@
 #include "runtime_env.h"
 #include "ast.h"
 
-//#include "symtab.h"
-
-
-
-
 // client code owns out (but not deeply!)
+// precondition: all is NULL or well-formed
 interpreter_status interpreter_eval(
         struct runtime_env *env,
         const struct ast *root,
@@ -66,6 +62,23 @@ interpreter_status interpreter_eval(
         if (!value)
             return INTERPRETER_STATUS_OOM;
         *out = value;
+        break;
+
+    case AST_TYPE_FUNCTION_DEFINITION:
+        ast *function_node = root->children->children[0];
+        runtime_env_value *evaluated_fn_value = NULL;
+        interpreter_status status = interpreter_eval(env, function_node, &evaluated_fn_value);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+        bool binding = runtime_env_set_local(
+            env,
+            function_node->children->children[0]->data->data.symbol_value,
+            evaluated_fn_value );
+        if (!binding) {
+            runtime_env_value_destroy(evaluated_fn_value);
+            return INTERPRETER_STATUS_BINDING_ERROR;
+        }
+        *out = evaluated_fn_value;
         break;
 
     default:

@@ -14,6 +14,7 @@
 #include "memory_allocator.h"
 #include "string_utils.h"
 #include "internal/runtime_env_internal.h"
+#include "internal/runtime_env_ctx.h"
 #include "ast.h"
 #include "symtab.h"
 
@@ -52,7 +53,32 @@ static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 
 
 // mocks
+
+int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
+    check_expected(ht);
+    check_expected(key);
+    check_expected(value);
+    return mock_type(int);
+}
+
+
 // spies
+
+static runtime_env *spy_set_local_arg_e = NULL;
+static const struct symbol *spy_set_local_arg_key = NULL;
+static const runtime_env_value *spy_set_local_arg_value = NULL;
+static bool spy_set_local_has_been_called = false;
+
+bool spy_runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value) {
+    spy_set_local_has_been_called = true;
+    spy_set_local_arg_e = e;
+    spy_set_local_arg_key = key;
+    spy_set_local_arg_value = value;
+    return mock_type(bool);
+}
+
+
+
 // stubs
 
 
@@ -69,7 +95,7 @@ static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 //-----------------------------------------------------------------------------
 
 
-ast *an_empty_function_node_with_dummy_name() {
+static ast *an_empty_function_node_with_dummy_name() {
     // function name
     ast *dummy_function_name = ast_create_symbol_node(DUMMY_SYMBOL_P);
 
@@ -95,10 +121,32 @@ ast *an_empty_function_node_with_dummy_name() {
             empty_body );
 }
 
+static ast *a_function_definition_node_with_empty_function() {
+    return
+    ast_create_children_node_var(
+        AST_TYPE_FUNCTION_DEFINITION,
+        1,
+        an_empty_function_node_with_dummy_name() );
+}
+
 
 
 //-----------------------------------------------------------------------------
 // TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+//-----------------------------------------------------------------------------
+
+
+// At every test:
+// Expected:
+//  - no invalid free
+//  - no double free
+//  - no memory leak
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// FOR INVALID ARGUMENTS MANAGEMENT
 //-----------------------------------------------------------------------------
 
 
@@ -109,21 +157,21 @@ ast *an_empty_function_node_with_dummy_name() {
 
 /*
 core of the isolated unit:
-    interpreter_status interpreter_eval(
+  - interpreter_status interpreter_eval(
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
 other elements of the isolated unit:
- - module runtime_env
- - module ast
- - module symtab
- - module hashtable
- - module list
-*/
+  - out
 
-// fake:
-//  - functions of standard libray which are used:
-//    - malloc, free, strdup
+doubles:
+  - dummy:
+    - env
+    - root
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free
+*/
 
 
 
@@ -132,47 +180,7 @@ other elements of the isolated unit:
 //-----------------------------------------------------------------------------
 
 
-static int eval_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    env = runtime_env_wind(NULL);
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-
-    if (env) {
-        runtime_env_unwind(env);
-        env = NULL;
-    }
-
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-static int eval_fake_memory_only_setup(void **state) {
+static int eval_with_invalid_args_setup(void **state) {
     (void)state;
 
     // fake
@@ -182,7 +190,7 @@ static int eval_fake_memory_only_setup(void **state) {
     return 0;
 }
 
-static int eval_fake_memory_only_teardown(void **state) {
+static int eval_with_invalid_args_teardown(void **state) {
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
@@ -196,15 +204,6 @@ static int eval_fake_memory_only_teardown(void **state) {
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
-
-
-// At every test:
-// Given:
-//  -
-// Expected:
-//  - no invalid free
-//  - no double free
-//  - no memory leak
 
 
 // Given:
@@ -291,6 +290,103 @@ static void eval_error_when_unsupported_root_type(void **state) {
     fake_free(out);
     fake_free(unsupported_ast);
 }
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// FOR EVALUATION OF AST OF TYPES AST_TYPE_DATA_WRAPPER AND AST_TYPE_ERROR
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+  - interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_number
+    - runtime_env_make_string
+    - runtime_env_make_symbol
+    - runtime_env_make_error
+    - runtime_env_value_destroy
+- from the ast module:
+    - ast_create_int_node
+    - ast_create_string_node
+    - ast_create_symbol_node
+    - ast_create_error_node
+    - ast_error_sentinel
+    - ast_destroy
+  - module hashtable
+  - module list
+
+doubles:
+  - dummy:
+    - env
+    - argument "symbol *sym" of ast_create_symbol_node
+  - functions of standard libray which are used:
+    - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int eval_leaf_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    // dummy
+    env = DUMMY_RUNTIME_ENV_P;
+
+    // real
+    out = fake_malloc(sizeof(runtime_env_value *));
+    *out = NULL;
+
+    return 0;
+}
+
+static int eval_teardown(void **state) {
+    (void)state;
+    if (out) {
+        if (*out) {
+            runtime_env_value_destroy(*out);
+            *out = NULL;
+        }
+        fake_free(out);
+        out = NULL;
+    }
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
 
 // Given:
 //  - args are valid
@@ -556,11 +652,112 @@ static void eval_success_when_error_node_sentinel_and_malloc_succeeds(void **sta
     assert_string_equal((*out)->as.err.msg, error_node_sentinel->error->message);
 }
 
+
+
+//-----------------------------------------------------------------------------
+// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// FOR EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+  - interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - env (actually not doubled runtime_env_make_function and runtime_env_value_destroy retain/release it)
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_function
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_symbol_node
+    - ast_create_children_node_var
+    - ast_destroy
+
+doubles:
+  - dummy:
+    - argument "symbol *sym" of ast_create_symbol_node
+  - spy:
+    - runtime_env_set_local (to check no binding)
+    - spy_set_local_has_been_called
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int eval_function_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    // mock/spy
+    runtime_env_set_set_local(spy_runtime_env_set_local);
+    spy_set_local_has_been_called = false;
+
+    // real
+    env = runtime_env_wind(NULL);
+    out = fake_malloc(sizeof(runtime_env_value *));
+    *out = NULL;
+
+    return 0;
+}
+
+static int eval_function_teardown(void **state) {
+    (void)state;
+    if (out) {
+        if (*out) {
+            runtime_env_value_destroy(*out);
+            *out = NULL;
+        }
+        fake_free(out);
+        out = NULL;
+    }
+    if (env) {
+        runtime_env_unwind(env);
+        env = NULL;
+    }
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    runtime_env_set_set_local(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
 // Given:
 //  - args are valid
 //  - root is an empty function node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
@@ -581,6 +778,7 @@ static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
     assert_int_equal(status, INTERPRETER_STATUS_OOM);
     assert_ptr_equal(out, old_out);
     assert_ptr_equal(*out, sentinel);
+    assert_false(spy_set_local_has_been_called);
 
     *out = NULL;
     ast_destroy(function_node);
@@ -591,6 +789,7 @@ static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
 //  - root is an empty function node
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_FUNCTION
 //    && (*out)->as.fn.function_node == root
@@ -607,18 +806,246 @@ static void eval_success_when_function_node_and_malloc_succeeds(void **state) {
     assert_int_equal((*out)->type, RUNTIME_VALUE_FUNCTION);
     assert_ptr_equal((*out)->as.fn.function_node, function_node);
     assert_ptr_equal((*out)->as.fn.closure, env);
+    assert_false(spy_set_local_has_been_called);
 
     ast_destroy(function_node);
 }
 
 
 
-// here
+//-----------------------------------------------------------------------------
+// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// FOR EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION_DEFINITION
+//-----------------------------------------------------------------------------
 
 
-/* draft
-env->bindings is dummy
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - env
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_function
+    - runtime_env_value_destroy
+    - runtime_env_set_local
+  - from the ast module:
+    - ast_create_symbol_node
+    - ast_create_children_node_var
+    - ast_destroy
+
+doubles:
+  - dummy:
+    - argument "symbol *sym" of ast_create_symbol_node
+  - spy:
+    - runtime_env_set_local (to check no binding)
+    - spy_set_local_has_been_called
+    - runtime_env *spy_set_local_arg_e
+    - spy_set_local_arg_key
+    - spy_set_local_arg_value
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
 */
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int eval_function_definition_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    // mock/spy
+    runtime_env_set_set_local(spy_runtime_env_set_local);
+    spy_set_local_has_been_called = false;
+    spy_set_local_arg_e = NULL;
+    spy_set_local_arg_key = NULL;
+    spy_set_local_arg_value = NULL;
+
+    env = runtime_env_wind(NULL);
+    out = fake_malloc(sizeof(runtime_env_value *));
+    *out = NULL;
+
+    return 0;
+}
+
+static int eval_function_definition_teardown(void **state) {
+    (void)state;
+    if (out) {
+        if (*out) {
+            runtime_env_value_destroy(*out);
+            *out = NULL;
+        }
+        fake_free(out);
+        out = NULL;
+    }
+    if (env) {
+        runtime_env_unwind(env);
+        env = NULL;
+    }
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    runtime_env_set_set_local(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - args are valid
+//  - root is a function definition node and its child is an empty function node
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_function_definition_node_and_malloc_fails(void **state) {
+    (void)state;
+    ast *function_definition_node = a_function_definition_node_with_empty_function();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+    assert_false(spy_set_local_has_been_called);
+
+    *out = NULL;
+    ast_destroy(function_definition_node);
+}
+
+// Given:
+//  - args are valid
+//  - root is a function definition node and its child is an empty function node
+//  - all allocations will succeed during interpreter_eval call
+//  - symbol binding will fail
+// Expected:
+//  - build v, a runtime_env_value * such as
+//    - v != NULL
+//    - v->type == RUNTIME_VALUE_FUNCTION
+//    - v->as.fn.function_node == root->children->children[0]
+//    - v->as.fn.closure == env
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: v
+//  - destroys v
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_BINDING_ERROR
+static void eval_binding_error_when_function_definition_node_and_binding_fails(void **state) {
+    (void)state;
+    ast *function_definition_node = a_function_definition_node_with_empty_function();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+    will_return(spy_runtime_env_set_local, false);
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_BINDING_ERROR);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+    assert_true(spy_set_local_has_been_called);
+    assert_ptr_equal(spy_set_local_arg_e, env);
+    assert_ptr_equal(
+        spy_set_local_arg_key,
+        function_definition_node->children->children[0]->children->children[0]->data->data.symbol_value );
+    assert_non_null(spy_set_local_arg_value);
+    assert_int_equal(
+        spy_set_local_arg_value->type,
+        RUNTIME_VALUE_FUNCTION );
+    assert_ptr_equal(
+        spy_set_local_arg_value->as.fn.function_node,
+        function_definition_node->children->children[0] );
+    assert_ptr_equal(
+        spy_set_local_arg_value->as.fn.closure,
+        env );
+
+    *out = NULL;
+    ast_destroy(function_definition_node);
+}
+
+// Given:
+//  - args are valid
+//  - root is a function definition node and its child is an empty function node
+//  - all allocations will succeed during interpreter_eval call
+//  - symbol binding will succeed
+// Expected:
+//  - build v, a runtime_env_value * such as
+//    - v != NULL
+//    - v->type == RUNTIME_VALUE_FUNCTION
+//    - v->as.fn.function_node == root->children->children[0]
+//    - v->as.fn.closure == env
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: v
+//  - the symbol interned by resolver while function symbol name is bound to a deep copy of v
+//  - *out == v
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_function_definition_node_and_binding_succeeds(void **state) {
+    (void)state;
+    ast *function_definition_node = a_function_definition_node_with_empty_function();
+    will_return(spy_runtime_env_set_local, true);
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_true(spy_set_local_has_been_called);
+    assert_ptr_equal(spy_set_local_arg_e, env);
+    assert_ptr_equal(
+        spy_set_local_arg_key,
+        function_definition_node->children->children[0]->children->children[0]->data->data.symbol_value );
+    assert_non_null(spy_set_local_arg_value);
+    assert_int_equal(
+        spy_set_local_arg_value->type,
+        RUNTIME_VALUE_FUNCTION );
+    assert_ptr_equal(
+        spy_set_local_arg_value->as.fn.function_node,
+        function_definition_node->children->children[0] );
+    assert_ptr_equal(
+        spy_set_local_arg_value->as.fn.closure,
+        env );
+    assert_ptr_equal(*out, spy_set_local_arg_value);
+
+    ast_destroy(function_definition_node);
+}
 
 
 
@@ -634,62 +1061,73 @@ int main(void) {
         // invalid args
         cmocka_unit_test_setup_teardown(
             eval_error_when_env_null,
-            eval_fake_memory_only_setup, eval_fake_memory_only_teardown),
+            eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_when_root_null,
-            eval_fake_memory_only_setup, eval_fake_memory_only_teardown),
+            eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_when_out_null,
-            eval_fake_memory_only_setup, eval_fake_memory_only_teardown),
+            eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_when_unsupported_root_type,
-            eval_fake_memory_only_setup, eval_fake_memory_only_teardown),
+            eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
 
         // AST_TYPE_DATA_WRAPPER ; TYPE_INT
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_int_node_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_int_node_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
 
         // AST_TYPE_DATA_WRAPPER ; TYPE_STRING
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_string_node_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_string_node_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
 
         // AST_TYPE_DATA_WRAPPER ; TYPE_SYMBOL
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_symbol_node_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_symbol_node_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
 
         // AST_TYPE_ERROR
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_error_node_not_sentinel_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_error_node_not_sentinel_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_error_node_sentinel_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_error_node_sentinel_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_leaf_setup, eval_teardown),
 
         // AST_TYPE_FUNCTION
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_function_node_and_malloc_fails,
-            eval_setup, eval_teardown),
+            eval_function_setup, eval_function_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_function_node_and_malloc_succeeds,
-            eval_setup, eval_teardown),
+            eval_function_setup, eval_function_teardown),
+
+        // AST_TYPE_FUNCTION_DEFINITION
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_function_definition_node_and_malloc_fails,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_binding_error_when_function_definition_node_and_binding_fails,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_function_definition_node_and_binding_succeeds,
+            eval_function_definition_setup, eval_function_definition_teardown),
     };
 
     int failed = 0;

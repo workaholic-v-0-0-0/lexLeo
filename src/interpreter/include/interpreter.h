@@ -13,7 +13,8 @@ struct runtime_env_value;
 typedef enum {
     INTERPRETER_STATUS_OK = 0,
     INTERPRETER_STATUS_ERROR,
-    INTERPRETER_STATUS_OOM
+    INTERPRETER_STATUS_OOM,
+    INTERPRETER_STATUS_BINDING_ERROR,
 } interpreter_status;
 
 interpreter_status interpreter_eval(
