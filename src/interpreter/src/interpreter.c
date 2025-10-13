@@ -107,8 +107,49 @@ interpreter_status interpreter_eval(
         *out = evaluated_child_value;
         break;
 
+    case AST_TYPE_ADDITION:
+        if (
+                   !root->children
+                || root->children->children_nb != 2
+                || !root->children->children
+                || !root->children->children[0]
+                || !root->children->children[1] )
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        ast *lhs = root->children->children[0];
+        ast *rhs = root->children->children[1];
+
+        runtime_env_value *evaluated_lhs = NULL;
+        runtime_env_value *evaluated_rhs = NULL;
+
+        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            return status;
+        }
+        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            runtime_env_value_destroy(evaluated_rhs);
+            return status;
+        }
+
+        if (
+                   evaluated_lhs->type != RUNTIME_VALUE_NUMBER
+                || evaluated_rhs->type != RUNTIME_VALUE_NUMBER ) {
+            runtime_env_value_destroy(evaluated_lhs);
+            runtime_env_value_destroy(evaluated_rhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
+
+        evaluated_lhs->as.i = evaluated_lhs->as.i + evaluated_rhs->as.i;
+        *out = evaluated_lhs;
+
+        runtime_env_value_destroy(evaluated_rhs);
+        break;
+
     default:
-        //
+        return INTERPRETER_STATUS_INVALID_AST;
     }
 
     return INTERPRETER_STATUS_OK;
