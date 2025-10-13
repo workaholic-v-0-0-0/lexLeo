@@ -42,7 +42,6 @@
 - fix memory leaks caused by the list module
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_NEGATION
   - AST_TYPE_ADDITION
   - AST_TYPE_COMPUTATION
   - AST_TYPE_NUMBERS
@@ -61,3 +60,9 @@
   - AST_TYPE_FUNCTION_CALL
   - AST_TYPE_FUNCTION_CALL
 
+- make interpreter_eval error when child of function_definition node
+  is not a function_node and fix some eventual mistakes of
+  the same kind ;
+  in order to do that, implement constructors of invalid ASTs
+
+- fix ast_destroy so that it destroys AST of type AST_TYPE_ERROR

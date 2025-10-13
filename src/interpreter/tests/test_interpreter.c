@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "interpreter.h"
 #include "fake_memory.h"
@@ -127,6 +128,51 @@ static ast *a_function_definition_node_with_empty_function() {
         AST_TYPE_FUNCTION_DEFINITION,
         1,
         an_empty_function_node_with_dummy_name() );
+}
+
+typedef enum {
+    CHILDREN_NULL,
+    NO_CHILD,
+    TWO_CHILDREN,
+} illness_type;
+
+static ast *a_ill_formed_negation_node(illness_type type) {
+    switch (type) {
+    case CHILDREN_NULL:
+        ast *ret = fake_malloc(sizeof(ast));
+        memset(ret, 0, sizeof(ast));
+        ret->type = AST_TYPE_NEGATION;
+        ret->children = NULL;
+        return ret;
+    case NO_CHILD:
+        return ast_create_children_node_var(AST_TYPE_NEGATION, 0);
+    case TWO_CHILDREN:
+        return
+            ast_create_children_node_var(
+                AST_TYPE_NEGATION,
+                2,
+                ast_create_int_node(A_INT),
+                ast_create_int_node(A_INT) );
+    default:
+        assert(false);
+    }
+    return NULL;
+}
+
+static ast *a_well_formed_negation_of_string() {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_NEGATION,
+            1,
+            ast_create_string_node(A_CONSTANT_STRING) );
+}
+
+static ast *a_negation_node_with_a_number(int i) {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_NEGATION,
+            1,
+            ast_create_int_node(i) );
 }
 
 
@@ -1049,6 +1095,258 @@ static void eval_success_when_function_definition_node_and_binding_succeeds(void
 
 
 
+//-----------------------------------------------------------------------------
+// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// FOR EVALUATION OF AST OF TYPE AST_TYPE_NEGATION
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_number
+    - runtime_env_make_string
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_string_node
+    - ast_create_children_node_var
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_set_local (to check no binding)
+    - spy_set_local_has_been_called
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int eval_negation_setup(void **state) {
+    (void)state;
+
+    // fake
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    // mock/spy
+    runtime_env_set_set_local(spy_runtime_env_set_local);
+    spy_set_local_has_been_called = false;
+
+    // dummy
+    env = DUMMY_RUNTIME_ENV_P;
+
+    // real
+    out = fake_malloc(sizeof(runtime_env_value *));
+    *out = NULL;
+
+    return 0;
+}
+
+static int eval_negation_teardown(void **state) {
+    (void)state;
+    if (out) {
+        if (*out) {
+            runtime_env_value_destroy(*out);
+            *out = NULL;
+        }
+        fake_free(out);
+        out = NULL;
+    }
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    runtime_env_set_set_local(NULL);
+    fake_memory_reset();
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed negation node because:
+//    - root->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_null(void **state) {
+    (void)state;
+    ast *negation_node = a_ill_formed_negation_node(CHILDREN_NULL);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(negation_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed negation node because:
+//    - root->children != NULL && root->children->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child(void **state) {
+    (void)state;
+    ast *negation_node = a_ill_formed_negation_node(NO_CHILD);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(negation_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed negation node because:
+//    - root->children != NULL && root->children->children_nb == 2
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children(void **state) {
+    (void)state;
+    ast *negation_node = a_ill_formed_negation_node(TWO_CHILDREN);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(negation_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed negation node with 1 child
+//  - but the child evaluates to a non-number
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_TYPE_ERROR
+static void eval_error_type_error_when_negation_child_not_number(void **state) {
+    (void)state;
+    ast *negation_node = a_well_formed_negation_of_string();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_TYPE_ERROR);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(negation_node);
+}
+
+// Given:
+//  - args are well-formed
+//  - root is a negation node with one child
+//  - root->children->children[0]->data->type == TYPE_INT
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static void eval_error_oom_when_negation_node_and_malloc_fails(void **state) {
+    (void)state;
+    ast *negation_node = a_negation_node_with_a_number(A_INT);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    // Simulate a total memory allocation failure
+    fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    // Restore normal allocation behavior
+    fake_memory_fail_on_calls(0, NULL);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OOM);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(negation_node);
+}
+
+// Given:
+//  - args are well-formed
+//  - root is a negation node
+//  - root->children->children[0]->data->type == TYPE_INT
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->as.i == - root->children->children[0]->data->data->int_value
+//  - returns INTERPRETER_STATUS_OK
+static void eval_success_when_negation_node_and_malloc_succeeds(void **state) {
+    (void)state;
+    ast *negation_node = a_negation_node_with_a_number(A_INT);
+
+    interpreter_status status = interpreter_eval(env, negation_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_OK);
+    assert_non_null(*out);
+    assert_int_equal((*out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal(
+        (*out)->as.i,
+        - negation_node->children->children[0]->data->data.int_value );
+    assert_false(spy_set_local_has_been_called);
+
+    ast_destroy(negation_node);
+}
+
+
 
 //-----------------------------------------------------------------------------
 // MAIN
@@ -1127,6 +1425,29 @@ int main(void) {
             eval_function_definition_setup, eval_function_definition_teardown),
         cmocka_unit_test_setup_teardown(
             eval_success_when_function_definition_node_and_binding_succeeds,
+            eval_function_definition_setup, eval_function_definition_teardown),
+
+        // AST_TYPE_NEGATION
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_null,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_type_error_when_negation_child_not_number,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_oom_when_negation_node_and_malloc_fails,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_success_when_negation_node_and_malloc_succeeds,
             eval_function_definition_setup, eval_function_definition_teardown),
     };
 

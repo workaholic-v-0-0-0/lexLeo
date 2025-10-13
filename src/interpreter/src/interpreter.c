@@ -15,6 +15,7 @@ interpreter_status interpreter_eval(
         return INTERPRETER_STATUS_ERROR;
 
     runtime_env_value *value = NULL;
+    interpreter_status status = INTERPRETER_STATUS_OK;
 
     switch (root->type) {
 
@@ -67,7 +68,8 @@ interpreter_status interpreter_eval(
     case AST_TYPE_FUNCTION_DEFINITION:
         ast *function_node = root->children->children[0];
         runtime_env_value *evaluated_fn_value = NULL;
-        interpreter_status status = interpreter_eval(env, function_node, &evaluated_fn_value);
+        status =
+            interpreter_eval(env, function_node, &evaluated_fn_value);
         if (status != INTERPRETER_STATUS_OK)
             return status;
         bool binding = runtime_env_set_local(
@@ -79,6 +81,30 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_BINDING_ERROR;
         }
         *out = evaluated_fn_value;
+        break;
+
+    case AST_TYPE_NEGATION:
+        if (
+                !root->children
+                || root->children->children_nb != 1
+                || !root->children->children
+                || !root->children->children[0] )
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        ast *child = root->children->children[0];
+        runtime_env_value *evaluated_child_value = NULL;
+        status = interpreter_eval(env, child, &evaluated_child_value);
+
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        if (!evaluated_child_value || evaluated_child_value->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_destroy(evaluated_child_value);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
+
+        evaluated_child_value->as.i = - evaluated_child_value->as.i;
+        *out = evaluated_child_value;
         break;
 
     default:
