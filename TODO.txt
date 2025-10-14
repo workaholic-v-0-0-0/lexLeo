@@ -6,7 +6,8 @@
 
 - check if there's a memory leak due to strdup in lexer
 
-- except for parser, resolver and runtime_env, the unit tests of the modules
+- except for parser, resolver, runtime_env and interpreter,
+  the unit tests of the modules
   below the parser layer are poorly written and need to be
   redone, mainly because they test implementation details
   instead of observable behavior, choose the wrong unit of
@@ -66,3 +67,11 @@
   in order to do that, implement constructors of invalid ASTs
 
 - fix ast_destroy so that it destroys AST of type AST_TYPE_ERROR
+
+- Make symtab_intern_symbol() idempotent. It should succeed even if the symbol already exists in the table — only fail on OOM or internal inconsistency.
+  Goal:
+  Avoid incorrect “intern failed” errors when the same symbol name (e.g., duplicate parameter or repeated identifier) appears multiple times in the same or nested scopes.
+  Subsequent occurrences of an already-interned name must simply retrieve and reuse the existing symbol* entry instead of returning an error.
+
+- Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
+  (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.

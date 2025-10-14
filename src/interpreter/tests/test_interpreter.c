@@ -50,6 +50,8 @@ static ast_children_t DUMMMY_AST_CHILDREN = {.children_nb = 1, .capacity = 1, .c
 static ast_children_t *DUMMY_AST_CHILDREN_P = &DUMMMY_AST_CHILDREN;
 static symbol DUMMY_SYMBOL = {.name = "symbol",};
 static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
+static symbol DUMMY_OTHER_SYMBOL = {.name = "an_other_symbol",};
+static symbol *DUMMY_OTHER_SYMBOL_P = &DUMMY_OTHER_SYMBOL;
 
 
 
@@ -104,13 +106,19 @@ static ast *an_empty_function_node_with_dummy_name() {
     ast *empty_list_of_params =
         ast_create_children_node_var(
             AST_TYPE_LIST_OF_PARAMETERS,
-            0 );
+            1,
+            ast_create_children_node_var(
+                AST_TYPE_PARAMETERS,
+                0 ) );
 
     // body
     ast *empty_body =
         ast_create_children_node_var(
             AST_TYPE_BLOCK,
-            0 );
+            1,
+            ast_create_children_node_var(
+                AST_TYPE_BLOCK_ITEMS,
+                0 ) );
 
     // function
     return
@@ -187,6 +195,10 @@ static ast *make_unary_with_int(ast_type type, int i) {
     return ast_create_children_node_var(type, 1, ast_create_int_node(i));
 }
 
+static ast *a_ill_formed_function_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_FUNCTION, how);
+}
+
 static ast *a_ill_formed_negation_node(illness_type how) {
     return make_ill_formed_node(AST_TYPE_NEGATION, how);
 }
@@ -214,6 +226,30 @@ static ast *a_well_formed_addition_of_two_numbers() {
         ast_create_int_node(A_INT),
         ast_create_int_node(A_INT) );
 }
+
+static ast *a_function_node_with_duplicate_param(void) {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            ast_create_symbol_node(DUMMY_SYMBOL_P),
+            ast_create_children_node_var(
+                AST_TYPE_LIST_OF_PARAMETERS,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_PARAMETERS,
+                    3,
+                    ast_create_symbol_node(DUMMY_SYMBOL_P),
+                    ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P),
+                    ast_create_symbol_node(DUMMY_SYMBOL_P) ) ),
+            ast_create_children_node_var(
+                AST_TYPE_BLOCK,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_BLOCK_ITEMS,
+                    0 ) ) );
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -765,6 +801,7 @@ other elements of the isolated unit:
     - runtime_env_value_destroy
   - from the ast module:
     - ast_create_symbol_node
+    - ast_create_int_node
     - ast_create_children_node_var
     - ast_destroy
 
@@ -838,8 +875,104 @@ static int eval_function_teardown(void **state) {
 
 
 // Given:
+//  - env and out are valid
+//  - root is a ill-formed function node because:
+//    - root->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_node_ill_formed_cause_children_null(void **state) {
+    (void)state;
+    ast *function_node = a_ill_formed_function_node(ILL_CHILDREN_NULL);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed function node because:
+//  - root->children != NULL && root->children->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_node_ill_formed_cause_no_child(void **state) {
+    (void)state;
+    ast *function_node = a_ill_formed_function_node(ILL_NO_CHILD);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed function node because:
+//    - root->children != NULL && root->children->children_nb == 2
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_node_ill_formed_cause_two_children(void **state) {
+    (void)state;
+    ast *function_node = a_ill_formed_function_node(ILL_TWO_CHILDREN);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed function node
+//  - but two parameters point on the same symbol
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_DUPLICATE_PARAMETER
+static void eval_error_duplicate_param_when_function_node_well_formed_but_duplicate_param(void **state) {
+    (void)state;
+    ast *function_node = a_function_node_with_duplicate_param();
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_DUPLICATE_PARAMETER);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_node);
+}
+
+// Given:
 //  - args are valid
-//  - root is an empty function node
+//  - root is an empty function node (so there is no duplicate parameter)
 //  - all allocations will fail during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
@@ -871,7 +1004,7 @@ static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
 
 // Given:
 //  - args are valid
-//  - root is an empty function node
+//  - root is an empty function node (so there is no duplicate parameter)
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
@@ -925,6 +1058,7 @@ other elements of the isolated unit:
     - runtime_env_set_local
   - from the ast module:
     - ast_create_symbol_node
+    - ast_create_int_node
     - ast_create_children_node_var
     - ast_destroy
 
@@ -1001,6 +1135,78 @@ static int eval_function_definition_teardown(void **state) {
 // TESTS
 //-----------------------------------------------------------------------------
 
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed function definition node because:
+//  - root->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_children_null(void **state) {
+    (void)state;
+    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_CHILDREN_NULL);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_definition_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed function definition node because:
+//  - root->children != NULL && root->children->children == NULL
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_no_child(void **state) {
+    (void)state;
+    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_NO_CHILD);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_definition_node);
+}
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed function definition node because:
+//    - root->children != NULL && root->children->children_nb == 2
+// Expected:
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_two_children(void **state) {
+    (void)state;
+    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_TWO_CHILDREN);
+    runtime_env_value *sentinel = (runtime_env_value *)0x1;
+    *out = sentinel;
+    runtime_env_value **old_out = out;
+
+    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+
+    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
+    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(*out, sentinel);
+
+    *out = NULL;
+    ast_destroy(function_definition_node);
+}
 
 // Given:
 //  - args are valid
@@ -1257,7 +1463,7 @@ static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed negation node because:
-//    - root->children != NULL && root->children->children == NULL
+//  - root->children != NULL && root->children->children == NULL
 // Expected:
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
@@ -1295,30 +1501,6 @@ static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_child
     interpreter_status status = interpreter_eval(env, negation_node, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(negation_node);
-}
-
-// Given:
-//  - env and out are valid
-//  - root is a well-formed negation node with 1 child
-//  - but the child evaluates to a non-number
-// Expected:
-//  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_TYPE_ERROR
-static void eval_error_type_error_when_negation_child_not_number(void **state) {
-    (void)state;
-    ast *negation_node = a_well_formed_negation_of_string();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
-
-    interpreter_status status = interpreter_eval(env, negation_node, out);
-
-    assert_int_equal(status, INTERPRETER_STATUS_TYPE_ERROR);
     assert_ptr_equal(out, old_out);
     assert_ptr_equal(*out, sentinel);
 
@@ -1580,30 +1762,6 @@ static void eval_error_invalid_ast_when_addition_node_ill_formed_cause_three_chi
 }
 
 // Given:
-//  - env and out are valid
-//  - root is a well-formed addition node
-//  - but the second child evaluates to a non-number
-// Expected:
-//  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_TYPE_ERROR
-static void eval_error_type_error_when_addition_and_second_child_not_number(void **state) {
-    (void)state;
-    ast *addition_node = a_well_formed_addition_of_number_and_string();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
-
-    interpreter_status status = interpreter_eval(env, addition_node, out);
-
-    assert_int_equal(status, INTERPRETER_STATUS_TYPE_ERROR);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(addition_node);
-}
-
-// Given:
 //  - args are well-formed
 //  - root is a well-formed addition node
 //  - the two children evaluate to numbers
@@ -1731,6 +1889,18 @@ int main(void) {
 
         // AST_TYPE_FUNCTION
         cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_node_ill_formed_cause_children_null,
+            eval_function_setup, eval_function_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_node_ill_formed_cause_no_child,
+            eval_function_setup, eval_function_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_node_ill_formed_cause_two_children,
+            eval_function_setup, eval_function_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_duplicate_param_when_function_node_well_formed_but_duplicate_param,
+            eval_function_setup, eval_function_teardown),
+        cmocka_unit_test_setup_teardown(
             eval_error_oom_when_function_node_and_malloc_fails,
             eval_function_setup, eval_function_teardown),
         cmocka_unit_test_setup_teardown(
@@ -1738,6 +1908,15 @@ int main(void) {
             eval_function_setup, eval_function_teardown),
 
         // AST_TYPE_FUNCTION_DEFINITION
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_children_null,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_no_child,
+            eval_function_definition_setup, eval_function_definition_teardown),
+        cmocka_unit_test_setup_teardown(
+            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_two_children,
+            eval_function_definition_setup, eval_function_definition_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_function_definition_node_and_malloc_fails,
             eval_function_definition_setup, eval_function_definition_teardown),
@@ -1762,9 +1941,6 @@ int main(void) {
             eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children,
             eval_negation_setup, eval_negation_teardown),
         cmocka_unit_test_setup_teardown(
-            eval_error_type_error_when_negation_child_not_number,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
             eval_error_oom_when_negation_node_and_malloc_fails,
             eval_negation_setup, eval_negation_teardown),
         cmocka_unit_test_setup_teardown(
@@ -1783,9 +1959,6 @@ int main(void) {
             eval_addition_setup, eval_addition_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_invalid_ast_when_addition_node_ill_formed_cause_three_children,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_type_error_when_addition_and_second_child_not_number,
             eval_addition_setup, eval_addition_teardown),
         cmocka_unit_test_setup_teardown(
             eval_error_oom_when_addition_node_and_malloc_fails,
