@@ -374,6 +374,7 @@ interpreter_status interpreter_eval(
 			return INTERPRETER_STATUS_DUPLICATE_PARAMETER; // should be better in resolver
 
         value = runtime_env_make_function(root, env);
+
         if (!value)
             return INTERPRETER_STATUS_OOM;
         *out = value;

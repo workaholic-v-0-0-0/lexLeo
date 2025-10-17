@@ -26,9 +26,17 @@ static bool runtime_env_set_local_impl(
         runtime_env *e,
         const struct symbol *key,
         const runtime_env_value *value);
+static const runtime_env_value *runtime_env_get_local_impl(
+        const runtime_env *e,
+        const struct symbol *key );
+static const runtime_env_value *runtime_env_get_impl(
+        const runtime_env *e,
+        const struct symbol *key );
 
 static const runtime_env_ops_t RUNTIME_ENV_OPS_DEFAULT = {
     .set_local = runtime_env_set_local_impl,
+    .get_local = runtime_env_get_local_impl,
+    .get = runtime_env_get_impl,
 };
 
 static runtime_env_ctx g_runtime_env_ctx = {
@@ -286,18 +294,24 @@ bool runtime_env_set_local(
     return g_runtime_env_ctx.ops->set_local(e, key, value);
 }
 
-const runtime_env_value *runtime_env_get_local(
-		const runtime_env *e,
-		const struct symbol *key) {
+static const runtime_env_value *runtime_env_get_local_impl(
+        const runtime_env *e,
+        const struct symbol *key ) {
 	if (!e || !key)
 		return NULL;
 
 	return g_runtime_env_ctx.hashtable_ops->hashtable_get(e->bindings, key);
 }
 
-const runtime_env_value *runtime_env_get(
+const runtime_env_value *runtime_env_get_local(
 		const runtime_env *e,
 		const struct symbol *key) {
+    return g_runtime_env_ctx.ops->get_local(e, key);
+}
+
+static const runtime_env_value *runtime_env_get_impl(
+        const runtime_env *e,
+        const struct symbol *key ) {
 	if (!e || !key)
 		return NULL;
 
@@ -307,6 +321,12 @@ const runtime_env_value *runtime_env_get(
 		:
 		runtime_env_get(e->parent, key)
 		;
+}
+
+const runtime_env_value *runtime_env_get(
+		const runtime_env *e,
+		const struct symbol *key) {
+    return g_runtime_env_ctx.ops->get(e, key);
 }
 
 
@@ -399,6 +419,18 @@ void runtime_env_set_set_local(runtime_env_set_local_fn_t fn) {
     });
 }
 
+void runtime_env_set_get_local(runtime_env_get_local_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops_t){
+        .get_local = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.get_local
+    });
+}
+
+void runtime_env_set_get(runtime_env_get_fn_t fn) {
+    runtime_env_set_ops(&(runtime_env_ops_t){
+        .get = fn ? fn : RUNTIME_ENV_OPS_DEFAULT.get
+    });
+}
+
 create_bindings_fn_t runtime_env_get_create_bindings(void) {
     return g_runtime_env_ctx.hashtable_ops->create_bindings;
 }
@@ -429,4 +461,12 @@ hashtable_remove_fn_t runtime_env_get_hashtable_remove(void) {
 
 runtime_env_set_local_fn_t runtime_env_get_set_local(void) {
     return g_runtime_env_ctx.ops->set_local;
+}
+
+runtime_env_get_local_fn_t runtime_env_get_get_local(void) {
+    return g_runtime_env_ctx.ops->get_local;
+}
+
+runtime_env_get_fn_t runtime_env_get_get(void) {
+    return g_runtime_env_ctx.ops->get;
 }

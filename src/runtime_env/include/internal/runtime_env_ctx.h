@@ -19,6 +19,8 @@ typedef int (*hashtable_reset_value_fn_t)(hashtable *ht, const void *key, void *
 typedef int (*hashtable_remove_fn_t)(hashtable *ht, const void *key);
 
 typedef bool (*runtime_env_set_local_fn_t)(runtime_env *e, const struct symbol *key, const runtime_env_value *value);
+typedef const runtime_env_value *(*runtime_env_get_local_fn_t)(const runtime_env *e, const struct symbol *key);
+typedef const runtime_env_value *(*runtime_env_get_fn_t)(const runtime_env *e, const struct symbol *key);
 
 typedef struct hashtable_ops_t {
     create_bindings_fn_t create_bindings;
@@ -32,6 +34,8 @@ typedef struct hashtable_ops_t {
 
 typedef struct runtime_env_ops_t {
   runtime_env_set_local_fn_t set_local;
+  runtime_env_get_local_fn_t get_local;
+  runtime_env_get_local_fn_t get;
 } runtime_env_ops_t;
 
 typedef struct runtime_env_ctx {
@@ -54,7 +58,8 @@ void runtime_env_set_hashtable_reset_value(hashtable_reset_value_fn_t fn);
 void runtime_env_set_hashtable_remove(hashtable_remove_fn_t fn);
 
 void runtime_env_set_set_local(runtime_env_set_local_fn_t fn);
-
+void runtime_env_set_get_local(runtime_env_get_local_fn_t fn);
+void runtime_env_set_get(runtime_env_get_fn_t fn);
 
 create_bindings_fn_t runtime_env_get_create_bindings(void);
 destroy_bindings_fn_t runtime_env_get_destroy_bindings(void);
@@ -65,5 +70,8 @@ hashtable_reset_value_fn_t runtime_env_get_hashtable_reset_value(void);
 hashtable_remove_fn_t runtime_env_get_hashtable_remove(void);
 
 runtime_env_set_local_fn_t runtime_env_get_set_local(void);
+runtime_env_get_local_fn_t runtime_env_get_get_local(void);
+runtime_env_get_fn_t runtime_env_get_get(void);
+
 
 #endif //LEXLEO_RUNTIME_ENV_CTX_H

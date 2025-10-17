@@ -25,6 +25,7 @@
 // GLOBALS NOT DOUBLES, MAGIC NUMBER KILLERS
 //-----------------------------------------------------------------------------
 
+
 static const int A_INT = 7;
 static runtime_env_value **out = NULL;
 static runtime_env *env = NULL;
@@ -52,6 +53,8 @@ static symbol DUMMY_SYMBOL = {.name = "symbol",};
 static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 static symbol DUMMY_OTHER_SYMBOL = {.name = "an_other_symbol",};
 static symbol *DUMMY_OTHER_SYMBOL_P = &DUMMY_OTHER_SYMBOL;
+static runtime_env_value DUMMY_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_NUMBER, .as.i = A_INT};
+static runtime_env_value *DUMMY_RUNTIME_ENV_VALUE_P = &DUMMY_RUNTIME_ENV_VALUE;
 
 
 
@@ -67,19 +70,45 @@ int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
 
 // spies
 
-static runtime_env *spy_set_local_arg_e = NULL;
-static const struct symbol *spy_set_local_arg_key = NULL;
-static const runtime_env_value *spy_set_local_arg_value = NULL;
-static bool spy_set_local_has_been_called = false;
+typedef struct {
+    bool set_local_has_been_called;
+    bool get_local_has_been_called;
+    bool get_has_been_called;
+    runtime_env *set_local_arg_e;
+    const struct symbol *set_local_arg_key;
+    const runtime_env_value *set_local_arg_value;
+    const runtime_env *get_local_arg_e;
+    const struct symbol *get_local_arg_key;
+    const runtime_env *get_arg_e;
+    const struct symbol *get_arg_key;
+} runtime_spy_t;
+
+static runtime_spy_t *g_runtime_spy = NULL;
 
 bool spy_runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value) {
-    spy_set_local_has_been_called = true;
-    spy_set_local_arg_e = e;
-    spy_set_local_arg_key = key;
-    spy_set_local_arg_value = value;
+    assert_non_null(g_runtime_spy);
+    g_runtime_spy->set_local_has_been_called = true;
+    g_runtime_spy->set_local_arg_e = e;
+    g_runtime_spy->set_local_arg_key = key;
+    g_runtime_spy->set_local_arg_value = value;
     return mock_type(bool);
 }
 
+const runtime_env_value *spy_runtime_env_get_local(const runtime_env *e, const struct symbol *key) {
+    assert_non_null(g_runtime_spy);
+    g_runtime_spy->get_local_has_been_called = true;
+    g_runtime_spy->get_local_arg_e = e;
+    g_runtime_spy->get_local_arg_key = key;
+    return mock_type(const runtime_env_value *);
+}
+
+const runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct symbol *key) {
+    assert_non_null(g_runtime_spy);
+    g_runtime_spy->get_has_been_called = true;
+    g_runtime_spy->get_arg_e = e;
+    g_runtime_spy->get_arg_key = key;
+    return mock_type(const runtime_env_value *);
+}
 
 
 // stubs
@@ -266,6 +295,11 @@ static ast *a_function_node_with_duplicate_param(void) {
 
 
 //-----------------------------------------------------------------------------
+// NON PARAMETRIC TESTS
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
 // TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
 // FOR INVALID ARGUMENTS MANAGEMENT
 //-----------------------------------------------------------------------------
@@ -415,8 +449,433 @@ static void eval_error_when_unsupported_root_type(void **state) {
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
+// PARAMETRIC TESTS
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASE STRUCTURE
+//-----------------------------------------------------------------------------
+
+
+typedef struct {
+    runtime_env *env;
+    const ast *root;
+    runtime_env_value **out;
+    runtime_env_value **old_out;
+    runtime_env_value *old_out_value;
+    runtime_spy_t spy;
+} test_interpreter_ctx;
+
+typedef void (*test_interpreter_root_constructor_fn_t)(test_interpreter_ctx *ctx);
+typedef void (*test_interpreter_expected_env_interaction_fn_t)(test_interpreter_ctx *ctx);
+typedef void (*test_interpreter_expected_out_fn_t)(test_interpreter_ctx *ctx);
+typedef void (*test_interpreter_clean_up_fn_t)(test_interpreter_ctx *ctx);
+
+typedef struct {
+
+    // test name
+    const char *name;
+
+    // arrange utilities
+    test_interpreter_root_constructor_fn_t root_constructor_fn;
+    bool env_is_dummy;
+    bool oom;
+    bool runtime_env_set_local_will_be_called;
+    bool runtime_env_set_local_will_fail;
+    bool runtime_env_get_local_will_be_called;
+    bool runtime_env_get_local_will_fail;
+    bool runtime_env_get_will_be_called;
+    bool runtime_env_get_will_fail;
+
+    // assert utilities
+    test_interpreter_expected_env_interaction_fn_t expected_env_interaction_fn; //
+    test_interpreter_expected_out_fn_t expected_out_fn;
+    interpreter_status expected_status;
+
+    // test infrastructure cleanup utilities
+    test_interpreter_clean_up_fn_t clean_up_fn;
+
+    // information sharing utilities
+    test_interpreter_ctx *ctx;
+
+} test_interpreter_case;
+
+
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+
+static int parametric_setup(void **state) {
+    test_interpreter_case *p = (test_interpreter_case *) *state;
+
+    set_allocators(fake_malloc, fake_free);
+    set_string_duplicate(fake_strdup);
+    fake_memory_reset();
+
+    if (!p->env_is_dummy) {
+        p->ctx->env = runtime_env_wind(NULL);
+        assert_non_null(p->ctx->env);
+    }
+    else p->ctx->env = DUMMY_RUNTIME_ENV_P;
+
+    runtime_env_set_set_local(spy_runtime_env_set_local);
+    runtime_env_set_get_local(spy_runtime_env_get_local);
+    runtime_env_set_get(spy_runtime_env_get);
+    p->ctx->spy = (runtime_spy_t){0};
+    g_runtime_spy = &p->ctx->spy;
+
+    p->ctx->out = fake_malloc(sizeof *p->ctx->out);
+    *p->ctx->out = NULL;
+
+    return 0;
+}
+
+static int parametric_teardown(void **state) {
+    test_interpreter_case *p = (test_interpreter_case *) *state;
+
+    if (p->clean_up_fn) p->clean_up_fn(p->ctx);
+
+    if (p->ctx->out) {
+        fake_free(p->ctx->out);
+        p->ctx->out = NULL;
+    }
+
+    if (p->ctx->env && !p->env_is_dummy) {
+        runtime_env_unwind(p->ctx->env);
+        p->ctx->env = NULL;
+    }
+
+    assert_true(fake_memory_no_invalid_free());
+    assert_true(fake_memory_no_double_free());
+    assert_true(fake_memory_no_leak());
+
+    g_runtime_spy = NULL;
+    runtime_env_set_set_local(NULL);
+    runtime_env_set_get_local(NULL);
+    runtime_env_set_get(NULL);
+
+    set_allocators(NULL, NULL);
+    set_string_duplicate(NULL);
+    fake_memory_reset();
+
+    return 0;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC TEST RUNNER
+//-----------------------------------------------------------------------------
+
+
+// forward declarations
+static void expected_out_unchanged(test_interpreter_ctx *ctx);
+static void mock_spy_arrange(const test_interpreter_case *);
+
+static void eval_test(void **state) {
+    test_interpreter_case *p = (test_interpreter_case *) *state;
+
+    // ARRANGE
+
+    p->root_constructor_fn(p->ctx);
+
+    // out snapshot to check is invariance
+    if (p->expected_out_fn == &expected_out_unchanged) {
+        p->ctx->old_out = p->ctx->out;
+        p->ctx->old_out_value = *p->ctx->out;
+    }
+
+    // eventual mocks initialisation for runtime_env interaction testing
+    if (p->expected_env_interaction_fn)
+        mock_spy_arrange(p);
+
+
+    // ACT
+
+    // Simulate a total memory allocation failure
+    if (p->oom)
+        fake_memory_fail_on_all_call();
+
+    interpreter_status status = interpreter_eval(p->ctx->env, p->ctx->root, p->ctx->out);
+
+    // Restore normal allocation behavior
+    if (p->oom)
+        fake_memory_fail_on_calls(0, NULL);
+
+
+    // ASSERT
+
+    assert_int_equal(status, p->expected_status);
+    if (p->expected_env_interaction_fn) p->expected_env_interaction_fn(p->ctx);
+    if (p->expected_out_fn) p->expected_out_fn(p->ctx);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// ROOT CONSTRUCTORS
+//-----------------------------------------------------------------------------
+
+
+static void make_root_a_int_node(test_interpreter_ctx *ctx) {
+    ctx->root = ast_create_int_node(A_INT);
+}
+
+static void make_root_a_string_node(test_interpreter_ctx *ctx) {
+    ctx->root = ast_create_string_node(A_CONSTANT_STRING);
+}
+
+static void make_root_a_symbol_node(test_interpreter_ctx *ctx) {
+    ctx->root = ast_create_symbol_node(DUMMY_SYMBOL_P);
+}
+
+static void make_root_an_error_not_sentinel_node(test_interpreter_ctx *ctx) {
+    ctx->root =
+        ast_create_error_node(
+            AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED,
+            A_CONSTANT_ERROR_MESSAGE );
+}
+
+static void make_root_the_error_sentinel_node(test_interpreter_ctx *ctx) {
+    ctx->root = ast_error_sentinel();
+}
+
+static void make_root_a_ill_formed_function_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_function_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_function_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_function_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_function_node_because_two_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_function_node(ILL_TWO_CHILDREN);
+}
+
+static void make_root_a_function_node_with_duplicate_param(test_interpreter_ctx *ctx) {
+    ctx->root = a_function_node_with_duplicate_param();
+}
+
+static void make_root_an_empty_function_node_with_dummy_name(test_interpreter_ctx *ctx) {
+    ctx->root = an_empty_function_node_with_dummy_name();
+}
+
+static void make_root_a_ill_formed_function_definition_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_function_definition_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_function_definition_node_because_two_children(test_interpreter_ctx *ctx) {
+    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_TWO_CHILDREN);
+}
+
+static void make_root_a_function_definition_node_with_empty_function(test_interpreter_ctx *ctx) {
+    ctx->root = a_function_definition_node_with_empty_function();
+}
+
+static void make_root_a_ill_formed_negation_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_negation_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_negation_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_negation_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_negation_node_because_two_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_negation_node(ILL_TWO_CHILDREN);
+}
+
+static void make_root_a_negation_node_with_a_number(test_interpreter_ctx *ctx) {
+    ctx->root = a_negation_node_with_a_number(A_INT);
+}
+
+static void make_root_a_ill_formed_addition_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_addition_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_addition_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_addition_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_addition_node_because_one_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_addition_node(ILL_ONE_CHILD);
+}
+
+static void make_root_a_ill_formed_addition_node_because_three_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_addition_node(ILL_THREE_CHILDREN);
+}
+
+static void make_root_a_well_formed_addition_of_two_numbers(test_interpreter_ctx *ctx) {
+    ctx->root = a_well_formed_addition_of_two_numbers();
+}
+
+
+
+//-----------------------------------------------------------------------------
+// RUNTIME ENVIRONMENT INTERACTION EXPECTATIONS
+//-----------------------------------------------------------------------------
+
+
+static void no_runtime_interaction(test_interpreter_ctx *ctx) {
+    assert_false(ctx->spy.set_local_has_been_called);
+    assert_false(ctx->spy.get_local_has_been_called);
+    assert_false(ctx->spy.get_has_been_called);
+}
+
+static void expect_runtime_binding_attempt(test_interpreter_ctx *ctx) {
+    assert_true(ctx->spy.set_local_has_been_called);
+    assert_ptr_equal(
+        ctx->spy.set_local_arg_e,
+        ctx->env );
+    assert_ptr_equal(
+        ctx->spy.set_local_arg_key,
+        ctx->root->children->children[0]->children->children[0]->data->data.symbol_value );
+    assert_int_equal(
+        ctx->spy.set_local_arg_value->type,
+        RUNTIME_VALUE_FUNCTION );
+    assert_ptr_equal(
+        ctx->spy.set_local_arg_value->as.fn.function_node,
+        ctx->root->children->children[0] );
+    assert_ptr_equal(
+        ctx->spy.set_local_arg_value->as.fn.closure,
+        ctx->env );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// MOCK INITIALISATION FOR runtime_env interaction testing
+//-----------------------------------------------------------------------------
+
+
+static void mock_spy_arrange(const test_interpreter_case *param_case) {
+    if (param_case->runtime_env_set_local_will_be_called)
+        will_return(
+            spy_runtime_env_set_local,
+            param_case->runtime_env_set_local_will_fail ? false : true );
+    if (param_case->runtime_env_get_local_will_be_called)
+        will_return(
+            spy_runtime_env_get_local,
+            param_case->runtime_env_get_local_will_fail ? NULL : DUMMY_RUNTIME_ENV_VALUE_P );
+    if (param_case->runtime_env_get_will_be_called)
+        will_return(
+            spy_runtime_env_get,
+            param_case->runtime_env_get_will_fail ? NULL : DUMMY_RUNTIME_ENV_VALUE_P );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// OUT EXPECTATIONS
+//-----------------------------------------------------------------------------
+
+
+static void expected_out_unchanged(test_interpreter_ctx *ctx) {
+    assert_ptr_equal(ctx->out, ctx->old_out);
+    assert_ptr_equal(*ctx->out, ctx->old_out_value);
+}
+
+static void expected_out_points_on_number_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->out)->as.i, ctx->root->data->data.int_value);
+}
+
+static void expected_out_points_on_string_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_STRING);
+    assert_string_equal((*ctx->out)->as.s, ctx->root->data->data.string_value);
+}
+
+static void expected_out_points_on_symbol_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_SYMBOL);
+    assert_ptr_equal((*ctx->out)->as.sym, ctx->root->data->data.symbol_value);
+}
+
+static void expected_out_points_on_error_not_sentinel_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*ctx->out)->as.err.code, ctx->root->error->code);
+    assert_string_equal((*ctx->out)->as.err.msg, ctx->root->error->message);
+}
+
+static void expected_out_points_on_the_error_sentinel_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*ctx->out)->as.err.code, ast_error_sentinel()->error->code);
+    assert_string_equal((*ctx->out)->as.err.msg, ast_error_sentinel()->error->message);
+}
+
+static void expected_out_points_on_function_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_FUNCTION);
+    assert_ptr_equal((*ctx->out)->as.fn.function_node, ctx->root);
+    assert_ptr_equal((*ctx->out)->as.fn.closure, ctx->env);
+}
+
+static void expected_out_points_on_child_function_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_FUNCTION);
+    assert_ptr_equal((*ctx->out)->as.fn.function_node, ctx->root->children->children[0]);
+    assert_ptr_equal((*ctx->out)->as.fn.closure, ctx->env);
+}
+
+static void expected_out_points_on_negation_result(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->out)->as.i, - ctx->root->children->children[0]->data->data.int_value);
+}
+
+static void expected_out_points_on_addition_result(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal(
+        (*ctx->out)->as.i,
+        ctx->root->children->children[0]->data->data.int_value
+        +
+        ctx->root->children->children[1]->data->data.int_value );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TEST INFRASTUCTURE CLEANUP
+//-----------------------------------------------------------------------------
+
+
+static void destroy_root(test_interpreter_ctx *ctx) {
+    ast_destroy((ast *) ctx->root);
+    ctx->root = NULL;
+}
+
+static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
+    ast_destroy((ast *) ctx->root);
+    ctx->root = NULL;
+    runtime_env_value_destroy(*ctx->out);
+    *ctx->out = NULL;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// TESTS FOR
+// interpreter_status interpreter_eval(
+//     struct runtime_env *env,
+//     const struct ast *root,
+//     struct runtime_env_value **out );
 // FOR EVALUATION OF AST OF TYPES AST_TYPE_DATA_WRAPPER AND AST_TYPE_ERROR
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPES AST_TYPE_DATA_WRAPPER AND AST_TYPE_ERROR
 //-----------------------------------------------------------------------------
 
 
@@ -454,58 +913,19 @@ doubles:
   - dummy:
     - env
     - argument "symbol *sym" of ast_create_symbol_node
-  - functions of standard libray which are used:
-    - malloc, free, strdup
+  - spy:
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
 */
 
 
 
 //-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int eval_leaf_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    // dummy
-    env = DUMMY_RUNTIME_ENV_P;
-
-    // real
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
+// PARAMETRIC CASES
 //-----------------------------------------------------------------------------
 
 
@@ -514,270 +934,265 @@ static int eval_teardown(void **state) {
 //  - root is a number node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_int_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *number_node = ast_create_int_node(A_INT);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_INT_OOM = {0};
+static const test_interpreter_case INT_NODE_OOM = {
+        .name = "eval_error_oom_when_int_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+        .root_constructor_fn = &make_root_a_int_node,
+        .env_is_dummy = true,
+        .oom = true,
 
-    interpreter_status status = interpreter_eval(env, number_node, out);
+        .expected_env_interaction_fn = &no_runtime_interaction,
+        .expected_out_fn = &expected_out_unchanged,
+        .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+        .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(number_node);
-}
+        .ctx =&CTX_INT_OOM,
+};
 
 // Given:
 //  - args are valid
 //  - root is a number node registering integer value A_INT
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out != NULL && (*out)->type == RUNTIME_VALUE_NUMBER && (*out)->as.i == A_INT
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_int_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *number_node = ast_create_int_node(A_INT);
+static test_interpreter_ctx CTX_INT_NODE_SUCCESS = {0};
+static const test_interpreter_case INT_NODE_SUCCESS = {
+    .name = "eval_success_when_int_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, number_node, out);
+    .root_constructor_fn = &make_root_a_int_node,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*out)->as.i, A_INT);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_number_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(number_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_INT_NODE_SUCCESS,
+};
 
 // Given:
 //  - args are valid
 //  - root is a string node registering the value of the constant string A_CONSTANT_STRING
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_string_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *string_node = ast_create_string_node(A_CONSTANT_STRING);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_STRING_OOM = {0};
+static const test_interpreter_case STRING_NODE_OOM = {
+    .name = "eval_error_oom_when_string_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_a_string_node,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, string_node, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(string_node);
-}
+    .ctx =&CTX_STRING_OOM,
+};
 
 // Given:
 //  - args are valid
 //  - root is a string node registering the value of the constant string A_CONSTANT_STRING
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_STRING
 //    && string_equal((*out)->as.s, A_CONSTANT_STRING)
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_string_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *string_node = ast_create_string_node(A_CONSTANT_STRING);
+static test_interpreter_ctx CTX_STRING_NODE_SUCCESS = {0};
+static const test_interpreter_case STRING_NODE_SUCCESS = {
+    .name = "eval_success_when_string_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, string_node, out);
+    .root_constructor_fn = &make_root_a_string_node,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_STRING);
-    assert_string_equal((*out)->as.s, A_CONSTANT_STRING);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_string_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(string_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_STRING_NODE_SUCCESS,
+};
 
 // Given:
 //  - args are valid
 //  - root is a symbol node registering DUMMY_SYMBOL_P
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_symbol_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *symbol_node = ast_create_symbol_node(DUMMY_SYMBOL_P);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_SYMBOL_OOM = {0};
+static const test_interpreter_case SYMBOL_NODE_OOM = {
+    .name = "eval_error_oom_when_symbol_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_a_symbol_node,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, symbol_node, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(symbol_node);
-}
+    .ctx =&CTX_SYMBOL_OOM,
+};
 
 // Given:
 //  - args are valid
 //  - root is a symbol node registering DUMMY_SYMBOL_P
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_SYMBOL
 //    && (*out)->as.sym == DUMMY_SYMBOL_P
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_symbol_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *symbol_node = ast_create_symbol_node(DUMMY_SYMBOL_P);
+static test_interpreter_ctx CTX_SYMBOL_NODE_SUCCESS = {0};
+static const test_interpreter_case SYMBOL_NODE_SUCCESS = {
+    .name = "eval_success_when_symbol_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, symbol_node, out);
+    .root_constructor_fn = &make_root_a_symbol_node,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_SYMBOL);
-    assert_ptr_equal((*out)->as.sym, DUMMY_SYMBOL_P);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_symbol_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(symbol_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_SYMBOL_NODE_SUCCESS,
+};
 
 // Given:
 //  - args are valid
 //  - root is an error node distinct from the sentinel
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_error_node_not_sentinel_and_malloc_fails(void **state) {
-    (void)state;
-    ast *error_node_not_sentinel = ast_create_error_node(AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED, A_CONSTANT_ERROR_MESSAGE);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ERROR_NOT_SENTINEL_OOM = {0};
+static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_OOM = {
+    .name = "eval_error_oom_when_error_node_not_sentinel_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_an_error_not_sentinel_node,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, error_node_not_sentinel, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(error_node_not_sentinel);
-}
+    .ctx =&CTX_ERROR_NOT_SENTINEL_OOM,
+};
 
 // Given:
 //  - args are valid
 //  - root is an error node distinct from the sentinel
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  -     *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_ERROR
 //    && (*out)->as.err.code == root->error->code
 //    && string_equal((*out)->as.err.msg, root->error->message)
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_error_node_not_sentinel_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *error_node_not_sentinel = ast_create_error_node(AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED, A_CONSTANT_ERROR_MESSAGE);
+static test_interpreter_ctx CTX_ERROR_NOT_SENTINEL_NODE_SUCCESS = {0};
+static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_SUCCESS = {
+    .name = "eval_success_when_error_node_not_sentinel_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, error_node_not_sentinel, out);
+    .root_constructor_fn = &make_root_an_error_not_sentinel_node,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_ERROR);
-    assert_int_equal((*out)->as.err.code, error_node_not_sentinel->error->code);
-    assert_string_equal((*out)->as.err.msg, error_node_not_sentinel->error->message);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_error_not_sentinel_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(error_node_not_sentinel);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_ERROR_NOT_SENTINEL_NODE_SUCCESS,
+};
 
 // Given:
 //  - args are valid
 //  - root is the error node sentinel
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_error_node_sentinel_and_malloc_fails(void **state) {
-    (void)state;
-    ast *error_node_sentinel = ast_error_sentinel();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ERROR_SENTINEL_OOM = {0};
+static const test_interpreter_case ERROR_SENTINEL_NODE_OOM = {
+    .name = "eval_error_oom_when_error_node_sentinel_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_the_error_sentinel_node,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, error_node_sentinel, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-}
+    .ctx =&CTX_ERROR_SENTINEL_OOM,
+};
 
 // Given:
 //  - args are valid
 //  - root is the error node sentinel
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_ERROR
 //    && (*out)->as.err.code == root->error->code
 //    && string_equal((*out)->as.err.msg, root->error->message)
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_error_node_sentinel_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *error_node_sentinel = ast_error_sentinel();
+static test_interpreter_ctx CTX_ERROR_SENTINEL_NODE_SUCCESS = {0};
+static const test_interpreter_case ERROR_SENTINEL_NODE_SUCCESS = {
+    .name = "eval_success_when_error_node_sentinel_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, error_node_sentinel, out);
+    .root_constructor_fn = &make_root_the_error_sentinel_node,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_ERROR);
-    assert_int_equal((*out)->as.err.code, error_node_sentinel->error->code);
-    assert_string_equal((*out)->as.err.msg, error_node_sentinel->error->message);
-}
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_the_error_sentinel_value,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_ERROR_SENTINEL_NODE_SUCCESS,
+};
 
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
-// FOR EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION
+// EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION
 //-----------------------------------------------------------------------------
 
 
@@ -809,8 +1224,9 @@ doubles:
   - dummy:
     - argument "symbol *sym" of ast_create_symbol_node
   - spy:
-    - runtime_env_set_local (to check no binding)
-    - spy_set_local_has_been_called
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
   - fake:
     - functions of standard libray which are used:
       - malloc, free, strdup
@@ -819,58 +1235,7 @@ doubles:
 
 
 //-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int eval_function_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    // mock/spy
-    runtime_env_set_set_local(spy_runtime_env_set_local);
-    spy_set_local_has_been_called = false;
-
-    // real
-    env = runtime_env_wind(NULL);
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_function_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-    if (env) {
-        runtime_env_unwind(env);
-        env = NULL;
-    }
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    runtime_env_set_set_local(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
+// PARAMETRIC CASES
 //-----------------------------------------------------------------------------
 
 
@@ -879,96 +1244,100 @@ static int eval_function_teardown(void **state) {
 //  - root is a ill-formed function node because:
 //    - root->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_node_ill_formed_cause_children_null(void **state) {
-    (void)state;
-    ast *function_node = a_ill_formed_function_node(ILL_CHILDREN_NULL);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_function_node_ill_formed_cause_children_null",
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed function node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_node_ill_formed_cause_no_child(void **state) {
-    (void)state;
-    ast *function_node = a_ill_formed_function_node(ILL_NO_CHILD);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_function_node_ill_formed_cause_no_child",
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_NODE_ILL_FORMED_NO_CHILD,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed function node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_node_ill_formed_cause_two_children(void **state) {
-    (void)state;
-    ast *function_node = a_ill_formed_function_node(ILL_TWO_CHILDREN);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
+static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_function_node_ill_formed_cause_two_children",
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_node_because_two_children,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a well-formed function node
 //  - but two parameters point on the same symbol
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_DUPLICATE_PARAMETER
-static void eval_error_duplicate_param_when_function_node_well_formed_but_duplicate_param(void **state) {
-    (void)state;
-    ast *function_node = a_function_node_with_duplicate_param();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_NODE_DUPLICATE_PARAM = {0};
+static const test_interpreter_case FUNCTION_NODE_DUPLICATE_PARAM = {
+    .name = "eval_error_duplicate_param_when_function_node_well_formed_but_duplicate_param",
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .root_constructor_fn = &make_root_a_function_node_with_duplicate_param,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_DUPLICATE_PARAMETER);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_DUPLICATE_PARAMETER,
 
-    *out = NULL;
-    ast_destroy(function_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_NODE_DUPLICATE_PARAM,
+};
 
 // Given:
 //  - args are valid
@@ -976,31 +1345,25 @@ static void eval_error_duplicate_param_when_function_node_well_formed_but_duplic
 //  - all allocations will fail during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *function_node = an_empty_function_node_with_dummy_name();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_NODE_OOM = {0};
+static const test_interpreter_case FUNCTION_NODE_OOM = {
+    .name = "eval_error_oom_when_function_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_an_empty_function_node_with_dummy_name,
+    .env_is_dummy = false,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .expected_env_interaction_fn = &no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-    assert_false(spy_set_local_has_been_called);
-
-    *out = NULL;
-    ast_destroy(function_node);
-}
+    .ctx =&CTX_FUNCTION_NODE_OOM,
+};
 
 // Given:
 //  - args are valid
@@ -1008,32 +1371,33 @@ static void eval_error_oom_when_function_node_and_malloc_fails(void **state) {
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
+//  - no binding in env->binding
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_FUNCTION
 //    && (*out)->as.fn.function_node == root
 //    && (*out)->as.fn.closure == env
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_function_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *function_node = an_empty_function_node_with_dummy_name();
+static test_interpreter_ctx CTX_FUNCTION_NODE_SUCCESS = {0};
+static const test_interpreter_case FUNCTION_NODE_SUCCESS = {
+    .name = "eval_success_when_function_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, function_node, out);
+    .root_constructor_fn = &make_root_an_empty_function_node_with_dummy_name,
+    .env_is_dummy = false,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_FUNCTION);
-    assert_ptr_equal((*out)->as.fn.function_node, function_node);
-    assert_ptr_equal((*out)->as.fn.closure, env);
-    assert_false(spy_set_local_has_been_called);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_function_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(function_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_FUNCTION_NODE_SUCCESS,
+};
 
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
-// FOR EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION_DEFINITION
+// EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION_DEFINITION
 //-----------------------------------------------------------------------------
 
 
@@ -1066,11 +1430,9 @@ doubles:
   - dummy:
     - argument "symbol *sym" of ast_create_symbol_node
   - spy:
-    - runtime_env_set_local (to check no binding)
-    - spy_set_local_has_been_called
-    - runtime_env *spy_set_local_arg_e
-    - spy_set_local_arg_key
-    - spy_set_local_arg_value
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
   - fake:
     - functions of standard libray which are used:
       - malloc, free, strdup
@@ -1079,60 +1441,7 @@ doubles:
 
 
 //-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int eval_function_definition_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    // mock/spy
-    runtime_env_set_set_local(spy_runtime_env_set_local);
-    spy_set_local_has_been_called = false;
-    spy_set_local_arg_e = NULL;
-    spy_set_local_arg_key = NULL;
-    spy_set_local_arg_value = NULL;
-
-    env = runtime_env_wind(NULL);
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_function_definition_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-    if (env) {
-        runtime_env_unwind(env);
-        env = NULL;
-    }
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    runtime_env_set_set_local(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
+// PARAMETRIC CASES
 //-----------------------------------------------------------------------------
 
 
@@ -1141,72 +1450,75 @@ static int eval_function_definition_teardown(void **state) {
 //  - root is a ill-formed function definition node because:
 //  - root->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_children_null(void **state) {
-    (void)state;
-    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_CHILDREN_NULL);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_children_null",
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_definition_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_definition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed function definition node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_no_child(void **state) {
-    (void)state;
-    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_NO_CHILD);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_no_child",
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_definition_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_definition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed function definition node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_two_children(void **state) {
-    (void)state;
-    ast *function_definition_node = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_TWO_CHILDREN);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_two_children",
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_function_definition_node_because_two_children,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(function_definition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILDREN,
+};
 
 // Given:
 //  - args are valid
@@ -1214,31 +1526,25 @@ static void eval_error_invalid_ast_when_function_definition_node_ill_formed_caus
 //  - all allocations will fail during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_function_definition_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *function_definition_node = a_function_definition_node_with_empty_function();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_OOM = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_OOM = {
+    .name = "eval_error_oom_when_function_definition_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_a_function_definition_node_with_empty_function,
+    .env_is_dummy = false,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .expected_env_interaction_fn = &no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-    assert_false(spy_set_local_has_been_called);
-
-    *out = NULL;
-    ast_destroy(function_definition_node);
-}
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_OOM,
+};
 
 // Given:
 //  - args are valid
@@ -1259,38 +1565,24 @@ static void eval_error_oom_when_function_definition_node_and_malloc_fails(void *
 //  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_BINDING_ERROR
-static void eval_binding_error_when_function_definition_node_and_binding_fails(void **state) {
-    (void)state;
-    ast *function_definition_node = a_function_definition_node_with_empty_function();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
-    will_return(spy_runtime_env_set_local, false);
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_BINDING_FAILURE = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_BINDING_FAILURE = {
+    .name = "eval_binding_error_when_function_definition_node_and_binding_fails",
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .root_constructor_fn = &make_root_a_function_definition_node_with_empty_function,
+    .env_is_dummy = false,
+    .oom = false,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = true,
 
-    assert_int_equal(status, INTERPRETER_STATUS_BINDING_ERROR);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-    assert_true(spy_set_local_has_been_called);
-    assert_ptr_equal(spy_set_local_arg_e, env);
-    assert_ptr_equal(
-        spy_set_local_arg_key,
-        function_definition_node->children->children[0]->children->children[0]->data->data.symbol_value );
-    assert_non_null(spy_set_local_arg_value);
-    assert_int_equal(
-        spy_set_local_arg_value->type,
-        RUNTIME_VALUE_FUNCTION );
-    assert_ptr_equal(
-        spy_set_local_arg_value->as.fn.function_node,
-        function_definition_node->children->children[0] );
-    assert_ptr_equal(
-        spy_set_local_arg_value->as.fn.closure,
-        env );
+    .expected_env_interaction_fn = &expect_runtime_binding_attempt,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
 
-    *out = NULL;
-    ast_destroy(function_definition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_BINDING_FAILURE,
+};
 
 // Given:
 //  - args are valid
@@ -1310,39 +1602,29 @@ static void eval_binding_error_when_function_definition_node_and_binding_fails(v
 //  - the symbol interned by resolver while function symbol name is bound to a deep copy of v
 //  - *out == v
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_function_definition_node_and_binding_succeeds(void **state) {
-    (void)state;
-    ast *function_definition_node = a_function_definition_node_with_empty_function();
-    will_return(spy_runtime_env_set_local, true);
+static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_SUCCESS = {0};
+static const test_interpreter_case FUNCTION_DEFINITION_NODE_SUCCESS = {
+    .name = "eval_success_when_function_definition_node_and_binding_succeeds",
 
-    interpreter_status status = interpreter_eval(env, function_definition_node, out);
+    .root_constructor_fn = &make_root_a_function_definition_node_with_empty_function,
+    .env_is_dummy = false,
+    .oom = false,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_true(spy_set_local_has_been_called);
-    assert_ptr_equal(spy_set_local_arg_e, env);
-    assert_ptr_equal(
-        spy_set_local_arg_key,
-        function_definition_node->children->children[0]->children->children[0]->data->data.symbol_value );
-    assert_non_null(spy_set_local_arg_value);
-    assert_int_equal(
-        spy_set_local_arg_value->type,
-        RUNTIME_VALUE_FUNCTION );
-    assert_ptr_equal(
-        spy_set_local_arg_value->as.fn.function_node,
-        function_definition_node->children->children[0] );
-    assert_ptr_equal(
-        spy_set_local_arg_value->as.fn.closure,
-        env );
-    assert_ptr_equal(*out, spy_set_local_arg_value);
+    .expected_env_interaction_fn = &expect_runtime_binding_attempt,
+    .expected_out_fn = &expected_out_points_on_child_function_value,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(function_definition_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_FUNCTION_DEFINITION_NODE_SUCCESS,
+};
 
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
-// FOR EVALUATION OF AST OF TYPE AST_TYPE_NEGATION
+// EVALUATION OF AST OF TYPE TYPE AST_TYPE_NEGATION
 //-----------------------------------------------------------------------------
 
 
@@ -1373,8 +1655,9 @@ doubles:
   - dummy:
     - env
   - spy:
-    - runtime_env_set_local (to check no binding)
-    - spy_set_local_has_been_called
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
   - fake:
     - functions of standard libray which are used:
       - malloc, free, strdup
@@ -1383,56 +1666,7 @@ doubles:
 
 
 //-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int eval_negation_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    // mock/spy
-    runtime_env_set_set_local(spy_runtime_env_set_local);
-    spy_set_local_has_been_called = false;
-
-    // dummy
-    env = DUMMY_RUNTIME_ENV_P;
-
-    // real
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_negation_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    runtime_env_set_set_local(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
+// PARAMETRIC CASES
 //-----------------------------------------------------------------------------
 
 
@@ -1441,72 +1675,75 @@ static int eval_negation_teardown(void **state) {
 //  - root is a ill-formed negation node because:
 //    - root->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_null(void **state) {
-    (void)state;
-    ast *negation_node = a_ill_formed_negation_node(ILL_CHILDREN_NULL);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case NEGATION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_null",
 
-    interpreter_status status = interpreter_eval(env, negation_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_negation_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(negation_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_NEGATION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed negation node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child(void **state) {
-    (void)state;
-    ast *negation_node = a_ill_formed_negation_node(ILL_NO_CHILD);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case NEGATION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child",
 
-    interpreter_status status = interpreter_eval(env, negation_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_negation_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(negation_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_NEGATION_NODE_ILL_FORMED_NO_CHILD,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed negation node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children(void **state) {
-    (void)state;
-    ast *negation_node = a_ill_formed_negation_node(ILL_TWO_CHILDREN);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
+static const test_interpreter_case NEGATION_NODE_ILL_FORMED_TWO_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children",
 
-    interpreter_status status = interpreter_eval(env, negation_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_negation_node_because_two_children,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(negation_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_NEGATION_NODE_ILL_FORMED_TWO_CHILDREN,
+};
 
 // Given:
 //  - args are well-formed
@@ -1514,30 +1751,25 @@ static void eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_child
 //  - root->children->children[0]->data->type == TYPE_INT
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_negation_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *negation_node = a_negation_node_with_a_number(A_INT);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_NEGATION_NODE_OOM = {0};
+static const test_interpreter_case NEGATION_NODE_OOM = {
+    .name = "eval_error_oom_when_negation_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_a_negation_node_with_a_number,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, negation_node, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(negation_node);
-}
+    .ctx =&CTX_NEGATION_NODE_OOM,
+};
 
 // Given:
 //  - args are well-formed
@@ -1550,28 +1782,27 @@ static void eval_error_oom_when_negation_node_and_malloc_fails(void **state) {
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->as.i == - root->children->children[0]->data->data->int_value
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_negation_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *negation_node = a_negation_node_with_a_number(A_INT);
+static test_interpreter_ctx CTX_NEGATION_NODE_SUCCESS = {0};
+static const test_interpreter_case NEGATION_NODE_SUCCESS = {
+    .name = "eval_success_when_negation_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, negation_node, out);
+    .root_constructor_fn = &make_root_a_negation_node_with_a_number,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal(
-        (*out)->as.i,
-        - negation_node->children->children[0]->data->data.int_value );
-    assert_false(spy_set_local_has_been_called);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_negation_result,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(negation_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_NEGATION_NODE_SUCCESS,
+};
 
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
-// FOR EVALUATION OF AST OF TYPE AST_TYPE_ADDITION
+// EVALUATION OF AST OF TYPE AST_TYPE_ADDITION
 //-----------------------------------------------------------------------------
 
 
@@ -1602,8 +1833,9 @@ doubles:
   - dummy:
     - env
   - spy:
-    - runtime_env_set_local (to check no binding)
-    - spy_set_local_has_been_called
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
   - fake:
     - functions of standard libray which are used:
       - malloc, free, strdup
@@ -1612,56 +1844,7 @@ doubles:
 
 
 //-----------------------------------------------------------------------------
-// FIXTURES
-//-----------------------------------------------------------------------------
-
-
-static int eval_addition_setup(void **state) {
-    (void)state;
-
-    // fake
-    set_allocators(fake_malloc, fake_free);
-    set_string_duplicate(fake_strdup);
-    fake_memory_reset();
-
-    // mock/spy
-    runtime_env_set_set_local(spy_runtime_env_set_local);
-    spy_set_local_has_been_called = false;
-
-    // dummy
-    env = DUMMY_RUNTIME_ENV_P;
-
-    // real
-    out = fake_malloc(sizeof(runtime_env_value *));
-    *out = NULL;
-
-    return 0;
-}
-
-static int eval_addition_teardown(void **state) {
-    (void)state;
-    if (out) {
-        if (*out) {
-            runtime_env_value_destroy(*out);
-            *out = NULL;
-        }
-        fake_free(out);
-        out = NULL;
-    }
-    assert_true(fake_memory_no_invalid_free());
-    assert_true(fake_memory_no_double_free());
-    assert_true(fake_memory_no_leak());
-    set_allocators(NULL, NULL);
-    set_string_duplicate(NULL);
-    runtime_env_set_set_local(NULL);
-    fake_memory_reset();
-    return 0;
-}
-
-
-
-//-----------------------------------------------------------------------------
-// TESTS
+// PARAMETRIC CASES
 //-----------------------------------------------------------------------------
 
 
@@ -1670,127 +1853,126 @@ static int eval_addition_teardown(void **state) {
 //  - root is a ill-formed addition node because:
 //    - root->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_addition_node_ill_formed_cause_children_null(void **state) {
-    (void)state;
-    ast *addition_node = a_ill_formed_addition_node(ILL_CHILDREN_NULL);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case ADDITION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_addition_node_ill_formed_cause_children_null",
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_addition_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(addition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_ADDITION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed addition node because:
 //    - root->children->children == NULL
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_addition_node_ill_formed_cause_no_child(void **state) {
-    (void)state;
-    ast *addition_node = a_ill_formed_addition_node(ILL_NO_CHILD);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case ADDITION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_addition_node_ill_formed_cause_no_child",
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_addition_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(addition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_ADDITION_NODE_ILL_FORMED_NO_CHILD,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed addition node because:
 //    - root->children->children_nb == 1
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_addition_node_ill_formed_cause_one_child(void **state) {
-    (void)state;
-    ast *addition_node = a_ill_formed_addition_node(ILL_ONE_CHILD);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_ONE_CHILD = {0};
+static const test_interpreter_case ADDITION_NODE_ILL_FORMED_ONE_CHILD = {
+    .name = "eval_error_invalid_ast_when_addition_node_ill_formed_cause_one_child",
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_addition_node_because_one_child,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(addition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_ADDITION_NODE_ILL_FORMED_ONE_CHILD,
+};
 
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed addition node because:
 //    - root->children->children_nb == 3
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static void eval_error_invalid_ast_when_addition_node_ill_formed_cause_three_children(void **state) {
-    (void)state;
-    ast *addition_node = a_ill_formed_addition_node(ILL_THREE_CHILDREN);
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
+static const test_interpreter_case ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_addition_node_ill_formed_cause_three_children",
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .root_constructor_fn = &make_root_a_ill_formed_addition_node_because_three_children,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_INVALID_AST);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
-    *out = NULL;
-    ast_destroy(addition_node);
-}
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_ADDITION_NODE_ILL_FORMED_THREE_CHILDREN,
+};
 
 // Given:
 //  - args are well-formed
 //  - root is a well-formed addition node
-//  - the two children evaluate to numbers
+//  - the two children evaluate to numbers (the grammar ensure it)
 //  - all allocations will fail during interpreter_eval call
 // Expected:
+//  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
-static void eval_error_oom_when_addition_node_and_malloc_fails(void **state) {
-    (void)state;
-    ast *addition_node = a_well_formed_addition_of_two_numbers();
-    runtime_env_value *sentinel = (runtime_env_value *)0x1;
-    *out = sentinel;
-    runtime_env_value **old_out = out;
+static test_interpreter_ctx CTX_ADDITION_NODE_OOM = {0};
+static const test_interpreter_case ADDITION_NODE_OOM = {
+    .name = "eval_error_oom_when_addition_node_and_malloc_fails",
 
-    // Simulate a total memory allocation failure
-    fake_memory_fail_on_all_call();
+    .root_constructor_fn = &make_root_a_well_formed_addition_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = true,
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-    // Restore normal allocation behavior
-    fake_memory_fail_on_calls(0, NULL);
+    .clean_up_fn = &destroy_root,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OOM);
-    assert_ptr_equal(out, old_out);
-    assert_ptr_equal(*out, sentinel);
-
-    *out = NULL;
-    ast_destroy(addition_node);
-}
+    .ctx =&CTX_ADDITION_NODE_OOM,
+};
 
 // Given:
 //  - args are well-formed
@@ -1806,24 +1988,85 @@ static void eval_error_oom_when_addition_node_and_malloc_fails(void **state) {
 //           +
 //           root->children->children[1]->data->data->int_value
 //  - returns INTERPRETER_STATUS_OK
-static void eval_success_when_addition_node_and_malloc_succeeds(void **state) {
-    (void)state;
-    ast *addition_node = a_well_formed_addition_of_two_numbers();
+static test_interpreter_ctx CTX_ADDITION_NODE_SUCCESS = {0};
+static const test_interpreter_case ADDITION_NODE_SUCCESS = {
+    .name = "eval_success_when_addition_node_and_malloc_succeeds",
 
-    interpreter_status status = interpreter_eval(env, addition_node, out);
+    .root_constructor_fn = &make_root_a_well_formed_addition_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = false,
 
-    assert_int_equal(status, INTERPRETER_STATUS_OK);
-    assert_non_null(*out);
-    assert_int_equal((*out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal(
-        (*out)->as.i,
-        addition_node->children->children[0]->data->data.int_value
-        +
-        addition_node->children->children[1]->data->data.int_value );
-    assert_false(spy_set_local_has_been_called);
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_addition_result,
+    .expected_status = INTERPRETER_STATUS_OK,
 
-    ast_destroy(addition_node);
-}
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_ADDITION_NODE_SUCCESS,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES REGISTRY
+//-----------------------------------------------------------------------------
+//
+// Centralized registry of all parametric test cases for interpreter_eval.
+// Each case is defined once here, then automatically expanded into a
+// CMocka CMUnitTest array below.
+//
+// To add a new test case:
+//     1. Define its `test_interpreter_case` struct (e.g. ADDITION_NODE_OOM)
+//     2. Add one line in INTERPRETER_PARAM_CASES() below
+//
+
+#define INTERPRETER_PARAM_CASES(X) \
+    X(INT_NODE_OOM) \
+    X(INT_NODE_SUCCESS) \
+    X(STRING_NODE_OOM) \
+    X(STRING_NODE_SUCCESS) \
+    X(SYMBOL_NODE_OOM) \
+    X(SYMBOL_NODE_SUCCESS) \
+    X(ERROR_NOT_SENTINEL_NODE_OOM) \
+    X(ERROR_NOT_SENTINEL_NODE_SUCCESS) \
+    X(ERROR_SENTINEL_NODE_OOM) \
+    X(ERROR_SENTINEL_NODE_SUCCESS) \
+    X(FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(FUNCTION_NODE_ILL_FORMED_NO_CHILD) \
+    X(FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN) \
+    X(FUNCTION_NODE_DUPLICATE_PARAM) \
+    X(FUNCTION_NODE_OOM) \
+    X(FUNCTION_NODE_SUCCESS) \
+    X(FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD) \
+    X(FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILDREN) \
+    X(FUNCTION_DEFINITION_NODE_OOM) \
+    X(FUNCTION_DEFINITION_NODE_BINDING_FAILURE) \
+    X(FUNCTION_DEFINITION_NODE_SUCCESS) \
+    X(NEGATION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(NEGATION_NODE_ILL_FORMED_NO_CHILD) \
+    X(NEGATION_NODE_ILL_FORMED_TWO_CHILDREN) \
+    X(NEGATION_NODE_OOM) \
+    X(NEGATION_NODE_SUCCESS) \
+    X(ADDITION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(ADDITION_NODE_ILL_FORMED_NO_CHILD) \
+    X(ADDITION_NODE_ILL_FORMED_ONE_CHILD) \
+    X(ADDITION_NODE_ILL_FORMED_THREE_CHILDREN) \
+    X(ADDITION_NODE_OOM) \
+    X(ADDITION_NODE_SUCCESS)
+
+#define MAKE_TEST(CASE_SYM) \
+    { .name = CASE_SYM.name, \
+    .test_func = eval_test, \
+    .setup_func = parametric_setup, \
+    .teardown_func = parametric_teardown, \
+    .initial_state = (void*)&CASE_SYM },
+
+static const struct CMUnitTest parametric_tests[] = {
+    INTERPRETER_PARAM_CASES(MAKE_TEST)
+};
+
+#undef MAKE_TEST
 
 
 
@@ -1833,9 +2076,7 @@ static void eval_success_when_addition_node_and_malloc_succeeds(void **state) {
 
 
 int main(void) {
-    const struct CMUnitTest _tests[] = {
-
-        // invalid args
+    const struct CMUnitTest invalid_args_tests[] = {
         cmocka_unit_test_setup_teardown(
             eval_error_when_env_null,
             eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
@@ -1848,128 +2089,11 @@ int main(void) {
         cmocka_unit_test_setup_teardown(
             eval_error_when_unsupported_root_type,
             eval_with_invalid_args_setup, eval_with_invalid_args_teardown),
-
-        // AST_TYPE_DATA_WRAPPER ; TYPE_INT
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_int_node_and_malloc_fails,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_int_node_and_malloc_succeeds,
-            eval_leaf_setup, eval_teardown),
-
-        // AST_TYPE_DATA_WRAPPER ; TYPE_STRING
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_string_node_and_malloc_fails,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_string_node_and_malloc_succeeds,
-            eval_leaf_setup, eval_teardown),
-
-        // AST_TYPE_DATA_WRAPPER ; TYPE_SYMBOL
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_symbol_node_and_malloc_fails,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_symbol_node_and_malloc_succeeds,
-            eval_leaf_setup, eval_teardown),
-
-        // AST_TYPE_ERROR
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_error_node_not_sentinel_and_malloc_fails,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_error_node_not_sentinel_and_malloc_succeeds,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_error_node_sentinel_and_malloc_fails,
-            eval_leaf_setup, eval_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_error_node_sentinel_and_malloc_succeeds,
-            eval_leaf_setup, eval_teardown),
-
-        // AST_TYPE_FUNCTION
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_node_ill_formed_cause_children_null,
-            eval_function_setup, eval_function_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_node_ill_formed_cause_no_child,
-            eval_function_setup, eval_function_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_node_ill_formed_cause_two_children,
-            eval_function_setup, eval_function_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_duplicate_param_when_function_node_well_formed_but_duplicate_param,
-            eval_function_setup, eval_function_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_function_node_and_malloc_fails,
-            eval_function_setup, eval_function_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_function_node_and_malloc_succeeds,
-            eval_function_setup, eval_function_teardown),
-
-        // AST_TYPE_FUNCTION_DEFINITION
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_children_null,
-            eval_function_definition_setup, eval_function_definition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_no_child,
-            eval_function_definition_setup, eval_function_definition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_function_definition_node_ill_formed_cause_two_children,
-            eval_function_definition_setup, eval_function_definition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_function_definition_node_and_malloc_fails,
-            eval_function_definition_setup, eval_function_definition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_binding_error_when_function_definition_node_and_binding_fails,
-            eval_function_definition_setup, eval_function_definition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_function_definition_node_and_binding_succeeds,
-            eval_function_definition_setup, eval_function_definition_teardown),
-
-        // AST_TYPE_NEGATION
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_negation_node_ill_formed_cause_children_null,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_negation_node_ill_formed_cause_no_child,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_negation_node_ill_formed_cause_two_children,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_negation_node_and_malloc_fails,
-            eval_negation_setup, eval_negation_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_negation_node_and_malloc_succeeds,
-            eval_negation_setup, eval_negation_teardown),
-
-        // AST_TYPE_ADDITION
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_addition_node_ill_formed_cause_children_null,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_addition_node_ill_formed_cause_no_child,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_addition_node_ill_formed_cause_one_child,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_invalid_ast_when_addition_node_ill_formed_cause_three_children,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_error_oom_when_addition_node_and_malloc_fails,
-            eval_addition_setup, eval_addition_teardown),
-        cmocka_unit_test_setup_teardown(
-            eval_success_when_addition_node_and_malloc_succeeds,
-            eval_addition_setup, eval_addition_teardown),
     };
 
     int failed = 0;
-    failed += cmocka_run_group_tests(_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(invalid_args_tests, NULL, NULL);
+    failed += cmocka_run_group_tests(parametric_tests, NULL, NULL);
 
     return failed;
 }
