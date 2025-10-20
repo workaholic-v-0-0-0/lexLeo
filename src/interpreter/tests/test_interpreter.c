@@ -123,165 +123,6 @@ const runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct 
 
 
 //-----------------------------------------------------------------------------
-// HELPERS
-//-----------------------------------------------------------------------------
-
-
-static ast *an_empty_function_node_with_dummy_name() {
-    // function name
-    ast *dummy_function_name = ast_create_symbol_node(DUMMY_SYMBOL_P);
-
-    // list of params
-    ast *empty_list_of_params =
-        ast_create_children_node_var(
-            AST_TYPE_LIST_OF_PARAMETERS,
-            1,
-            ast_create_children_node_var(
-                AST_TYPE_PARAMETERS,
-                0 ) );
-
-    // body
-    ast *empty_body =
-        ast_create_children_node_var(
-            AST_TYPE_BLOCK,
-            1,
-            ast_create_children_node_var(
-                AST_TYPE_BLOCK_ITEMS,
-                0 ) );
-
-    // function
-    return
-        ast_create_children_node_var(
-            AST_TYPE_FUNCTION,
-            3,
-            dummy_function_name,
-            empty_list_of_params,
-            empty_body );
-}
-
-static ast *a_function_definition_node_with_empty_function() {
-    return
-    ast_create_children_node_var(
-        AST_TYPE_FUNCTION_DEFINITION,
-        1,
-        an_empty_function_node_with_dummy_name() );
-}
-
-typedef enum {
-    ILL_CHILDREN_NULL,
-    ILL_NO_CHILD,
-    ILL_ONE_CHILD,
-    ILL_TWO_CHILDREN,
-    ILL_THREE_CHILDREN,
-} illness_type;
-
-static ast *make_shallow_node(ast_type type) {
-    ast *ret = fake_malloc(sizeof(ast));
-    memset(ret, 0, sizeof(ast));
-    ret->type = type;
-    return ret;
-}
-
-static ast *make_ill_formed_node(ast_type type, illness_type how) {
-    switch (how) {
-        case ILL_CHILDREN_NULL: {
-            ast *ret = make_shallow_node(type);
-            if (ret) ret->children = NULL;
-            return ret;
-        }
-        case ILL_NO_CHILD:
-            return ast_create_children_node_var(type, 0);
-
-        case ILL_ONE_CHILD:
-            return ast_create_children_node_var(
-                type,
-                1,
-                ast_create_int_node(A_INT) );
-
-        case ILL_TWO_CHILDREN:
-            return ast_create_children_node_var(
-                type,
-                2,
-                ast_create_int_node(A_INT),
-                ast_create_int_node(A_INT) );
-
-        case ILL_THREE_CHILDREN:
-            return ast_create_children_node_var(
-                type,
-                3,
-                ast_create_int_node(A_INT),
-                ast_create_int_node(A_INT),
-                ast_create_int_node(A_INT) );
-    }
-    assert(!"invalid illness_type");
-    return NULL;
-}
-
-static ast *make_unary_with_string(ast_type type, const char *s) {
-    return ast_create_children_node_var(type, 1, ast_create_string_node(s));
-}
-static ast *make_unary_with_int(ast_type type, int i) {
-    return ast_create_children_node_var(type, 1, ast_create_int_node(i));
-}
-
-static ast *a_ill_formed_function_node(illness_type how) {
-    return make_ill_formed_node(AST_TYPE_FUNCTION, how);
-}
-
-static ast *a_ill_formed_negation_node(illness_type how) {
-    return make_ill_formed_node(AST_TYPE_NEGATION, how);
-}
-static ast *a_well_formed_negation_of_string(void) {
-    return make_unary_with_string(AST_TYPE_NEGATION, A_CONSTANT_STRING);
-}
-static ast *a_negation_node_with_a_number(int i) {
-    return make_unary_with_int(AST_TYPE_NEGATION, i);
-}
-
-static ast *a_ill_formed_addition_node(illness_type how) {
-    return make_ill_formed_node(AST_TYPE_ADDITION, how);
-}
-static ast *a_well_formed_addition_of_number_and_string() {
-    return ast_create_children_node_var(
-        AST_TYPE_ADDITION,
-        2,
-        ast_create_int_node(A_INT),
-        ast_create_string_node(A_CONSTANT_STRING) );
-}
-static ast *a_well_formed_addition_of_two_numbers() {
-    return ast_create_children_node_var(
-        AST_TYPE_ADDITION,
-        2,
-        ast_create_int_node(A_INT),
-        ast_create_int_node(A_INT) );
-}
-
-static ast *a_function_node_with_duplicate_param(void) {
-    return
-        ast_create_children_node_var(
-            AST_TYPE_FUNCTION,
-            3,
-            ast_create_symbol_node(DUMMY_SYMBOL_P),
-            ast_create_children_node_var(
-                AST_TYPE_LIST_OF_PARAMETERS,
-                1,
-                ast_create_children_node_var(
-                    AST_TYPE_PARAMETERS,
-                    3,
-                    ast_create_symbol_node(DUMMY_SYMBOL_P),
-                    ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P),
-                    ast_create_symbol_node(DUMMY_SYMBOL_P) ) ),
-            ast_create_children_node_var(
-                AST_TYPE_BLOCK,
-                1,
-                ast_create_children_node_var(
-                    AST_TYPE_BLOCK_ITEMS,
-                    0 ) ) );
-}
-
-
-
-//-----------------------------------------------------------------------------
 // TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
 //-----------------------------------------------------------------------------
 
@@ -300,8 +141,7 @@ static ast *a_function_node_with_duplicate_param(void) {
 
 
 //-----------------------------------------------------------------------------
-// TESTS interpreter_status interpreter_eval(struct runtime_env *env, const struct ast *root, struct runtime_env_value **out);
-// FOR INVALID ARGUMENTS MANAGEMENT
+// INVALID ARGUMENTS HANDLING
 //-----------------------------------------------------------------------------
 
 
@@ -620,6 +460,198 @@ static void eval_test(void **state) {
 //-----------------------------------------------------------------------------
 
 
+static ast *an_empty_function_node_with_dummy_name() {
+    // function name
+    ast *dummy_function_name = ast_create_symbol_node(DUMMY_SYMBOL_P);
+
+    // list of params
+    ast *empty_list_of_params =
+        ast_create_children_node_var(
+            AST_TYPE_LIST_OF_PARAMETERS,
+            1,
+            ast_create_children_node_var(
+                AST_TYPE_PARAMETERS,
+                0 ) );
+
+    // body
+    ast *empty_body =
+        ast_create_children_node_var(
+            AST_TYPE_BLOCK,
+            1,
+            ast_create_children_node_var(
+                AST_TYPE_BLOCK_ITEMS,
+                0 ) );
+
+    // function
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            dummy_function_name,
+            empty_list_of_params,
+            empty_body );
+}
+
+static ast *a_function_definition_node_with_empty_function() {
+    return
+    ast_create_children_node_var(
+        AST_TYPE_FUNCTION_DEFINITION,
+        1,
+        an_empty_function_node_with_dummy_name() );
+}
+
+typedef enum {
+    ILL_CHILDREN_NULL,
+    ILL_NO_CHILD,
+    ILL_ONE_CHILD,
+    ILL_TWO_CHILDREN,
+    ILL_THREE_CHILDREN,
+} illness_type;
+
+static ast *make_shallow_node(ast_type type) {
+    ast *ret = fake_malloc(sizeof(ast));
+    memset(ret, 0, sizeof(ast));
+    ret->type = type;
+    return ret;
+}
+
+static ast *make_ill_formed_node(ast_type type, illness_type how) {
+    switch (how) {
+        case ILL_CHILDREN_NULL: {
+            ast *ret = make_shallow_node(type);
+            if (ret) ret->children = NULL;
+            return ret;
+        }
+        case ILL_NO_CHILD:
+            return ast_create_children_node_var(type, 0);
+
+        case ILL_ONE_CHILD:
+            return ast_create_children_node_var(
+                type,
+                1,
+                ast_create_int_node(A_INT) );
+
+        case ILL_TWO_CHILDREN:
+            return ast_create_children_node_var(
+                type,
+                2,
+                ast_create_int_node(A_INT),
+                ast_create_int_node(A_INT) );
+
+        case ILL_THREE_CHILDREN:
+            return ast_create_children_node_var(
+                type,
+                3,
+                ast_create_int_node(A_INT),
+                ast_create_int_node(A_INT),
+                ast_create_int_node(A_INT) );
+    }
+    assert(!"invalid illness_type");
+    return NULL;
+}
+
+static ast *make_unary_with_string(ast_type type, const char *s) {
+    return ast_create_children_node_var(type, 1, ast_create_string_node(s));
+}
+static ast *make_unary_with_int(ast_type type, int i) {
+    return ast_create_children_node_var(type, 1, ast_create_int_node(i));
+}
+
+static ast *a_ill_formed_function_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_FUNCTION, how);
+}
+
+static ast *a_ill_formed_negation_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_NEGATION, how);
+}
+static ast *a_well_formed_negation_of_string(void) {
+    return make_unary_with_string(AST_TYPE_NEGATION, A_CONSTANT_STRING);
+}
+static ast *a_negation_node_with_a_number(int i) {
+    return make_unary_with_int(AST_TYPE_NEGATION, i);
+}
+
+static ast *a_ill_formed_addition_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_ADDITION, how);
+}
+static ast *a_well_formed_addition_of_number_and_string() {
+    return ast_create_children_node_var(
+        AST_TYPE_ADDITION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_string_node(A_CONSTANT_STRING) );
+}
+static ast *a_well_formed_addition_of_two_numbers() {
+    return ast_create_children_node_var(
+        AST_TYPE_ADDITION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_int_node(A_INT) );
+}
+
+static ast *a_function_node_with_duplicate_param(void) {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            ast_create_symbol_node(DUMMY_SYMBOL_P),
+            ast_create_children_node_var(
+                AST_TYPE_LIST_OF_PARAMETERS,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_PARAMETERS,
+                    3,
+                    ast_create_symbol_node(DUMMY_SYMBOL_P),
+                    ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P),
+                    ast_create_symbol_node(DUMMY_SYMBOL_P) ) ),
+            ast_create_children_node_var(
+                AST_TYPE_BLOCK,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_BLOCK_ITEMS,
+                    0 ) ) );
+}
+
+static ast *a_ill_formed_subtraction_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_SUBTRACTION, how);
+}
+static ast *a_well_formed_subtraction_of_two_numbers() {
+    return ast_create_children_node_var(
+        AST_TYPE_SUBTRACTION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_int_node(A_INT) );
+}
+
+static ast *a_ill_formed_multiplication_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_MULTIPLICATION, how);
+}
+static ast *a_well_formed_multiplication_of_two_numbers() {
+    return ast_create_children_node_var(
+        AST_TYPE_MULTIPLICATION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_int_node(A_INT) );
+}
+
+static ast *a_ill_formed_division_node(illness_type how) {
+    return make_ill_formed_node(AST_TYPE_DIVISION, how);
+}
+static ast *a_well_formed_division_by_zero_node() {
+    return ast_create_children_node_var(
+        AST_TYPE_DIVISION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_int_node(0) );
+}
+static ast *a_well_formed_division_not_by_zero_node() {
+    return ast_create_children_node_var(
+        AST_TYPE_DIVISION,
+        2,
+        ast_create_int_node(A_INT),
+        ast_create_int_node(A_INT) );
+}
+
 static void make_root_a_int_node(test_interpreter_ctx *ctx) {
     ctx->root = ast_create_int_node(A_INT);
 }
@@ -715,6 +747,70 @@ static void make_root_a_well_formed_addition_of_two_numbers(test_interpreter_ctx
     ctx->root = a_well_formed_addition_of_two_numbers();
 }
 
+static void make_root_a_ill_formed_subtraction_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_subtraction_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_subtraction_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_subtraction_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_subtraction_node_because_one_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_subtraction_node(ILL_ONE_CHILD);
+}
+
+static void make_root_a_ill_formed_subtraction_node_because_three_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_subtraction_node(ILL_THREE_CHILDREN);
+}
+
+static void make_root_a_well_formed_subtraction_of_two_numbers(test_interpreter_ctx *ctx) {
+    ctx->root = a_well_formed_subtraction_of_two_numbers();
+}
+
+static void make_root_a_ill_formed_multiplication_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_multiplication_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_multiplication_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_multiplication_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_multiplication_node_because_one_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_multiplication_node(ILL_ONE_CHILD);
+}
+
+static void make_root_a_ill_formed_multiplication_node_because_three_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_multiplication_node(ILL_THREE_CHILDREN);
+}
+
+static void make_root_a_well_formed_multiplication_of_two_numbers(test_interpreter_ctx *ctx) {
+    ctx->root = a_well_formed_multiplication_of_two_numbers();
+}
+
+static void make_root_a_ill_formed_division_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_division_node(ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_ill_formed_division_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_division_node(ILL_NO_CHILD);
+}
+
+static void make_root_a_ill_formed_division_node_because_one_child(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_division_node(ILL_ONE_CHILD);
+}
+
+static void make_root_a_ill_formed_division_node_because_three_children(test_interpreter_ctx *ctx) {
+    ctx->root = a_ill_formed_division_node(ILL_THREE_CHILDREN);
+}
+
+static void make_root_a_well_formed_division_by_zero_node(test_interpreter_ctx *ctx) {
+    ctx->root = a_well_formed_division_by_zero_node();
+}
+
+static void make_root_a_well_formed_division_not_by_zero_node(test_interpreter_ctx *ctx) {
+    ctx->root = a_well_formed_division_not_by_zero_node();
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -750,7 +846,7 @@ static void expect_runtime_binding_attempt(test_interpreter_ctx *ctx) {
 
 
 //-----------------------------------------------------------------------------
-// MOCK INITIALISATION FOR runtime_env interaction testing
+// MOCK INITIALISATION FOR runtime_env INTERACTION TESTING
 //-----------------------------------------------------------------------------
 
 
@@ -843,6 +939,36 @@ static void expected_out_points_on_addition_result(test_interpreter_ctx *ctx) {
         ctx->root->children->children[1]->data->data.int_value );
 }
 
+static void expected_out_points_on_subtraction_result(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal(
+        (*ctx->out)->as.i,
+        ctx->root->children->children[0]->data->data.int_value
+        -
+        ctx->root->children->children[1]->data->data.int_value );
+}
+
+static void expected_out_points_on_multiplication_result(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal(
+        (*ctx->out)->as.i,
+        ctx->root->children->children[0]->data->data.int_value
+        *
+        ctx->root->children->children[1]->data->data.int_value );
+}
+
+static void expected_out_points_on_division_result(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal(
+        (*ctx->out)->as.i,
+        ctx->root->children->children[0]->data->data.int_value
+        /
+        ctx->root->children->children[1]->data->data.int_value );
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -862,16 +988,6 @@ static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
     *ctx->out = NULL;
 }
 
-
-
-//-----------------------------------------------------------------------------
-// TESTS FOR
-// interpreter_status interpreter_eval(
-//     struct runtime_env *env,
-//     const struct ast *root,
-//     struct runtime_env_value **out );
-// FOR EVALUATION OF AST OF TYPES AST_TYPE_DATA_WRAPPER AND AST_TYPE_ERROR
-//-----------------------------------------------------------------------------
 
 
 //-----------------------------------------------------------------------------
@@ -1951,7 +2067,7 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {
 // Given:
 //  - args are well-formed
 //  - root is a well-formed addition node
-//  - the two children evaluate to numbers (the grammar ensure it)
+//  - the two children evaluate to numbers (the grammar ensures it)
 //  - all allocations will fail during interpreter_eval call
 // Expected:
 //  - no binding in env->binding
@@ -2008,6 +2124,651 @@ static const test_interpreter_case ADDITION_NODE_SUCCESS = {
 
 
 //-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_SUBTRACTION
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_number
+    - runtime_env_make_string
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_string_node
+    - ast_create_children_node_var
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed subtraction node because:
+//    - root->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_subtraction_node_ill_formed_cause_children_null",
+
+    .root_constructor_fn = &make_root_a_ill_formed_subtraction_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed subtraction node because:
+//    - root->children->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_subtraction_node_ill_formed_cause_no_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_subtraction_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_SUBTRACTION_NODE_ILL_FORMED_NO_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed subtraction node because:
+//    - root->children->children_nb == 1
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD = {0};
+static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD = {
+    .name = "eval_error_invalid_ast_when_subtraction_node_ill_formed_cause_one_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_subtraction_node_because_one_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed subtraction node because:
+//    - root->children->children_nb == 3
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
+static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_subtraction_node_ill_formed_cause_three_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_subtraction_node_because_three_children,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed subtraction node
+//  - the two children evaluate to numbers (the grammar ensures it)
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_OOM = {0};
+static const test_interpreter_case SUBTRACTION_NODE_OOM = {
+    .name = "eval_error_oom_when_subtraction_node_and_malloc_fails",
+
+    .root_constructor_fn = &make_root_a_well_formed_subtraction_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = true,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_SUBTRACTION_NODE_OOM,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed subtraction node
+//  - the two children evaluate to numbers
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->as.i ==
+//           root->children->children[0]->data->data->int_value
+//           -
+//           root->children->children[1]->data->data->int_value
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_SUBTRACTION_NODE_SUCCESS = {0};
+static const test_interpreter_case SUBTRACTION_NODE_SUCCESS = {
+    .name = "eval_success_when_subtraction_node_and_malloc_succeeds",
+
+    .root_constructor_fn = &make_root_a_well_formed_subtraction_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_subtraction_result,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_SUBTRACTION_NODE_SUCCESS,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_MULTIPLICATION
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_number
+    - runtime_env_make_string
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_string_node
+    - ast_create_children_node_var
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed multiplication node because:
+//    - root->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_multiplication_node_ill_formed_cause_children_null",
+
+    .root_constructor_fn = &make_root_a_ill_formed_multiplication_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed multiplication node because:
+//    - root->children->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_multiplication_node_ill_formed_cause_no_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_multiplication_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed multiplication node because:
+//    - root->children->children_nb == 1
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD = {
+    .name = "eval_error_invalid_ast_when_multiplication_node_ill_formed_cause_one_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_multiplication_node_because_one_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed multiplication node because:
+//    - root->children->children_nb == 3
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_multiplication_node_ill_formed_cause_three_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_multiplication_node_because_three_children,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed multiplication node
+//  - the two children evaluate to numbers (the grammar ensures it)
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_OOM = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_OOM = {
+    .name = "eval_error_oom_when_multiplication_node_and_malloc_fails",
+
+    .root_constructor_fn = &make_root_a_well_formed_multiplication_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = true,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_OOM,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed multiplication node
+//  - the two children evaluate to numbers
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->as.i ==
+//           root->children->children[0]->data->data->int_value
+//           *
+//           root->children->children[1]->data->data->int_value
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_MULTIPLICATION_NODE_SUCCESS = {0};
+static const test_interpreter_case MULTIPLICATION_NODE_SUCCESS = {
+    .name = "eval_success_when_multiplication_node_and_malloc_succeeds",
+
+    .root_constructor_fn = &make_root_a_well_formed_multiplication_of_two_numbers,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_multiplication_result,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_MULTIPLICATION_NODE_SUCCESS,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_DIVISION
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_number
+    - runtime_env_make_string
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_string_node
+    - ast_create_children_node_var
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed division node because:
+//    - root->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case DIVISION_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_division_node_ill_formed_cause_children_null",
+
+    .root_constructor_fn = &make_root_a_ill_formed_division_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_ILL_FORMED_CHILDREN_NULL,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed division node because:
+//    - root->children->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case DIVISION_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_division_node_ill_formed_cause_no_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_division_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_ILL_FORMED_NO_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed division node because:
+//    - root->children->children_nb == 1
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_ONE_CHILD = {0};
+static const test_interpreter_case DIVISION_NODE_ILL_FORMED_ONE_CHILD = {
+    .name = "eval_error_invalid_ast_when_division_node_ill_formed_cause_one_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_division_node_because_one_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_ILL_FORMED_ONE_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed division node because:
+//    - root->children->children_nb == 3
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
+static const test_interpreter_case DIVISION_NODE_ILL_FORMED_THREE_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_division_node_ill_formed_cause_three_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_division_node_because_three_children,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_ILL_FORMED_THREE_CHILDREN,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed division node
+//  - but the second number is zero
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_DIVISION_BY_ZERO
+static test_interpreter_ctx CTX_DIVISION_NODE_DIVISION_BY_ZERO = {0};
+static const test_interpreter_case DIVISION_NODE_DIVISION_BY_ZERO = {
+    .name = "eval_error_division_by_zero_when_division_node_and_second_number_is_zero",
+
+    .root_constructor_fn = &make_root_a_well_formed_division_by_zero_node,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_DIVISION_BY_ZERO,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_DIVISION_BY_ZERO,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed division node
+//  - the two children evaluate to numbers (the grammar ensures it)
+//  - the second number is not zero
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_DIVISION_NODE_OOM = {0};
+static const test_interpreter_case DIVISION_NODE_OOM = {
+    .name = "eval_error_oom_when_division_node_and_malloc_fails",
+
+    .root_constructor_fn = &make_root_a_well_formed_division_not_by_zero_node,
+    .env_is_dummy = true,
+    .oom = true,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_DIVISION_NODE_OOM,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed division node
+//  - the two children evaluate to numbers
+//  - the second number is not zero
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->as.i ==
+//           root->children->children[0]->data->data->int_value
+//           /
+//           root->children->children[1]->data->data->int_value
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_DIVISION_NODE_SUCCESS = {0};
+static const test_interpreter_case DIVISION_NODE_SUCCESS = {
+    .name = "eval_success_when_division_node_and_malloc_succeeds",
+
+    .root_constructor_fn = &make_root_a_well_formed_division_not_by_zero_node,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_env_interaction_fn = no_runtime_interaction,
+    .expected_out_fn = &expected_out_points_on_division_result,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_DIVISION_NODE_SUCCESS,
+};
+
+
+
+//-----------------------------------------------------------------------------
 // PARAMETRIC CASES REGISTRY
 //-----------------------------------------------------------------------------
 //
@@ -2053,7 +2814,26 @@ static const test_interpreter_case ADDITION_NODE_SUCCESS = {
     X(ADDITION_NODE_ILL_FORMED_ONE_CHILD) \
     X(ADDITION_NODE_ILL_FORMED_THREE_CHILDREN) \
     X(ADDITION_NODE_OOM) \
-    X(ADDITION_NODE_SUCCESS)
+    X(ADDITION_NODE_SUCCESS) \
+    X(SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(SUBTRACTION_NODE_ILL_FORMED_NO_CHILD) \
+    X(SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD) \
+    X(SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN) \
+    X(SUBTRACTION_NODE_OOM) \
+    X(SUBTRACTION_NODE_SUCCESS) \
+    X(MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD) \
+    X(MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD) \
+    X(MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN) \
+    X(MULTIPLICATION_NODE_OOM) \
+    X(MULTIPLICATION_NODE_SUCCESS) \
+    X(DIVISION_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(DIVISION_NODE_ILL_FORMED_NO_CHILD) \
+    X(DIVISION_NODE_ILL_FORMED_ONE_CHILD) \
+    X(DIVISION_NODE_ILL_FORMED_THREE_CHILDREN) \
+    X(DIVISION_NODE_DIVISION_BY_ZERO) \
+    X(DIVISION_NODE_OOM) \
+    X(DIVISION_NODE_SUCCESS)
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

@@ -324,6 +324,11 @@ interpreter_status interpreter_eval(
     runtime_env_value *value = NULL;
     interpreter_status status = INTERPRETER_STATUS_OK;
 
+    ast *lhs = NULL;
+    ast *rhs = NULL;
+    runtime_env_value *evaluated_lhs = NULL;
+    runtime_env_value *evaluated_rhs = NULL;
+
     switch (root->type) {
 
     case AST_TYPE_DATA_WRAPPER:
@@ -420,11 +425,11 @@ interpreter_status interpreter_eval(
         if (!ast_is_well_formed_addition(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        ast *lhs = root->children->children[0];
-        ast *rhs = root->children->children[1];
+        lhs = root->children->children[0];
+        rhs = root->children->children[1];
 
-        runtime_env_value *evaluated_lhs = NULL;
-        runtime_env_value *evaluated_rhs = NULL;
+        evaluated_lhs = NULL;
+        evaluated_rhs = NULL;
 
         status = interpreter_eval(env, lhs, &evaluated_lhs);
         if (status != INTERPRETER_STATUS_OK) {
@@ -444,8 +449,99 @@ interpreter_status interpreter_eval(
         runtime_env_value_destroy(evaluated_rhs);
         break;
 
+    case AST_TYPE_SUBTRACTION:
+        if (!ast_is_well_formed_subtraction(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        lhs = root->children->children[0];
+        rhs = root->children->children[1];
+
+        evaluated_lhs = NULL;
+        evaluated_rhs = NULL;
+
+        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            return status;
+        }
+        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            runtime_env_value_destroy(evaluated_rhs);
+            return status;
+        }
+
+        evaluated_lhs->as.i = evaluated_lhs->as.i - evaluated_rhs->as.i;
+        *out = evaluated_lhs;
+
+        runtime_env_value_destroy(evaluated_rhs);
+        break;
+
+    case AST_TYPE_MULTIPLICATION:
+        if (!ast_is_well_formed_multiplication(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        lhs = root->children->children[0];
+        rhs = root->children->children[1];
+
+        evaluated_lhs = NULL;
+        evaluated_rhs = NULL;
+
+        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            return status;
+        }
+        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            runtime_env_value_destroy(evaluated_rhs);
+            return status;
+        }
+
+        evaluated_lhs->as.i = evaluated_lhs->as.i * evaluated_rhs->as.i;
+        *out = evaluated_lhs;
+
+        runtime_env_value_destroy(evaluated_rhs);
+        break;
+
+    case AST_TYPE_DIVISION:
+        if (!ast_is_well_formed_division(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        lhs = root->children->children[0];
+        rhs = root->children->children[1];
+
+        evaluated_lhs = NULL;
+        evaluated_rhs = NULL;
+
+        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_rhs);
+            return status;
+        }
+
+        if (evaluated_rhs->as.i == 0) {
+            runtime_env_value_destroy(evaluated_rhs);
+            return INTERPRETER_STATUS_DIVISION_BY_ZERO;
+        }
+
+        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK) {
+            runtime_env_value_destroy(evaluated_lhs);
+            runtime_env_value_destroy(evaluated_rhs);
+            return status;
+        }
+
+        evaluated_lhs->as.i = evaluated_lhs->as.i / evaluated_rhs->as.i;
+        *out = evaluated_lhs;
+
+        runtime_env_value_destroy(evaluated_rhs);
+        break;
+
+
     default:
-        return INTERPRETER_STATUS_INVALID_AST;
+        return INTERPRETER_STATUS_UNSUPPORTED_AST;
     }
 
     return INTERPRETER_STATUS_OK;
