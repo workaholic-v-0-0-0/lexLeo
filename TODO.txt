@@ -43,8 +43,6 @@
 - fix memory leaks caused by the list module
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_ADDITION
-  - AST_TYPE_COMPUTATION
   - AST_TYPE_NUMBERS
   - AST_TYPE_LIST_OF_NUMBERS
   - AST_TYPE_QUOTE

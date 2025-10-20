@@ -1194,7 +1194,7 @@ static void initialize_ast_children_dynamically(destroy_ast_children_params_t *p
         alloc_and_save_address_to_be_freed((void **) &((params->ast_children->children)[0]), sizeof(ast));
         alloc_and_save_address_to_be_freed((void **) &((params->ast_children->children)[1]), sizeof(ast));
         ((params->ast_children->children)[0])->type = AST_TYPE_DATA_WRAPPER;
-        ((params->ast_children->children)[1])->type = AST_TYPE_COMPUTATION;
+        ((params->ast_children->children)[1])->type = AST_TYPE_ADDITION;
         ((params->ast_children->children)[0])->data = DUMMY_TYPED_DATA_P;
         ((params->ast_children->children)[1])->children = DUMMY_AST_CHILDREN_T_P;
     }
@@ -3305,7 +3305,6 @@ static void ast_type_has_children_returns_true_when_container_type(void **state)
     assert_true(ast_type_has_children(AST_TYPE_READING));
     assert_true(ast_type_has_children(AST_TYPE_WRITING));
     assert_true(ast_type_has_children(AST_TYPE_TRANSLATION_UNIT));
-    assert_true(ast_type_has_children(AST_TYPE_COMPUTATION));
     assert_true(ast_type_has_children(AST_TYPE_ADDITION));
 }
 

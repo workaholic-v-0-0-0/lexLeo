@@ -433,7 +433,6 @@ bool ast_type_has_children(ast_type type) {
         case AST_TYPE_FUNCTION_CALL:
         case AST_TYPE_QUOTE:
         case AST_TYPE_NEGATION:
-        case AST_TYPE_COMPUTATION:
         case AST_TYPE_ADDITION:
             return true;
         case AST_TYPE_DATA_WRAPPER:
@@ -538,7 +537,6 @@ const char *ast_type_to_string(ast_type t) {
         case AST_TYPE_FUNCTION_CALL:       return "FUNCTION_CALL";
         case AST_TYPE_QUOTE:               return "QUOTE";
         case AST_TYPE_NEGATION:            return "NEGATION";
-        case AST_TYPE_COMPUTATION:         return "COMPUTATION";
         case AST_TYPE_ADDITION:            return "ADDITION";
         case AST_TYPE_DATA_WRAPPER:        return "DATA_WRAPPER";
         case AST_TYPE_ERROR:               return "ERROR";
