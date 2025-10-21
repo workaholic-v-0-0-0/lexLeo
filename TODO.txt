@@ -43,8 +43,6 @@
 - fix memory leaks caused by the list module
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_NUMBERS
-  - AST_TYPE_LIST_OF_NUMBERS
   - AST_TYPE_QUOTE
   - AST_TYPE_READING
   - AST_TYPE_BINDING
@@ -52,11 +50,6 @@
   - AST_TYPE_BLOCK_ITEMS
   - AST_TYPE_BLOCK
   - AST_TYPE_TRANSLATION_UNIT
-  - BLOCK
-  - AST_TYPE_FUNCTION
-  - AST_TYPE_PARAMETERS
-  - AST_TYPE_LIST_OF_PARAMETERS
-  - AST_TYPE_FUNCTION_CALL
   - AST_TYPE_FUNCTION_CALL
 
 - make interpreter_eval error when child of function_definition node

@@ -811,6 +811,14 @@ static void make_root_a_well_formed_division_not_by_zero_node(test_interpreter_c
     ctx->root = a_well_formed_division_not_by_zero_node();
 }
 
+static void make_root_a_ill_formed_numbers_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = make_ill_formed_node(AST_TYPE_NUMBERS, ILL_CHILDREN_NULL);
+}
+
+static void make_root_a_numbers_node_with_no_child(test_interpreter_ctx *ctx) {
+    ctx->root = ast_create_children_node_var(AST_TYPE_NUMBERS, 0);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -2765,6 +2773,9 @@ static const test_interpreter_case DIVISION_NODE_SUCCESS = {
 
     .ctx =&CTX_DIVISION_NODE_SUCCESS,
 };
+
+
+
 
 
 
