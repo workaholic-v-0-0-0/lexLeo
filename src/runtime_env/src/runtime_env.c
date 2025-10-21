@@ -147,6 +147,17 @@ runtime_env_value *runtime_env_make_function(
     return ret;
 }
 
+runtime_env_value *runtime_env_make_quoted(const struct ast *quoted) {
+    runtime_env_value *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env_value));
+    if (!ret)
+        return NULL;
+
+    ret->type = RUNTIME_VALUE_QUOTED;
+    ret->as.quoted = quoted;
+
+    return ret;
+}
+
 runtime_env *runtime_env_unwind(runtime_env *e) {
 	if (!e)
 		return NULL;
@@ -194,6 +205,9 @@ void runtime_env_value_destroy(runtime_env_value *value) {
     case RUNTIME_VALUE_FUNCTION:
         runtime_env_release(value->as.fn.closure);
 		RUNTIME_ENV_FREE(value);
+        break;
+    case RUNTIME_VALUE_QUOTED:
+        RUNTIME_ENV_FREE(value);
         break;
     default:
         // do nothing

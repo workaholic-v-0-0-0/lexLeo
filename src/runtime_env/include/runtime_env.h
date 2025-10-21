@@ -15,6 +15,7 @@ typedef enum {
     RUNTIME_VALUE_SYMBOL,
     RUNTIME_VALUE_ERROR,
     RUNTIME_VALUE_FUNCTION,
+    RUNTIME_VALUE_QUOTED,
     RUNTIME_VALUE_TYPE_NB_TYPES,
 } runtime_env_value_type;
 
@@ -43,6 +44,7 @@ typedef struct runtime_env_value {
             const struct ast *function_node; // borrowed from ast module
             struct runtime_env *closure; // retained/released
         } fn; // owned container
+        const struct ast *quoted; // borrowed from ast module
     } as; // owned container
 } runtime_env_value;
 
@@ -51,6 +53,7 @@ runtime_env_value *runtime_env_make_string(const char *s); // with string duplic
 runtime_env_value *runtime_env_make_symbol(const struct symbol *sym); // borrowed
 runtime_env_value *runtime_env_make_error(int code, const char *msg);
 runtime_env_value *runtime_env_make_function(const struct ast *function_node, runtime_env *closure);
+runtime_env_value *runtime_env_make_quoted(const struct ast *quoted);
 
 // Note: After runtime_env_make_*, runtime_env_value must always be destroyed with runtime_env_value_destroy
 void runtime_env_value_destroy(runtime_env_value *value);
