@@ -623,6 +623,17 @@ interpreter_status interpreter_eval(
         *out = value;
         break;
 
+    case AST_TYPE_QUOTE:
+        if (!ast_is_well_formed_quote(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        value = runtime_env_make_quoted(root->children->children[0]);
+        if (!value)
+            return INTERPRETER_STATUS_OOM;
+
+        *out = value;
+        break;
+
 
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;

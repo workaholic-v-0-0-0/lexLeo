@@ -59,6 +59,8 @@ static symbol DUMMY_OTHER_SYMBOL = {.name = "an_other_symbol",};
 static symbol *DUMMY_OTHER_SYMBOL_P = &DUMMY_OTHER_SYMBOL;
 static runtime_env_value DUMMY_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_NUMBER, .refcount = 2, .as.i = A_INT_NOT_ZERO};
 static runtime_env_value *DUMMY_RUNTIME_ENV_VALUE_P = &DUMMY_RUNTIME_ENV_VALUE;
+static symbol DUMMY_SYMBOL_FOR_FUNCTION_NAME = {.name = "fonction_name",};
+static symbol *DUMMY_SYMBOL_FOR_FUNCTION_NAME_P = &DUMMY_SYMBOL_FOR_FUNCTION_NAME;
 
 
 
@@ -893,6 +895,57 @@ static void make_root_a_numbers_node_with_no_child(test_interpreter_ctx *ctx) {
     ctx->root = ast_create_children_node_var(AST_TYPE_NUMBERS, 0);
 }
 
+static void make_root_a_ill_formed_quote_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->root = ast_create_children_node_var(AST_TYPE_QUOTE, 0);
+}
+
+static ast *a_function_node_with_two_params(void) {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            ast_create_symbol_node(DUMMY_SYMBOL_FOR_FUNCTION_NAME_P),
+            ast_create_children_node_var(
+                AST_TYPE_LIST_OF_PARAMETERS,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_PARAMETERS,
+                    2,
+                    ast_create_symbol_node(DUMMY_SYMBOL_P),
+                    ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P) ) ),
+            ast_create_children_node_var(
+                AST_TYPE_BLOCK,
+                0//bbb
+            ) );
+}
+
+static const ast *a_function_call_child_with_params_7_8(void) {
+    return
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION_CALL,
+            2,
+            ast_create_symbol_node(DUMMY_SYMBOL_FOR_FUNCTION_NAME_P),
+            ast_create_children_node_var(
+                AST_TYPE_LIST_OF_NUMBERS,
+                1,
+                ast_create_children_node_var(
+                    AST_TYPE_NUMBERS,
+                    2,
+                    ast_create_int_node(7),
+                    ast_create_int_node(8)
+                )
+            )
+        );
+}
+
+static void make_root_a_quote_node_with_a_function_call_child_with_params_7_8(test_interpreter_ctx *ctx) {
+    ctx->root =
+        ast_create_children_node_var(
+            AST_TYPE_QUOTE,
+            1,
+            a_function_call_child_with_params_7_8() );
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -1180,6 +1233,13 @@ static void expected_out_points_on_division_result_when_lhs_number_rhs_symbol(te
         ctx->root->children->children[0]->data->data.int_value
         /
         ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i );
+}
+
+static void expected_out_points_on_quoted_value(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->out);
+    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_QUOTED);
+    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_ptr_equal((*ctx->out)->as.quoted, ctx->root->children->children[0]);
 }
 
 
@@ -4001,6 +4061,133 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO 
 
 
 //-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE TYPE AST_TYPE_QUOTE
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - from the runtime_env module:
+    - runtime_env_make_quoted
+    - runtime_env_value_destroy
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_symbol_node
+    - ast_create_children_node_var
+    - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_set_local
+    - runtime_env_get_local
+    - runtime_env_get
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed quote node because:
+//    - root->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_QUOTE_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case QUOTE_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_quote_node_ill_formed_cause_children_null",
+
+    .root_constructor_fn = &make_root_a_ill_formed_quote_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_QUOTE_NODE_ILL_FORMED_CHILDREN_NULL,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a quote node
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_QUOTE_NODE_OOM = {0};
+static const test_interpreter_case QUOTE_NODE_OOM = {
+    .name = "eval_error_oom_when_quote_node_and_malloc_fails",
+
+    .root_constructor_fn = &make_root_a_quote_node_with_a_function_call_child_with_params_7_8,
+    .env_is_dummy = true,
+    .oom = true,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_QUOTE_NODE_OOM,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a quote node
+//  - all allocations will succeed during interpreter_eval call
+// Expected:
+//  - no binding in env->binding
+//  -    *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_QUOTED
+//    && (*out)->refcount == 1
+//    && (*out)->as.quoted == root->children->children[0]
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_QUOTE_NODE = {0};
+static const test_interpreter_case QUOTE_NODE = {
+    .name = "eval_success_when_quote_node",
+
+    .root_constructor_fn = &make_root_a_quote_node_with_a_function_call_child_with_params_7_8,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_points_on_quoted_value,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_QUOTE_NODE,
+};
+
+
+
+//-----------------------------------------------------------------------------
 // PARAMETRIC CASES REGISTRY
 //-----------------------------------------------------------------------------
 //
@@ -4099,6 +4286,9 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO 
     X(DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO) \
     X(DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO_AND_OOM) \
     X(DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO) \
+    X(QUOTE_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(QUOTE_NODE_OOM) \
+    X(QUOTE_NODE) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \
