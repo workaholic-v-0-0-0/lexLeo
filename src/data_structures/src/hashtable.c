@@ -134,8 +134,8 @@ void hashtable_destroy_entry(void *item, void *user_data) {
     hashtable *ht = (hashtable *)user_data;
     hashtable_destroy_value_fn_t destroy_fn = ht->destroy_value_fn;
     if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
-        DATA_STRUCTURE_FREE(e->key);
-    if (destroy_fn) destroy_fn(e->value);
+        DATA_STRUCTURE_FREE((void *) e->key);
+    if (destroy_fn) destroy_fn((void *) e->value);
     DATA_STRUCTURE_FREE(e);
 }
 

@@ -31,6 +31,7 @@ struct runtime_env; // opaque
 typedef struct runtime_env runtime_env;
 
 typedef struct runtime_env_value {
+    size_t refcount;
     runtime_env_value_type type;
     union {
         int i;
@@ -56,13 +57,57 @@ runtime_env_value *runtime_env_make_function(const struct ast *function_node, ru
 runtime_env_value *runtime_env_make_quoted(const struct ast *quoted);
 
 // Note: After runtime_env_make_*, runtime_env_value must always be destroyed with runtime_env_value_destroy
-void runtime_env_value_destroy(runtime_env_value *value);
+void runtime_env_value_retain(const runtime_env_value *v);
+void runtime_env_value_release(const runtime_env_value *v);
 
 runtime_env *runtime_env_wind(runtime_env *parent);
 runtime_env *runtime_env_unwind(runtime_env *e);
 
+/**
+ * Associates a symbol with a runtime value in the given environment frame.
+ *
+ * Ownership and reference counting rules:
+ *  - On success, the environment RETAINS the value (i.e., increments its refcount).
+ *  - The caller keeps its own ownership and is still responsible for calling
+ *    runtime_env_value_release() when done with the value.
+ *  - If the operation fails (e.g. OOM, hash error), the refcount is unchanged.
+ *
+ * @param e    Target environment (must not be NULL)
+ * @param key  Symbol to bind (must not be NULL)
+ * @param value Runtime value to bind (must not be NULL)
+ * @return true on success, false on failure
+ */
 bool runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value);
+
+/**
+ * Retrieves the value bound to the given symbol in the current environment frame only.
+ *
+ * Ownership and reference counting rules:
+ *  - The returned pointer is BORROWED (no retain).
+ *  - The caller must NOT modify or release it directly.
+ *  - If the caller needs to keep the value beyond the lifetime of the environment,
+ *    it MUST call runtime_env_value_retain() before storing or returning it.
+ *
+ * @param e   Environment to look up (must not be NULL)
+ * @param key Symbol to look up (must not be NULL)
+ * @return Borrowed const pointer to the bound value, or NULL if not found
+ */
 const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
+
+/**
+ * Retrieves the value bound to the given symbol, searching the current environment
+ * and its parents recursively.
+ *
+ * Ownership and reference counting rules:
+ *  - The returned pointer is BORROWED (no retain).
+ *  - The caller must NOT modify or release it directly.
+ *  - If the caller needs to keep the value beyond the lifetime of the environment,
+ *    it MUST call runtime_env_value_retain() before storing or returning it.
+ *
+ * @param e   Environment chain to search (must not be NULL)
+ * @param key Symbol to look up (must not be NULL)
+ * @return Borrowed const pointer to the bound value, or NULL if not found
+ */
 const runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
 
 #endif //LEXLEO_RUNTIME_ENV_H

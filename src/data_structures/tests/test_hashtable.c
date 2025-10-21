@@ -31,7 +31,7 @@ static const boolean DUMMY_BOOLEAN_VALUE = 0;
 static list collected_ptr_to_be_freed = NULL;
 
 typedef struct {
-    char *key;
+    const char *key;
     void *value;
 } key_value_pair;
 
@@ -777,7 +777,7 @@ static void initialize_entries(hashtable_params_t *params) {
             alloc_and_save_address_to_be_freed((void*)&(entries[i]), sizeof(entry));;
             assert_non_null(entries[i]);
             alloc_and_save_address_to_be_freed((void*)&(entries[i]->key), strlen(KEY_VALUES[i])+1);
-            memcpy(entries[i]->key, KEY_VALUES[i], strlen(KEY_VALUES[i])+1);
+            memcpy((void *) entries[i]->key, KEY_VALUES[i], strlen(KEY_VALUES[i])+1);
         	//assert_non_null(entries[i]->key);
         	if ((params->config).chars_are_dynamically_allocated) {
                 alloc_and_save_address_to_be_freed((void*)&(entries[i]->value), sizeof(char));
@@ -831,7 +831,7 @@ static void initialize_key_value_pairs_to_be_added(key_value_pairs_params_t *par
     alloc_and_save_address_to_be_freed((void*)&key_value_pairs_to_be_added, sizeof(key_value_pair));
     size_t index = params->key_is_already_in_use ? INDEX_OF_A_KEY_IN_USE : INDEX_OF_A_KEY_NOT_IN_USE;
     alloc_and_save_address_to_be_freed((void*)&(key_value_pairs_to_be_added->key), strlen(KEY_VALUES[index])+1);
-    memcpy(key_value_pairs_to_be_added->key, KEY_VALUES[index], strlen(KEY_VALUES[index])+1);
+    memcpy((void*)key_value_pairs_to_be_added->key, KEY_VALUES[index], strlen(KEY_VALUES[index])+1);
     alloc_and_save_address_to_be_freed((void*)&(key_value_pairs_to_be_added->value), sizeof(char));
     *((char *) key_value_pairs_to_be_added->value) = STATIC_CHARS[DUMMY_INDEX_OF_A_DUMMY_KEY];
     params->key_value_pairs_to_be_added = key_value_pairs_to_be_added;
@@ -2117,9 +2117,9 @@ static void reset_value_free_reset_value_and_returns_0_when_key_in_use(void **st
     params_t *params = (params_t *) *state;
     hashtable *ht = params->hashtable_params->ht;
     const key_value_pair *key_value_pairs_to_be_added = params->key_value_pairs_params->key_value_pairs_to_be_added;
-    char *key = key_value_pairs_to_be_added->key;
+    const char *key = key_value_pairs_to_be_added->key;
     void *value = key_value_pairs_to_be_added->value;
-    void *old_value = hashtable_get(ht, key); // the mock of hash_djb2 returns index 0
+    void *old_value = hashtable_get((const hashtable*) ht, key); // the mock of hash_djb2 returns index 0
     if (ht->destroy_value_fn)
         expect_value(mock_free, ptr, old_value);
     assert_int_equal(
@@ -2220,7 +2220,7 @@ static void remove_destroy_first_entry_of_first_bucket_and_returns_0_when_no_col
 	// what to be cleanup
 	cons *cons_to_be_cleanup = ht->buckets[0];
 	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
-	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	const char *key_to_be_cleanup = entry_to_be_cleanup->key;
 	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
 
 	// a key which match the key to be removed
@@ -2270,7 +2270,7 @@ static void remove_destroy_second_entry_of_first_bucket_and_returns_0_when_colli
 	// what to be cleanup
 	cons *cons_to_be_cleanup = (ht->buckets[0])->cdr;
 	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
-	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	const char *key_to_be_cleanup = entry_to_be_cleanup->key;
 	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
 
 	// a key which match the key to be removed
@@ -2318,7 +2318,7 @@ static void remove_destroy_first_entry_of_second_bucket_and_returns_0_when_no_co
 	// what to be cleanup
 	cons *cons_to_be_cleanup = ht->buckets[1];
 	entry *entry_to_be_cleanup = (entry *) (cons_to_be_cleanup->car);
-	char *key_to_be_cleanup = entry_to_be_cleanup->key;
+	const char *key_to_be_cleanup = entry_to_be_cleanup->key;
 	char *value_that_might_be_cleanup = entry_to_be_cleanup->value;
 
 	// a key which match the key to be removed

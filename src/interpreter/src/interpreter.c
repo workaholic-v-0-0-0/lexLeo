@@ -142,7 +142,8 @@ static bool ast_is_well_formed_computation(const ast *node) {
         || ast_is_well_formed_subtraction(node)
         || ast_is_well_formed_multiplication(node)
         || ast_is_well_formed_division(node)
-        || ast_is_well_formed_int_node(node) );
+        || ast_is_well_formed_int_node(node)
+        || ast_is_well_formed_symbol_node(node) );
 }
 
 static bool ast_is_well_formed_numbers(const ast *node) {
@@ -306,12 +307,29 @@ static bool params_are_unique(const ast *list_of_params) {
 	return true;
 }
 
-// client code owns out (but not deeply!)
-// precondition: all is NULL or well-formed
+// Ownership & contract
+// - On success (return == INTERPRETER_STATUS_OK):
+//   *out receives an OWNED reference to the returned value
+//   (refcount == 1, unless otherwise documented).
+//   The caller MUST call runtime_env_value_release(*out) when done.
+// - On error (return != INTERPRETER_STATUS_OK):
+//   *out is LEFT UNCHANGED (the caller must not release *out).
+//
+// Specific notes:
+// - TYPE_SYMBOL: runtime_env_get() returns a BORROWED pointer.
+//   interpreter_eval() calls runtime_env_value_retain() before storing it in *out.
+// - TYPE_FUNCTION: the value is created via runtime_env_make_function() (refcount == 1).
+//   No extra retain is performed. The closure (env) is retained inside make_function().
+//
+// Preconditions (ensured by the caller or validated by this function):
+// - env, root, and out are non-NULL
+// - root->type ∈ [0 .. AST_TYPE_NB_TYPES)
+// - The required substructures for the given node kind are well-formed;
+//   otherwise, an appropriate error status is returned.
 interpreter_status interpreter_eval(
         struct runtime_env *env,
         const struct ast *root,
-        struct runtime_env_value **out ) {
+        const struct runtime_env_value **out ) {
 
     if (
                !env
@@ -321,13 +339,13 @@ interpreter_status interpreter_eval(
             || root->type >= AST_TYPE_NB_TYPES )
         return INTERPRETER_STATUS_ERROR;
 
-    runtime_env_value *value = NULL;
+    const runtime_env_value *value = NULL;
     interpreter_status status = INTERPRETER_STATUS_OK;
 
     ast *lhs = NULL;
     ast *rhs = NULL;
-    runtime_env_value *evaluated_lhs = NULL;
-    runtime_env_value *evaluated_rhs = NULL;
+    const runtime_env_value *evaluated_lhs = NULL;
+    const runtime_env_value *evaluated_rhs = NULL;
 
     switch (root->type) {
 
@@ -347,22 +365,28 @@ interpreter_status interpreter_eval(
             value = runtime_env_make_string(root->data->data.string_value);
             if (!value)
                 return INTERPRETER_STATUS_OOM;
+
             *out = value;
             break;
 
         case TYPE_SYMBOL:
-            value = runtime_env_make_symbol(root->data->data.symbol_value);
+            value =
+                runtime_env_get(
+                    env,
+                    root->data->data.symbol_value );
+
             if (!value)
-                return INTERPRETER_STATUS_OOM;
+                return INTERPRETER_STATUS_UNBOUND_SYMBOL;
+
+            runtime_env_value_retain(value);
             *out = value;
             break;
 
         default:
-            // should never append due precondition
-            return INTERPRETER_STATUS_OOM;
+            // should never happen due precondition
+            return INTERPRETER_STATUS_INVALID_AST;
         }
     break;
-
 
     case AST_TYPE_ERROR:
         value = runtime_env_make_error(root->error->code, root->error->message);
@@ -382,6 +406,7 @@ interpreter_status interpreter_eval(
 
         if (!value)
             return INTERPRETER_STATUS_OOM;
+
         *out = value;
         break;
 
@@ -390,19 +415,21 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_INVALID_AST;
 
         ast *function_node = root->children->children[0];
-        runtime_env_value *evaluated_fn_value = NULL;
+        const runtime_env_value *evaluated_fn_value = NULL;
         status =
             interpreter_eval(env, function_node, &evaluated_fn_value);
         if (status != INTERPRETER_STATUS_OK)
             return status;
-        bool binding = runtime_env_set_local(
-            env,
-            function_node->children->children[0]->data->data.symbol_value,
-            evaluated_fn_value );
+        bool binding =
+            runtime_env_set_local(
+                env,
+                function_node->children->children[0]->data->data.symbol_value,
+                evaluated_fn_value );
         if (!binding) {
-            runtime_env_value_destroy(evaluated_fn_value);
+            runtime_env_value_release(evaluated_fn_value);
             return INTERPRETER_STATUS_BINDING_ERROR;
         }
+
         *out = evaluated_fn_value;
         break;
 
@@ -411,14 +438,23 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_INVALID_AST;
 
         ast *child = root->children->children[0];
-        runtime_env_value *evaluated_child_value = NULL;
+        const runtime_env_value *evaluated_child_value = NULL;
         status = interpreter_eval(env, child, &evaluated_child_value);
 
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        evaluated_child_value->as.i = - evaluated_child_value->as.i;
-        *out = evaluated_child_value;
+        if (evaluated_child_value->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_child_value);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
+
+        value = runtime_env_make_number(- evaluated_child_value->as.i);
+        runtime_env_value_release(evaluated_child_value);
+        if (!value)
+            return INTERPRETER_STATUS_OOM;
+
+        *out = value;
         break;
 
     case AST_TYPE_ADDITION:
@@ -432,21 +468,33 @@ interpreter_status interpreter_eval(
         evaluated_rhs = NULL;
 
         status = interpreter_eval(env, lhs, &evaluated_lhs);
-        if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK)
             return status;
-        }
+
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+            return INTERPRETER_STATUS_TYPE_ERROR;
+
         status = interpreter_eval(env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
-            runtime_env_value_destroy(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
             return status;
         }
 
-        evaluated_lhs->as.i = evaluated_lhs->as.i + evaluated_rhs->as.i;
-        *out = evaluated_lhs;
+        if (evaluated_rhs->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
 
-        runtime_env_value_destroy(evaluated_rhs);
+        value =
+            runtime_env_make_number(
+                evaluated_lhs->as.i
+                +
+                evaluated_rhs->as.i );
+
+        runtime_env_value_release(evaluated_lhs);
+        runtime_env_value_release(evaluated_rhs);
+        *out = value;
         break;
 
     case AST_TYPE_SUBTRACTION:
@@ -460,21 +508,33 @@ interpreter_status interpreter_eval(
         evaluated_rhs = NULL;
 
         status = interpreter_eval(env, lhs, &evaluated_lhs);
-        if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK)
             return status;
-        }
+
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+            return INTERPRETER_STATUS_TYPE_ERROR;
+
         status = interpreter_eval(env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
-            runtime_env_value_destroy(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
             return status;
         }
 
-        evaluated_lhs->as.i = evaluated_lhs->as.i - evaluated_rhs->as.i;
-        *out = evaluated_lhs;
+        if (evaluated_rhs->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
 
-        runtime_env_value_destroy(evaluated_rhs);
+        value =
+            runtime_env_make_number(
+                evaluated_lhs->as.i
+                -
+                evaluated_rhs->as.i );
+
+        runtime_env_value_release(evaluated_lhs);
+        runtime_env_value_release(evaluated_rhs);
+        *out = value;
         break;
 
     case AST_TYPE_MULTIPLICATION:
@@ -488,21 +548,33 @@ interpreter_status interpreter_eval(
         evaluated_rhs = NULL;
 
         status = interpreter_eval(env, lhs, &evaluated_lhs);
-        if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK)
             return status;
-        }
+
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+            return INTERPRETER_STATUS_TYPE_ERROR;
+
         status = interpreter_eval(env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
-            runtime_env_value_destroy(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
             return status;
         }
 
-        evaluated_lhs->as.i = evaluated_lhs->as.i * evaluated_rhs->as.i;
-        *out = evaluated_lhs;
+        if (evaluated_rhs->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
 
-        runtime_env_value_destroy(evaluated_rhs);
+        value =
+            runtime_env_make_number(
+                evaluated_lhs->as.i
+                *
+                evaluated_rhs->as.i );
+
+        runtime_env_value_release(evaluated_lhs);
+        runtime_env_value_release(evaluated_rhs);
+        *out = value;
         break;
 
     case AST_TYPE_DIVISION:
@@ -515,28 +587,40 @@ interpreter_status interpreter_eval(
         evaluated_lhs = NULL;
         evaluated_rhs = NULL;
 
+        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+            return INTERPRETER_STATUS_TYPE_ERROR;
+
         status = interpreter_eval(env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
             return status;
+        }
+
+        if (evaluated_rhs->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_lhs);
+            runtime_env_value_release(evaluated_rhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
         if (evaluated_rhs->as.i == 0) {
-            runtime_env_value_destroy(evaluated_rhs);
+            runtime_env_value_release(evaluated_lhs);
+            runtime_env_value_release(evaluated_rhs);
             return INTERPRETER_STATUS_DIVISION_BY_ZERO;
         }
 
-        status = interpreter_eval(env, lhs, &evaluated_lhs);
-        if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_destroy(evaluated_lhs);
-            runtime_env_value_destroy(evaluated_rhs);
-            return status;
-        }
+        value =
+            runtime_env_make_number(
+                evaluated_lhs->as.i
+                /
+                evaluated_rhs->as.i );
 
-        evaluated_lhs->as.i = evaluated_lhs->as.i / evaluated_rhs->as.i;
-        *out = evaluated_lhs;
-
-        runtime_env_value_destroy(evaluated_rhs);
+        runtime_env_value_release(evaluated_lhs);
+        runtime_env_value_release(evaluated_rhs);
+        *out = value;
         break;
 
 

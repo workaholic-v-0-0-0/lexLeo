@@ -22,12 +22,13 @@ typedef enum {
     INTERPRETER_STATUS_ARITY_ERROR,
 	INTERPRETER_STATUS_DUPLICATE_PARAMETER,
     INTERPRETER_STATUS_DIVISION_BY_ZERO,
+    INTERPRETER_STATUS_UNBOUND_SYMBOL,
     INTERPRETER_STATUS_NB_TYPES,
 } interpreter_status;
 
 interpreter_status interpreter_eval(
     struct runtime_env *env,
     const struct ast *root,
-    struct runtime_env_value **out );
+    const struct runtime_env_value **out );
 
 #endif //LEXLEO_INTERPRETER_H

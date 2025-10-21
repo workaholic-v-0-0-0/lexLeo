@@ -7,7 +7,7 @@
 #include "list.h"
 
 typedef struct entry {
-    void *key;
+    const void *key;
     void *value;
 } entry;
 
