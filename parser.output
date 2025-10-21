@@ -1,0 +1,1004 @@
+Terminaux inutilisés dans la grammaire
+
+    CALL
+
+
+Grammaire
+
+    0 $accept: start $end
+
+    1 start: translation_unit
+
+    2 atom: number_atom
+    3     | string_atom
+    4     | symbol_name_atom
+
+    5 binding: symbol_name_atom EQUAL evaluable SEMICOLON
+
+    6 block_items: ε
+    7            | block_items statement
+
+    8 block: LBRACE block_items RBRACE
+
+    9 computable_core: SUBTRACT computable_core
+   10                | computable_core ADD computable_core
+   11                | computable_core SUBTRACT computable_core
+   12                | computable_core MULTIPLY computable_core
+   13                | computable_core DIVIDE computable_core
+   14                | LPAREN computable_core RPAREN
+   15                | number_atom
+   16                | symbol_name_atom
+
+   17 computable: SUBTRACT computable_core
+   18           | computable_core ADD computable_core
+   19           | computable_core SUBTRACT computable_core
+   20           | computable_core MULTIPLY computable_core
+   21           | computable_core DIVIDE computable_core
+   22           | LPAREN computable_core RPAREN
+
+   23 evaluable: function_call
+   24          | atom
+   25          | computable
+   26          | QUOTE evaluable
+
+   27 function_call: symbol_name_atom list_of_numbers
+
+   28 function_definition: DEFINE function
+
+   29 function: symbol_name_atom list_of_parameters block
+
+   30 list_of_numbers: LPAREN numbers RPAREN
+
+   31 list_of_parameters: LPAREN parameters RPAREN
+
+   32 number_atom: INTEGER
+
+   33 numbers: ε
+   34        | numbers number_atom
+
+   35 parameters: ε
+   36           | parameters symbol_name_atom
+
+   37 reading: READ symbol_name_atom SEMICOLON
+
+   38 statement: binding
+   39          | writing
+   40          | reading
+   41          | function_definition
+   42          | function_call SEMICOLON
+
+   43 string_atom: STRING
+
+   44 symbol_name_atom: SYMBOL_NAME
+
+   45 translation_unit: ε
+   46                 | translation_unit statement
+
+   47 writing: WRITE symbol_name_atom SEMICOLON
+
+
+Terminaux, suivis des règles où ils apparaissent
+
+    $end (0) 0
+    error (256)
+    INTEGER <int_value> (258) 32
+    STRING <string_value> (259) 43
+    SYMBOL_NAME <symbol_name_value> (260) 44
+    LBRACE (261) 8
+    RBRACE (262) 8
+    LPAREN (263) 14 22 30 31
+    RPAREN (264) 14 22 30 31
+    ADD (265) 10 18
+    SUBTRACT (266) 9 11 17 19
+    MULTIPLY (267) 12 20
+    DIVIDE (268) 13 21
+    SEMICOLON (269) 5 37 42 47
+    EQUAL (270) 5
+    READ (271) 37
+    WRITE (272) 47
+    DEFINE (273) 28
+    CALL (274)
+    QUOTE (275) 26
+    UMINUS (276)
+
+
+Non-terminaux, suivis des règles où ils apparaissent
+
+    $accept (22)
+        à gauche: 0
+    start (23)
+        à gauche: 1
+        à droite: 0
+    atom <ast> (24)
+        à gauche: 2 3 4
+        à droite: 24
+    binding <ast> (25)
+        à gauche: 5
+        à droite: 38
+    block_items <ast> (26)
+        à gauche: 6 7
+        à droite: 7 8
+    block <ast> (27)
+        à gauche: 8
+        à droite: 29
+    computable_core <ast> (28)
+        à gauche: 9 10 11 12 13 14 15 16
+        à droite: 9 10 11 12 13 14 17 18 19 20 21 22
+    computable <ast> (29)
+        à gauche: 17 18 19 20 21 22
+        à droite: 25
+    evaluable <ast> (30)
+        à gauche: 23 24 25 26
+        à droite: 5 26
+    function_call <ast> (31)
+        à gauche: 27
+        à droite: 23 42
+    function_definition <ast> (32)
+        à gauche: 28
+        à droite: 41
+    function <ast> (33)
+        à gauche: 29
+        à droite: 28
+    list_of_numbers <ast> (34)
+        à gauche: 30
+        à droite: 27
+    list_of_parameters <ast> (35)
+        à gauche: 31
+        à droite: 29
+    number_atom <ast> (36)
+        à gauche: 32
+        à droite: 2 15 34
+    numbers <ast> (37)
+        à gauche: 33 34
+        à droite: 30 34
+    parameters <ast> (38)
+        à gauche: 35 36
+        à droite: 31 36
+    reading <ast> (39)
+        à gauche: 37
+        à droite: 40
+    statement <ast> (40)
+        à gauche: 38 39 40 41 42
+        à droite: 7 46
+    string_atom <ast> (41)
+        à gauche: 43
+        à droite: 3
+    symbol_name_atom <ast> (42)
+        à gauche: 44
+        à droite: 4 5 16 27 29 36 37 47
+    translation_unit <ast> (43)
+        à gauche: 45 46
+        à droite: 1 46
+    writing <ast> (44)
+        à gauche: 47
+        à droite: 39
+
+
+État 0
+
+    0 $accept: • start $end
+
+    $défaut  réduction par utilisation de la règle 45 (translation_unit)
+
+    start             aller à l'état 1
+    translation_unit  aller à l'état 2
+
+
+État 1
+
+    0 $accept: start • $end
+
+    $end  décalage et aller à l'état 3
+
+
+État 2
+
+    1 start: translation_unit •
+   46 translation_unit: translation_unit • statement
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+    READ         décalage et aller à l'état 5
+    WRITE        décalage et aller à l'état 6
+    DEFINE       décalage et aller à l'état 7
+
+    $défaut  réduction par utilisation de la règle 1 (start)
+
+    binding              aller à l'état 8
+    function_call        aller à l'état 9
+    function_definition  aller à l'état 10
+    reading              aller à l'état 11
+    statement            aller à l'état 12
+    symbol_name_atom     aller à l'état 13
+    writing              aller à l'état 14
+
+
+État 3
+
+    0 $accept: start $end •
+
+    $défaut  accepter
+
+
+État 4
+
+   44 symbol_name_atom: SYMBOL_NAME •
+
+    $défaut  réduction par utilisation de la règle 44 (symbol_name_atom)
+
+
+État 5
+
+   37 reading: READ • symbol_name_atom SEMICOLON
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+
+    symbol_name_atom  aller à l'état 15
+
+
+État 6
+
+   47 writing: WRITE • symbol_name_atom SEMICOLON
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+
+    symbol_name_atom  aller à l'état 16
+
+
+État 7
+
+   28 function_definition: DEFINE • function
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+
+    function          aller à l'état 17
+    symbol_name_atom  aller à l'état 18
+
+
+État 8
+
+   38 statement: binding •
+
+    $défaut  réduction par utilisation de la règle 38 (statement)
+
+
+État 9
+
+   42 statement: function_call • SEMICOLON
+
+    SEMICOLON  décalage et aller à l'état 19
+
+
+État 10
+
+   41 statement: function_definition •
+
+    $défaut  réduction par utilisation de la règle 41 (statement)
+
+
+État 11
+
+   40 statement: reading •
+
+    $défaut  réduction par utilisation de la règle 40 (statement)
+
+
+État 12
+
+   46 translation_unit: translation_unit statement •
+
+    $défaut  réduction par utilisation de la règle 46 (translation_unit)
+
+
+État 13
+
+    5 binding: symbol_name_atom • EQUAL evaluable SEMICOLON
+   27 function_call: symbol_name_atom • list_of_numbers
+
+    LPAREN  décalage et aller à l'état 20
+    EQUAL   décalage et aller à l'état 21
+
+    list_of_numbers  aller à l'état 22
+
+
+État 14
+
+   39 statement: writing •
+
+    $défaut  réduction par utilisation de la règle 39 (statement)
+
+
+État 15
+
+   37 reading: READ symbol_name_atom • SEMICOLON
+
+    SEMICOLON  décalage et aller à l'état 23
+
+
+État 16
+
+   47 writing: WRITE symbol_name_atom • SEMICOLON
+
+    SEMICOLON  décalage et aller à l'état 24
+
+
+État 17
+
+   28 function_definition: DEFINE function •
+
+    $défaut  réduction par utilisation de la règle 28 (function_definition)
+
+
+État 18
+
+   29 function: symbol_name_atom • list_of_parameters block
+
+    LPAREN  décalage et aller à l'état 25
+
+    list_of_parameters  aller à l'état 26
+
+
+État 19
+
+   42 statement: function_call SEMICOLON •
+
+    $défaut  réduction par utilisation de la règle 42 (statement)
+
+
+État 20
+
+   30 list_of_numbers: LPAREN • numbers RPAREN
+
+    $défaut  réduction par utilisation de la règle 33 (numbers)
+
+    numbers  aller à l'état 27
+
+
+État 21
+
+    5 binding: symbol_name_atom EQUAL • evaluable SEMICOLON
+
+    INTEGER      décalage et aller à l'état 28
+    STRING       décalage et aller à l'état 29
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 30
+    SUBTRACT     décalage et aller à l'état 31
+    QUOTE        décalage et aller à l'état 32
+
+    atom              aller à l'état 33
+    computable_core   aller à l'état 34
+    computable        aller à l'état 35
+    evaluable         aller à l'état 36
+    function_call     aller à l'état 37
+    number_atom       aller à l'état 38
+    string_atom       aller à l'état 39
+    symbol_name_atom  aller à l'état 40
+
+
+État 22
+
+   27 function_call: symbol_name_atom list_of_numbers •
+
+    $défaut  réduction par utilisation de la règle 27 (function_call)
+
+
+État 23
+
+   37 reading: READ symbol_name_atom SEMICOLON •
+
+    $défaut  réduction par utilisation de la règle 37 (reading)
+
+
+État 24
+
+   47 writing: WRITE symbol_name_atom SEMICOLON •
+
+    $défaut  réduction par utilisation de la règle 47 (writing)
+
+
+État 25
+
+   31 list_of_parameters: LPAREN • parameters RPAREN
+
+    $défaut  réduction par utilisation de la règle 35 (parameters)
+
+    parameters  aller à l'état 41
+
+
+État 26
+
+   29 function: symbol_name_atom list_of_parameters • block
+
+    LBRACE  décalage et aller à l'état 42
+
+    block  aller à l'état 43
+
+
+État 27
+
+   30 list_of_numbers: LPAREN numbers • RPAREN
+   34 numbers: numbers • number_atom
+
+    INTEGER  décalage et aller à l'état 28
+    RPAREN   décalage et aller à l'état 44
+
+    number_atom  aller à l'état 45
+
+
+État 28
+
+   32 number_atom: INTEGER •
+
+    $défaut  réduction par utilisation de la règle 32 (number_atom)
+
+
+État 29
+
+   43 string_atom: STRING •
+
+    $défaut  réduction par utilisation de la règle 43 (string_atom)
+
+
+État 30
+
+   14 computable_core: LPAREN • computable_core RPAREN
+   22 computable: LPAREN • computable_core RPAREN
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 48
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 31
+
+    9 computable_core: SUBTRACT • computable_core
+   17 computable: SUBTRACT • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 51
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 32
+
+   26 evaluable: QUOTE • evaluable
+
+    INTEGER      décalage et aller à l'état 28
+    STRING       décalage et aller à l'état 29
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 30
+    SUBTRACT     décalage et aller à l'état 31
+    QUOTE        décalage et aller à l'état 32
+
+    atom              aller à l'état 33
+    computable_core   aller à l'état 34
+    computable        aller à l'état 35
+    evaluable         aller à l'état 52
+    function_call     aller à l'état 37
+    number_atom       aller à l'état 38
+    string_atom       aller à l'état 39
+    symbol_name_atom  aller à l'état 40
+
+
+État 33
+
+   24 evaluable: atom •
+
+    $défaut  réduction par utilisation de la règle 24 (evaluable)
+
+
+État 34
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   18 computable: computable_core • ADD computable_core
+   19           | computable_core • SUBTRACT computable_core
+   20           | computable_core • MULTIPLY computable_core
+   21           | computable_core • DIVIDE computable_core
+
+    ADD       décalage et aller à l'état 53
+    SUBTRACT  décalage et aller à l'état 54
+    MULTIPLY  décalage et aller à l'état 55
+    DIVIDE    décalage et aller à l'état 56
+
+
+État 35
+
+   25 evaluable: computable •
+
+    $défaut  réduction par utilisation de la règle 25 (evaluable)
+
+
+État 36
+
+    5 binding: symbol_name_atom EQUAL evaluable • SEMICOLON
+
+    SEMICOLON  décalage et aller à l'état 57
+
+
+État 37
+
+   23 evaluable: function_call •
+
+    $défaut  réduction par utilisation de la règle 23 (evaluable)
+
+
+État 38
+
+    2 atom: number_atom •
+   15 computable_core: number_atom •
+
+    SEMICOLON  réduction par utilisation de la règle 2 (atom)
+    $défaut    réduction par utilisation de la règle 15 (computable_core)
+
+
+État 39
+
+    3 atom: string_atom •
+
+    $défaut  réduction par utilisation de la règle 3 (atom)
+
+
+État 40
+
+    4 atom: symbol_name_atom •
+   16 computable_core: symbol_name_atom •
+   27 function_call: symbol_name_atom • list_of_numbers
+
+    LPAREN  décalage et aller à l'état 20
+
+    SEMICOLON  réduction par utilisation de la règle 4 (atom)
+    $défaut    réduction par utilisation de la règle 16 (computable_core)
+
+    list_of_numbers  aller à l'état 22
+
+
+État 41
+
+   31 list_of_parameters: LPAREN parameters • RPAREN
+   36 parameters: parameters • symbol_name_atom
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+    RPAREN       décalage et aller à l'état 58
+
+    symbol_name_atom  aller à l'état 59
+
+
+État 42
+
+    8 block: LBRACE • block_items RBRACE
+
+    $défaut  réduction par utilisation de la règle 6 (block_items)
+
+    block_items  aller à l'état 60
+
+
+État 43
+
+   29 function: symbol_name_atom list_of_parameters block •
+
+    $défaut  réduction par utilisation de la règle 29 (function)
+
+
+État 44
+
+   30 list_of_numbers: LPAREN numbers RPAREN •
+
+    $défaut  réduction par utilisation de la règle 30 (list_of_numbers)
+
+
+État 45
+
+   34 numbers: numbers number_atom •
+
+    $défaut  réduction par utilisation de la règle 34 (numbers)
+
+
+État 46
+
+   14 computable_core: LPAREN • computable_core RPAREN
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 61
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 47
+
+    9 computable_core: SUBTRACT • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 62
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 48
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   14                | LPAREN computable_core • RPAREN
+   22 computable: LPAREN computable_core • RPAREN
+
+    RPAREN    décalage et aller à l'état 63
+    ADD       décalage et aller à l'état 64
+    SUBTRACT  décalage et aller à l'état 65
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+
+État 49
+
+   15 computable_core: number_atom •
+
+    $défaut  réduction par utilisation de la règle 15 (computable_core)
+
+
+État 50
+
+   16 computable_core: symbol_name_atom •
+
+    $défaut  réduction par utilisation de la règle 16 (computable_core)
+
+
+État 51
+
+    9 computable_core: SUBTRACT computable_core •
+   10                | computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   17 computable: SUBTRACT computable_core •
+
+    SEMICOLON  réduction par utilisation de la règle 17 (computable)
+    $défaut    réduction par utilisation de la règle 9 (computable_core)
+
+
+État 52
+
+   26 evaluable: QUOTE evaluable •
+
+    $défaut  réduction par utilisation de la règle 26 (evaluable)
+
+
+État 53
+
+   10 computable_core: computable_core ADD • computable_core
+   18 computable: computable_core ADD • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 68
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 54
+
+   11 computable_core: computable_core SUBTRACT • computable_core
+   19 computable: computable_core SUBTRACT • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 69
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 55
+
+   12 computable_core: computable_core MULTIPLY • computable_core
+   20 computable: computable_core MULTIPLY • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 70
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 56
+
+   13 computable_core: computable_core DIVIDE • computable_core
+   21 computable: computable_core DIVIDE • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 71
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 57
+
+    5 binding: symbol_name_atom EQUAL evaluable SEMICOLON •
+
+    $défaut  réduction par utilisation de la règle 5 (binding)
+
+
+État 58
+
+   31 list_of_parameters: LPAREN parameters RPAREN •
+
+    $défaut  réduction par utilisation de la règle 31 (list_of_parameters)
+
+
+État 59
+
+   36 parameters: parameters symbol_name_atom •
+
+    $défaut  réduction par utilisation de la règle 36 (parameters)
+
+
+État 60
+
+    7 block_items: block_items • statement
+    8 block: LBRACE block_items • RBRACE
+
+    SYMBOL_NAME  décalage et aller à l'état 4
+    RBRACE       décalage et aller à l'état 72
+    READ         décalage et aller à l'état 5
+    WRITE        décalage et aller à l'état 6
+    DEFINE       décalage et aller à l'état 7
+
+    binding              aller à l'état 8
+    function_call        aller à l'état 9
+    function_definition  aller à l'état 10
+    reading              aller à l'état 11
+    statement            aller à l'état 73
+    symbol_name_atom     aller à l'état 13
+    writing              aller à l'état 14
+
+
+État 61
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   14                | LPAREN computable_core • RPAREN
+
+    RPAREN    décalage et aller à l'état 74
+    ADD       décalage et aller à l'état 64
+    SUBTRACT  décalage et aller à l'état 65
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+
+État 62
+
+    9 computable_core: SUBTRACT computable_core •
+   10                | computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+
+    $défaut  réduction par utilisation de la règle 9 (computable_core)
+
+
+État 63
+
+   14 computable_core: LPAREN computable_core RPAREN •
+   22 computable: LPAREN computable_core RPAREN •
+
+    SEMICOLON  réduction par utilisation de la règle 22 (computable)
+    $défaut    réduction par utilisation de la règle 14 (computable_core)
+
+
+État 64
+
+   10 computable_core: computable_core ADD • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 75
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 65
+
+   11 computable_core: computable_core SUBTRACT • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 76
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 66
+
+   12 computable_core: computable_core MULTIPLY • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 77
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 67
+
+   13 computable_core: computable_core DIVIDE • computable_core
+
+    INTEGER      décalage et aller à l'état 28
+    SYMBOL_NAME  décalage et aller à l'état 4
+    LPAREN       décalage et aller à l'état 46
+    SUBTRACT     décalage et aller à l'état 47
+
+    computable_core   aller à l'état 78
+    number_atom       aller à l'état 49
+    symbol_name_atom  aller à l'état 50
+
+
+État 68
+
+   10 computable_core: computable_core • ADD computable_core
+   10                | computable_core ADD computable_core •
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   18 computable: computable_core ADD computable_core •
+
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+    SEMICOLON  réduction par utilisation de la règle 18 (computable)
+    $défaut    réduction par utilisation de la règle 10 (computable_core)
+
+
+État 69
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   11                | computable_core SUBTRACT computable_core •
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   19 computable: computable_core SUBTRACT computable_core •
+
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+    SEMICOLON  réduction par utilisation de la règle 19 (computable)
+    $défaut    réduction par utilisation de la règle 11 (computable_core)
+
+
+État 70
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   12                | computable_core MULTIPLY computable_core •
+   13                | computable_core • DIVIDE computable_core
+   20 computable: computable_core MULTIPLY computable_core •
+
+    SEMICOLON  réduction par utilisation de la règle 20 (computable)
+    $défaut    réduction par utilisation de la règle 12 (computable_core)
+
+
+État 71
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   13                | computable_core DIVIDE computable_core •
+   21 computable: computable_core DIVIDE computable_core •
+
+    SEMICOLON  réduction par utilisation de la règle 21 (computable)
+    $défaut    réduction par utilisation de la règle 13 (computable_core)
+
+
+État 72
+
+    8 block: LBRACE block_items RBRACE •
+
+    $défaut  réduction par utilisation de la règle 8 (block)
+
+
+État 73
+
+    7 block_items: block_items statement •
+
+    $défaut  réduction par utilisation de la règle 7 (block_items)
+
+
+État 74
+
+   14 computable_core: LPAREN computable_core RPAREN •
+
+    $défaut  réduction par utilisation de la règle 14 (computable_core)
+
+
+État 75
+
+   10 computable_core: computable_core • ADD computable_core
+   10                | computable_core ADD computable_core •
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+    $défaut  réduction par utilisation de la règle 10 (computable_core)
+
+
+État 76
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   11                | computable_core SUBTRACT computable_core •
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+
+    MULTIPLY  décalage et aller à l'état 66
+    DIVIDE    décalage et aller à l'état 67
+
+    $défaut  réduction par utilisation de la règle 11 (computable_core)
+
+
+État 77
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   12                | computable_core MULTIPLY computable_core •
+   13                | computable_core • DIVIDE computable_core
+
+    $défaut  réduction par utilisation de la règle 12 (computable_core)
+
+
+État 78
+
+   10 computable_core: computable_core • ADD computable_core
+   11                | computable_core • SUBTRACT computable_core
+   12                | computable_core • MULTIPLY computable_core
+   13                | computable_core • DIVIDE computable_core
+   13                | computable_core DIVIDE computable_core •
+
+    $défaut  réduction par utilisation de la règle 13 (computable_core)

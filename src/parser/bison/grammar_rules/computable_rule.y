@@ -85,6 +85,9 @@ computable_core
     | number_atom {
           $$ = $1;
       }
+    | symbol_name_atom {
+          $$ = $1;
+      }
     ;
 
 computable

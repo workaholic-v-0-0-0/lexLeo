@@ -60,6 +60,7 @@ set(
 %token WRITE
 %token DEFINE
 %token CALL
+%token QUOTE
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\

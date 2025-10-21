@@ -67,17 +67,14 @@
 
 
 /* First part of user prologue.  */
-#line 21 "src/parser/src/parser.y"
+#line 18 "build/src/parser/bison/parser.y"
 
-
-#include "ast.h"
-#include "symtab.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include "ast.h"
+#include "parser_ctx.h"
 
-#define YYDEBUG 1
-
-
-#line 81 "parser.tab.c"
+#line 78 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -100,7 +97,87 @@
 #  endif
 # endif
 
-#include "parser.tab.h"
+
+/* Debug traces.  */
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
+#if YYDEBUG
+extern int yydebug;
+#endif
+/* "%code requires" blocks.  */
+#line 13 "build/src/parser/bison/parser.y"
+
+#include "parser_types.h"
+struct parser_ctx;
+
+#line 115 "parser.tab.c"
+
+/* Token kinds.  */
+#ifndef YYTOKENTYPE
+# define YYTOKENTYPE
+  enum yytokentype
+  {
+    YYEMPTY = -2,
+    YYEOF = 0,                     /* "end of file"  */
+    YYerror = 256,                 /* error  */
+    YYUNDEF = 257,                 /* "invalid token"  */
+    INTEGER = 258,                 /* INTEGER  */
+    STRING = 259,                  /* STRING  */
+    SYMBOL_NAME = 260,             /* SYMBOL_NAME  */
+    LBRACE = 261,                  /* LBRACE  */
+    RBRACE = 262,                  /* RBRACE  */
+    LPAREN = 263,                  /* LPAREN  */
+    RPAREN = 264,                  /* RPAREN  */
+    ADD = 265,                     /* ADD  */
+    SUBTRACT = 266,                /* SUBTRACT  */
+    MULTIPLY = 267,                /* MULTIPLY  */
+    DIVIDE = 268,                  /* DIVIDE  */
+    SEMICOLON = 269,               /* SEMICOLON  */
+    EQUAL = 270,                   /* EQUAL  */
+    READ = 271,                    /* READ  */
+    WRITE = 272,                   /* WRITE  */
+    DEFINE = 273,                  /* DEFINE  */
+    CALL = 274,                    /* CALL  */
+    QUOTE = 275,                   /* QUOTE  */
+    UMINUS = 276                   /* UMINUS  */
+  };
+  typedef enum yytokentype yytoken_kind_t;
+#endif
+
+/* Value type.  */
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+union YYSTYPE
+{
+#line 30 "build/src/parser/bison/parser.y"
+
+    int int_value;
+    char *string_value;
+    char *symbol_name_value;
+ast *ast;
+
+#line 160 "parser.tab.c"
+
+};
+typedef union YYSTYPE YYSTYPE;
+# define YYSTYPE_IS_TRIVIAL 1
+# define YYSTYPE_IS_DECLARED 1
+#endif
+
+
+
+
+int yyparse (yyscan_t scanner, ast **result, struct parser_ctx *ctx);
+
+/* "%code provides" blocks.  */
+#line 25 "build/src/parser/bison/parser.y"
+
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
+int yylex(YYSTYPE *yylval, yyscan_t scanner);
+
+#line 179 "parser.tab.c"
+
+
 /* Symbol kind.  */
 enum yysymbol_kind_t
 {
@@ -110,32 +187,46 @@ enum yysymbol_kind_t
   YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
   YYSYMBOL_INTEGER = 3,                    /* INTEGER  */
   YYSYMBOL_STRING = 4,                     /* STRING  */
-  YYSYMBOL_SYMBOL = 5,                     /* SYMBOL  */
-  YYSYMBOL_PARAMETERS = 6,                 /* PARAMETERS  */
-  YYSYMBOL_EQUAL = 7,                      /* EQUAL  */
-  YYSYMBOL_EVALUATE = 8,                   /* EVALUATE  */
-  YYSYMBOL_EXECUTE = 9,                    /* EXECUTE  */
-  YYSYMBOL_COMPUTE = 10,                   /* COMPUTE  */
-  YYSYMBOL_READ = 11,                      /* READ  */
-  YYSYMBOL_WRITE = 12,                     /* WRITE  */
-  YYSYMBOL_SEMICOLON = 13,                 /* SEMICOLON  */
-  YYSYMBOL_LEFT_PARENTHESIS = 14,          /* LEFT_PARENTHESIS  */
-  YYSYMBOL_RIGHT_PARENTHESIS = 15,         /* RIGHT_PARENTHESIS  */
-  YYSYMBOL_PLUS = 16,                      /* PLUS  */
-  YYSYMBOL_MINUS = 17,                     /* MINUS  */
-  YYSYMBOL_MULTIPLY = 18,                  /* MULTIPLY  */
-  YYSYMBOL_DIVIDE = 19,                    /* DIVIDE  */
-  YYSYMBOL_YYACCEPT = 20,                  /* $accept  */
-  YYSYMBOL_program = 21,                   /* program  */
-  YYSYMBOL_statements = 22,                /* statements  */
-  YYSYMBOL_statement_list = 23,            /* statement_list  */
-  YYSYMBOL_statement = 24,                 /* statement  */
+  YYSYMBOL_SYMBOL_NAME = 5,                /* SYMBOL_NAME  */
+  YYSYMBOL_LBRACE = 6,                     /* LBRACE  */
+  YYSYMBOL_RBRACE = 7,                     /* RBRACE  */
+  YYSYMBOL_LPAREN = 8,                     /* LPAREN  */
+  YYSYMBOL_RPAREN = 9,                     /* RPAREN  */
+  YYSYMBOL_ADD = 10,                       /* ADD  */
+  YYSYMBOL_SUBTRACT = 11,                  /* SUBTRACT  */
+  YYSYMBOL_MULTIPLY = 12,                  /* MULTIPLY  */
+  YYSYMBOL_DIVIDE = 13,                    /* DIVIDE  */
+  YYSYMBOL_SEMICOLON = 14,                 /* SEMICOLON  */
+  YYSYMBOL_EQUAL = 15,                     /* EQUAL  */
+  YYSYMBOL_READ = 16,                      /* READ  */
+  YYSYMBOL_WRITE = 17,                     /* WRITE  */
+  YYSYMBOL_DEFINE = 18,                    /* DEFINE  */
+  YYSYMBOL_CALL = 19,                      /* CALL  */
+  YYSYMBOL_QUOTE = 20,                     /* QUOTE  */
+  YYSYMBOL_UMINUS = 21,                    /* UMINUS  */
+  YYSYMBOL_YYACCEPT = 22,                  /* $accept  */
+  YYSYMBOL_start = 23,                     /* start  */
+  YYSYMBOL_atom = 24,                      /* atom  */
   YYSYMBOL_binding = 25,                   /* binding  */
-  YYSYMBOL_evaluation = 26,                /* evaluation  */
-  YYSYMBOL_execution = 27,                 /* execution  */
-  YYSYMBOL_computation = 28,               /* computation  */
-  YYSYMBOL_expression = 29,                /* expression  */
-  YYSYMBOL_atom = 30                       /* atom  */
+  YYSYMBOL_block_items = 26,               /* block_items  */
+  YYSYMBOL_block = 27,                     /* block  */
+  YYSYMBOL_computable_core = 28,           /* computable_core  */
+  YYSYMBOL_computable = 29,                /* computable  */
+  YYSYMBOL_evaluable = 30,                 /* evaluable  */
+  YYSYMBOL_function_call = 31,             /* function_call  */
+  YYSYMBOL_function_definition = 32,       /* function_definition  */
+  YYSYMBOL_function = 33,                  /* function  */
+  YYSYMBOL_list_of_numbers = 34,           /* list_of_numbers  */
+  YYSYMBOL_list_of_parameters = 35,        /* list_of_parameters  */
+  YYSYMBOL_number_atom = 36,               /* number_atom  */
+  YYSYMBOL_numbers = 37,                   /* numbers  */
+  YYSYMBOL_parameters = 38,                /* parameters  */
+  YYSYMBOL_reading = 39,                   /* reading  */
+  YYSYMBOL_statement = 40,                 /* statement  */
+  YYSYMBOL_string_atom = 41,               /* string_atom  */
+  YYSYMBOL_symbol_name_atom = 42,          /* symbol_name_atom  */
+  YYSYMBOL_translation_unit = 43,          /* translation_unit  */
+  YYSYMBOL_writing = 44                    /* writing  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -461,21 +552,21 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  22
+#define YYFINAL  3
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   30
+#define YYLAST   88
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  20
+#define YYNTOKENS  22
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  11
+#define YYNNTS  23
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  23
+#define YYNRULES  48
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  36
+#define YYNSTATES  79
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   274
+#define YYMAXUTOK   276
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -516,16 +607,18 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19
+      15,    16,    17,    18,    19,    20,    21
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_int16 yyrline[] =
 {
-       0,    86,    86,    90,    91,    95,    96,   100,   101,   102,
-     103,   110,   114,   118,   122,   129,   130,   131,   132,   133,
-     134,   139,   144,   147
+       0,    70,    70,    76,    77,    78,    84,   105,   117,   138,
+     157,   171,   187,   203,   219,   235,   238,   241,   247,   261,
+     277,   293,   309,   325,   333,   334,   335,   336,   355,   376,
+     395,   418,   437,   456,   469,   481,   502,   514,   535,   554,
+     555,   556,   557,   558,   564,   577,   590,   602,   623
 };
 #endif
 
@@ -542,11 +635,14 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
 static const char *const yytname[] =
 {
   "\"end of file\"", "error", "\"invalid token\"", "INTEGER", "STRING",
-  "SYMBOL", "PARAMETERS", "EQUAL", "EVALUATE", "EXECUTE", "COMPUTE",
-  "READ", "WRITE", "SEMICOLON", "LEFT_PARENTHESIS", "RIGHT_PARENTHESIS",
-  "PLUS", "MINUS", "MULTIPLY", "DIVIDE", "$accept", "program",
-  "statements", "statement_list", "statement", "binding", "evaluation",
-  "execution", "computation", "expression", "atom", YY_NULLPTR
+  "SYMBOL_NAME", "LBRACE", "RBRACE", "LPAREN", "RPAREN", "ADD", "SUBTRACT",
+  "MULTIPLY", "DIVIDE", "SEMICOLON", "EQUAL", "READ", "WRITE", "DEFINE",
+  "CALL", "QUOTE", "UMINUS", "$accept", "start", "atom", "binding",
+  "block_items", "block", "computable_core", "computable", "evaluable",
+  "function_call", "function_definition", "function", "list_of_numbers",
+  "list_of_parameters", "number_atom", "numbers", "parameters", "reading",
+  "statement", "string_atom", "symbol_name_atom", "translation_unit",
+  "writing", YY_NULLPTR
 };
 
 static const char *
@@ -556,12 +652,12 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-14)
+#define YYPACT_NINF (-30)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
 
-#define YYTABLE_NINF (-1)
+#define YYTABLE_NINF (-24)
 
 #define yytable_value_is_error(Yyn) \
   0
@@ -570,10 +666,14 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -1,    19,     0,    -1,    -2,    27,   -14,    15,   -14,   -14,
-     -14,   -14,   -14,    -2,   -14,   -14,   -14,   -14,   -14,    -2,
-       6,   -14,   -14,    -1,     6,     2,    -2,    -2,    -2,    -2,
-     -14,   -14,    -8,    -8,   -14,   -14
+     -30,    28,    24,   -30,   -30,    43,    43,    43,   -30,    40,
+     -30,   -30,   -30,    35,   -30,    42,    65,   -30,    49,   -30,
+     -30,     3,   -30,   -30,   -30,   -30,    74,     6,   -30,   -30,
+      41,    41,     3,   -30,    59,   -30,    67,   -30,    68,   -30,
+      39,    46,   -30,   -30,   -30,   -30,    41,    41,    50,   -30,
+     -30,    69,   -30,    41,    41,    41,    41,   -30,   -30,   -30,
+      15,    55,   -30,    70,    41,    41,    41,    41,    61,    64,
+      71,    72,   -30,   -30,   -30,     0,     0,   -30,   -30
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -581,24 +681,30 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       3,     0,     0,     3,     0,     0,     2,     4,     5,     7,
-       8,     9,    10,     0,    12,    13,    21,    22,    23,     0,
-      14,    15,     1,     0,    11,     0,     0,     0,     0,     0,
-       6,    16,    17,    18,    19,    20
+      46,     0,     2,     1,    45,     0,     0,     0,    39,     0,
+      42,    41,    47,     0,    40,     0,     0,    29,     0,    43,
+      34,     0,    28,    38,    48,    36,     0,     0,    33,    44,
+       0,     0,     0,    25,     0,    26,     0,    24,    16,     4,
+      17,     0,     7,    30,    31,    35,     0,     0,     0,    16,
+      17,    10,    27,     0,     0,     0,     0,     6,    32,    37,
+       0,     0,    10,    15,     0,     0,     0,     0,    11,    12,
+      13,    14,     9,     8,    15,    11,    12,    13,    14
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -14,    26,   -14,   -14,     7,   -14,   -14,   -14,   -14,   -13,
-     -14
+     -30,   -30,   -30,   -30,   -30,   -30,   -29,   -30,    56,    13,
+     -30,   -30,   -30,   -30,   -11,   -30,   -30,   -30,    27,   -30,
+      -2,   -30,   -30
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     5,     6,     7,     8,     9,    10,    11,    12,    20,
-      21
+       0,     1,    33,     8,    60,    43,    34,    35,    36,     9,
+      10,    17,    22,    26,    49,    27,    41,    11,    12,    39,
+      50,     2,    14
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -606,44 +712,62 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      24,    16,    17,    18,     1,    14,    25,     2,     3,     4,
-      28,    29,    19,    32,    33,    34,    35,    31,    26,    27,
-      28,    29,    26,    27,    28,    29,    13,    22,    23,    15,
-      30
+      13,    48,    51,    15,    16,    18,    28,    29,     4,    28,
+      38,    30,    66,    67,    31,    44,    45,    61,    62,    40,
+       4,    38,    72,    32,    68,    69,    70,    71,     3,     4,
+      40,     5,     6,     7,    37,    75,    76,    77,    78,    59,
+       5,     6,     7,    20,    28,    37,     4,    20,     4,    46,
+      21,     4,    47,    -5,    19,    58,    23,    25,    13,    63,
+      64,    65,    66,    67,    74,    64,    65,    66,    67,    53,
+      54,    55,    56,    66,    67,   -19,    66,    67,   -20,    24,
+      42,    57,    -3,   -18,   -23,   -21,   -22,    73,    52
 };
 
 static const yytype_int8 yycheck[] =
 {
-      13,     3,     4,     5,     5,     5,    19,     8,     9,    10,
-      18,    19,    14,    26,    27,    28,    29,    15,    16,    17,
-      18,    19,    16,    17,    18,    19,     7,     0,    13,     3,
-      23
+       2,    30,    31,     5,     6,     7,     3,     4,     5,     3,
+      21,     8,    12,    13,    11,     9,    27,    46,    47,    21,
+       5,    32,     7,    20,    53,    54,    55,    56,     0,     5,
+      32,    16,    17,    18,    21,    64,    65,    66,    67,    41,
+      16,    17,    18,     8,     3,    32,     5,     8,     5,     8,
+      15,     5,    11,    14,    14,     9,    14,     8,    60,     9,
+      10,    11,    12,    13,     9,    10,    11,    12,    13,    10,
+      11,    12,    13,    12,    13,    14,    12,    13,    14,    14,
+       6,    14,    14,    14,    14,    14,    14,    60,    32
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     5,     8,     9,    10,    21,    22,    23,    24,    25,
-      26,    27,    28,     7,     5,    21,     3,     4,     5,    14,
-      29,    30,     0,    13,    29,    29,    16,    17,    18,    19,
-      24,    15,    29,    29,    29,    29
+       0,    23,    43,     0,     5,    16,    17,    18,    25,    31,
+      32,    39,    40,    42,    44,    42,    42,    33,    42,    14,
+       8,    15,    34,    14,    14,     8,    35,    37,     3,     4,
+       8,    11,    20,    24,    28,    29,    30,    31,    36,    41,
+      42,    38,     6,    27,     9,    36,     8,    11,    28,    36,
+      42,    28,    30,    10,    11,    12,    13,    14,     9,    42,
+      26,    28,    28,     9,    10,    11,    12,    13,    28,    28,
+      28,    28,     7,    40,     9,    28,    28,    28,    28
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    20,    21,    22,    22,    23,    23,    24,    24,    24,
-      24,    25,    26,    27,    28,    29,    29,    29,    29,    29,
-      29,    30,    30,    30
+       0,    22,    23,    24,    24,    24,    25,    26,    26,    27,
+      28,    28,    28,    28,    28,    28,    28,    28,    29,    29,
+      29,    29,    29,    29,    30,    30,    30,    30,    31,    32,
+      33,    34,    35,    36,    37,    37,    38,    38,    39,    40,
+      40,    40,    40,    40,    41,    42,    43,    43,    44
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1,     0,     1,     1,     3,     1,     1,     1,
-       1,     3,     2,     2,     2,     1,     3,     3,     3,     3,
-       3,     1,     1,     1
+       0,     2,     1,     1,     1,     1,     4,     0,     2,     3,
+       2,     3,     3,     3,     3,     3,     1,     1,     2,     3,
+       3,     3,     3,     3,     1,     1,     1,     2,     2,     2,
+       3,     3,     3,     1,     0,     2,     0,     2,     3,     1,
+       1,     1,     1,     2,     1,     1,     0,     2,     3
 };
 
 
@@ -672,7 +796,7 @@ enum { YYENOMEM = -2 };
       }                                                           \
     else                                                          \
       {                                                           \
-        yyerror (scanner, YY_("syntax error: cannot back up")); \
+        yyerror (scanner, result, ctx, YY_("syntax error: cannot back up")); \
         YYERROR;                                                  \
       }                                                           \
   while (0)
@@ -705,7 +829,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Kind, Value, scanner); \
+                  Kind, Value, scanner, result, ctx); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -717,11 +841,13 @@ do {                                                                      \
 
 static void
 yy_symbol_value_print (FILE *yyo,
-                       yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, yyscan_t scanner)
+                       yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, yyscan_t scanner, ast **result, struct parser_ctx *ctx)
 {
   FILE *yyoutput = yyo;
   YY_USE (yyoutput);
   YY_USE (scanner);
+  YY_USE (result);
+  YY_USE (ctx);
   if (!yyvaluep)
     return;
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
@@ -736,12 +862,12 @@ yy_symbol_value_print (FILE *yyo,
 
 static void
 yy_symbol_print (FILE *yyo,
-                 yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, yyscan_t scanner)
+                 yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, yyscan_t scanner, ast **result, struct parser_ctx *ctx)
 {
   YYFPRINTF (yyo, "%s %s (",
              yykind < YYNTOKENS ? "token" : "nterm", yysymbol_name (yykind));
 
-  yy_symbol_value_print (yyo, yykind, yyvaluep, scanner);
+  yy_symbol_value_print (yyo, yykind, yyvaluep, scanner, result, ctx);
   YYFPRINTF (yyo, ")");
 }
 
@@ -775,7 +901,7 @@ do {                                                            \
 
 static void
 yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp,
-                 int yyrule, yyscan_t scanner)
+                 int yyrule, yyscan_t scanner, ast **result, struct parser_ctx *ctx)
 {
   int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -788,7 +914,7 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp,
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
                        YY_ACCESSING_SYMBOL (+yyssp[yyi + 1 - yynrhs]),
-                       &yyvsp[(yyi + 1) - (yynrhs)], scanner);
+                       &yyvsp[(yyi + 1) - (yynrhs)], scanner, result, ctx);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -796,7 +922,7 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp,
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, Rule, scanner); \
+    yy_reduce_print (yyssp, yyvsp, Rule, scanner, result, ctx); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -837,16 +963,28 @@ int yydebug;
 
 static void
 yydestruct (const char *yymsg,
-            yysymbol_kind_t yykind, YYSTYPE *yyvaluep, yyscan_t scanner)
+            yysymbol_kind_t yykind, YYSTYPE *yyvaluep, yyscan_t scanner, ast **result, struct parser_ctx *ctx)
 {
   YY_USE (yyvaluep);
   YY_USE (scanner);
+  YY_USE (result);
+  YY_USE (ctx);
   if (!yymsg)
     yymsg = "Deleting";
   YY_SYMBOL_PRINT (yymsg, yykind, yyvaluep, yylocationp);
 
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YY_USE (yykind);
+  switch (yykind)
+    {
+    case YYSYMBOL_STRING: /* STRING  */
+#line 39 "build/src/parser/bison/parser.y"
+            { free(((*yyvaluep).string_value)); }
+#line 983 "parser.tab.c"
+        break;
+
+      default:
+        break;
+    }
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
@@ -860,7 +998,7 @@ yydestruct (const char *yymsg,
 `----------*/
 
 int
-yyparse (yyscan_t scanner)
+yyparse (yyscan_t scanner, ast **result, struct parser_ctx *ctx)
 {
 /* Lookahead token kind.  */
 int yychar;
@@ -1114,81 +1252,707 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 3: /* statements: %empty  */
-#line 90 "src/parser/bison/parser.y"
-                  {}
-#line 1121 "parser.tab.c"
+  case 2: /* start: translation_unit  */
+#line 70 "build/src/parser/bison/parser.y"
+                  { *result = (yyvsp[0].ast); }
+#line 1259 "parser.tab.c"
     break;
 
-  case 4: /* statements: statement_list  */
-#line 91 "src/parser/bison/parser.y"
-                     {}
-#line 1127 "parser.tab.c"
+  case 3: /* atom: number_atom  */
+#line 76 "build/src/parser/bison/parser.y"
+                { (yyval.ast) = (yyvsp[0].ast); }
+#line 1265 "parser.tab.c"
     break;
 
-  case 11: /* binding: SYMBOL EQUAL expression  */
-#line 110 "src/parser/bison/parser.y"
-                              {}
-#line 1133 "parser.tab.c"
+  case 4: /* atom: string_atom  */
+#line 77 "build/src/parser/bison/parser.y"
+                { (yyval.ast) = (yyvsp[0].ast); }
+#line 1271 "parser.tab.c"
     break;
 
-  case 12: /* evaluation: EVALUATE SYMBOL  */
-#line 114 "src/parser/bison/parser.y"
-                      {}
-#line 1139 "parser.tab.c"
+  case 5: /* atom: symbol_name_atom  */
+#line 78 "build/src/parser/bison/parser.y"
+                     { (yyval.ast) = (yyvsp[0].ast); }
+#line 1277 "parser.tab.c"
     break;
 
-  case 13: /* execution: EXECUTE program  */
-#line 118 "src/parser/bison/parser.y"
-                      {}
-#line 1145 "parser.tab.c"
+  case 6: /* binding: symbol_name_atom EQUAL evaluable SEMICOLON  */
+#line 84 "build/src/parser/bison/parser.y"
+                                               {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_BINDING,
+            2,
+            (yyvsp[-3].ast),
+            (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-3].ast));
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED,
+                "ast creation for a binding node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1298 "parser.tab.c"
     break;
 
-  case 14: /* computation: COMPUTE expression  */
-#line 122 "src/parser/bison/parser.y"
-                         {}
-#line 1151 "parser.tab.c"
+  case 7: /* block_items: %empty  */
+#line 105 "build/src/parser/bison/parser.y"
+           {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_BLOCK_ITEMS,
+            0 );
+        if (!a) {
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_BLOCK_ITEMS_NODE_CREATION_FAILED,
+                "ast creation for the content of a block node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1315 "parser.tab.c"
     break;
 
-  case 21: /* atom: INTEGER  */
-#line 139 "src/parser/bison/parser.y"
-              {
-(yyval.ast) =
-    ast_create_typed_data_wrapper(
-        ast_create_typed_data_int((yyvsp[0].int_value)) );
-}
-#line 1161 "parser.tab.c"
+  case 8: /* block_items: block_items statement  */
+#line 117 "build/src/parser/bison/parser.y"
+                          {
+        if ((!(yyvsp[-1].ast)) || ((yyvsp[-1].ast)->type == AST_TYPE_ERROR)) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = (yyvsp[-1].ast);
+        } else {
+            if (ctx->ops.children_append_take((yyvsp[-1].ast), (yyvsp[0].ast))) {
+                (yyval.ast) = (yyvsp[-1].ast);
+            } else {
+                ctx->ops.destroy((yyvsp[-1].ast));
+                ctx->ops.destroy((yyvsp[0].ast));
+                (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_BLOCK_ITEMS_APPEND_FAILED,
+                    "ast append failed when adding a statement to the content of a block" );
+            }
+        }
+  }
+#line 1336 "parser.tab.c"
     break;
 
-  case 22: /* atom: STRING  */
-#line 144 "src/parser/bison/parser.y"
-             {
-(yyval.ast) = ast_create_typed_data_wrapper(ast_create_typed_data_string((yyvsp[0].string_value)));
-}
-#line 1169 "parser.tab.c"
+  case 9: /* block: LBRACE block_items RBRACE  */
+#line 138 "build/src/parser/bison/parser.y"
+                              {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_BLOCK,
+            1,
+            (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_BLOCK_NODE_CREATION_FAILED,
+                "ast creation for a block node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1355 "parser.tab.c"
     break;
 
-  case 23: /* atom: SYMBOL  */
-#line 147 "src/parser/bison/parser.y"
-             {
-context ctx = (context)yyget_extra(scanner);
-if (symtab_contains_local(ctx->st, (yyvsp[0].symbol_name_value))) {
-    (yyval.ast) =
-        ast_create_typed_data_wrapper(
-            ast_create_typed_data_symbol(
-                symtab_get_local(ctx->st, (yyvsp[0].symbol_name_value)) ) );
-} else {
-    (yyval.ast) =
-        ast_create_typed_data_wrapper(
-            ast_create_typed_data_symbol(
-                symtab_get_local(ctx->st, (yyvsp[0].symbol_name_value)) ) );
-}
-}
-#line 1188 "parser.tab.c"
+  case 10: /* computable_core: SUBTRACT computable_core  */
+#line 157 "build/src/parser/bison/parser.y"
+                                            {
+        ast *a = ctx->ops.create_children_node_var(
+           AST_TYPE_NEGATION,
+           1,
+           (yyvsp[0].ast) );
+        if (!a) {
+           ctx->ops.destroy((yyvsp[0].ast));
+           (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+               AST_ERROR_CODE_NEGATION_NODE_CREATION_FAILED,
+               "ast creation for a negation node failed");
+        } else {
+           (yyval.ast) = a;
+        }
+    }
+#line 1374 "parser.tab.c"
+    break;
+
+  case 11: /* computable_core: computable_core ADD computable_core  */
+#line 171 "build/src/parser/bison/parser.y"
+                                          {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_ADDITION,
+            2,
+            (yyvsp[-2].ast),
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-2].ast));
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_ADDITION_NODE_CREATION_FAILED,
+                "ast creation for a addition node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+     }
+#line 1395 "parser.tab.c"
+    break;
+
+  case 12: /* computable_core: computable_core SUBTRACT computable_core  */
+#line 187 "build/src/parser/bison/parser.y"
+                                               {
+         ast *a = ctx->ops.create_children_node_var(
+             AST_TYPE_SUBTRACTION,
+             2,
+             (yyvsp[-2].ast),
+             (yyvsp[0].ast) );
+         if (!a) {
+             ctx->ops.destroy((yyvsp[-2].ast));
+             ctx->ops.destroy((yyvsp[0].ast));
+             (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                 AST_ERROR_CODE_SUBTRACTION_NODE_CREATION_FAILED,
+                 "ast creation for a subtraction node failed" );
+         } else {
+             (yyval.ast) = a;
+         }
+     }
+#line 1416 "parser.tab.c"
+    break;
+
+  case 13: /* computable_core: computable_core MULTIPLY computable_core  */
+#line 203 "build/src/parser/bison/parser.y"
+                                               {
+          ast *a = ctx->ops.create_children_node_var(
+              AST_TYPE_MULTIPLICATION,
+              2,
+              (yyvsp[-2].ast),
+              (yyvsp[0].ast) );
+          if (!a) {
+              ctx->ops.destroy((yyvsp[-2].ast));
+              ctx->ops.destroy((yyvsp[0].ast));
+              (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                  AST_ERROR_CODE_MULTIPLICATION_NODE_CREATION_FAILED,
+                  "ast creation for a multiplication node failed" );
+          } else {
+              (yyval.ast) = a;
+          }
+      }
+#line 1437 "parser.tab.c"
+    break;
+
+  case 14: /* computable_core: computable_core DIVIDE computable_core  */
+#line 219 "build/src/parser/bison/parser.y"
+                                             {
+          ast *a = ctx->ops.create_children_node_var(
+              AST_TYPE_DIVISION,
+              2,
+              (yyvsp[-2].ast),
+              (yyvsp[0].ast) );
+          if (!a) {
+              ctx->ops.destroy((yyvsp[-2].ast));
+              ctx->ops.destroy((yyvsp[0].ast));
+              (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                  AST_ERROR_CODE_DIVISION_NODE_CREATION_FAILED,
+                  "ast creation for a division node failed" );
+          } else {
+              (yyval.ast) = a;
+          }
+      }
+#line 1458 "parser.tab.c"
+    break;
+
+  case 15: /* computable_core: LPAREN computable_core RPAREN  */
+#line 235 "build/src/parser/bison/parser.y"
+                                    {
+          (yyval.ast) = (yyvsp[-1].ast);
+      }
+#line 1466 "parser.tab.c"
+    break;
+
+  case 16: /* computable_core: number_atom  */
+#line 238 "build/src/parser/bison/parser.y"
+                  {
+          (yyval.ast) = (yyvsp[0].ast);
+      }
+#line 1474 "parser.tab.c"
+    break;
+
+  case 17: /* computable_core: symbol_name_atom  */
+#line 241 "build/src/parser/bison/parser.y"
+                       {
+          (yyval.ast) = (yyvsp[0].ast);
+      }
+#line 1482 "parser.tab.c"
+    break;
+
+  case 18: /* computable: SUBTRACT computable_core  */
+#line 247 "build/src/parser/bison/parser.y"
+                                            {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_NEGATION,
+            1,
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_NEGATION_NODE_CREATION_FAILED,
+                "ast creation for a negation node failed");
+        } else {
+            (yyval.ast) = a;
+        }
+    }
+#line 1501 "parser.tab.c"
+    break;
+
+  case 19: /* computable: computable_core ADD computable_core  */
+#line 261 "build/src/parser/bison/parser.y"
+                                          {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_ADDITION,
+            2,
+            (yyvsp[-2].ast),
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-2].ast));
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_ADDITION_NODE_CREATION_FAILED,
+                "ast creation for a addition node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+     }
+#line 1522 "parser.tab.c"
+    break;
+
+  case 20: /* computable: computable_core SUBTRACT computable_core  */
+#line 277 "build/src/parser/bison/parser.y"
+                                               {
+         ast *a = ctx->ops.create_children_node_var(
+             AST_TYPE_SUBTRACTION,
+             2,
+             (yyvsp[-2].ast),
+             (yyvsp[0].ast) );
+         if (!a) {
+             ctx->ops.destroy((yyvsp[-2].ast));
+             ctx->ops.destroy((yyvsp[0].ast));
+             (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                 AST_ERROR_CODE_SUBTRACTION_NODE_CREATION_FAILED,
+                 "ast creation for a subtraction node failed" );
+         } else {
+             (yyval.ast) = a;
+         }
+     }
+#line 1543 "parser.tab.c"
+    break;
+
+  case 21: /* computable: computable_core MULTIPLY computable_core  */
+#line 293 "build/src/parser/bison/parser.y"
+                                               {
+          ast *a = ctx->ops.create_children_node_var(
+              AST_TYPE_MULTIPLICATION,
+              2,
+              (yyvsp[-2].ast),
+              (yyvsp[0].ast) );
+          if (!a) {
+              ctx->ops.destroy((yyvsp[-2].ast));
+              ctx->ops.destroy((yyvsp[0].ast));
+              (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                  AST_ERROR_CODE_MULTIPLICATION_NODE_CREATION_FAILED,
+                  "ast creation for a multiplication node failed" );
+          } else {
+              (yyval.ast) = a;
+          }
+      }
+#line 1564 "parser.tab.c"
+    break;
+
+  case 22: /* computable: computable_core DIVIDE computable_core  */
+#line 309 "build/src/parser/bison/parser.y"
+                                             {
+          ast *a = ctx->ops.create_children_node_var(
+              AST_TYPE_DIVISION,
+              2,
+              (yyvsp[-2].ast),
+              (yyvsp[0].ast) );
+          if (!a) {
+              ctx->ops.destroy((yyvsp[-2].ast));
+              ctx->ops.destroy((yyvsp[0].ast));
+              (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                  AST_ERROR_CODE_DIVISION_NODE_CREATION_FAILED,
+                  "ast creation for a division node failed" );
+          } else {
+              (yyval.ast) = a;
+          }
+      }
+#line 1585 "parser.tab.c"
+    break;
+
+  case 23: /* computable: LPAREN computable_core RPAREN  */
+#line 325 "build/src/parser/bison/parser.y"
+                                    {
+          (yyval.ast) = (yyvsp[-1].ast);
+      }
+#line 1593 "parser.tab.c"
+    break;
+
+  case 24: /* evaluable: function_call  */
+#line 333 "build/src/parser/bison/parser.y"
+                  { (yyval.ast) = (yyvsp[0].ast); }
+#line 1599 "parser.tab.c"
+    break;
+
+  case 25: /* evaluable: atom  */
+#line 334 "build/src/parser/bison/parser.y"
+         { (yyval.ast) = (yyvsp[0].ast); }
+#line 1605 "parser.tab.c"
+    break;
+
+  case 26: /* evaluable: computable  */
+#line 335 "build/src/parser/bison/parser.y"
+               { (yyval.ast) = (yyvsp[0].ast); }
+#line 1611 "parser.tab.c"
+    break;
+
+  case 27: /* evaluable: QUOTE evaluable  */
+#line 336 "build/src/parser/bison/parser.y"
+                    {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_QUOTE,
+            1,
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_QUOTE_NODE_CREATION_FAILED,
+                "ast creation for a quote node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1630 "parser.tab.c"
+    break;
+
+  case 28: /* function_call: symbol_name_atom list_of_numbers  */
+#line 355 "build/src/parser/bison/parser.y"
+                                     {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_FUNCTION_CALL,
+            2,
+            (yyvsp[-1].ast),
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_FUNCTION_CALL_NODE_CREATION_FAILED,
+                "ast creation for a function call node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1651 "parser.tab.c"
+    break;
+
+  case 29: /* function_definition: DEFINE function  */
+#line 376 "build/src/parser/bison/parser.y"
+                    {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_FUNCTION_DEFINITION,
+            1,
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_FUNCTION_DEFINITION_NODE_CREATION_FAILED,
+                "ast creation for a function definition node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1670 "parser.tab.c"
+    break;
+
+  case 30: /* function: symbol_name_atom list_of_parameters block  */
+#line 395 "build/src/parser/bison/parser.y"
+                                              {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_FUNCTION,
+            3,
+            (yyvsp[-2].ast),
+            (yyvsp[-1].ast),
+            (yyvsp[0].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-2].ast));
+            ctx->ops.destroy((yyvsp[-1].ast));
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_FUNCTION_NODE_CREATION_FAILED,
+                "ast creation for a function node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1693 "parser.tab.c"
+    break;
+
+  case 31: /* list_of_numbers: LPAREN numbers RPAREN  */
+#line 418 "build/src/parser/bison/parser.y"
+                          {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_LIST_OF_NUMBERS,
+            1,
+            (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_LIST_OF_NUMBERS_NODE_CREATION_FAILED,
+                "ast creation for a node for a list of numbers failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1712 "parser.tab.c"
+    break;
+
+  case 32: /* list_of_parameters: LPAREN parameters RPAREN  */
+#line 437 "build/src/parser/bison/parser.y"
+                             {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_LIST_OF_PARAMETERS,
+            1,
+            (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_LIST_OF_PARAMETERS_NODE_CREATION_FAILED,
+                "ast creation for a node for a list of parameters failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1731 "parser.tab.c"
+    break;
+
+  case 33: /* number_atom: INTEGER  */
+#line 456 "build/src/parser/bison/parser.y"
+            {
+        ast *a = ctx->ops.create_int_node((yyvsp[0].int_value));
+        (yyval.ast) = (a) ? a
+                 :
+                 ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_INT_NODE_CREATION_FAILED,
+                    "ast creation for a number failed" );
+    }
+#line 1744 "parser.tab.c"
+    break;
+
+  case 34: /* numbers: %empty  */
+#line 469 "build/src/parser/bison/parser.y"
+           {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_NUMBERS,
+            0 );
+        if (!a) {
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_NUMBERS_NODE_CREATION_FAILED,
+                "ast creation for numbers node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1761 "parser.tab.c"
+    break;
+
+  case 35: /* numbers: numbers number_atom  */
+#line 481 "build/src/parser/bison/parser.y"
+                        {
+        if ((!(yyvsp[-1].ast)) || ((yyvsp[-1].ast)->type == AST_TYPE_ERROR)) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = (yyvsp[-1].ast);
+        } else {
+            if (ctx->ops.children_append_take((yyvsp[-1].ast), (yyvsp[0].ast))) {
+                (yyval.ast) = (yyvsp[-1].ast);
+            } else {
+                ctx->ops.destroy((yyvsp[-1].ast));
+                ctx->ops.destroy((yyvsp[0].ast));
+                (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_NUMBERS_APPEND_FAILED,
+                    "ast append failed when adding a number to a list of numbers" );
+            }
+        }
+  }
+#line 1782 "parser.tab.c"
+    break;
+
+  case 36: /* parameters: %empty  */
+#line 502 "build/src/parser/bison/parser.y"
+           {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_PARAMETERS,
+            0 );
+        if (!a) {
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_PARAMETERS_NODE_CREATION_FAILED,
+                "ast creation for parameters node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1799 "parser.tab.c"
+    break;
+
+  case 37: /* parameters: parameters symbol_name_atom  */
+#line 514 "build/src/parser/bison/parser.y"
+                                {
+        if ((!(yyvsp[-1].ast)) || ((yyvsp[-1].ast)->type == AST_TYPE_ERROR)) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = (yyvsp[-1].ast);
+        } else {
+            if (ctx->ops.children_append_take((yyvsp[-1].ast), (yyvsp[0].ast))) {
+                (yyval.ast) = (yyvsp[-1].ast);
+            } else {
+                ctx->ops.destroy((yyvsp[-1].ast));
+                ctx->ops.destroy((yyvsp[0].ast));
+                (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_PARAMETERS_APPEND_FAILED,
+                    "ast append failed when adding a parameter to a list of parameters" );
+            }
+        }
+  }
+#line 1820 "parser.tab.c"
+    break;
+
+  case 38: /* reading: READ symbol_name_atom SEMICOLON  */
+#line 535 "build/src/parser/bison/parser.y"
+                                    {
+        ast *a = ctx->ops.create_children_node_var(
+                    AST_TYPE_READING,
+                    1,
+                    (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_READING_NODE_CREATION_FAILED,
+                "ast creation for a reading node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1839 "parser.tab.c"
+    break;
+
+  case 39: /* statement: binding  */
+#line 554 "build/src/parser/bison/parser.y"
+            { (yyval.ast) = (yyvsp[0].ast); }
+#line 1845 "parser.tab.c"
+    break;
+
+  case 40: /* statement: writing  */
+#line 555 "build/src/parser/bison/parser.y"
+            { (yyval.ast) = (yyvsp[0].ast); }
+#line 1851 "parser.tab.c"
+    break;
+
+  case 41: /* statement: reading  */
+#line 556 "build/src/parser/bison/parser.y"
+            { (yyval.ast) = (yyvsp[0].ast); }
+#line 1857 "parser.tab.c"
+    break;
+
+  case 42: /* statement: function_definition  */
+#line 557 "build/src/parser/bison/parser.y"
+                        { (yyval.ast) = (yyvsp[0].ast); }
+#line 1863 "parser.tab.c"
+    break;
+
+  case 43: /* statement: function_call SEMICOLON  */
+#line 558 "build/src/parser/bison/parser.y"
+                            { (yyval.ast) = (yyvsp[-1].ast); }
+#line 1869 "parser.tab.c"
+    break;
+
+  case 44: /* string_atom: STRING  */
+#line 564 "build/src/parser/bison/parser.y"
+           {
+        ast *a = ctx->ops.create_string_node((yyvsp[0].string_value));
+        (yyval.ast) = (a) ? a
+                 :
+                 ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_STRING_NODE_CREATION_FAILED,
+                    "ast creation for a string failed" );
+    }
+#line 1882 "parser.tab.c"
+    break;
+
+  case 45: /* symbol_name_atom: SYMBOL_NAME  */
+#line 577 "build/src/parser/bison/parser.y"
+                {
+        ast *a = ctx->ops.create_symbol_name_node((yyvsp[0].symbol_name_value));
+        (yyval.ast) = (a) ? a
+                 :
+                 ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_SYMBOL_NAME_NODE_CREATION_FAILED,
+                    "ast creation for a symbol name failed" );
+  }
+#line 1895 "parser.tab.c"
+    break;
+
+  case 46: /* translation_unit: %empty  */
+#line 590 "build/src/parser/bison/parser.y"
+           {
+        ast *a = ctx->ops.create_children_node_var(
+            AST_TYPE_TRANSLATION_UNIT,
+            0 );
+        if (!a) {
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_TRANSLATION_UNIT_NODE_CREATION_FAILED,
+                "ast creation for a translation unit node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1912 "parser.tab.c"
+    break;
+
+  case 47: /* translation_unit: translation_unit statement  */
+#line 602 "build/src/parser/bison/parser.y"
+                               {
+        if ((!(yyvsp[-1].ast)) || ((yyvsp[-1].ast)->type == AST_TYPE_ERROR)) {
+            ctx->ops.destroy((yyvsp[0].ast));
+            (yyval.ast) = (yyvsp[-1].ast);
+        } else {
+            if (ctx->ops.children_append_take((yyvsp[-1].ast), (yyvsp[0].ast))) {
+                (yyval.ast) = (yyvsp[-1].ast);
+            } else {
+                ctx->ops.destroy((yyvsp[-1].ast));
+                ctx->ops.destroy((yyvsp[0].ast));
+                (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                    AST_ERROR_CODE_TRANSLATION_UNIT_APPEND_FAILED,
+                    "ast append failed when adding a statement to the translation unit" );
+            }
+        }
+  }
+#line 1933 "parser.tab.c"
+    break;
+
+  case 48: /* writing: WRITE symbol_name_atom SEMICOLON  */
+#line 623 "build/src/parser/bison/parser.y"
+                                     {
+        ast *a = ctx->ops.create_children_node_var(
+                            AST_TYPE_WRITING,
+                            1,
+                            (yyvsp[-1].ast) );
+        if (!a) {
+            ctx->ops.destroy((yyvsp[-1].ast));
+            (yyval.ast) = ctx->ops.create_error_node_or_sentinel(
+                AST_ERROR_CODE_WRITING_NODE_CREATION_FAILED,
+                "ast creation for a writing node failed" );
+        } else {
+            (yyval.ast) = a;
+        }
+  }
+#line 1952 "parser.tab.c"
     break;
 
 
-#line 1192 "parser.tab.c"
+#line 1956 "parser.tab.c"
 
       default: break;
     }
@@ -1235,7 +1999,7 @@ yyerrlab:
   if (!yyerrstatus)
     {
       ++yynerrs;
-      yyerror (scanner, YY_("syntax error"));
+      yyerror (scanner, result, ctx, YY_("syntax error"));
     }
 
   if (yyerrstatus == 3)
@@ -1252,7 +2016,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, scanner);
+                      yytoken, &yylval, scanner, result, ctx);
           yychar = YYEMPTY;
         }
     }
@@ -1308,7 +2072,7 @@ yyerrlab1:
 
 
       yydestruct ("Error: popping",
-                  YY_ACCESSING_SYMBOL (yystate), yyvsp, scanner);
+                  YY_ACCESSING_SYMBOL (yystate), yyvsp, scanner, result, ctx);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -1346,7 +2110,7 @@ yyabortlab:
 | yyexhaustedlab -- YYNOMEM (memory exhaustion) comes here.  |
 `-----------------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (scanner, YY_("memory exhausted"));
+  yyerror (scanner, result, ctx, YY_("memory exhausted"));
   yyresult = 2;
   goto yyreturnlab;
 
@@ -1361,7 +2125,7 @@ yyreturnlab:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, scanner);
+                  yytoken, &yylval, scanner, result, ctx);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -1370,7 +2134,7 @@ yyreturnlab:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  YY_ACCESSING_SYMBOL (+*yyssp), yyvsp, scanner);
+                  YY_ACCESSING_SYMBOL (+*yyssp), yyvsp, scanner, result, ctx);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
@@ -1381,12 +2145,13 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 163 "src/parser/bison/parser.y"
+#line 641 "build/src/parser/bison/parser.y"
 
 
-int yydebug = 0;
-
-int yyerror(void *ctx, const char *s) {
-    fprintf(stderr, "syntax error: %s\n", s);
-    return EXIT_SUCCESS;
+int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+    (void)scanner; (void)result; (void)ctx;
+    fprintf(stderr, "Parse error: %s\n", msg);
+    return 1;
 }
+
+/* @formatter:on */

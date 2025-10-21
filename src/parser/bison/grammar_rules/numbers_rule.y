@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/numbers_rule.y
 
 numbers
-  : /* empty */ {
+  : %empty {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_NUMBERS,
             0 );

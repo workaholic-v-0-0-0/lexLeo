@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/block_items_rule.y
 
 block_items
-  : /* empty */ {
+  : %empty {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_BLOCK_ITEMS,
             0 );

@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/translation_unit_rule.y
 
 translation_unit
-  : /* empty */ {
+  : %empty {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_TRANSLATION_UNIT,
             0 );
