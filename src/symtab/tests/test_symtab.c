@@ -21,7 +21,6 @@
 #include "internal/list_test_utils.h"
 
 
-
 //-----------------------------------------------------------------------------
 // GLOBALS, TYPES, DUMMIES AND "MAGIC NUMBER KILLERS"
 //-----------------------------------------------------------------------------
@@ -41,7 +40,7 @@ static const symbol *const DUMMY_SYMBOL_P = (symbol *) &DUMMY[7];
 static const int DUMMY_INT = 0;
 static const ast *const DUMMY_IMAGE = (ast *) &DUMMY[8];
 static const void *const DUMMY_VOID_POINTER = (void *) &DUMMY[9];
-static char too_long_symbol_name[MAXIMUM_SYMBOL_NAME_LENGTH +2];
+static char too_long_symbol_name[MAXIMUM_SYMBOL_NAME_LENGTH + 2];
 static char *valid_symbol_name = "valid_symbol_name";
 static const void *DUMMY_STRDUP_RETURNED_VALUE = (void *) &DUMMY[10];
 #define STRDUP_ERROR_CODE NULL
@@ -52,13 +51,12 @@ static list collected_ptr_to_be_freed = NULL;
 symtab_destroy_value_fn_t symtab_destroy_symbol;
 
 
-
 //-----------------------------------------------------------------------------
 // MOCKS, STUBS, SPIES AND FAKES
 //-----------------------------------------------------------------------------
 
 
-void * mock_malloc(size_t size) {
+void *mock_malloc(size_t size) {
     check_expected(size);
     return mock_type(void *);
 }
@@ -78,7 +76,8 @@ void ast_destroy_children_node(ast *children_node) {
     check_expected(children_node);
 }
 
-hashtable *mock_hashtable_create(size_t size, hashtable_key_type key_type, hashtable_destroy_value_fn_t destroy_value_fn) {
+hashtable *mock_hashtable_create(size_t size, hashtable_key_type key_type,
+                                 hashtable_destroy_value_fn_t destroy_value_fn) {
     check_expected(size);
     check_expected(key_type);
     check_expected(destroy_value_fn);
@@ -171,8 +170,8 @@ static symtab stub_st;
 static void init_symtab_stub(void) {
     memset(&dummy_ht, 0, sizeof dummy_ht);
     memset(&stub_st, 0, sizeof stub_st);
-    stub_st.symbols = &dummy_ht;   // ou stub_st.pool = &dummy_ht selon ton design
-    stub_st.parent  = NULL;
+    stub_st.symbols = &dummy_ht; // ou stub_st.pool = &dummy_ht selon ton design
+    stub_st.parent = NULL;
 }
 
 static hashtable stub_ht;
@@ -181,7 +180,7 @@ static void *stub_malloc_returned_value_for_symbol = (void *) DUMMY_SYMBOL_P;
 static char *malloc_ret_block_for_symbol;
 static char *strdup_ret_block;
 
-list mock_list_push(list l, void * e) {
+list mock_list_push(list l, void *e) {
     check_expected(l);
     check_expected(e);
     return mock_type(list);
@@ -191,7 +190,6 @@ void *mock_list_pop(list *l_p) {
     check_expected(l_p);
     return mock_type(void *);
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -221,11 +219,9 @@ static void free_saved_addresses_to_be_freed(void) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_wind_scope TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -307,8 +303,8 @@ static void wind_scope_returns_null_when_hashtable_create_fails(void **state) {
 // Given: hashtable_create succeeds
 // Expected: malloc'ed symtab is initialized and returned
 static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashtable_create_succeeds(void **state) {
-    alloc_and_save_address_to_be_freed((void **)&fake_malloc_returned_value_for_a_symtab, sizeof(struct symtab));
-    alloc_and_save_address_to_be_freed((void **)&fake_hashtable_create_returned_value, DUMMY_SIZE_STRUCT_HASHTABLE);
+    alloc_and_save_address_to_be_freed((void **) &fake_malloc_returned_value_for_a_symtab, sizeof(struct symtab));
+    alloc_and_save_address_to_be_freed((void **) &fake_hashtable_create_returned_value, DUMMY_SIZE_STRUCT_HASHTABLE);
 
     expect_value(mock_malloc, size, sizeof(symtab));
     will_return(mock_malloc, fake_malloc_returned_value_for_a_symtab);
@@ -325,11 +321,9 @@ static void wind_scope_calls_initializes_and_returns_malloced_symtab_when_hashta
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_unwind_scope TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -351,7 +345,6 @@ static int unwind_scope_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -370,7 +363,7 @@ static void unwind_scope_do_nothing_and_returns_null_when_st_null(void **state) 
 //  - returns st->parent
 static void unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_when_st_not_null(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
 
@@ -383,11 +376,9 @@ static void unwind_scope_calls_hashtable_destroy_frees_st_and_returns_parent_whe
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_get_local TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -407,7 +398,6 @@ static int get_local_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -425,7 +415,7 @@ static void get_local_returns_null_when_st_null(void **state) {
 //  - returns hashtable_get returned value
 static void get_local_calls_hashtable_get_and_returns_its_returned_value_when_st_not_null(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
 
@@ -437,11 +427,9 @@ static void get_local_calls_hashtable_get_and_returns_its_returned_value_when_st
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_remove TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -461,7 +449,6 @@ static int remove_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -472,7 +459,7 @@ static int remove_teardown(void **state) {
 static void remove_returns_1_when_st_null(void **state) {
     assert_int_equal(
         symtab_remove(NULL, (char *) DUMMY_STRING),
-        1 );
+        1);
 }
 
 // Given: st != NULL
@@ -481,7 +468,7 @@ static void remove_returns_1_when_st_null(void **state) {
 //  - returns hashtable_remove returned value
 static void remove_calls_hashtable_remove_and_returns_its_returned_value_when_st_not_null_name_not_null(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
 
@@ -491,15 +478,13 @@ static void remove_calls_hashtable_remove_and_returns_its_returned_value_when_st
 
     assert_int_equal(
         symtab_remove(st, (char *) DUMMY_STRING),
-        DUMMY_INT );
+        DUMMY_INT);
 }
-
 
 
 //-----------------------------------------------------------------------------
 // symtab_contains_local TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -519,7 +504,6 @@ static int contains_local_teardown(void **state) {
 }
 
 
-
 //-----------------------------------------------------------------------------
 // TESTS
 //-----------------------------------------------------------------------------
@@ -530,7 +514,7 @@ static int contains_local_teardown(void **state) {
 static void contains_local_returns_0_when_st_null(void **state) {
     assert_int_equal(
         symtab_contains_local(NULL, (char *) DUMMY_STRING),
-        0 );
+        0);
 }
 
 // Given: st != NULL
@@ -540,7 +524,7 @@ static void contains_local_returns_0_when_st_null(void **state) {
 //  - returns hashtable_key_is_in_use
 static void contains_local_calls_hashtable_key_is_in_use_when_st_not_null(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
 
@@ -550,15 +534,13 @@ static void contains_local_calls_hashtable_key_is_in_use_when_st_not_null(void *
 
     assert_int_equal(
         symtab_contains_local(st, (char *) DUMMY_STRING),
-        DUMMY_INT );
+        DUMMY_INT);
 }
-
 
 
 //-----------------------------------------------------------------------------
 // symtab_get TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -581,7 +563,6 @@ static int get_teardown(void **state) {
     free_saved_addresses_to_be_freed();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -611,7 +592,8 @@ static void get_calls_symtab_contains_local_when_st_not_null(void **state) {
 // Expected:
 //  - calls symtab_get_local(st, name);
 //  - returns symtab_get_local returned value
-static void get_calls_symtab_get_local_and_returns_its_returned_value_when_symtab_contains_local_returns_true(void **state) {
+static void get_calls_symtab_get_local_and_returns_its_returned_value_when_symtab_contains_local_returns_true(
+    void **state) {
     expect_value(mock_symtab_contains_local, st, DUMMY_SYMTAB_P);
     expect_value(mock_symtab_contains_local, name, DUMMY_STRING);
     will_return(mock_symtab_contains_local, true);
@@ -630,7 +612,7 @@ static void get_calls_symtab_get_local_and_returns_its_returned_value_when_symta
 //  - returns symtab_get returned value
 static void get_calls_itself_and_returns_value_when_symtab_contains_local_returns_false(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
     expect_value(mock_symtab_contains_local, st, st);
@@ -646,11 +628,9 @@ static void get_calls_itself_and_returns_value_when_symtab_contains_local_return
 }
 
 
-
 //-----------------------------------------------------------------------------
 // symtab_contains TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -671,7 +651,6 @@ static int contains_teardown(void **state) {
     free_saved_addresses_to_be_freed();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -709,7 +688,7 @@ static void contains_returns_1_when_symtab_contains_local_returns_1(void **state
 //  - returns symtab_contains returned value
 static void contains_calls_symtab_contains_and_returns_value_when_symtab_contains_local_returns_0(void **state) {
     symtab *st = NULL;
-    alloc_and_save_address_to_be_freed((void **)&st, sizeof(symtab));
+    alloc_and_save_address_to_be_freed((void **) &st, sizeof(symtab));
     st->symbols = (hashtable *) DUMMY_HASHTABLE_P;
     st->parent = (symtab *) DUMMY_SYMTAB_P;
     expect_value(mock_symtab_contains_local, st, st);
@@ -720,15 +699,13 @@ static void contains_calls_symtab_contains_and_returns_value_when_symtab_contain
     will_return(mock_symtab_contains, DUMMY_INT);
     assert_int_equal(
         symtab_contains(st, DUMMY_STRING),
-        DUMMY_INT );
+        DUMMY_INT);
 }
-
 
 
 //-----------------------------------------------------------------------------
 // symtab_intern_symbol TESTS
 //-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -748,21 +725,20 @@ static void contains_calls_symtab_contains_and_returns_value_when_symtab_contain
 //  - symtab *st param (stub)
 
 
-
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
 
 static int intern_symbol_setup(void **state) {
-	memset(too_long_symbol_name, 'a', MAXIMUM_SYMBOL_NAME_LENGTH + 1);
-	too_long_symbol_name[256] = '\0';
+    memset(too_long_symbol_name, 'a', MAXIMUM_SYMBOL_NAME_LENGTH + 1);
+    too_long_symbol_name[256] = '\0';
     memset(&stub_ht, 0, sizeof stub_ht);
     memset(&stub_symtab, 0, sizeof stub_symtab);
     stub_symtab.symbols = &stub_ht;
-    stub_symtab.parent  = NULL;
+    stub_symtab.parent = NULL;
     set_allocators(mock_malloc, mock_free);
-	set_string_duplicate(mock_strdup);
+    set_string_duplicate(mock_strdup);
     set_hashtable_key_is_in_use(mock_hashtable_key_is_in_use);
     set_hashtable_add(mock_hashtable_add);
     set_list_push(mock_list_push);
@@ -772,15 +748,14 @@ static int intern_symbol_setup(void **state) {
 
 static int intern_symbol_teardown(void **state) {
     set_allocators(NULL, NULL);
-	set_string_duplicate(NULL);
+    set_string_duplicate(NULL);
     set_hashtable_key_is_in_use(NULL);
     set_list_push(NULL);
-	set_list_pop(NULL);
+    set_list_pop(NULL);
     set_hashtable_add(NULL);
     free_saved_addresses_to_be_freed();
     return 0;
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -795,7 +770,7 @@ static int intern_symbol_teardown(void **state) {
 static void intern_symbol_error_when_st_null(void **state) {
     assert_int_equal(
         symtab_intern_symbol(NULL, valid_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -805,7 +780,7 @@ static void intern_symbol_error_when_st_null(void **state) {
 static void intern_symbol_error_when_name_null(void **state) {
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, NULL),
-        1 );
+        1);
 }
 
 // Given:
@@ -815,7 +790,7 @@ static void intern_symbol_error_when_name_null(void **state) {
 static void intern_symbol_error_when_name_too_long(void **state) {
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, too_long_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -826,7 +801,7 @@ static void intern_symbol_error_when_symbols_field_null(void **state) {
     (&stub_symtab)->symbols = NULL;
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, NULL),
-        1 );
+        1);
 }
 
 // Given:
@@ -844,7 +819,7 @@ static void intern_symbol_do_nothing_and_returns_0_when_symbol_already_interned(
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        0 );
+        0);
 }
 
 // Given:
@@ -867,7 +842,7 @@ static void intern_symbol_error_when_malloc_for_symbol_fails(void **state) {
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -890,7 +865,7 @@ static void intern_symbol_cleanup_and_error_when_strdup_fails(void **state) {
     expect_value(mock_hashtable_key_is_in_use, ht, (&stub_symtab)->symbols);
     expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
     will_return(mock_hashtable_key_is_in_use, false);
-    alloc_and_save_address_to_be_freed((void **)&malloc_ret_block_for_symbol, sizeof(symbol));
+    alloc_and_save_address_to_be_freed((void **) &malloc_ret_block_for_symbol, sizeof(symbol));
     expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, malloc_ret_block_for_symbol);
     expect_value(mock_strdup, s, valid_symbol_name);
@@ -899,7 +874,7 @@ static void intern_symbol_cleanup_and_error_when_strdup_fails(void **state) {
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -928,10 +903,10 @@ static void intern_symbol_cleanup_and_error_when_list_push_fails(void **state) {
     expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
     expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
     will_return(mock_hashtable_key_is_in_use, false);
-    alloc_and_save_address_to_be_freed((void **)&malloc_ret_block_for_symbol, sizeof(symbol));
+    alloc_and_save_address_to_be_freed((void **) &malloc_ret_block_for_symbol, sizeof(symbol));
     expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, malloc_ret_block_for_symbol);
-    alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
+    alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
     expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
     expect_value(mock_list_push, l, get_symbol_pool());
@@ -942,7 +917,7 @@ static void intern_symbol_cleanup_and_error_when_list_push_fails(void **state) {
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -978,10 +953,10 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
     expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
     expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
     will_return(mock_hashtable_key_is_in_use, false);
-    alloc_and_save_address_to_be_freed((void **)&malloc_ret_block_for_symbol, sizeof(symbol));
+    alloc_and_save_address_to_be_freed((void **) &malloc_ret_block_for_symbol, sizeof(symbol));
     expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, malloc_ret_block_for_symbol);
-    alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
+    alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
     expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
     expect_value(mock_list_push, l, get_symbol_pool());
@@ -991,14 +966,14 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
     expect_value(mock_hashtable_add, key, valid_symbol_name);
     expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
     will_return(mock_hashtable_add, 1);
-	expect_value(mock_list_pop, l_p, get_symbol_pool_address());
-	will_return(mock_list_pop, malloc_ret_block_for_symbol);
+    expect_value(mock_list_pop, l_p, get_symbol_pool_address());
+    will_return(mock_list_pop, malloc_ret_block_for_symbol);
     expect_value(mock_free, ptr, strdup_ret_block);
     expect_value(mock_free, ptr, malloc_ret_block_for_symbol);
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        1 );
+        1);
 }
 
 // Given:
@@ -1028,10 +1003,10 @@ static void intern_symbol_interns_new_symbol_when_hashtable_add_succeeds(void **
     expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
     expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
     will_return(mock_hashtable_key_is_in_use, false);
-    alloc_and_save_address_to_be_freed((void **)&malloc_ret_block_for_symbol, sizeof(symbol));
+    alloc_and_save_address_to_be_freed((void **) &malloc_ret_block_for_symbol, sizeof(symbol));
     expect_value(mock_malloc, size, sizeof(symbol));
     will_return(mock_malloc, malloc_ret_block_for_symbol);
-    alloc_and_save_address_to_be_freed((void **)&strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name)+1));
+    alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
     expect_string(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
     expect_value(mock_list_push, l, get_symbol_pool());
@@ -1044,9 +1019,8 @@ static void intern_symbol_interns_new_symbol_when_hashtable_add_succeeds(void **
 
     assert_int_equal(
         symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        0 );
+        0);
 }
-
 
 
 //-----------------------------------------------------------------------------

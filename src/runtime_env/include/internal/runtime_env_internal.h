@@ -16,12 +16,10 @@ void runtime_env_value_destroy_adapter(void *value);
 
 struct runtime_env {
     hashtable *bindings; // key: const symbol* (borrowed), value: runtime_env_value (owned)
-    int refcount;
+    size_t refcount;
     bool is_root;
     struct runtime_env *parent;
 };
-
-// make the following fcts static?
 
 runtime_env *runtime_env_make_toplevel(void);
 
@@ -29,5 +27,7 @@ runtime_env_value *runtime_env_value_clone(const runtime_env_value *value);
 void runtime_env_destroy(runtime_env *e);
 void runtime_env_retain(runtime_env *e);
 void runtime_env_release(runtime_env *e);
+
+//void runtime_env_value_destroy(runtime_env_value *value);
 
 #endif //LEXLEO_RUNTIME_ENV_INTERNAL_H

@@ -58,7 +58,7 @@ static void hashtable_destroy_entry(void *item, void *user_data) {
     hashtable *ht = (hashtable *)user_data;
     hashtable_destroy_value_fn_t destroy_fn = ht->destroy_value_fn;
     if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
-        DATA_STRUCTURE_FREE(e->key);
+        DATA_STRUCTURE_FREE((void *) e->key);
     if (destroy_fn) destroy_fn(e->value);
     DATA_STRUCTURE_FREE(e);
 }
@@ -146,7 +146,7 @@ int real_hashtable_add(hashtable *ht, const void *key, void *value) {
     cons *c = DATA_STRUCTURE_MALLOC(sizeof(cons));
     if (!c) {
         if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
-            DATA_STRUCTURE_FREE(new_entry->key);
+            DATA_STRUCTURE_FREE((void *) new_entry->key);
         DATA_STRUCTURE_FREE(new_entry);
         return 1;
     }
@@ -270,7 +270,7 @@ int real_hashtable_remove(hashtable *ht, const void *key) {
     if (ht->destroy_value_fn)
         ht->destroy_value_fn(((entry *) (bucket->car))->value);
     if (ht->key_type == HASHTABLE_KEY_TYPE_STRING)
-        DATA_STRUCTURE_FREE(((entry *) (bucket->car))->key);
+        DATA_STRUCTURE_FREE((void *) ((entry *) (bucket->car))->key);
     DATA_STRUCTURE_FREE(bucket->car);
     DATA_STRUCTURE_FREE(bucket);
 

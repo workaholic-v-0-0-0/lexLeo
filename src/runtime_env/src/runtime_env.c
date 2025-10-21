@@ -9,7 +9,7 @@
 #include <stdbool.h>
 
 void runtime_env_value_destroy_adapter(void *value) {
-    runtime_env_value_destroy((runtime_env_value *)value);
+    runtime_env_value_release((runtime_env_value *)value);
 }
 
 static const hashtable_ops_t RUNTIME_ENV_HASHTABLE_OPS_DEFAULT = {
@@ -75,6 +75,7 @@ runtime_env_value *runtime_env_make_number(int i) {
     if (!ret)
         return NULL;
 
+    ret->refcount = 1;
     ret->type = RUNTIME_VALUE_NUMBER;
     ret->as.i = i;
 
@@ -95,6 +96,7 @@ runtime_env_value *runtime_env_make_string(const char *s) {
         return NULL;
     }
 
+    ret->refcount = 1;
     ret->type = RUNTIME_VALUE_STRING;
 
     return ret;
@@ -105,6 +107,7 @@ runtime_env_value *runtime_env_make_symbol(const struct symbol *sym) {
     if (!ret)
         return NULL;
 
+    ret->refcount = 1;
     ret->type = RUNTIME_VALUE_SYMBOL;
     ret->as.sym = sym;
 
@@ -125,6 +128,7 @@ runtime_env_value *runtime_env_make_error(int code, const char *msg) {
         return NULL;
     }
 
+    ret->refcount = 1;
     ret->type = RUNTIME_VALUE_ERROR;
     ret->as.err.code = code;
 
@@ -139,6 +143,7 @@ runtime_env_value *runtime_env_make_function(
         return NULL;
 
     ret->type = RUNTIME_VALUE_FUNCTION;
+    ret->refcount = 1;
     ret->as.fn.function_node = function_node;
     ret->as.fn.closure = closure;
 
@@ -152,39 +157,14 @@ runtime_env_value *runtime_env_make_quoted(const struct ast *quoted) {
     if (!ret)
         return NULL;
 
+    ret->refcount = 1;
     ret->type = RUNTIME_VALUE_QUOTED;
     ret->as.quoted = quoted;
 
     return ret;
 }
 
-runtime_env *runtime_env_unwind(runtime_env *e) {
-	if (!e)
-		return NULL;
-
-	g_runtime_env_ctx.hashtable_ops->destroy_bindings(e->bindings);
-
-	runtime_env *ret = e->parent;
-	RUNTIME_ENV_FREE(e);
-
-	return ret;
-}
-
-void runtime_env_retain(runtime_env *e) {
-    if (e) e->refcount++;
-}
-
-void runtime_env_release(runtime_env *e) {
-	if (!e || e->refcount <= 0 || e->is_root)
-        return;
-
-	if (--e->refcount == 0) {
-        g_runtime_env_ctx.hashtable_ops->destroy_bindings(e->bindings);
-        RUNTIME_ENV_FREE(e);
-	}
-}
-
-void runtime_env_value_destroy(runtime_env_value *value) {
+static void runtime_env_value_destroy(runtime_env_value *value) {
 	if (!value)
 		return;
     switch (value->type) {
@@ -211,7 +191,51 @@ void runtime_env_value_destroy(runtime_env_value *value) {
         break;
     default:
         // do nothing
+        //return;
     }
+}
+
+void runtime_env_value_retain(const runtime_env_value *v) {
+    if (v) ((runtime_env_value *) v)->refcount++;
+}
+
+void runtime_env_value_release(const runtime_env_value *v) {
+    if (!v)
+        return;
+
+    runtime_env_value *m = (runtime_env_value *)v;
+	if (m->refcount <= 0)
+        return;
+
+	if (--m->refcount == 0) {
+        runtime_env_value_destroy(m);
+	}
+}
+
+runtime_env *runtime_env_unwind(runtime_env *e) {
+	if (!e)
+		return NULL;
+
+	g_runtime_env_ctx.hashtable_ops->destroy_bindings(e->bindings);
+
+	runtime_env *ret = e->parent;
+	RUNTIME_ENV_FREE(e);
+
+	return ret;
+}
+
+void runtime_env_retain(runtime_env *e) {
+    if (e) e->refcount++;
+}
+
+void runtime_env_release(runtime_env *e) {
+	if (!e || e->refcount <= 0 || e->is_root)
+        return;
+
+	if (--e->refcount == 0) {
+        g_runtime_env_ctx.hashtable_ops->destroy_bindings(e->bindings);
+        RUNTIME_ENV_FREE(e);
+	}
 }
 
 runtime_env *runtime_env_wind(runtime_env *parent) {
@@ -267,10 +291,6 @@ static bool runtime_env_set_local_impl(
     if (!e || !key || !value)
         return false;
 
-	runtime_env_value *clone = runtime_env_value_clone(value);
-	if (!clone)
-		return false;
-
     const bool in_use =
 		g_runtime_env_ctx.hashtable_ops->hashtable_key_is_in_use(e->bindings, key);
 
@@ -280,7 +300,7 @@ static bool runtime_env_set_local_impl(
 				g_runtime_env_ctx.hashtable_ops->hashtable_reset_value(
 					e->bindings,
 					key,
-					clone )
+					(void *) value )
 				==
 				0 )
 			:
@@ -288,17 +308,17 @@ static bool runtime_env_set_local_impl(
 				g_runtime_env_ctx.hashtable_ops->hashtable_add(
 					e->bindings,
 					key,
-					clone )
+					(void *) value )
 				==
 				0 )
 			;
 
-	if (!ok) {
-		runtime_env_value_destroy(clone);
-		return false;
+	if (ok) {
+        runtime_env_value_retain(value);
+		return true;
 	}
 
-    return true;
+    return false;
 }
 
 bool runtime_env_set_local(
@@ -377,6 +397,10 @@ void runtime_env_set_ops(const runtime_env_ops_t *overrides) {
     if (overrides) {
         if (overrides->set_local)
             applied.set_local = overrides->set_local;
+        if (overrides->get_local)
+            applied.get_local = overrides->get_local;
+        if (overrides->get)
+            applied.get = overrides->get;
     }
     g_runtime_env_ctx.ops = &applied;
 }
