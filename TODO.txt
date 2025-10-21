@@ -66,3 +66,16 @@
 
 - Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
+
+- changes:
+  - interpreter_eval:
+      - when evaluating a symbol data wrapper AST (except in LHS assignment or "function contexts"),
+        resolve the symbol to its associated runtime value in the current or an ancestor environment.
+      - ensure proper fallback behavior when the symbol is unbound (return INTERPRETER_STATUS_UNBOUND_SYMBOL or equivalent)
+  - grammar:
+      - update the "computable" rule to accept generic atoms, not only numeric ones
+        (e.g., allow expressions like "atom_number + atom_symbol" or "atom + atom").
+  - interpreter:
+      - add runtime type checking for computation nodes
+      - use INTERPRETER_STATUS_TYPE_ERROR to report invalid operand types
+      - ensure quoted expressions are not evaluated within computations
