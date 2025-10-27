@@ -43,7 +43,6 @@
 - fix memory leaks caused by the list module
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_QUOTE
   - AST_TYPE_READING
   - AST_TYPE_BINDING
   - AST_TYPE_WRITING
@@ -51,11 +50,6 @@
   - AST_TYPE_BLOCK
   - AST_TYPE_TRANSLATION_UNIT
   - AST_TYPE_FUNCTION_CALL
-
-- make interpreter_eval error when child of function_definition node
-  is not a function_node and fix some eventual mistakes of
-  the same kind ;
-  in order to do that, implement constructors of invalid ASTs
 
 - fix ast_destroy so that it destroys AST of type AST_TYPE_ERROR
 
@@ -67,15 +61,3 @@
 - Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
-- changes:
-  - interpreter_eval:
-      - when evaluating a symbol data wrapper AST (except in LHS assignment or "function contexts"),
-        resolve the symbol to its associated runtime value in the current or an ancestor environment.
-      - ensure proper fallback behavior when the symbol is unbound (return INTERPRETER_STATUS_UNBOUND_SYMBOL or equivalent)
-  - grammar:
-      - update the "computable" rule to accept generic atoms, not only numeric ones
-        (e.g., allow expressions like "atom_number + atom_symbol" or "atom + atom").
-  - interpreter:
-      - add runtime type checking for computation nodes
-      - use INTERPRETER_STATUS_TYPE_ERROR to report invalid operand types
-      - ensure quoted expressions are not evaluated within computations
