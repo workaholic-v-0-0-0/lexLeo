@@ -15,7 +15,7 @@ extern const hashtable_key_type RUNTIME_ENV_KEY_TYPE;
 void runtime_env_value_destroy_adapter(void *value);
 
 struct runtime_env {
-    hashtable *bindings; // key: const symbol* (borrowed), value: runtime_env_value (owned)
+    hashtable *bindings; // key: const symbol* (borrowed), value: runtime_env_value (refcounted)
     size_t refcount;
     bool is_root;
     struct runtime_env *parent;
