@@ -47,3 +47,41 @@ build_unit_test("numbers")
 build_unit_test("list_of_numbers")
 build_unit_test("function_call")
 build_unit_test("evaluable")
+
+
+# integration tests for parser_api.c
+
+add_executable(
+    test_parser_api
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_parser_api.c
+)
+
+target_include_directories(
+    test_parser_api
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/ast/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/include/"
+    PRIVATE "${CMAKE_BINARY_DIR}/src/parser/include/"
+    PRIVATE "${CMAKE_BINARY_DIR}/src/lexer/include/"
+    PRIVATE "${CMOCKA_INCLUDE_DIR}"
+)
+
+target_link_libraries(
+    test_parser_api
+    PRIVATE ${CMOCKA_LIBRARY}
+    PRIVATE ast
+    PRIVATE parser
+    PRIVATE lexer
+)
+add_dependencies(test_parser_api parser lexer)
+target_compile_definitions(test_parser_api PRIVATE _GNU_SOURCE)
+target_compile_definitions(test_parser_api PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+add_test(NAME test_parser_api COMMAND test_parser_api)
+add_test(
+    NAME test_parser_api_memory
+    COMMAND valgrind
+    --leak-check=full
+    --error-exitcode=1
+    $<TARGET_FILE:test_parser_api>
+)
+set_tests_properties(test_parser_api_memory PROPERTIES LABELS "memory")

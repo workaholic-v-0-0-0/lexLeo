@@ -37,12 +37,21 @@ static mock_token seq[] = {
     {0, {0}}
 };
 
-ast *mock_create_symbol_name_node(char *str) {
-    check_expected(str);
+static void dup_semantic(STYPE *dst, const STYPE *src, int tok) {
+    *dst = *src; // copy POD fields first
+    if (tok == SYMBOL_NAME) {
+        // strdup ONLY because the grammar will %destructor free($$) STRING
+        dst->string_value = strdup(src->string_value);
+    }
+}
+
+static char *g_spy_create_symbol_name_node_arg_str = NULL;
+ast *mock_create_symbol_name_node(const char *str) {
+    g_spy_create_symbol_name_node_arg_str = (str ? strdup(str) : NULL);
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(ast_error_type code, const char *message) {
     check_expected(code);
     check_expected(message);
     return mock_type(ast *);
@@ -80,8 +89,10 @@ static int symbol_name_atom_parse_setup(void **state) {
     (void) state;
     parsed_ast = NULL;
     mock_ctx.ops.create_symbol_name_node = mock_create_symbol_name_node;
+    g_spy_create_symbol_name_node_arg_str = NULL;
     mock_ctx.ops.create_error_node_or_sentinel = mock_create_error_node_or_sentinel;
     mock_lex_reset();
+    mock_lex_set_dupper(dup_semantic);
     mock_lex_set(seq, 2);
     return 0;
 }
@@ -90,6 +101,7 @@ static int symbol_name_atom_parse_teardown(void **state) {
     (void) state;
     mock_lex_reset();
     parsed_ast = NULL;
+    free(g_spy_create_symbol_name_node_arg_str);
     return 0;
 }
 
@@ -112,7 +124,6 @@ static int symbol_name_atom_parse_teardown(void **state) {
 static void
 symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_returned_value_when_create_symbol_name_node_fails(
     void **state) {
-    expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, NULL);
     expect_value(mock_create_error_node_or_sentinel, code, AST_ERROR_CODE_SYMBOL_NAME_NODE_CREATION_FAILED);
     expect_string(mock_create_error_node_or_sentinel, message, "ast creation for a symbol name failed");
@@ -121,6 +132,7 @@ symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_retur
     symbol_name_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_P);
+    assert_string_equal(g_spy_create_symbol_name_node_arg_str, "symbol_name");
 }
 
 // Given:
@@ -130,12 +142,12 @@ symbol_name_atom_parse_calls_create_error_node_or_sentinel_and_returns_its_retur
 static void
 symbol_name_atom_parse_calls_create_symbol_name_node_and_returns_its_returned_value_when_create_symbol_name_node_succeeds(
     void **state) {
-    expect_string(mock_create_symbol_name_node, str, "symbol_name");
     will_return(mock_create_symbol_name_node, DUMMY_AST_NOT_ERROR_P);
 
     symbol_name_atom_parse(NULL, &parsed_ast, &mock_ctx);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_NOT_ERROR_P);
+    assert_string_equal(g_spy_create_symbol_name_node_arg_str, "symbol_name");
 }
 
 

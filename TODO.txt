@@ -62,10 +62,58 @@
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make AST_TYPE_READING evaluable by the interpreter:
-  - "make 2 starts in parser.h":
-     - keep current start for whole files:
-       - translation_unit (parses until EOF)
-       - add a start that parses exactly one statement (returns as soon as one full statement is reduced)
+  - "Add a token ";;" as an end-of-input sentinel, to be used when
+     evaluating a READING node so that the user can enter a translation_unit
+  - modify grammar:
+    - modify the statement rule:
+            statement
+              : binding { $$ = $1; }
+              | writing { $$ = $1; }
+              | reading { $$ = $1; }
+              | function_definition { $$ = $1; }
+              | function_call SEMICOLON { $$ = $1; }
+              ;
+        becomes
+            statement
+              : binding { $$ = $1; }
+              | writing { $$ = $1; }
+              | reading { $$ = $1; }
+              | function_definition { $$ = $1; }
+              | evaluable SEMICOLON { $$ = $1; }
+              ;
+    - add the following rules:
+            readable: evaluable | translation_unit ;
+            start
+                : TU_MODE translation_unit END {
+                    /* sécurité croisée */
+                    if (ctx->goal != PARSE_GOAL_TU) YYERROR;
+                    *result = $2;
+                }
+                | ONE_STATEMENT_MODE statement {
+                    if (ctx->goal != PARSE_GOAL_ONE_STATEMENT) YYERROR;
+                    *result = $2;
+                    YYACCEPT;
+                }
+                | ONE_STATEMENT_MODE END {
+                    if (ctx->goal != PARSE_GOAL_ONE_STATEMENT) YYERROR;
+                    *result = NULL;
+                    YYACCEPT;
+                }
+                | READABLE_MODE readable END_SENTINEL {
+                    if (ctx->goal != PARSE_GOAL_READABLE) YYERROR;
+                    *result = $2;
+                    YYACCEPT;
+                }
+                ;
+  - Expose three parse entry points in parser.h:
+     - parse_translation_unit(...) — parse until EOF and return the AST of type AST_TYPE_TRANSLATION_UNIT.
+     - parse_one_statement(...) — parse exactly one complete statement and return the related AST;
+     - parse_a_readable(...) — parse one evaluable and returns the related AST
+       of type AST_TYPE_DATA_WRAPPER, AST_TYPE_NEGATION, AST_TYPE_ADDITION,
+       AST_TYPE_SUBTRACTION, AST_TYPE_MULTIPLICATION, AST_TYPE_DIVISION
+       or AST_TYPE_FUNCTION_CALL if an evaluable is submited or parse
+       until a dedicated sentinel ";;" is reached and returns an AST of type
+       AST_TYPE_TRANSLATION_UNIT.
   - make a module input_provider
   - make a module read_engine
   - make a module runtime_session with:

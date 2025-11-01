@@ -15,6 +15,7 @@ function_definition:
         RBRACE
     { (void)$1; (void)$3; (void)$4; (void)$7; (void)$9;
       $$ = stub_function_definition_action(); } ;
+evaluable: function_call {$$ = $1;}
 function_call:
         SYMBOL_NAME LPAREN SYMBOL_NAME SYMBOL_NAME RPAREN
     { (void)$1; (void)$3; (void)$4;

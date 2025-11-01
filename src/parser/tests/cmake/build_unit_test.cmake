@@ -22,7 +22,8 @@ function(build_unit_test NAME)
         "${CMAKE_SOURCE_DIR}/src/data_structures/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_lexer/include"
-    )
+        "${CMAKE_BINARY_DIR}/src/parser/tests/include"
+    )#here: but it does not work -> generate redeclaration errors eg
     add_dependencies("test_${NAME}_parser" move_generated_lexer_header)
     target_link_libraries("test_${NAME}_parser" PRIVATE "${NAME}_parser" ${CMOCKA_LIBRARY} lexer data_structures)
     target_compile_definitions("test_${NAME}_parser" PRIVATE $<$<CONFIG:Debug>:DEBUG>)

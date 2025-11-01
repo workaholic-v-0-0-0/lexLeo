@@ -68,7 +68,7 @@ ast *mock_create_children_node_var(ast_type type, size_t children_nb, ...) {
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(ast_error_type code, const char *message) {
     check_expected(code);
     check_expected(message);
     return mock_type(ast *);

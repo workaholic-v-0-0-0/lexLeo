@@ -41,7 +41,7 @@ ast *mock_create_int_node(int i) {
     return mock_type(ast *);
 }
 
-ast *mock_create_error_node_or_sentinel(ast_error_type code, char *message) {
+ast *mock_create_error_node_or_sentinel(ast_error_type code, const char *message) {
     check_expected(code);
     check_expected(message);
     return mock_type(ast *);
