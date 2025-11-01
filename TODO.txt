@@ -62,10 +62,6 @@
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make AST_TYPE_READING evaluable by the interpreter:
-  - "make 2 starts in parser.h":
-     - keep current start for whole files:
-       - translation_unit (parses until EOF)
-       - add a start that parses exactly one statement (returns as soon as one full statement is reduced)
   - make a module input_provider
   - make a module read_engine
   - make a module runtime_session with:

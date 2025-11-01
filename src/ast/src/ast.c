@@ -434,6 +434,9 @@ bool ast_type_has_children(ast_type type) {
         case AST_TYPE_QUOTE:
         case AST_TYPE_NEGATION:
         case AST_TYPE_ADDITION:
+        case AST_TYPE_SUBTRACTION:
+        case AST_TYPE_MULTIPLICATION:
+        case AST_TYPE_DIVISION:
             return true;
         case AST_TYPE_DATA_WRAPPER:
         case AST_TYPE_ERROR:
@@ -520,6 +523,9 @@ ast *ast_create_symbol_node(symbol *sym) {
 
 // DEBUG TOOLS
 
+#include <stdio.h>
+#include <ctype.h>
+
 const char *ast_type_to_string(ast_type t) {
     switch (t) {
         case AST_TYPE_BINDING:             return "BINDING";
@@ -538,9 +544,163 @@ const char *ast_type_to_string(ast_type t) {
         case AST_TYPE_QUOTE:               return "QUOTE";
         case AST_TYPE_NEGATION:            return "NEGATION";
         case AST_TYPE_ADDITION:            return "ADDITION";
+        case AST_TYPE_SUBTRACTION:         return "SUBTRACTION";
+        case AST_TYPE_MULTIPLICATION:      return "MULTIPLICATION";
+        case AST_TYPE_DIVISION:            return "DIVISION";
         case AST_TYPE_DATA_WRAPPER:        return "DATA_WRAPPER";
         case AST_TYPE_ERROR:               return "ERROR";
         case AST_TYPE_NB_TYPES:            return "NB_TYPES";
         default:                           return "<UNKNOWN_AST_TYPE>";
     }
+}
+
+static void print_indent(int indent) {
+    for (int i = 0; i < indent; i++)
+        printf(" ");
+}
+
+static const char *data_type_to_string(data_type dt) {
+    switch (dt) {
+        case TYPE_INT:         return "INT";
+        case TYPE_STRING:      return "STRING";
+        case TYPE_SYMBOL_NAME: return "SYMBOL_NAME";
+        case TYPE_SYMBOL:      return "SYMBOL";
+        default:               return "<?>"; // should not happen
+    }
+}
+
+static void print_escaped_string(const char *s) {
+    if (!s) {
+        printf("(null)");
+        return;
+    }
+    printf("\"");
+    for (const unsigned char *p = (const unsigned char *)s; *p; ++p) {
+        unsigned char c = *p;
+        switch (c) {
+            case '\\': printf("\\\\"); break;
+            case '\"': printf("\\\""); break;
+            case '\n': printf("\\n");  break;
+            case '\r': printf("\\r");  break;
+            case '\t': printf("\\t");  break;
+            default:
+                if (isprint(c))
+                    printf("%c", c);
+                else
+                    printf("\\x%02X", (unsigned)c);
+        }
+    }
+    printf("\"");
+}
+
+// forward declaration
+static void ast_print_inner(const ast *a, int indent, int max_depth);
+
+static void print_data_node(const ast *a, int indent) {
+    if (!a || !a->data) {
+        print_indent(indent);
+        printf("(data: null)\n");
+        return;
+    }
+
+    const typed_data *d = a->data;
+    print_indent(indent);
+    printf("%s: ", ast_type_to_string(a->type));
+
+    switch (d->type) {
+        case TYPE_INT:
+            printf("INT(%d)\n", d->data.int_value);
+            break;
+        case TYPE_STRING:
+        case TYPE_SYMBOL_NAME:
+            printf("%s(", data_type_to_string(d->type));
+            print_escaped_string(d->data.string_value);
+            printf(")\n");
+            break;
+        case TYPE_SYMBOL:
+            printf("SYMBOL(%p)\n", (void *)d->data.symbol_value);
+            break;
+        default:
+            printf("%s(?)\n", data_type_to_string(d->type));
+            break;
+    }
+}
+
+static void print_error_node(const ast *a, int indent) {
+    if (!a || !a->error) {
+        print_indent(indent);
+        printf("ERROR(null)\n");
+        return;
+    }
+    const error_info *e = a->error;
+    print_indent(indent);
+    printf("ERROR(code=%d, sentinel=%s, msg=",
+           (int)e->code,
+           e->is_sentinel ? "true" : "false");
+    print_escaped_string(e->message);
+    printf(")\n");
+}
+
+static void print_children_node(const ast *a, int indent, int max_depth) {
+    const ast_children_t *ch = a ? a->children : NULL;
+
+    print_indent(indent);
+    if (!a) {
+        printf("(null AST)\n");
+        return;
+    }
+
+    printf("%s", ast_type_to_string(a->type));
+
+    if (!ch) {
+        printf(" (no children)\n");
+        return;
+    }
+
+    printf(" (children=%zu, capacity=%zu)\n", ch->children_nb, ch->capacity);
+
+    if (max_depth == 0) {
+        print_indent(indent + 2);
+        printf("… (max_depth reached)\n");
+        return;
+    }
+
+    for (size_t i = 0; i < ch->children_nb; i++) {
+        const ast *ci = ch->children ? ch->children[i] : NULL;
+        print_indent(indent + 2);
+        printf("[%zu]\n", i);
+        if (!ci) {
+            print_indent(indent + 4);
+            printf("(null)\n");
+            continue;
+        }
+        ast_print_inner(ci, indent + 4, max_depth > 0 ? max_depth - 1 : max_depth);
+    }
+}
+
+static void ast_print_inner(const ast *a, int indent, int max_depth) {
+    if (!a) {
+        print_indent(indent);
+        printf("(null)\n");
+        return;
+    }
+
+    if (a->type == AST_TYPE_DATA_WRAPPER) {
+        print_data_node(a, indent);
+    } else if (a->type == AST_TYPE_ERROR) {
+        print_error_node(a, indent);
+    } else if (ast_type_has_children(a->type)) {
+        print_children_node(a, indent, max_depth);
+    } else {
+        print_indent(indent);
+        printf("%s (leaf)\n", ast_type_to_string(a->type));
+    }
+}
+
+void ast_print(const ast *root) {
+    ast_print_inner(root, 0, -1);
+}
+
+void ast_print_limited(const ast *root, int max_depth) {
+    ast_print_inner(root, 0, max_depth);
 }

@@ -13,6 +13,7 @@ reading
 function_definition
 function_call
 statement
+evaluable
 
 %token SEMICOLON
 %token EQUAL

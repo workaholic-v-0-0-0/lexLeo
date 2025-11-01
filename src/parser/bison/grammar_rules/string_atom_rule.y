@@ -3,6 +3,7 @@
 string_atom
   : STRING {
         ast *a = ctx->ops.create_string_node($1);
+        free($1);
         $$ = (a) ? a
                  :
                  ctx->ops.create_error_node_or_sentinel(

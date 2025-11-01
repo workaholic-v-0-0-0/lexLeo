@@ -1,7 +1,8 @@
 // src/parser/bison/parser.y.in
 
 /* @formatter:off */
-
+%define parse.error verbose
+%define parse.trace
 %define api.pure full
 
 %lex-param   { yyscan_t scanner }
@@ -33,6 +34,7 @@ int yylex(YYSTYPE *yylval, yyscan_t scanner);
     char *symbol_name_value;
 ast *ast;
 }
+%destructor { free($$); } <string_value> <symbol_name_value>
 
 @TERMINAL_LEXEMS_DECLARATION@
 
@@ -41,14 +43,43 @@ ast *ast;
 %precedence UMINUS
 
 %type <ast> @NON_TERMINAL_LEXEMS_LIST@
+%destructor { if ($$) ctx->ops.destroy($$); } <ast>
+
+%token TU_MODE
+%token ONE_STATEMENT_MODE
+%token READABLE_MODE
 
 %start start
 
 %%
 
-start:
-@START_SYMBOL@  { *result = $1; }
-;
+start
+    : TU_MODE translation_unit END {
+        /* sécurité croisée */
+        if (ctx->goal != PARSE_GOAL_TU) YYERROR;
+        *result = $2;
+    }
+    | ONE_STATEMENT_MODE statement {
+        if (ctx->goal != PARSE_GOAL_ONE_STATEMENT) YYERROR;
+        *result = $2;
+        YYACCEPT;
+    }
+    | ONE_STATEMENT_MODE END {
+        if (ctx->goal != PARSE_GOAL_ONE_STATEMENT) YYERROR;
+        *result = NULL;
+        YYACCEPT;
+    }
+    | READABLE_MODE readable {
+        if (ctx->goal != PARSE_GOAL_READABLE) YYERROR;
+        *result = $2;
+        YYACCEPT;
+    }
+    ;
+
+readable
+    : evaluable {$$ = $1;}
+    | block {$$ = $1;}
+    ;
 
 @GRAMMAR_RULES@
 

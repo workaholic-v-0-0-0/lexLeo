@@ -204,5 +204,7 @@ ast *ast_deserialize(char *);
 
 // DEBUG TOOLS
 const char *ast_type_to_string(ast_type t);
+void ast_print(const ast *root);
+void ast_print_limited(const ast *root, int max_depth);
 
 #endif //AST_H

@@ -6,6 +6,15 @@
 #include "osal.h"
 #include "parser.tab.h"
 #include "parser_types.h"
+
+#define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)
+
+#define LEX_EXTRA  ((lexer_extra_t*) yyget_extra(yyscanner))
+#define GOAL       (LEX_EXTRA->goal)
+
+/* Prototypes de la vraie func et du wrapper */
+//int lex_lex(YYSTYPE *yylval_param, yyscan_t scanner);       /* générée par Flex */
+//int yylex(YYSTYPE *yylval_param, yyscan_t scanner);         /* wrapper exposé à Bison */
 %}
 
 %option nounput
@@ -24,13 +33,14 @@
 "*"                 { return MULTIPLY; }
 "/"                 { return DIVIDE; }
 
-";"           { return SEMICOLON; }
-"="           { return EQUAL; }
+";"                 { return SEMICOLON; }
+"="                 { return EQUAL; }
 
-"read"           { return READ; }
+"read"              { return READ; }
 "write"             { return WRITE; }
 "define"            { return DEFINE; }
 "call"              { return CALL; }
+"quote"             { return QUOTE; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);
@@ -70,3 +80,21 @@
 }
 
 %%
+int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
+{
+    lexer_extra_t *ex = LEX_EXTRA;
+    if (ex && !ex->sent_mode_token) {
+        ex->sent_mode_token = 1;
+        switch (ex->goal) {
+            case PARSE_GOAL_TU:
+                return TU_MODE;
+            case PARSE_GOAL_ONE_STATEMENT:
+                return ONE_STATEMENT_MODE;
+            case PARSE_GOAL_READABLE:
+                return READABLE_MODE;
+            default:
+                break;
+        }
+    }
+    return lex_lex(yylval_param, yyscanner);
+}

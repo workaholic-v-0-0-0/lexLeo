@@ -1,5 +1,7 @@
 // src/osal/include/osal.h
 
+#include <stdio.h>
+
 #ifndef LEXLEO_OSAL_H
 #define LEXLEO_OSAL_H
 
@@ -35,5 +37,7 @@
 void osal_sleep(int ms);
 
 void osal_open_in_web_browser(const char *filepath);
+
+FILE *osal_fmemopen_ro(const char *data, size_t len);
 
 #endif //LEXLEO_OSAL_H

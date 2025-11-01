@@ -44,23 +44,23 @@ set(
     "\
 %token <int_value> INTEGER\n\
 %token <string_value> STRING\n\
-%destructor { free($$); } STRING\n\
 %token <symbol_name_value> SYMBOL_NAME\n\
-%token LBRACE
-%token RBRACE
-%token LPAREN
-%token RPAREN
-%token ADD
-%token SUBTRACT
-%token MULTIPLY
-%token DIVIDE
+%token LBRACE\n\
+%token RBRACE\n\
+%token LPAREN\n\
+%token RPAREN\n\
+%token ADD\n\
+%token SUBTRACT\n\
+%token MULTIPLY\n\
+%token DIVIDE\n\
 %token SEMICOLON\n\
 %token EQUAL\n\
-%token READ
-%token WRITE
-%token DEFINE
-%token CALL
-%token QUOTE
+%token READ\n\
+%token WRITE\n\
+%token DEFINE\n\
+%token CALL\n\
+%token QUOTE\n\
+%token END 0 \"end of file\"\n\
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -84,7 +84,9 @@ function_call \
 computable_core \
 computable \
 evaluable \
-translation_unit")
+translation_unit \
+readable\n\
+")
 set(START_SYMBOL "translation_unit")
 set(
     GRAMMAR_RULES_DIR
@@ -103,7 +105,12 @@ configure_file(
 )
 
 BISON_TARGET(parser ${PARSER_Y} ${PARSER_SRC} DEFINES_FILE ${PARSER_HEADER})
-add_library(parser STATIC ${BISON_parser_OUTPUTS})
+add_library(
+    parser
+    STATIC
+    ${BISON_parser_OUTPUTS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser_api.c"
+)
 target_include_directories(
     parser
     PUBLIC
@@ -111,8 +118,9 @@ target_include_directories(
     "${CMAKE_CURRENT_BINARY_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src/ast/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/src/osal/include"
 )
-target_link_libraries(parser PRIVATE lexer ast)
+target_link_libraries(parser PRIVATE lexer ast osal)
 
 if (BUILD_TESTING)
     target_compile_definitions(parser PRIVATE UNIT_TEST)
