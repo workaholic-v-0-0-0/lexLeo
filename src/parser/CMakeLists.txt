@@ -38,7 +38,6 @@ set(
 file(MAKE_DIRECTORY ${GENERATED_PARSER_SOURCE_DIR})
 file(MAKE_DIRECTORY ${GENERATED_PARSER_INCLUDE_DIR})
 
-# will be changed to the full parser when archived
 set(
     TERMINAL_LEXEMS_DECLARATION
     "\
@@ -61,6 +60,7 @@ set(
 %token CALL\n\
 %token QUOTE\n\
 %token END 0 \"end of file\"\n\
+%token INVALID
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\

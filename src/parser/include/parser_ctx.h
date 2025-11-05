@@ -19,6 +19,7 @@ typedef struct parser_ops {
 typedef struct parser_ctx {
     parser_ops ops;
     parse_goal_t goal;
+	int syntax_errors;
 } parser_ctx;
 
 parser_ctx *get_g_parser_ctx_default_one_statement(void);

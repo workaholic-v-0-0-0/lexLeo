@@ -16,13 +16,20 @@ typedef enum {
 typedef struct lexer_extra {
     parse_goal_t goal;
     int sent_mode_token;
+    int reached_input_end;
 } lexer_extra_t;
+
+typedef enum {
+    PARSE_STATUS_OK,
+    PARSE_STATUS_EOF,
+    PARSE_STATUS_INCOMPLETE,
+    PARSE_STATUS_ERROR
+} parse_status;
 
 // forward declaration of yyscan_t for Bison (as Flex generates it)
 #ifndef YY_TYPEDEF_YY_SCANNER_T
 #define YY_TYPEDEF_YY_SCANNER_T
 typedef void* yyscan_t;
-//extern void* yyget_extra(yyscan_t scanner);
 #endif
 
 #endif //PARSER_TYPES_H

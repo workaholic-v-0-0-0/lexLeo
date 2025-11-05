@@ -75,9 +75,7 @@
     // ignore white spaces
 }
 
-. {
-    yyerror(NULL, NULL, NULL, "unknown characters");
-}
+. { return INVALID; }
 
 %%
 int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
@@ -96,5 +94,9 @@ int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
                 break;
         }
     }
-    return lex_lex(yylval_param, yyscanner);
+    int token = lex_lex(yylval_param, yyscanner);
+    if (token == 0 && ex) {
+        ex->reached_input_end = 1;
+    }
+    return token;
 }

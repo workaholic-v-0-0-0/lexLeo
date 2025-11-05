@@ -1,8 +1,7 @@
 // src/parser/src/parser_api.c
 
-#include <stdbool.h>
-#include "parser_ctx.h"
-#include "ast.h"
+#include "parser_api.h"
+
 #include "parser.tab.h"
 
 static const parser_ops PARSER_OPS_DEFAULT = {
@@ -45,44 +44,74 @@ parser_ctx *get_g_parser_ctx_default_readable() {
 // forward declaration
 void yyset_extra(struct lexer_extra *extra, yyscan_t scanner);
 
-bool parse_translation_unit(
+static parse_status map_rc_to_status(
+		int rc,
+		const ast *out,
+		const lexer_extra_t *ex,
+		struct parser_ctx *ctx ) {
+    if (!ctx || ctx->syntax_errors != 0)
+        return PARSE_STATUS_ERROR;
+    if (rc != 0) {
+        if (ex && ex->reached_input_end)
+            return PARSE_STATUS_INCOMPLETE;
+        return PARSE_STATUS_ERROR;
+    }
+    return (out == NULL) ? PARSE_STATUS_EOF : PARSE_STATUS_OK;
+}
+
+parse_status
+parse_translation_unit(
         yyscan_t scanner,
         ast **out,
         struct parser_ctx *ctx ) {
     if (!out || !ctx)
-        return false;
+        return PARSE_STATUS_ERROR;
     *out = NULL;
-    lexer_extra_t ex = { .goal = PARSE_GOAL_TU, .sent_mode_token = 0 };
+    lexer_extra_t ex = {
+		.goal = PARSE_GOAL_TU,
+		.sent_mode_token = 0,
+		.reached_input_end = 0 };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_TU;
+	ctx->syntax_errors = 0;
     int rc = yyparse(scanner, out, ctx);
-    return (rc == 0) && (*out != NULL);
+    return map_rc_to_status(rc, *out, &ex, ctx);
 }
 
-bool parse_one_statement(
+parse_status
+parse_one_statement(
         yyscan_t scanner,
         ast **out,
         struct parser_ctx *ctx) {
     if (!out || !ctx)
-        return false;
+        return PARSE_STATUS_ERROR;
     *out = NULL;
-    lexer_extra_t ex = { .goal = PARSE_GOAL_ONE_STATEMENT, .sent_mode_token = 0 };
+    lexer_extra_t ex = {
+		.goal = PARSE_GOAL_ONE_STATEMENT,
+		.sent_mode_token = 0,
+		.reached_input_end = 0 };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_ONE_STATEMENT;
+	ctx->syntax_errors = 0;
     int rc = yyparse(scanner, out, ctx);
-    return (rc == 0) && (*out != NULL);
+    return map_rc_to_status(rc, *out, &ex, ctx);
 }
 
-bool parse_readable(
+parse_status
+parse_readable(
         yyscan_t scanner,
         ast **out,
         struct parser_ctx *ctx) {
     if (!out || !ctx)
-        return false;
+        return PARSE_STATUS_ERROR;
     *out = NULL;
-    lexer_extra_t ex = { .goal = PARSE_GOAL_READABLE, .sent_mode_token = 0 };
+    lexer_extra_t ex = {
+		.goal = PARSE_GOAL_READABLE,
+		.sent_mode_token = 0,
+		.reached_input_end = 0 };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_READABLE;
+	ctx->syntax_errors = 0;
     int rc = yyparse(scanner, out, ctx);
-    return (rc == 0) && (*out != NULL);
+    return map_rc_to_status(rc, *out, &ex, ctx);
 }

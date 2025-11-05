@@ -12,20 +12,25 @@
 %parse-param { struct parser_ctx *ctx }
 
 %code requires {
-#include "parser_types.h"
-struct parser_ctx;
+    #include "parser_types.h"
+    struct parser_ctx;
+
+    // forward declaration
+    typedef void* yyscan_t;
+    void *yyget_extra(yyscan_t scanner);
 }
 
 %{
-#include <stdlib.h>
-#include <stdio.h>
-#include "ast.h"
-#include "parser_ctx.h"
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <string.h>
+    #include "ast.h"
+    #include "parser_ctx.h"
 %}
 
 %code provides {
-int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
-int yylex(YYSTYPE *yylval, yyscan_t scanner);
+    int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
+    int yylex(YYSTYPE *yylval, yyscan_t scanner);
 }
 
 %union {
@@ -55,7 +60,6 @@ ast *ast;
 
 start
     : TU_MODE translation_unit END {
-        /* sécurité croisée */
         if (ctx->goal != PARSE_GOAL_TU) YYERROR;
         *result = $2;
     }
@@ -86,7 +90,8 @@ readable
 %%
 
 int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
-    (void)scanner; (void)result; (void)ctx;
+    (void)result;
+    if (!((lexer_extra_t*) yyget_extra(scanner))->reached_input_end) ctx->syntax_errors++;
     fprintf(stderr, "Parse error: %s\n", msg);
     return 1;
 }

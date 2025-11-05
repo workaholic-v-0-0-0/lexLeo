@@ -61,7 +61,7 @@ typedef struct {
     const char *lexer_input;
 
     // assert utilities
-    bool expected_returned_value;
+    parse_status expected_returned_value;
     test_parser_api_expected_arg_out_fn_t expected_arg_out_fn;
 
     // test infrastructure cleanup utilities
@@ -144,7 +144,7 @@ static void parser_api_test(void **state) {
     test_parser_api_case *p = (test_parser_api_case *) *state;
 
     // ACT
-    bool ret;
+    parse_status ret;
     switch (p->goal) {
         case PARSE_GOAL_TU:
             p->ctx->arg_ctx = get_g_parser_ctx_default_translation_unit();
@@ -176,16 +176,30 @@ static void parser_api_test(void **state) {
 
 static test_parser_api_ctx CTX_STATEMENT_SYNTAX_ERROR = {0};
 static const test_parser_api_case STATEMENT_SYNTAX_ERROR = {
-    .description = "parse_one_statement handle gracefully the syntax error \"a = 1\"",
+    .description = "parse_one_statement handle gracefully the syntax error \"a = ;\"",
 
     .goal = PARSE_GOAL_ONE_STATEMENT,
-    .lexer_input = "a = 1",
+    .lexer_input = "a = ;",
 
-    .expected_returned_value = false,
+    .expected_returned_value = PARSE_STATUS_ERROR,
     .expected_arg_out_fn = is_null,
 
     .clean_up_fn = destroy_nothing,
     .ctx =&CTX_STATEMENT_SYNTAX_ERROR,
+};
+
+static test_parser_api_ctx CTX_STATEMENT_INCOMPLETE = {0};
+static const test_parser_api_case STATEMENT_INCOMPLETE = {
+    .description = "parse_one_statement returns PARSE_STATUS_INCOMPLETE when \"a = \"",
+
+    .goal = PARSE_GOAL_ONE_STATEMENT,
+    .lexer_input = "a = ",
+
+    .expected_returned_value = PARSE_STATUS_INCOMPLETE,
+    .expected_arg_out_fn = is_null,
+
+    .clean_up_fn = destroy_nothing,
+    .ctx =&CTX_STATEMENT_INCOMPLETE,
 };
 
 static test_parser_api_ctx CTX_STATEMENT_BINDING = {0};
@@ -197,7 +211,7 @@ a = 1 ;\
     .goal = PARSE_GOAL_ONE_STATEMENT,
     .lexer_input = "a = 1 ;",
 
-    .expected_returned_value = true,
+    .expected_returned_value = PARSE_STATUS_OK,
     .expected_arg_out_fn = a_equal_1,
 
     .clean_up_fn = destroy_result_ast,
@@ -215,7 +229,7 @@ define f(x y) { \
 } \
 ",
 
-    .expected_returned_value = true,
+    .expected_returned_value = PARSE_STATUS_OK,
     .expected_arg_out_fn = a_function_definition,
 
     .clean_up_fn = destroy_result_ast,
@@ -232,11 +246,28 @@ a = 1 ; \
 f(2)) ; \
 ",
 
-    .expected_returned_value = false,
+    .expected_returned_value = PARSE_STATUS_ERROR,
     .expected_arg_out_fn = is_null,
 
     .clean_up_fn = destroy_nothing,
     .ctx =&CTX_TU_SYNTAX_ERROR,
+};
+
+static test_parser_api_ctx CTX_TU_INCOMPLETE = {0};
+static const test_parser_api_case TU_INCOMPLETE = {
+    .description = "parse_translation_unit returns PARSE_STATUS_INCOMPLETE when incomplete TU",
+
+    .goal = PARSE_GOAL_TU,
+    .lexer_input = "\
+a = 1 ; \
+f(2) \
+",
+
+    .expected_returned_value = PARSE_STATUS_INCOMPLETE,
+    .expected_arg_out_fn = is_null,
+
+    .clean_up_fn = destroy_nothing,
+    .ctx =&CTX_TU_INCOMPLETE,
 };
 
 static test_parser_api_ctx CTX_TU_BINDING_FUNCTION_CALL = {0};
@@ -249,7 +280,7 @@ a = 1 ; \
 f(2) ; \
 ",
 
-    .expected_returned_value = true,
+    .expected_returned_value = PARSE_STATUS_OK,
     .expected_arg_out_fn = a_tu_with_binding_function_call,
 
     .clean_up_fn = destroy_result_ast,
@@ -265,7 +296,7 @@ static const test_parser_api_case READABLE_SYNTAX_ERROR = {
 a=1; \
 ",
 
-    .expected_returned_value = false,
+    .expected_returned_value = PARSE_STATUS_ERROR,
     .expected_arg_out_fn = is_null,
 
     .clean_up_fn = destroy_nothing,
@@ -281,7 +312,7 @@ static const test_parser_api_case READABLE_NUMBER = {
 7 \
 ",
 
-    .expected_returned_value = true,
+    .expected_returned_value = PARSE_STATUS_OK,
     .expected_arg_out_fn = a_number,
 
     .clean_up_fn = destroy_result_ast,
@@ -300,7 +331,7 @@ static const test_parser_api_case READABLE_BLOCK = {
 }\n\
 ",
 
-    .expected_returned_value = true,
+    .expected_returned_value = PARSE_STATUS_OK,
     .expected_arg_out_fn = a_block,
 
     .clean_up_fn = destroy_result_ast,
@@ -324,9 +355,11 @@ static const test_parser_api_case READABLE_BLOCK = {
 
 #define PARSER_API_CASES(X) \
     X(STATEMENT_SYNTAX_ERROR) \
+	X(STATEMENT_INCOMPLETE) \
     X(STATEMENT_BINDING) \
     X(STATEMENT_FUNCTION_DEFINITION) \
     X(TU_SYNTAX_ERROR) \
+	X(TU_INCOMPLETE) \
     X(TU_BINDING_FUNCTION_CALL) \
     X(READABLE_SYNTAX_ERROR) \
     X(READABLE_NUMBER) \
@@ -370,7 +403,7 @@ static void test_parse_one_statement_three_calls(void **state) {
     bool ret = parse_one_statement(scanner, &node, ctx);
 
     // ASSERT
-    assert_true(ret);
+    assert_int_equal(ret, PARSE_STATUS_OK);
     assert_non_null(node);
     assert_int_equal(node->type, AST_TYPE_BINDING);
     assert_non_null(node->children);
@@ -394,7 +427,7 @@ static void test_parse_one_statement_three_calls(void **state) {
     ret = parse_one_statement(scanner, &node, ctx);
 
     // ASSERT
-    assert_true(ret);
+    assert_int_equal(ret, PARSE_STATUS_OK);
     assert_non_null(node);
     assert_int_equal(node->type, AST_TYPE_BINDING);
     assert_non_null(node->children);
@@ -418,7 +451,7 @@ static void test_parse_one_statement_three_calls(void **state) {
     ret = parse_one_statement(scanner, &node, ctx);
 
     // ASSERT
-    assert_false(ret);
+    assert_int_equal(ret, PARSE_STATUS_EOF);
     assert_null(node);
 
     assert_int_equal(0, yylex_destroy(scanner));
