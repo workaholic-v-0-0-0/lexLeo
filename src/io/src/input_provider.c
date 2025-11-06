@@ -1,15 +1,27 @@
 // src/io/src/input_provider.c
 
-struct input_provider {
-    input_source_kind_t kind;
-    FILE *f;
-    bool own_file;
+#define INITIAL_SIZE_OF_BUFFER 256
 
-    char *buf;            // si copie
-    const char *src;      // si pas de copie
-    size_t len;
-    bool own_buffer;
+struct dynamic_buffer {
+    char *buf;
+	size_t cap;
+	size_t len;
 };
+
+struct input_provider {
+    input_provider_mode mode;
+    FILE *file;
+    struct dynamic_buffer dbuf;
+	yyscan_t lexer_scanner; // borrowed from lexer ;
+			// if mode == INPUT_PROVIDER_MODE_CHUNKS, owns its YY_BUFFER_STATE field
+			// if mode == INPUT_PROVIDER_MODE_FILE, doesn't use its YY_BUFFER_STATE field at all and hence doesn't own its YY_BUFFER_STATE field
+	YY_BUFFER_STATE lexer_buffer_state;
+};
+
+
+
+
+/*
 
 input_provider *input_provider_from_cstring(const char *src, bool copy) {
     if (!src) return NULL;
@@ -17,23 +29,12 @@ input_provider *input_provider_from_cstring(const char *src, bool copy) {
     if (!p) return NULL;
     p->kind = INPUT_FROM_CSTRING;
 
-    if (copy) {
-        p->len = strlen(src);
-        p->buf = malloc(p->len + 1);
-        if (!p->buf) { free(p); return NULL; }
-        memcpy(p->buf, src, p->len + 1);
-        p->own_buffer = true;
-        // wrap buf en FILE*
-        p->f = osal_fmemopen_ro(p->buf, p->len);
-        if (!p->f) { free(p->buf); free(p); return NULL; }
-        p->own_file = true; // on ferme ce FILE* à destroy
-    } else {
-        p->src = src;
-        p->len = strlen(src);
-        p->f = osal_fmemopen_ro((void*)p->src, p->len);
-        if (!p->f) { free(p); return NULL; }
-        p->own_file = true;
-    }
+    p->src = src;
+    p->len = strlen(src);
+    p->f = osal_fmemopen_ro((void*)p->src, p->len);
+    if (!p->f) { free(p); return NULL; }
+    p->own_file = true;
+
     return p;
 }
 
@@ -49,3 +50,5 @@ void input_provider_destroy(input_provider *p) {
     if (p->own_buffer && p->buf) free(p->buf);
     free(p);
 }
+
+*/

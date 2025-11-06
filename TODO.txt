@@ -62,23 +62,6 @@
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make AST_TYPE_READING evaluable by the interpreter:
-  - make parse_* functions return a more precise status:
-    typedef enum {
-        PARSE_STATUS_OK,
-        PARSE_STATUS_EOF,
-        PARSE_STATUS_INCOMPLETE,
-        PARSE_STATUS_ERROR
-    } parse_status;
-    typedef struct lexer_extra {
-        int goal;
-        int sent_mode_token;
-        int reached_input_end;
-    } lexer_extra_t;
-    typedef struct parser_ctx {
-        parser_ops ops;
-        parse_goal_t goal;
-    	int syntax_errors;
-    } parser_ctx;
   - make a module input_provider
   - make a module read_engine
   - make a module runtime_session with:
