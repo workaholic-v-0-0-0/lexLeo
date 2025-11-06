@@ -20,5 +20,6 @@ bool fake_memory_no_double_free(void);
 void *fake_malloc(size_t size);
 void fake_free(void *ptr);
 char *fake_strdup(const char *s);
+void *fake_realloc(void *ptr, size_t size);
 
 #endif //LEXLEO_FAKE_MEMORY_H

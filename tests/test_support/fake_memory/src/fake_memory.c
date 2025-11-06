@@ -9,7 +9,7 @@
 #include <stddef.h>
 
 #ifndef TEST_ARENA_SIZE
-  #define TEST_ARENA_SIZE (64 * 1024)
+  #define TEST_ARENA_SIZE (64 * 1048576)
 #endif
 
 OSAL_ALIGNED_MAX static uint8_t g_arena[TEST_ARENA_SIZE];
@@ -148,4 +148,47 @@ char *fake_strdup(const char *s) {
   if (!p) return NULL;
   memcpy(p, s, n);
   return p;
+}
+
+void *fake_realloc(void *ptr, size_t size) {
+  if (should_fail_now(++g_alloc_count)) return NULL;
+
+  // realloc(NULL, size) => malloc(size)
+  if (!ptr) {
+    return fake_malloc(size);
+  }
+
+  // realloc(ptr, 0) => free(ptr) and return NULL
+  if (size == 0) {
+    fake_free(ptr);
+    return NULL;
+  }
+
+  const size_t a = OSAL_ALIGNOF_MAX;
+  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+
+  fake_hdr *oldh = (fake_hdr *)((uint8_t*)ptr - hdr_size);
+
+  if (oldh->magic != FAKE_MAGIC_ALLOC) {
+    // Unknown pointer: count as invalid and return NULL (glibc would be UB; in tests we want signal)
+    g_invalid_free_count++;
+    return NULL;
+  }
+
+  size_t old_req  = oldh->size_requested;
+  // Allocate a new block
+  void *newp = fake_malloc(size);
+  if (!newp) {
+    // Fail atomically: keep the old block intact
+    return NULL;
+  }
+
+  // Copy the minimum of old requested size and new requested size
+  size_t ncopy = (old_req < size) ? old_req : size;
+  memcpy(newp, ptr, ncopy);
+
+  // Free the old block (updates g_in_use appropriately)
+  fake_free(ptr);
+
+  return newp;
 }
