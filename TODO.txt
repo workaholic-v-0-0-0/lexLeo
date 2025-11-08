@@ -86,3 +86,8 @@
       } runtime_env;
   - replace the static global symbol_pool:
     - one symbol_pool per session (owned by runtime_session, or internally by symtab).
+
+- architecture regarding interaction with stdin and the filesystem
+  - use osal
+  - interfaces in src/frontend/ports/
+  - implementations in each related module
