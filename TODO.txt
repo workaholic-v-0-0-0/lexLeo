@@ -62,9 +62,8 @@
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make AST_TYPE_READING evaluable by the interpreter:
-  - make a module input_provider (<here> maybe input_provider is not finished, if it is, do merge! !! dynamic_buffer must have a prefix!)
   - make frontend/ports
-  - make io/adapters
+  - make src/adapters
   - make a module frontend/parse_engine
   - make a module runtime_session with:
       typedef bool (*resolve_ast_fn_t)(struct ast **a, struct resolver_ctx ctx);
