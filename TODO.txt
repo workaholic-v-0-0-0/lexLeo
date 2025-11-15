@@ -61,6 +61,8 @@
 - Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
+- make tests for stream module
+
 - make AST_TYPE_READING evaluable by the interpreter:
   - make frontend/ports
   - make src/adapters

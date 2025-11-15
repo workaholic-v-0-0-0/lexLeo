@@ -200,7 +200,7 @@ add_subdirectory(src/parser) # depends on lexer and ast
 add_subdirectory(src/lexer) # depends on parser interface—opaque types
 add_subdirectory(src/resolver) # depends on ast and symtab
 add_subdirectory(src/runtime_env) # depends on hashtable
-add_subdirectory(src/io/input_provider) # depends on lexer
+add_subdirectory(src/frontend/input_provider) # depends on lexer
 add_subdirectory(src/interpreter) # depends on runtime_env, ...?
 
 # TO BE IMPLEMENTED
