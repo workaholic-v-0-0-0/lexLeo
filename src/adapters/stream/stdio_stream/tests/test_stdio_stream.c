@@ -9,12 +9,12 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include "internal/stdio_stream_internal.h"
 #include "internal/stream_internal.h"
 #include "fake_memory.h"
 #include "osal.h"
-#include <stdlib.h>
 
 
 
@@ -78,6 +78,7 @@ other elements of the isolated unit:
   - int stream_close(stream *s);
   - from the standard library:
 	- fread, fwrite, fflush, fclose, fopen, fputs, fseek, freopen, fclose
+*/
 
 
 
@@ -181,6 +182,7 @@ other elements of the isolated unit:
   - stream *stdio_stream_from_fp_for_tests(FILE *fp, bool autoclose);
   - from the standard library:
 	- fread, fwrite, fflush, fclose, fopen, fputs, fseek, freopen, fclose
+*/
 
 
 

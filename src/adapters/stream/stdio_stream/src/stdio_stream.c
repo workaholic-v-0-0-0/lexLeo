@@ -33,7 +33,7 @@ static int stdio_stream_close(void *ctx) {
 	return ret;
 }
 
-const stream_vtable STDIO_STREAM_VTABLE = {
+static const stream_vtable STDIO_STREAM_VTABLE = {
 	.read = stdio_stream_read,
 	.write = stdio_stream_write,
 	.flush = stdio_stream_flush,
