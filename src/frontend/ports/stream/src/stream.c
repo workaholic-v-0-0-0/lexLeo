@@ -10,7 +10,7 @@ struct stream {
 };
 
 stream *stream_create(const stream_vtable* vtbl, void *ctx) {
-	stream *s = malloc(sizeof(stream));
+	stream *s = STREAM_MALLOC(sizeof(stream));
 	if (!s) return NULL;
 	s->ops  = vtbl;
 	s->ctx = ctx;
@@ -33,6 +33,6 @@ int stream_close(stream *s) {
 	if (!s) return 0;
 	int rc = 0;
 	if (s->ops && s->ops->close) rc = s->ops->close(s->ctx);
-	free(s);
+	STREAM_FREE(s);
 	return rc;
 }

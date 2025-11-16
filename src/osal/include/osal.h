@@ -40,4 +40,7 @@ void osal_open_in_web_browser(const char *filepath);
 
 FILE *osal_fmemopen_ro(const char *data, size_t len);
 
+FILE *osal_open_memstream(char **out_buf, size_t *out_len);
+
+
 #endif //LEXLEO_OSAL_H

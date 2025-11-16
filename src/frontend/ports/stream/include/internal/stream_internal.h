@@ -118,6 +118,7 @@
 #define LEXLEO_STREAM_INTERNAL_H
 
 #include "stream.h"
+#include "internal/stream_memory_allocator.h"
 
 #include <stddef.h>
 

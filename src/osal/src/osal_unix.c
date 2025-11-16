@@ -1,6 +1,7 @@
 // src/osal/src/osal_unix.c
 
 #include "osal.h"
+#include "osal_config.h"
 
 #include <time.h>
 #include <stdlib.h>
@@ -25,10 +26,6 @@ void osal_open_in_web_browser(const char *filepath) {
     }
     system(cmd);
 }
-
-#if defined(__GLIBC__) || defined(__linux__)
-#define OSAL_HAVE_FMEMOPEN 1
-#endif
 
 #if !defined(OSAL_HAVE_FMEMOPEN)
 // try fopencookie (GNU/BSD like)
@@ -73,5 +70,36 @@ FILE *osal_fmemopen_ro(const char *data, size_t len) {
     if (len && fwrite(data, 1, len, f) != len) { fclose(f); return NULL; }
     rewind(f);
     return f;
+#endif
+}
+
+FILE *osal_open_memstream(char **out_buf, size_t *out_len) {
+    if (!out_buf || !out_len) return NULL;
+    *out_buf = NULL;
+    *out_len = 0;
+
+#if OSAL_HAVE_OPEN_MEMSTREAM
+    return open_memstream(out_buf, out_len);
+
+#elif OSAL_HAVE_FMEMOPEN
+    size_t cap = 4096;
+    char *buf = malloc(cap);
+    if (!buf) return NULL;
+    *out_buf = buf;
+    *out_len = 0;
+    FILE *f = fmemopen(buf, cap, "w+");
+    if (!f) {
+        free(buf);
+        *out_buf = NULL;
+        return NULL;
+    }
+    return f;
+
+#elif defined(OSAL_HAVE_FOPENCOOKIE)
+	// todo
+
+#else
+	// todo
+    return NULL;
 #endif
 }
