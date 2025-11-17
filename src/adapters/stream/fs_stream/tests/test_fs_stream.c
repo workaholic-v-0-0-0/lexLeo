@@ -159,7 +159,7 @@ static void from_file_ret_not_null_when_file_exists(void **state) {
 //  - no oom
 //  - path is a path of an existing file
 // Expected:
-//  - fs_stream_read reads the 16th first characters of the file
+//  - fs_stream_read reads the 16 first characters of the file
 static void from_file_reads_from_file(void **state) {
 	(void)state;
 	FILE *fp = fopen("an_existing_file.txt", "w");
@@ -198,9 +198,11 @@ int main(void) {
 		cmocka_unit_test_setup_teardown(
 			from_file_ret_not_null_when_file_exists,
 			fake_memory_setup, fake_memory_teardown),
+#if OSAL_HAVE_OPEN_MEMSTREAM || OSAL_HAVE_FOPENCOOKIE || defined(__APPLE__)
 		cmocka_unit_test_setup_teardown(
 			from_file_reads_from_file,
 			fake_memory_setup, fake_memory_teardown),
+#endif
 	};
 
 	int failed = 0;

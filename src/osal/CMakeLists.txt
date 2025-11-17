@@ -2,7 +2,7 @@
 
 include(CheckSymbolExists)
 
-if (NOT WIN32)
+if (NOT WIN32 AND NOT APPLE)
     set(CMAKE_REQUIRED_DEFINITIONS_SAVE "${CMAKE_REQUIRED_DEFINITIONS}")
     list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
     check_symbol_exists(fmemopen "stdio.h" OSAL_HAVE_FMEMOPEN)
@@ -12,6 +12,7 @@ if (NOT WIN32)
 else ()
     set(OSAL_HAVE_FMEMOPEN 0)
     set(OSAL_HAVE_OPEN_MEMSTREAM 0)
+    set(OSAL_HAVE_FOPENCOOKIE 0)
 endif ()
 
 configure_file(

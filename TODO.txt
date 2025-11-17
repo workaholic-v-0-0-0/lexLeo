@@ -63,9 +63,9 @@
 
 - make tests for stream module
 
+- in osal :
+
 - make AST_TYPE_READING evaluable by the interpreter:
-  - make frontend/ports
-  - make src/adapters
   - make a module frontend/parse_engine
   - make a module runtime_session with:
       typedef bool (*resolve_ast_fn_t)(struct ast **a, struct resolver_ctx ctx);

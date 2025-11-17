@@ -1,10 +1,14 @@
 // src/osal/src/osal_windows.c
 
 #include "osal.h"
+#include "osal_config.h"
+
 #define WIN32_LEAN_AND_MEAN
+
 #include <windows.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 void osal_sleep(int ms) {
     Sleep(ms);
@@ -24,7 +28,6 @@ void osal_open_in_web_browser(const char *filepath) {
 FILE *osal_fmemopen_ro(const char *data, size_t len) {
     if (!data) return NULL;
     if (len == (size_t)-1) len = strlen(data);
-
     FILE *f = NULL;
 #ifdef _MSC_VER
     if (tmpfile_s(&f) != 0) return NULL;
@@ -35,4 +38,11 @@ FILE *osal_fmemopen_ro(const char *data, size_t len) {
     if (len && fwrite(data, 1, len, f) != len) { fclose(f); return NULL; }
     rewind(f);
     return f;
+}
+
+FILE *osal_open_memstream(char **out_buf, size_t *out_len) {
+    if (out_buf) *out_buf = NULL;
+    if (out_len) *out_len = 0;
+    errno = ENOSYS; // Function not implemented
+    return NULL;
 }
