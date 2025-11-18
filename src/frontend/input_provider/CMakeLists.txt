@@ -1,4 +1,4 @@
-# src/io/input_provider/CMakeLists.txt
+# src/frontend/input_provider/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.27)
 
@@ -15,12 +15,13 @@ endif ()
 target_include_directories(
     input_provider
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC ${CMAKE_SOURCE_DIR}/src/frontend/ports/stream/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/adapters/stream/dynamic_buffer_stream/include
     PRIVATE ${CMAKE_BINARY_DIR}/src/lexer/include
 )
 
 target_link_libraries(input_provider
-    PRIVATE lexer
-    #PRIVATE $<$<BOOL:${BUILD_TESTING}>:extra_for_tests>
+    PRIVATE stream dynamic_buffer_stream
 )
 
 target_compile_definitions(input_provider PRIVATE $<$<CONFIG:Debug>:DEBUG>)

@@ -6,11 +6,22 @@
 #include "osal.h"
 #include "parser.tab.h"
 #include "parser_types.h"
+#include "input_provider_reader.h"
 
 #define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 
 #define LEX_EXTRA  ((lexer_extra_t*) yyget_extra(yyscanner))
 #define GOAL       (LEX_EXTRA->goal)
+
+#define YY_INPUT(buf, result, max_size)                                      \
+do {                                                                         \
+    input_provider *prov = LEX_EXTRA ? LEX_EXTRA->provider : NULL;     \
+    if (!prov) {                                                             \
+        (result) = 0;                                                        \
+        break;                                                               \
+    }                                                                        \
+    (result) = (int)input_provider_read(prov, buf, (size_t)max_size);        \
+} while (0)
 
 /* Prototypes de la vraie func et du wrapper */
 //int lex_lex(YYSTYPE *yylval_param, yyscan_t scanner);       /* générée par Flex */

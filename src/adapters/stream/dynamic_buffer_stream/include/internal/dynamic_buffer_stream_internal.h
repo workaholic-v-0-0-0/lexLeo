@@ -11,11 +11,11 @@
 #define DYNAMIC_BUFFER_STREAM_DEFAULT_CAPACITY 256
 
 typedef struct {
-	char   *buf;
-	size_t  cap;
-	size_t  len;
-	size_t  read_pos;
-	bool    autoclose;
+	char *buf;
+	size_t cap;
+	size_t len;
+	size_t read_pos;
+	bool autoclose;
 } dynamic_buffer_stream_ctx;
 
 #endif //LEXLEO_DYNAMIC_BUFFER_STREAM_INTERNAL_H

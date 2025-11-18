@@ -63,14 +63,16 @@ parse_status
 parse_translation_unit(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx ) {
+        struct parser_ctx *ctx,
+        input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;
     *out = NULL;
     lexer_extra_t ex = {
 		.goal = PARSE_GOAL_TU,
 		.sent_mode_token = 0,
-		.reached_input_end = 0 };
+		.reached_input_end = 0,
+        .provider = provider };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_TU;
 	ctx->syntax_errors = 0;
@@ -82,14 +84,16 @@ parse_status
 parse_one_statement(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx) {
+        struct parser_ctx *ctx,
+        input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;
     *out = NULL;
     lexer_extra_t ex = {
 		.goal = PARSE_GOAL_ONE_STATEMENT,
 		.sent_mode_token = 0,
-		.reached_input_end = 0 };
+        .reached_input_end = 0,
+        .provider = provider };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_ONE_STATEMENT;
 	ctx->syntax_errors = 0;
@@ -101,14 +105,16 @@ parse_status
 parse_readable(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx) {
+        struct parser_ctx *ctx,
+        input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;
     *out = NULL;
     lexer_extra_t ex = {
 		.goal = PARSE_GOAL_READABLE,
 		.sent_mode_token = 0,
-		.reached_input_end = 0 };
+        .reached_input_end = 0,
+        .provider = provider };
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_READABLE;
 	ctx->syntax_errors = 0;

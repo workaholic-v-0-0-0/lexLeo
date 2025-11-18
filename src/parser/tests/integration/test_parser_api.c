@@ -5,35 +5,12 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include <stdio.h>
-#include <string.h>
-
-#include "osal.h"
-
 #include "parser_ctx.h"
 #include "parser.tab.h"
 #include "parser_api.h"
 #include "lexer.yy.h"
 #include "ast.h"
-
-
-
-//-----------------------------------------------------------------------------
-// GENERAL HELPERS
-//-----------------------------------------------------------------------------
-
-
-static FILE* open_memory_as_FILE(const char *s) {
-#ifdef _GNU_SOURCE
-    return osal_fmemopen_ro((void*)s, strlen(s));
-#else
-    FILE *f = tmpfile();
-    if (!f) return NULL;
-    fputs(s, f);
-    rewind(f);
-    return f;
-#endif
-}
+#include "input_provider.h"
 
 
 
@@ -46,7 +23,7 @@ typedef struct {
     yyscan_t arg_scanner;
     ast *ast_result;
     struct parser_ctx *arg_ctx;
-    FILE *input_file;
+    input_provider *arg_input_provider;
 } test_parser_api_ctx;
 
 typedef void (*test_parser_api_expected_arg_out_fn_t)(test_parser_api_ctx *ctx);
@@ -114,11 +91,18 @@ static void a_block(test_parser_api_ctx *ctx);
 
 static int setup(void **state) {
     test_parser_api_case *p = (test_parser_api_case *) *state;
-    p->ctx->input_file = open_memory_as_FILE(p->lexer_input);
-    assert_non_null(p->ctx->input_file);
+
+    // arg_scanner initialisation
     p->ctx->arg_scanner = NULL;
     assert_int_equal(0, yylex_init(&p->ctx->arg_scanner));
-    yyset_in(p->ctx->input_file, p->ctx->arg_scanner);
+
+    // arg_input_provider initialisation
+    p->ctx->arg_input_provider = input_provider_create();
+    input_provider_set_mode_chunks(p->ctx->arg_input_provider);
+
+    // bind arg_input_provider to arg_scanner
+    assert_true(input_provider_bind_to_scanner(p->ctx->arg_input_provider, p->ctx->arg_scanner));
+
     p->ctx->ast_result = NULL;
     return 0;
 }
@@ -126,7 +110,7 @@ static int setup(void **state) {
 static int teardown(void **state) {
     test_parser_api_case *p = (test_parser_api_case *) *state;
     assert_int_equal(0, yylex_destroy(p->ctx->arg_scanner));
-    fclose(p->ctx->input_file);
+    input_provider_destroy(p->ctx->arg_input_provider);
     if (p->clean_up_fn) p->clean_up_fn(p->ctx);
     return 0;
 }
@@ -142,21 +126,25 @@ static void parser_api_test(void **state) {
 
     // ARRANGE
     test_parser_api_case *p = (test_parser_api_case *) *state;
+    input_provider_append_string_as_line(
+        p->ctx->arg_input_provider,
+        p->lexer_input
+     );
 
     // ACT
     parse_status ret;
     switch (p->goal) {
         case PARSE_GOAL_TU:
             p->ctx->arg_ctx = get_g_parser_ctx_default_translation_unit();
-            ret = parse_translation_unit(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx);
+            ret = parse_translation_unit(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx, p->ctx->arg_input_provider);
             break;
         case PARSE_GOAL_ONE_STATEMENT:
             p->ctx->arg_ctx = get_g_parser_ctx_default_one_statement();
-            ret = parse_one_statement(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx);
+            ret = parse_one_statement(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx, p->ctx->arg_input_provider);
             break;
         case PARSE_GOAL_READABLE:
             p->ctx->arg_ctx = get_g_parser_ctx_default_readable();
-            ret = parse_readable(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx);
+            ret = parse_readable(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx, p->ctx->arg_input_provider);
             break;
         default:
             assert_false(true);
@@ -385,24 +373,38 @@ static const struct CMUnitTest parser_api_tests[] = {
 //-----------------------------------------------------------------------------
 
 
-static void test_parse_one_statement_three_calls(void **state);
 static void test_parse_one_statement_three_calls(void **state) {
     (void)state;
 
     // ARRANGE
+
     const char *src = "a=1;b=2;";
-    FILE *f = open_memory_as_FILE(src);
-    assert_non_null(f);
+
+    // scanner initialization
     yyscan_t scanner = NULL;
     assert_int_equal(0, yylex_init(&scanner));
-    yyset_in(f, scanner);
+
+    // input_provider initialization
+    input_provider *provider = input_provider_create();
+    input_provider_set_mode_chunks(provider);
+
+    // bind input_provider to scanner
+    assert_true(input_provider_bind_to_scanner(provider, scanner));
+
+    // prepare lexer input
+    input_provider_append_string_as_line(provider, src);
+
     struct parser_ctx *ctx = get_g_parser_ctx_default_one_statement();
     struct ast *node = NULL;
 
+
     // ACT
-    bool ret = parse_one_statement(scanner, &node, ctx);
+
+    parse_status ret = parse_one_statement(scanner, &node, ctx, provider);
+
 
     // ASSERT
+
     assert_int_equal(ret, PARSE_STATUS_OK);
     assert_non_null(node);
     assert_int_equal(node->type, AST_TYPE_BINDING);
@@ -423,10 +425,14 @@ static void test_parse_one_statement_three_calls(void **state) {
     ast_destroy(node);
     node = NULL;
 
+
     // ACT
-    ret = parse_one_statement(scanner, &node, ctx);
+
+    ret = parse_one_statement(scanner, &node, ctx, provider);
+
 
     // ASSERT
+
     assert_int_equal(ret, PARSE_STATUS_OK);
     assert_non_null(node);
     assert_int_equal(node->type, AST_TYPE_BINDING);
@@ -447,15 +453,21 @@ static void test_parse_one_statement_three_calls(void **state) {
     ast_destroy(node);
     node = NULL;
 
+
     // ACT
-    ret = parse_one_statement(scanner, &node, ctx);
+
+    ret = parse_one_statement(scanner, &node, ctx, provider);
+
 
     // ASSERT
+
     assert_int_equal(ret, PARSE_STATUS_EOF);
     assert_null(node);
 
+    // TEST INFRASTRUCTURE CLEANUP
+
     assert_int_equal(0, yylex_destroy(scanner));
-    fclose(f);
+    input_provider_destroy(provider);
 }
 
 
@@ -469,6 +481,7 @@ int main(void) {
     const struct CMUnitTest parser_api_non_parametric_tests[] = {
         cmocka_unit_test(test_parse_one_statement_three_calls),
     };
+
 
     int failed = 0;
     failed += cmocka_run_group_tests(parser_api_non_parametric_tests, NULL, NULL);

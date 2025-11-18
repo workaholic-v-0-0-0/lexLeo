@@ -63,6 +63,9 @@ target_include_directories(
     PRIVATE "${CMAKE_SOURCE_DIR}/src/include/"
     PRIVATE "${CMAKE_BINARY_DIR}/src/parser/include/"
     PRIVATE "${CMAKE_BINARY_DIR}/src/lexer/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/frontend/ports/stream/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/adapters/stream/dynamic_buffer_stream/include/"
+    PRIVATE "${CMAKE_SOURCE_DIR}/src/frontend/input_provider/include/"
     PRIVATE "${CMOCKA_INCLUDE_DIR}"
 )
 

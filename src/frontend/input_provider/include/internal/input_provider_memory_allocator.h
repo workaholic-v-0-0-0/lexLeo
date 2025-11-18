@@ -1,4 +1,4 @@
-// src/io/input_provider/include/internal/input_provider_memory_allocator.h
+// src/frontend/input_provider/include/internal/input_provider_memory_allocator.h
 
 #ifndef LEXLEO_INPUT_PROVIDER_MEMORY_ALLOCATOR_H
 #define LEXLEO_INPUT_PROVIDER_MEMORY_ALLOCATOR_H

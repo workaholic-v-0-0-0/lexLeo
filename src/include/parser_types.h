@@ -13,10 +13,13 @@ typedef enum {
     PARSE_GOAL_READABLE,
 } parse_goal_t;
 
+typedef struct input_provider input_provider;
+
 typedef struct lexer_extra {
     parse_goal_t goal;
     int sent_mode_token;
     int reached_input_end;
+    input_provider *provider;
 } lexer_extra_t;
 
 typedef enum {

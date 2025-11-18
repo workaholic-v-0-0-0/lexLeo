@@ -13,9 +13,15 @@ target_link_libraries(
 target_include_directories(
     unit_test_input_provider
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/internal
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/frontend/ports/stream/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/adapters/stream/dynamic_buffer_stream/include/
 )
 
-target_compile_definitions(unit_test_input_provider PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+target_compile_definitions(
+    unit_test_input_provider
+    PRIVATE $<$<CONFIG:Debug>:DEBUG>
+    PRIVATE UNIT_TEST
+)
 
 if (USE_MEMORY_ALLOCATOR)
     target_compile_definitions(unit_test_input_provider PRIVATE USE_MEMORY_ALLOCATOR)

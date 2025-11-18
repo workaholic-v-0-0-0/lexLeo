@@ -46,12 +46,13 @@ set(
 FLEX_TARGET(lexer ${FLEX_L} ${FLEX_OUTPUT})
 
 add_library(lexer STATIC ${FLEX_lexer_OUTPUTS})
-target_link_libraries(lexer PRIVATE osal)
+target_link_libraries(lexer PRIVATE osal input_provider)
 
 target_include_directories(lexer
     PRIVATE
     "${CMAKE_SOURCE_DIR}/src/include"
     "${PARSER_INCLUDE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/frontend/input_provider/include"
 )
 
 add_dependencies(lexer parser) # lexer depends on the Bison-generated header
