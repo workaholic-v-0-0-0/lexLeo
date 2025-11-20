@@ -36,3 +36,11 @@ int stream_close(stream *s) {
 	STREAM_FREE(s);
 	return rc;
 }
+
+
+#ifdef UNIT_TEST
+void *stream_get_ctx(stream *s) {
+	if (!s) return NULL;
+	return s->ctx;
+}
+#endif

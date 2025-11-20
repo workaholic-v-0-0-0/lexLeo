@@ -131,4 +131,8 @@ typedef struct stream_vtable {
 
 stream *stream_create(const stream_vtable *vtbl, void *ctx);
 
+#ifdef UNIT_TEST
+void *stream_get_ctx(stream *s);
+#endif
+
 #endif //LEXLEO_STREAM_INTERNAL_H
