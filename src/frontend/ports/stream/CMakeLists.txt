@@ -8,6 +8,15 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stream.c
 )
 
+if (BUILD_TESTING)
+    target_compile_definitions(
+        stream
+        PRIVATE
+        $<$<CONFIG:Debug>:DEBUG>
+        UNIT_TEST
+    )
+endif ()
+
 # TODO
 #[[
 if (BUILD_TESTING)
@@ -19,8 +28,6 @@ target_include_directories(
     stream
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
-target_compile_definitions(stream PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 # optional logger injection "at cmake scope"
 if (USE_LOGGER)
