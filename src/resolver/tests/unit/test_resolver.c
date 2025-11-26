@@ -233,7 +233,7 @@ static int resolve_ast_teardown(void **state) {
 static void resolve_ast_returns_false_when_a_null(void **state) {
     (void)state;
     assert_int_equal(
-        resolver_resolve_ast(NULL, ctx),
+        resolver_resolve_ast(NULL, &ctx),
         false );
 }
 
@@ -258,7 +258,7 @@ static void resolve_ast_make_error_node_sentinel_and_returns_false_when_root_poi
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
 
     assert_true(fake_memory_no_invalid_free());
@@ -286,7 +286,7 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_false_when_root
     ast_to_promote = NULL;
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -315,7 +315,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapp
     fake_memory_fail_on_all_call();
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -340,7 +340,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapp
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -366,7 +366,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_string_data_wrapp
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -397,7 +397,7 @@ static void resolve_ast_success_with_no_side_effect_when_string_data_wrapper_and
     int old_string_value_length = strlen(old_data_data);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -428,7 +428,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -454,7 +454,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_symbol_name_data_
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -493,7 +493,7 @@ static void resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_n
     fake_memory_fail_only_on_call(3);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -540,7 +540,7 @@ static void resolve_ast_make_error_node_sentinel_and_returns_false_when_symbol_n
     fake_memory_fail_only_on_call(3);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -585,7 +585,7 @@ static void resolve_ast_make_error_node_not_sentinel_and_returns_false_when_symb
     will_return(mock_get, NULL);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -637,7 +637,7 @@ static void resolve_ast_success_with_promotion_into_symbol_data_wrapper_when_sym
     typed_data *old_data = ast_to_promote->data;
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -667,7 +667,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_
     fake_memory_fail_only_on_call(1);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -693,7 +693,7 @@ static void resolve_ast_fatal_error_oom_and_returns_false_when_binding_node_and_
     fake_memory_fail_only_on_call(2);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -720,7 +720,7 @@ static void resolve_ast_turns_second_child_into_error_node_sentinel_and_promote_
     fake_memory_fail_only_on_call(3);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         false );
     assert_null(ast_to_promote);
     assert_true(fake_memory_no_invalid_free());
@@ -792,7 +792,7 @@ static void resolve_ast_success_with_a_symbol_promotion_when_binding_node_and_al
     will_return(mock_get, &STUB_SYMBOL);
 
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         true );
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());

@@ -14,8 +14,6 @@ typedef struct symbol {
 
 typedef struct symtab symtab;
 
-void symtab_cleanup_pool(void);
-
 symtab *symtab_wind_scope(symtab *st); // the caller is responsible for passing either NULL or a well-formed symtab pointer
 symtab *symtab_unwind_scope(symtab *st);  // the caller is responsible for passing either NULL or a well-formed symtab pointer
 

@@ -6,7 +6,7 @@
 
 - check if there's a memory leak due to strdup in lexer
 
-- except for parser, resolver, runtime_env and interpreter,
+- except since parser implementation,
   the unit tests of the modules
   below the parser layer are poorly written and need to be
   redone, mainly because they test implementation details
@@ -40,7 +40,11 @@
 - refact grammar with:
   - rename binding with assignment
 
-- fix memory leaks caused by the list module
+- Fix memory leaks reported by valgrind in list tests
+  - Add a destroy helper for create_dynamic_char_ptr_array_n (free ptrs[i] then ptrs)
+  - Ensure allocations used in list_pop_* tests (empty, singleton, two elements) are freed
+  - Make test_list.c valgrind-clean without changing list.c behaviour
+
 
 - continue to TDD interpreter_eval with the following order:
   - AST_TYPE_READING
@@ -53,11 +57,6 @@
 
 - fix ast_destroy so that it destroys AST of type AST_TYPE_ERROR
 
-- Make symtab_intern_symbol() idempotent. It should succeed even if the symbol already exists in the table — only fail on OOM or internal inconsistency.
-  Goal:
-  Avoid incorrect “intern failed” errors when the same symbol name (e.g., duplicate parameter or repeated identifier) appears multiple times in the same or nested scopes.
-  Subsequent occurrences of an already-interned name must simply retrieve and reuse the existing symbol* entry instead of returning an error.
-
 - Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
@@ -65,15 +64,16 @@
 
 - make AST_TYPE_READING evaluable by the interpreter:
   - make a module runtime_session with:
-      typedef bool (*resolve_ast_fn_t)(struct ast **a, struct resolver_ctx ctx);
+      typedef bool (*resolve_ast_fn_t)(struct ast **a, struct resolver_ctx *ctx);
       typedef struct runtime_session {
-          list ast_pool;
-          list symbol_pool;
-          input_provider *in;
-          yyscan_t scanner;
-          symtab *st;
-          resolve_ast_fn_t resolve_ast_fn;
-          struct resolver_ctx resolver_ctx;
+            input_provider *in;
+            yyscan_t scanner;
+            symtab *st;
+            resolve_ast_fn_t resolve_ast_fn;
+            struct resolver_ctx resolver_ctx;
+            runtime_env *env; // maybe another for root
+            list ast_pool;
+            list symbol_pool;
       } runtime_session;
       but don't write "struct runtime_session runtime_session;" to avoid collision
   - in runtime_env, migrate to frames that reference the runtime_session:
@@ -82,7 +82,6 @@
           size_t refcount;
           bool is_root;
           struct runtime_env *parent;
-          runtime_session *session;
       } runtime_env;
   - replace the static global symbol_pool:
     - one symbol_pool per session (owned by runtime_session, or internally by symtab).

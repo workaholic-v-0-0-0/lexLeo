@@ -130,7 +130,7 @@ typed_data *ast_create_typed_data_symbol_name(const char *s);
 void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name);
 
 // borrowed symbol*: not freed by the caller nor by the AST
-// lifetime managed by the symtab (symtab_cleanup_pool)
+// lifetime managed by the runtime_session
 typed_data *ast_create_typed_data_symbol(symbol *s);
 
 /**
@@ -158,7 +158,7 @@ ast *ast_create_string_node(const char *str);
 ast *ast_create_symbol_name_node(const char *str);
 
 // Borrowed symbol pointer (NOT owned by the AST).
-// Freed via symtab_cleanup_pool(), not by ast_destroy().
+// lifetime of symbol is managed by runtime_session.
 ast *ast_create_symbol_node(symbol *sym);
 
 ast *ast_create_error_node(ast_error_type code, const char *message); // client code is responsible for message

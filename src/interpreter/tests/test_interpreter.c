@@ -73,6 +73,21 @@ int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
     return mock_type(int);
 }
 
+static interpreter_status mock_eval_read_ast (
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        const struct runtime_env_value **out) {
+    return INTERPRETER_STATUS_OK; // placeholder
+}
+static const interpreter_ops mock_interpreter_ops = {
+    .eval_read_ast = mock_eval_read_ast
+};
+static struct interpreter_ctx mock_interpreter_ctx = {
+    .ops = &mock_interpreter_ops,
+    .host_ctx = NULL //placeholder
+};
+
 
 // spies
 
@@ -231,7 +246,7 @@ static void eval_error_when_env_null(void **state) {
     *out = sentinel;
     const runtime_env_value **old_out = out;
 
-    interpreter_status status = interpreter_eval(NULL, DUMMY_AST_P, out);
+    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, NULL, DUMMY_AST_P, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, old_out);
@@ -253,7 +268,7 @@ static void eval_error_when_root_null(void **state) {
     *out = sentinel;
     const runtime_env_value **old_out = out;
 
-    interpreter_status status = interpreter_eval(DUMMY_RUNTIME_ENV_P, NULL, out);
+    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, NULL, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, old_out);
@@ -271,7 +286,7 @@ static void eval_error_when_root_null(void **state) {
 static void eval_error_when_out_null(void **state) {
     (void)state;
 
-    interpreter_status status = interpreter_eval(DUMMY_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
+    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
 }
@@ -293,7 +308,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
     *out = sentinel;
     const runtime_env_value **old_out = out;
 
-    interpreter_status status = interpreter_eval(DUMMY_RUNTIME_ENV_P, unsupported_ast, out);
+    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, unsupported_ast, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, old_out);
@@ -478,7 +493,7 @@ static void eval_test(void **state) {
     if (p->oom)
         fake_memory_fail_on_all_call();
 
-    interpreter_status status = interpreter_eval(p->ctx->env, p->ctx->root, p->ctx->out);
+    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, p->ctx->env, p->ctx->root, p->ctx->out);
 
     // Restore normal allocation behavior
     if (p->oom)
@@ -1286,6 +1301,7 @@ static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
 /*
 core of the isolated unit:
   - interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -1616,6 +1632,7 @@ static const test_interpreter_case ERROR_SENTINEL_NODE_SUCCESS = {
 /*
 core of the isolated unit:
   - interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -1822,6 +1839,7 @@ static const test_interpreter_case FUNCTION_NODE_SUCCESS = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -2056,6 +2074,7 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_SUCCESS = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -2432,6 +2451,7 @@ static const test_interpreter_case NEGATION_NODE_WITH_NUMBER_SUCCESS = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -2814,6 +2834,7 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_NUMBER = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -3195,6 +3216,7 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_NUMBER = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -3577,6 +3599,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_NUMBER = {
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );
@@ -4073,6 +4096,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO 
 /*
 core of the isolated unit:
     interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
         const struct ast *root,
         struct runtime_env_value **out );

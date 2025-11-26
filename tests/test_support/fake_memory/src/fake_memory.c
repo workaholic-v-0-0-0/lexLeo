@@ -28,16 +28,9 @@ static size_t g_double_free_count;
 static size_t g_fail_points[MAX_FAILS];
 static size_t g_fail_points_len;
 
-static int cmp_size(const void *a, const void *b) {
-  size_t lhs = *(const size_t *)a;
-  size_t rhs = *(const size_t *)b;
-  return (lhs > rhs) - (lhs < rhs);
-}
-
 void fake_memory_fail_on_calls(size_t n, const size_t *idxs) {
   if (n > MAX_FAILS) n = MAX_FAILS;
   for (size_t i = 0; i < n; ++i) g_fail_points[i] = idxs[i];
-  qsort(g_fail_points, n, sizeof(size_t), cmp_size);
   g_fail_points_len = n;
   g_alloc_count = 0;
 }
@@ -47,15 +40,15 @@ void fake_memory_fail_only_on_call(size_t n) {
 }
 
 void fake_memory_fail_on_all_call(void) {
-  size_t fails[MAX_FAILS];
-  for (size_t i = 0 ; i < MAX_FAILS ; ) fails[i] = ++i;
-  fake_memory_fail_on_calls(MAX_FAILS, fails);
+  g_fail_points_len = MAX_FAILS;
+  for (size_t i = 0 ; i < MAX_FAILS ; ++i)  g_fail_points[i] = i + 1; // fails[i] = ++i;
+  g_alloc_count = 0;
 }
 
 void fake_memory_fail_since(size_t n) {
-	size_t fails[MAX_FAILS];
-	for (size_t i = 0 ; i < MAX_FAILS ; i++) fails[i] = n + i;
-	fake_memory_fail_on_calls(MAX_FAILS, fails);
+  g_fail_points_len = MAX_FAILS;
+  for (size_t i = 0 ; i < MAX_FAILS ; i++) g_fail_points[i] = n + i; // fails[i] = n + i;
+  g_alloc_count = 0;
 }
 
 static bool should_fail_now(size_t cur) {

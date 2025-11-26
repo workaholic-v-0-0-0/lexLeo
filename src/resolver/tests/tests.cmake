@@ -27,6 +27,12 @@ add_test(
     $<TARGET_FILE:unit_test_resolver>
 )
 set_tests_properties(unit_test_resolver_memory PROPERTIES LABELS "memory")
+target_compile_definitions(
+    unit_test_resolver
+    PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+    USE_MEMORY_ALLOCATOR
+)
 
 
 add_executable(
@@ -56,3 +62,9 @@ add_test(
     $<TARGET_FILE:unit_test_resolver_external_doubling>
 )
 set_tests_properties(unit_test_resolver_external_doubling_memory PROPERTIES LABELS "memory")
+target_compile_definitions(
+    unit_test_resolver_external_doubling
+    PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+    USE_MEMORY_ALLOCATOR
+)

@@ -13,8 +13,6 @@ int main() {
     return 0;
 }
 
-// near the end:
-// symtab_cleanup_pool();
 
 // BE CAREFULL!!! MAYBE IN RESOLVER WE HAVE TO CHECK IF INTERN
 // DO NOT MAKE TROUBLE WHEN THE SYMBOL IS ALREADY INTERNED

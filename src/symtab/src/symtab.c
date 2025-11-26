@@ -12,23 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static list symbol_pool = NULL;
-
-static void symtab_destroy_symbol_adapter(void *item, void *user_data) {
-	if (item) {
-		SYMTAB_FREE(((symbol *) item)->name);
-		SYMTAB_FREE(item);
-	}
-}
-
-void symtab_cleanup_pool(void) {
-    list_free_list(
-        symbol_pool,
-        symtab_destroy_symbol_adapter,
-        NULL );
-    symbol_pool = NULL;
-}
-
 symtab *symtab_wind_scope(symtab *st) {
     symtab *ret = SYMTAB_MALLOC(sizeof(symtab));
 
@@ -36,8 +19,7 @@ symtab *symtab_wind_scope(symtab *st) {
         return NULL;
 
 	// Passing NULL as the third parameter ensures that symbols are not destroyed
-	// when unwinding scopes. Symbols are only released explicitly via
-	// symtab_cleanup_pool().
+	// when unwinding scopes. Symbols are owned by runtime_session
     hashtable *ht = hashtable_create(SYMTAB_SIZE, SYMTAB_KEY_TYPE, NULL);
 
     if (!ht) {
@@ -70,23 +52,13 @@ int symtab_intern_symbol(symtab *st, char *name) {
         symbol *sym = SYMTAB_MALLOC(sizeof(symbol));
 	    if (!sym)
 		    return 1;
-
         sym->name = SYMTAB_STRING_DUPLICATE(name);
     	if (!sym->name) {
 	    	SYMTAB_FREE(sym);
 		    return 1;
 	    }
 
-        list l = list_push(symbol_pool, sym);
-        if (!l) {
-			SYMTAB_FREE(sym->name);
-			SYMTAB_FREE(sym);
-            return 1;
-		}
-        symbol_pool = l;
-
         if (hashtable_add(st->symbols, name, sym) == 1) {
-			list_pop(&symbol_pool);
             SYMTAB_FREE(sym->name);
             SYMTAB_FREE(sym);
 		    return 1;
@@ -155,59 +127,3 @@ int symtab_contains(symtab *st, const char *name) {
     return symtab_contains(st->parent, name);
 #endif
 }
-
-#ifdef UNIT_TEST
-list get_symbol_pool() {
-    return symbol_pool;
-}
-void set_symbol_pool(list l) {
-    symbol_pool = l;
-}
-
-list *get_symbol_pool_address() {
-	return &symbol_pool;
-}
-
-// DEBUG TOOLS
-
-#include <stdio.h>
-
-char *symbol_pool_to_string() {
-    // buffer initial
-    size_t capacity = 128;
-    size_t length = 0;
-    char *buf = malloc(capacity);
-    if (!buf) return NULL;
-
-    // header
-    int written = snprintf(buf, capacity, "Symbol pool [length=%zu]:", list_length(symbol_pool));
-    if (written < 0) { free(buf); return NULL; }
-    length = (size_t)written;
-
-    size_t idx = 0;
-    for (list it = symbol_pool; it != NULL; it = it->cdr, idx++) {
-        symbol *s = (symbol *)it->car;
-
-        // ligne à ajouter
-        const char *name = (s && s->name) ? s->name : "(null symbol)";
-        written = snprintf(NULL, 0, "\n  [%zu] %s", idx, name);
-
-        // resize si nécessaire
-        if (length + (size_t)written + 1 > capacity) {
-            while (length + (size_t)written + 1 > capacity) {
-                capacity *= 2;
-            }
-            char *tmp = realloc(buf, capacity);
-            if (!tmp) { free(buf); return NULL; }
-            buf = tmp;
-        }
-
-        // append
-        snprintf(buf + length, capacity - length, "\n  [%zu] %s", idx, name);
-        length += (size_t)written;
-    }
-
-    return buf;
-}
-
-#endif

@@ -73,5 +73,4 @@ runtime_env_set_local_fn_t runtime_env_get_set_local(void);
 runtime_env_get_local_fn_t runtime_env_get_get_local(void);
 runtime_env_get_fn_t runtime_env_get_get(void);
 
-
 #endif //LEXLEO_RUNTIME_ENV_CTX_H

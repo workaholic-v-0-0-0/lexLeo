@@ -205,6 +205,7 @@ add_subdirectory(src/frontend/ports/stream)
 add_subdirectory(src/adapters/stream/stdio_stream) # depends on stream
 add_subdirectory(src/adapters/stream/fs_stream) # depends on stream
 add_subdirectory(src/adapters/stream/dynamic_buffer_stream) # depends on stream
+add_subdirectory(src/runtime_session) # depends on ...?
 add_subdirectory(src/interpreter) # depends on runtime_env, ...?
 
 # TO BE IMPLEMENTED

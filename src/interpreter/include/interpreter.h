@@ -26,7 +26,29 @@ typedef enum {
     INTERPRETER_STATUS_NB_TYPES,
 } interpreter_status;
 
+struct interpreter_ctx; // forward
+typedef interpreter_status (*eval_read_ast_fn_t)(
+	struct interpreter_ctx *ctx,
+	struct runtime_env *env,
+	const struct ast *root,
+	const struct runtime_env_value **out);
+
+typedef struct interpreter_ops {
+	// called when evaluating an AST of type AST_TYPE_READING ;
+	// a hook for cli_eval_read_ast
+	eval_read_ast_fn_t eval_read_ast;
+} interpreter_ops;
+
+typedef struct interpreter_ctx {
+	const interpreter_ops *ops;
+
+	// hook for runtime_session instance ;
+	// it will be passed to callback eval_read_ast
+	void *host_ctx;  // opaque
+} interpreter_ctx;
+
 interpreter_status interpreter_eval(
+	struct interpreter_ctx *ctx,
     struct runtime_env *env,
     const struct ast *root,
     const struct runtime_env_value **out );

@@ -24,7 +24,8 @@
 
 
 static ast *ast_to_promote = NULL;
-resolver_ctx ctx;
+static resolver_ctx ctx;
+static list symbol_pool;
 
 
 
@@ -37,6 +38,15 @@ resolver_ctx ctx;
 #define FAKABLE_MALLOC(n) (get_current_malloc()(n))
 #define FAKABLE_FREE(p) (get_current_free()(p))
 #define FAKABLE_STRDUP(s) (get_current_string_duplicate()(s))
+#define FAKABLE_REALLOC(p,n) (get_current_realloc()((p),(n)))
+#include <stdio.h>//todebug
+bool fake_store_symbol(symbol *sym, void *user_data) {
+    (void)user_data;
+    printf("list_contains(symbol_pool, (void *)sym): %i\n", list_contains(symbol_pool, (void *)sym));
+    if (list_contains(symbol_pool, sym)) return true;
+    symbol_pool = list_push(symbol_pool, sym);
+    return true;
+}
 
 
 
@@ -176,6 +186,47 @@ int initialize_ast_to_promote_with_function_node(void) {
     return 0;
 }
 
+static void destroy_symbol_adapter(void *item, void *user_data) {
+    if (item) {
+        RESOLVER_FREE(((symbol *) item)->name);
+        RESOLVER_FREE(item);
+    }
+}
+
+static void cleanup_symbol_pool() {
+    list_free_list(
+        symbol_pool,
+        destroy_symbol_adapter,
+        NULL );
+    symbol_pool = NULL;
+}
+
+char *symbol_pool_to_string() { //debug tool
+    // buffer initial
+    size_t capacity = 128;
+    size_t length = 0;
+    char *buf = FAKABLE_MALLOC(capacity);
+
+    // header
+    int written = snprintf(buf, capacity, "Symbol pool [length=%zu]:", list_length(symbol_pool));
+    if (written < 0) { FAKABLE_FREE(buf); return NULL; }
+    length = (size_t)written;
+
+    size_t idx = 0;
+    for (list it = symbol_pool; it != NULL; it = it->cdr, idx++) {
+        symbol *s = (symbol *)it->car;
+
+        const char *name = (s && s->name) ? s->name : "(null symbol)";
+        written = snprintf(NULL, 0, "\n  [%zu] %s", idx, name);
+
+        // append
+        snprintf(buf + length, capacity - length, "\n  [%zu] %s", idx, name);
+        length += (size_t)written;
+    }
+
+    return buf;
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -216,8 +267,12 @@ static int resolve_ast_setup(void **state) {
 
     // fake
     set_allocators(fake_malloc, fake_free);
+    set_reallocator(fake_realloc);
     set_string_duplicate(fake_strdup);
     fake_memory_reset();
+    symbol_pool = NULL;
+    ctx.ops.store_symbol = fake_store_symbol;
+    ctx.user_data = NULL;
 
     // real
     ctx.ops.push = list_push;
@@ -240,6 +295,7 @@ static int resolve_ast_teardown(void **state) {
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
     set_allocators(NULL, NULL);
+    set_reallocator(NULL);
     set_string_duplicate(NULL);
     fake_memory_reset();
     memset(&ctx, 0, sizeof ctx);
@@ -262,7 +318,7 @@ static int resolve_ast_teardown(void **state) {
 static void resolve_ast_returns_false_when_a_null(void **state) {
     (void)state;
     assert_int_equal(
-        resolver_resolve_ast(NULL, ctx),
+        resolver_resolve_ast(NULL, &ctx),
         false );
 }
 
@@ -272,10 +328,10 @@ static void resolve_ast_returns_false_when_a_null(void **state) {
 //  - the function symbol ("f") is interned in the current (global) scope
 //  - the parameter symbol ("x") is interned in a nested scope
 //    and therefore not visible in the global scope after resolution
-//  - the global symbol table (ctx.st) contains only "f"
-//  - the symbol pool contains exactly two symbols ("f" and "x")
+//  - the symbol table (ctx.st) contains only "f"
+//  - symbol_pool contains exactly two symbols ("f" and "x")
 //    because both were interned at some point
-//  - after symtab_cleanup_pool(), the symbol pool is empty
+//  - after cleanup_symbol_pool(), the symbol pool is empty
 //  - no invalid free
 //  - no double free
 //  - no memory leak
@@ -283,27 +339,29 @@ static void resolve_ast_returns_false_when_a_null(void **state) {
 static void resolve_ast_success_when_function_node(void **state) {
     (void)state;
     initialize_ast_to_promote_with_function_node();
-
+    fflush(stdout);
     assert_int_equal(
-        resolver_resolve_ast(&ast_to_promote, ctx),
+        resolver_resolve_ast(&ast_to_promote, &ctx),
         true );
+    fflush(stdout);
     ast_destroy(ast_to_promote);
+    fflush(stdout);
     symbol *symbol_f = symtab_get_local(ctx.st, "f");
     assert_non_null(symbol_f);
     assert_string_equal("f", symbol_f->name);
     assert_ptr_equal(
-        get_symbol_pool()->cdr->car,
+        symbol_pool->cdr->car,
         symbol_f
     );
     symbol *symbol_x = symtab_get_local(ctx.st, "x");
     assert_null(symbol_x);
     assert_string_equal(
-        ((symbol *) (get_symbol_pool()->car))->name,
+        ((symbol *) (symbol_pool->car))->name,
         "x"
     );
-    assert_int_equal(2, list_length(get_symbol_pool()));
-    symtab_cleanup_pool();
-    assert_int_equal(0, list_length(get_symbol_pool()));
+    assert_int_equal(2, list_length(symbol_pool));
+    cleanup_symbol_pool();
+    assert_int_equal(0, list_length(symbol_pool));
 }
 
 

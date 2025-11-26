@@ -720,8 +720,6 @@ static void contains_calls_symtab_contains_and_returns_value_when_symtab_contain
 //  - hashtable_add (mock)
 //  - hashtable_key_is_in_use (mock)
 //  - malloc, free, strdup  (mock)
-//  - list_push (mock)
-//  - list_pop (mock)
 //  - symtab *st param (stub)
 
 
@@ -741,8 +739,6 @@ static int intern_symbol_setup(void **state) {
     set_string_duplicate(mock_strdup);
     set_hashtable_key_is_in_use(mock_hashtable_key_is_in_use);
     set_hashtable_add(mock_hashtable_add);
-    set_list_push(mock_list_push);
-    set_list_pop(mock_list_pop);
     return 0;
 }
 
@@ -750,8 +746,6 @@ static int intern_symbol_teardown(void **state) {
     set_allocators(NULL, NULL);
     set_string_duplicate(NULL);
     set_hashtable_key_is_in_use(NULL);
-    set_list_push(NULL);
-    set_list_pop(NULL);
     set_hashtable_add(NULL);
     free_saved_addresses_to_be_freed();
     return 0;
@@ -882,50 +876,6 @@ static void intern_symbol_cleanup_and_error_when_strdup_fails(void **state) {
 //  - hashtable_key_is_in_use will return false
 //  - allocation for symbol will succeed
 //  - duplication of name will succeed
-//  - list_push for symbol registration in symbol_pool will fail
-// Expected:
-//  - calls hashtable_key_is_in_use with:
-//    - ht: st->symbols
-//    - key: name
-//  - calls malloc with:
-//    - size: sizeof(symbol)
-//  - calls strdup with:
-//    - s: name
-//  - call list_push with:
-//    - l: symbol_pool
-//    - e: malloc returned value for symbol
-//  - calls free with:
-//    - ptr: strdup returned value
-//  - calls free with:
-//    - ptr: malloc returned value for symbol
-//  - returns 1
-static void intern_symbol_cleanup_and_error_when_list_push_fails(void **state) {
-    expect_value(mock_hashtable_key_is_in_use, ht, stub_symtab.symbols);
-    expect_string(mock_hashtable_key_is_in_use, key, valid_symbol_name);
-    will_return(mock_hashtable_key_is_in_use, false);
-    alloc_and_save_address_to_be_freed((void **) &malloc_ret_block_for_symbol, sizeof(symbol));
-    expect_value(mock_malloc, size, sizeof(symbol));
-    will_return(mock_malloc, malloc_ret_block_for_symbol);
-    alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
-    expect_value(mock_strdup, s, valid_symbol_name);
-    will_return(mock_strdup, strdup_ret_block);
-    expect_value(mock_list_push, l, get_symbol_pool());
-    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
-    will_return(mock_list_push, NULL);
-    expect_value(mock_free, ptr, strdup_ret_block);
-    expect_value(mock_free, ptr, malloc_ret_block_for_symbol);
-
-    assert_int_equal(
-        symtab_intern_symbol(&stub_symtab, valid_symbol_name),
-        1);
-}
-
-// Given:
-//  - arguments are valid
-//  - hashtable_key_is_in_use will return false
-//  - allocation for symbol will succeed
-//  - duplication of name will succeed
-//  - list_push will succeed
 //  - hashtable_add will fail
 // Expected:
 //  - calls hashtable_key_is_in_use with:
@@ -935,9 +885,6 @@ static void intern_symbol_cleanup_and_error_when_list_push_fails(void **state) {
 //    - size: sizeof(symbol)
 //  - calls strdup with:
 //    - s: name
-//  - call list_push with:
-//    - l: symbol_pool
-//    - e: malloc returned value for symbol
 //  - calls hashtable_add:
 //    - ht: st->symbols
 //    - key: name
@@ -959,15 +906,10 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
     alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
     expect_value(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
-    expect_value(mock_list_push, l, get_symbol_pool());
-    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
-    will_return(mock_list_push, DUMMY_SYMBOL_POOL);
     expect_value(mock_hashtable_add, ht, stub_symtab.symbols);
     expect_value(mock_hashtable_add, key, valid_symbol_name);
     expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
     will_return(mock_hashtable_add, 1);
-    expect_value(mock_list_pop, l_p, get_symbol_pool_address());
-    will_return(mock_list_pop, malloc_ret_block_for_symbol);
     expect_value(mock_free, ptr, strdup_ret_block);
     expect_value(mock_free, ptr, malloc_ret_block_for_symbol);
 
@@ -981,7 +923,6 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
 //  - hashtable_key_is_in_use will return false
 //  - allocation for symbol will succeed
 //  - duplication of name will succeed
-//  - list_push will succeed
 //  - hashtable_add will succeed
 // Expected:
 //  - calls hashtable_key_is_in_use with:
@@ -991,9 +932,6 @@ static void intern_symbol_cleanup_and_error_when_hashtable_add_fails(void **stat
 //    - size: sizeof(symbol)
 //  - calls strdup with:
 //    - s: name
-//  - call list_push with:
-//    - l: symbol_pool
-//    - e: malloc returned value for symbol
 //  - calls hashtable_add:
 //    - ht: st->symbols
 //    - key: name
@@ -1009,9 +947,6 @@ static void intern_symbol_interns_new_symbol_when_hashtable_add_succeeds(void **
     alloc_and_save_address_to_be_freed((void **) &strdup_ret_block, sizeof(char) * (strlen(valid_symbol_name) + 1));
     expect_string(mock_strdup, s, valid_symbol_name);
     will_return(mock_strdup, strdup_ret_block);
-    expect_value(mock_list_push, l, get_symbol_pool());
-    expect_value(mock_list_push, e, malloc_ret_block_for_symbol);
-    will_return(mock_list_push, DUMMY_SYMBOL_POOL);
     expect_value(mock_hashtable_add, ht, stub_symtab.symbols);
     expect_value(mock_hashtable_add, key, valid_symbol_name);
     expect_value(mock_hashtable_add, value, malloc_ret_block_for_symbol);
@@ -1133,9 +1068,6 @@ int main(void) {
             intern_symbol_setup, intern_symbol_teardown),
         cmocka_unit_test_setup_teardown(
             intern_symbol_cleanup_and_error_when_strdup_fails,
-            intern_symbol_setup, intern_symbol_teardown),
-        cmocka_unit_test_setup_teardown(
-            intern_symbol_cleanup_and_error_when_list_push_fails,
             intern_symbol_setup, intern_symbol_teardown),
         cmocka_unit_test_setup_teardown(
             intern_symbol_cleanup_and_error_when_hashtable_add_fails,

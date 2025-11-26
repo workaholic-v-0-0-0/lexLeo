@@ -327,7 +327,9 @@ static bool params_are_unique(const ast *list_of_params) {
 // - The required substructures for the given node kind are well-formed;
 //   otherwise, an appropriate error status is returned.
 interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
         struct runtime_env *env,
+        //struct runtime_session *session,
         const struct ast *root,
         const struct runtime_env_value **out ) {
 
@@ -417,7 +419,7 @@ interpreter_status interpreter_eval(
         ast *function_node = root->children->children[0];
         const runtime_env_value *evaluated_fn_value = NULL;
         status =
-            interpreter_eval(env, function_node, &evaluated_fn_value);
+            interpreter_eval(ctx, env, function_node, &evaluated_fn_value);
         if (status != INTERPRETER_STATUS_OK)
             return status;
         bool binding =
@@ -439,7 +441,7 @@ interpreter_status interpreter_eval(
 
         ast *child = root->children->children[0];
         const runtime_env_value *evaluated_child_value = NULL;
-        status = interpreter_eval(env, child, &evaluated_child_value);
+        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
 
         if (status != INTERPRETER_STATUS_OK)
             return status;
@@ -467,14 +469,14 @@ interpreter_status interpreter_eval(
         evaluated_lhs = NULL;
         evaluated_rhs = NULL;
 
-        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
         if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
             return INTERPRETER_STATUS_TYPE_ERROR;
 
-        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
             runtime_env_value_release(evaluated_lhs);
             return status;
@@ -507,14 +509,14 @@ interpreter_status interpreter_eval(
         evaluated_lhs = NULL;
         evaluated_rhs = NULL;
 
-        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
         if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
             return INTERPRETER_STATUS_TYPE_ERROR;
 
-        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
             runtime_env_value_release(evaluated_lhs);
             return status;
@@ -547,14 +549,14 @@ interpreter_status interpreter_eval(
         evaluated_lhs = NULL;
         evaluated_rhs = NULL;
 
-        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
         if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
             return INTERPRETER_STATUS_TYPE_ERROR;
 
-        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
             runtime_env_value_release(evaluated_lhs);
             return status;
@@ -587,14 +589,14 @@ interpreter_status interpreter_eval(
         evaluated_lhs = NULL;
         evaluated_rhs = NULL;
 
-        status = interpreter_eval(env, lhs, &evaluated_lhs);
+        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
         if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
             return INTERPRETER_STATUS_TYPE_ERROR;
 
-        status = interpreter_eval(env, rhs, &evaluated_rhs);
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
             runtime_env_value_release(evaluated_lhs);
             return status;

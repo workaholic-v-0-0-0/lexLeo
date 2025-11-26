@@ -57,7 +57,13 @@ void list_free_list(list l, void (*destroy_fn)(void *item, void *user_data), voi
 	}
 }
 
-
+bool list_contains(list l, void *item) {
+	while (l) {
+		if (l->car == item) return true;
+		l = l->cdr;
+	}
+	return false;
+}
 
 // DEBUG TOOLS
 

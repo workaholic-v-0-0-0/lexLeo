@@ -14,6 +14,7 @@ typedef enum {
     RESOLVER_ERROR_CODE_SYMBOL_INTERN_FAILED,
     RESOLVER_ERROR_CODE_SYMBOL_LOOKUP_FAILED,
     RESOLVER_ERROR_CODE_OOM,
+    RESOLVER_ERROR_CODE_SYMBOL_STORE_FAILED,
     // ...,
     RESOLVER_UNRETRIEVABLE_ERROR_CODE,
 } resolver_error_type;
@@ -24,7 +25,6 @@ typedef enum {
 // makes error nodes when non infracture error
 // cleanup and write NULL at *a if infracture error
 // classical iterative implementation
-bool resolver_resolve_ast(ast **a, resolver_ctx ctx);
+bool resolver_resolve_ast(ast **a, resolver_ctx *ctx);
 
 #endif //LEXLEO_RESOLVER_H
-

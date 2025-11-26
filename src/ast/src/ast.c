@@ -116,7 +116,7 @@ void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
     AST_FREE(typed_data_symbol);
 	// Only frees the typed_data container itself.
 	// Does not free the underlying symbol*, which is owned and freed
-	// by the global symbol_pool via symtab_cleanup_pool().
+	// by the runtime_session
 #endif
 }
 
