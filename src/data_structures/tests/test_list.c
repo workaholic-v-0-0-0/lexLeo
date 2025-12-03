@@ -146,6 +146,7 @@ typedef struct {
     const char *label;
     boolean chars_are_dynamically_allocated;
     char **char_ptrs;
+	boolean l_is_defined_in_set_up;
     list l;
     void *e;
 } list_push_test_params_t;
@@ -206,6 +207,7 @@ static list_push_test_params_t l_null_e_null = {
     .label = "l == NULL, e == NULL",
     .chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
     .char_ptrs = NULL,
+	.l_is_defined_in_set_up = false,
     .l = NULL,
     .e = NULL,
 };
@@ -214,7 +216,8 @@ static list_push_test_params_t l_not_null_e_null_statically_allocated = {
     .label = "l != NULL, e == NULL, chars are statically allocated",
     .chars_are_dynamically_allocated = FALSE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .e = NULL,
 };
 
@@ -222,7 +225,8 @@ static list_push_test_params_t l_not_null_e_null_dynamically_allocated = {
     .label = "l != NULL, e == NULL, chars are dynamically allocated",
     .chars_are_dynamically_allocated = TRUE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .e = NULL,
 };
 
@@ -230,6 +234,7 @@ static list_push_test_params_t l_null_e_not_null_statically_allocated = {
     .label = "l == NULL, e != NULL, chars are statically allocated",
     .chars_are_dynamically_allocated = FALSE,
     .char_ptrs = NULL,
+	.l_is_defined_in_set_up = false,
     .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -238,6 +243,7 @@ static list_push_test_params_t l_null_e_not_null_dynamically_allocated = {
     .label = "l == NULL, e != NULL, chars are dynamically allocated",
     .chars_are_dynamically_allocated = TRUE,
     .char_ptrs = NULL,
+	.l_is_defined_in_set_up = false,
     .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
@@ -246,7 +252,8 @@ static list_push_test_params_t l_not_null_e_not_null_statically_allocated = {
     .label = "l == NULL, e != NULL, chars are statically allocated",
     .chars_are_dynamically_allocated = FALSE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
 
@@ -254,7 +261,8 @@ static list_push_test_params_t l_not_null_e_not_null_dynamically_allocated = {
     .label = "l == NULL, e != NULL, chars are dynamically allocated",
     .chars_are_dynamically_allocated = TRUE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .e = (void *) &STATIC_CHAR_C,
 };
 
@@ -267,7 +275,7 @@ static list_push_test_params_t l_not_null_e_not_null_dynamically_allocated = {
 static int list_push_setup(void **state) {
     set_allocators(mock_malloc, mock_free);
     list_push_test_params_t *params = (list_push_test_params_t *) *state;
-    if (params->l == LIST_DEFINED_IN_SETUP) {
+    if (params->l_is_defined_in_set_up) {
         if (params->chars_are_dynamically_allocated) {
             params->char_ptrs = create_dynamic_char_ptr_array_n(LIST_LENGTH, 'A', 'B');
         } else {
@@ -290,7 +298,7 @@ static int list_push_setup(void **state) {
 static int list_push_teardown(void **state) {
     set_allocators(NULL, NULL);
     list_push_test_params_t *params = (list_push_test_params_t *) *state;
-    if (params->l == LIST_DEFINED_IN_SETUP) {
+    if (params->l_is_defined_in_set_up) {
         list next = NULL;
         while (params->l) {
             next = (params->l)->cdr;
@@ -436,8 +444,8 @@ typedef struct {
     const char *label;
     boolean chars_are_dynamically_allocated;
     char **char_ptrs;
+	boolean l_is_defined_in_set_up;
     list l;
-
     void (*f)(void *, void *);
 } list_free_list_test_params_t;
 
@@ -464,6 +472,7 @@ static list_free_list_test_params_t l_null_f_null = {
     .label = "l == NULL, f == NULL",
     .chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
     .char_ptrs = NULL,
+	.l_is_defined_in_set_up = false,
     .l = NULL,
     .f = NULL,
 };
@@ -472,6 +481,7 @@ static list_free_list_test_params_t l_null_f_not_null = {
     .label = "l == NULL, f != NULL",
     .chars_are_dynamically_allocated = DUMMY_BOOLEAN_VALUE,
     .char_ptrs = NULL,
+	.l_is_defined_in_set_up = false,
     .l = NULL,
     .f = destroy_fn_with_current_free,
 };
@@ -480,7 +490,8 @@ static list_free_list_test_params_t l_not_null_f_null_statically_allocated = {
     .label = "l != NULL, f == NULL, chars are statically allocated",
     .chars_are_dynamically_allocated = FALSE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .f = NULL,
 };
 
@@ -488,7 +499,8 @@ static list_free_list_test_params_t l_not_null_f_null_dynamically_allocated = {
     .label = "l != NULL, f == NULL, chars are dynamically allocated",
     .chars_are_dynamically_allocated = TRUE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .f = NULL,
 };
 
@@ -496,7 +508,8 @@ static list_free_list_test_params_t l_not_null_f_current_free_statically_allocat
     .label = "l != NULL, f == current_free, chars are statically allocated",
     .chars_are_dynamically_allocated = FALSE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .f = CURRENT_FREE_DEFINED_IN_SETUP,
 };
 
@@ -504,7 +517,8 @@ static list_free_list_test_params_t l_not_null_f_current_free_dynamically_alloca
     .label = "l != NULL, f == current_free, chars are dynamically allocated",
     .chars_are_dynamically_allocated = TRUE,
     .char_ptrs = NULL,
-    .l = LIST_DEFINED_IN_SETUP,
+	.l_is_defined_in_set_up = true,
+    .l = NULL,
     .f = CURRENT_FREE_DEFINED_IN_SETUP,
 };
 
@@ -517,7 +531,7 @@ static list_free_list_test_params_t l_not_null_f_current_free_dynamically_alloca
 static int list_free_list_setup(void **state) {
     set_allocators(mock_malloc, mock_free);
     list_free_list_test_params_t *params = (list_free_list_test_params_t *) *state;
-    if (params->l == LIST_DEFINED_IN_SETUP) {
+    if (params->l_is_defined_in_set_up) {
         if (params->chars_are_dynamically_allocated) {
             params->char_ptrs = create_dynamic_char_ptr_array_n(LIST_LENGTH, 'A', 'B');
         } else {
@@ -535,7 +549,7 @@ static int list_free_list_setup(void **state) {
 static int list_free_list_teardown(void **state) {
     set_allocators(NULL, NULL);
     list_free_list_test_params_t *params = (list_free_list_test_params_t *) *state;
-    if (params->l == LIST_DEFINED_IN_SETUP) {
+    if (params->l_is_defined_in_set_up) {
         list next = NULL;
         while (params->l) {
             next = (params->l)->cdr;
@@ -699,6 +713,8 @@ static void list_pop_returns_null_when_list_empty(void **state) {
     *l_p = NULL;
 
     assert_null(list_pop(l_p));
+
+	free(l_p);
 }
 
 // Given:
@@ -714,11 +730,15 @@ static void list_pop_returns_car_and_frees_when_singleton_list(void **state) {
     l->car = stub_element_p;
     l->cdr = NULL;
     expect_value(mock_free, ptr, l);
+	cons *mem = l;
 
     void *ret = list_pop(&l);
 
     assert_ptr_equal(ret, stub_element_p);
     assert_null(l);
+
+	free(mem);
+	free(l);
 }
 
 // Given:
@@ -741,12 +761,16 @@ static void list_pop_returns_car_and_frees_and_advances_when_two_elements(void *
     l->car = stub_element_1_p;
     l->cdr = l_end;
     expect_value(mock_free, ptr, l);
+	cons *mem = l;
 
     void *ret = list_pop(&l);
 
     assert_ptr_equal(ret, stub_element_1_p);
     assert_ptr_equal(l, l_end);
     assert_ptr_equal(l->car, stub_element_2_p);
+
+	free(mem);
+	free(l);
 }
 
 

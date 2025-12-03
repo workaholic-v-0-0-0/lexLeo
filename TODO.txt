@@ -40,12 +40,6 @@
 - refact grammar with:
   - rename binding with assignment
 
-- Fix memory leaks reported by valgrind in list tests
-  - Add a destroy helper for create_dynamic_char_ptr_array_n (free ptrs[i] then ptrs)
-  - Ensure allocations used in list_pop_* tests (empty, singleton, two elements) are freed
-  - Make test_list.c valgrind-clean without changing list.c behaviour
-
-
 - continue to TDD interpreter_eval with the following order:
   - AST_TYPE_READING
   - AST_TYPE_BINDING
