@@ -41,7 +41,6 @@
   - rename binding with assignment
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_READING
   - AST_TYPE_BINDING
   - AST_TYPE_WRITING
   - AST_TYPE_BLOCK_ITEMS

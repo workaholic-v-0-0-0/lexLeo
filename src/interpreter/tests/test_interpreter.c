@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "interpreter.h"
+#include "internal/interpreter_internal.h"
 #include "fake_memory.h"
 #include "memory_allocator.h"
 #include "string_utils.h"
@@ -36,6 +36,7 @@ static runtime_env_value A_NUMBER_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_NUM
 static runtime_env_value *A_NUMBER_RUNTIME_ENV_VALUE_P = &A_NUMBER_RUNTIME_ENV_VALUE;
 static runtime_env_value A_STRING_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_STRING, .refcount = 2, .as.s = "a string"};
 static runtime_env_value *A_STRING_RUNTIME_ENV_VALUE_P = &A_STRING_RUNTIME_ENV_VALUE;
+static runtime_env_value *SENTINEL_TO_BE_REPLACED_BY_NUMBER = (runtime_env_value*)0xDEADF00D;
 
 
 
@@ -58,9 +59,10 @@ static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 static symbol DUMMY_OTHER_SYMBOL = {.name = "an_other_symbol",};
 static symbol *DUMMY_OTHER_SYMBOL_P = &DUMMY_OTHER_SYMBOL;
 static runtime_env_value DUMMY_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_NUMBER, .refcount = 2, .as.i = A_INT_NOT_ZERO};
-static runtime_env_value *DUMMY_RUNTIME_ENV_VALUE_P = &DUMMY_RUNTIME_ENV_VALUE;
+static runtime_env_value *const DUMMY_RUNTIME_ENV_VALUE_P = &DUMMY_RUNTIME_ENV_VALUE;
 static symbol DUMMY_SYMBOL_FOR_FUNCTION_NAME = {.name = "fonction_name",};
 static symbol *DUMMY_SYMBOL_FOR_FUNCTION_NAME_P = &DUMMY_SYMBOL_FOR_FUNCTION_NAME;
+static void *const dummy_runtime_session = (void*)0xDEADBEEF;
 
 
 
@@ -71,22 +73,7 @@ int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
     check_expected(key);
     check_expected(value);
     return mock_type(int);
-}
-
-static interpreter_status mock_eval_read_ast (
-        struct interpreter_ctx *ctx,
-        struct runtime_env *env,
-        const struct ast *root,
-        const struct runtime_env_value **out) {
-    return INTERPRETER_STATUS_OK; // placeholder
-}
-static const interpreter_ops mock_interpreter_ops = {
-    .eval_read_ast = mock_eval_read_ast
-};
-static struct interpreter_ctx mock_interpreter_ctx = {
-    .ops = &mock_interpreter_ops,
-    .host_ctx = NULL //placeholder
-};
+} // useless?
 
 
 // spies
@@ -95,9 +82,11 @@ typedef struct {
     bool set_local_has_been_called;
     bool get_local_has_been_called;
     bool get_has_been_called;
+
     runtime_env *set_local_arg_e;
     const struct symbol *set_local_arg_key;
     const runtime_env_value *set_local_arg_value;
+
     const runtime_env *get_local_arg_e;
     const struct symbol *get_local_arg_key;
     const runtime_env *get_arg_e;
@@ -138,6 +127,39 @@ const runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct 
     g_runtime_spy->get_arg_key = key;
     return mock_type(const runtime_env_value *);
 }
+
+typedef struct {
+    bool read_eval_fn_has_been_called;
+    struct interpreter_ctx *read_eval_fn_arg_ctx;
+    struct runtime_env *read_eval_fn_arg_env;
+    const struct runtime_env_value **read_eval_fn_arg_out;
+    struct runtime_env_value *read_eval_out;
+} read_eval_spy_t;
+
+static read_eval_spy_t *g_read_eval_spy = NULL;
+
+static interpreter_status spy_read_eval_fn (
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct runtime_env_value **out) {
+    assert_non_null(g_read_eval_spy);
+    g_read_eval_spy->read_eval_fn_has_been_called = true;
+    g_read_eval_spy->read_eval_fn_arg_ctx = ctx;
+    g_read_eval_spy->read_eval_fn_arg_env = env;
+    g_read_eval_spy->read_eval_fn_arg_out = out;
+    assert_non_null(out);
+    *out = g_read_eval_spy->read_eval_out;
+    return mock_type(interpreter_status);
+}
+
+static const interpreter_ops_t SPY_INTERPRETER_OPS = {
+    .read_eval_fn = spy_read_eval_fn,
+};
+
+static struct interpreter_ctx spy_interpreter_ctx = {
+    .ops = &SPY_INTERPRETER_OPS,
+    .host_ctx = dummy_runtime_session
+};
 
 
 // stubs
@@ -244,12 +266,12 @@ static void eval_error_when_env_null(void **state) {
     out = fake_malloc(sizeof(runtime_env_value *));
     runtime_env_value *sentinel = (runtime_env_value *)0x1;
     *out = sentinel;
-    const runtime_env_value **old_out = out;
+    const runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, NULL, DUMMY_AST_P, out);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, NULL, DUMMY_AST_P, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
-    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
     fake_free(out);
@@ -266,12 +288,12 @@ static void eval_error_when_root_null(void **state) {
     out = fake_malloc(sizeof(runtime_env_value *));
     runtime_env_value *sentinel = (runtime_env_value *)0x1;
     *out = sentinel;
-    const runtime_env_value **old_out = out;
+    const runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, NULL, out);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, NULL, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
-    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
     fake_free(out);
@@ -286,7 +308,7 @@ static void eval_error_when_root_null(void **state) {
 static void eval_error_when_out_null(void **state) {
     (void)state;
 
-    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
 }
@@ -306,12 +328,12 @@ static void eval_error_when_unsupported_root_type(void **state) {
     unsupported_ast->children = DUMMY_AST_CHILDREN_P;
     runtime_env_value *sentinel = (runtime_env_value *)0x1;
     *out = sentinel;
-    const runtime_env_value **old_out = out;
+    const runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, DUMMY_RUNTIME_ENV_P, unsupported_ast, out);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, unsupported_ast, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
-    assert_ptr_equal(out, old_out);
+    assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
     *out = NULL;
@@ -332,18 +354,27 @@ static void eval_error_when_unsupported_root_type(void **state) {
 
 
 typedef struct {
-    runtime_env *env;
-    const ast *root;
-    const runtime_env_value **out;
-    const runtime_env_value **old_out;
-    const runtime_env_value *old_out_value;
-    runtime_spy_t spy;
+    struct interpreter_ctx *arg_ctx;
+    runtime_env *arg_env;
+    const ast *arg_root;
+    const runtime_env_value **arg_out;
+    const runtime_env_value **arg_out_before;
+    const runtime_env_value *arg_out_value_before;
+    runtime_spy_t runtime_spy;
+    read_eval_spy_t read_eval_spy;
 } test_interpreter_ctx;
 
 typedef void (*test_interpreter_root_constructor_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_expected_runtime_env_usage_fn_t)(test_interpreter_ctx *ctx);
+typedef void (*expected_callback_read_eval_usage_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_expected_out_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_clean_up_fn_t)(test_interpreter_ctx *ctx);
+
+typedef enum {
+    READ_EVAL_OUT_KIND_NONE = 0,
+    READ_EVAL_OUT_KIND_DUMMY,
+    READ_EVAL_OUT_KIND_NUMBER_42
+} read_eval_out_kind_type;
 
 typedef struct {
 
@@ -363,9 +394,14 @@ typedef struct {
     bool runtime_env_get_returned_a_number_runtime_value_not_zero;
     bool runtime_env_get_returned_a_number_runtime_value_zero;
     bool runtime_env_get_returned_a_string_runtime_value;
+    bool callback_read_eval_will_be_called;
+    bool callback_read_eval_will_fail;
+    interpreter_status callback_read_eval_ret;
+    read_eval_out_kind_type read_eval_out_kind;
 
     // assert utilities
     test_interpreter_expected_runtime_env_usage_fn_t expected_runtime_env_usage_fn;
+    expected_callback_read_eval_usage_fn_t expected_callback_read_eval_usage_fn;
     test_interpreter_expected_out_fn_t expected_out_fn;
     interpreter_status expected_status;
 
@@ -383,7 +419,7 @@ typedef struct {
 // FIXTURES
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
+
 static int parametric_setup(void **state) {
     test_interpreter_case *p = (test_interpreter_case *) *state;
 
@@ -391,14 +427,19 @@ static int parametric_setup(void **state) {
     set_string_duplicate(fake_strdup);
     fake_memory_reset();
 
-    if (!p->env_is_dummy) {
-        p->ctx->env = runtime_env_wind(NULL);
-        assert_non_null(p->ctx->env);
-    }
-    else p->ctx->env = DUMMY_RUNTIME_ENV_P;
+    p->ctx->arg_ctx = &spy_interpreter_ctx;
 
-    p->ctx->spy = (runtime_spy_t){0};
-    g_runtime_spy = &p->ctx->spy;
+    if (!p->env_is_dummy) {
+        p->ctx->arg_env = runtime_env_wind(NULL);
+        assert_non_null(p->ctx->arg_env);
+    }
+    else p->ctx->arg_env = DUMMY_RUNTIME_ENV_P;
+
+    // globals initialization so that spies could act on spy variables of test context
+    p->ctx->runtime_spy = (runtime_spy_t){0};
+    p->ctx->read_eval_spy = (read_eval_spy_t){0};
+    g_runtime_spy = &p->ctx->runtime_spy;
+    g_read_eval_spy = &p->ctx->read_eval_spy;
 
     runtime_env_set_set_local(spy_runtime_env_set_local);
     runtime_env_set_get_local(spy_runtime_env_get_local);
@@ -406,21 +447,21 @@ static int parametric_setup(void **state) {
 
     if (p->runtime_env_get_will_be_called_a_first_time && !p->runtime_env_get_will_fail) {
         if (p->runtime_env_get_returned_a_string_runtime_value)
-            p->ctx->spy.fake_value_bound_to_dummy_symbol_p =
+            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
                 runtime_env_make_string(A_CONSTANT_STRING);
         else if (p->runtime_env_get_returned_a_number_runtime_value_not_zero)
-            p->ctx->spy.fake_value_bound_to_dummy_symbol_p =
+            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
                 runtime_env_make_number(A_INT_NOT_ZERO);
         else if (p->runtime_env_get_returned_a_number_runtime_value_zero)
-            p->ctx->spy.fake_value_bound_to_dummy_symbol_p =
+            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
                 runtime_env_make_number(0);
         else
-            p->ctx->spy.fake_value_bound_to_dummy_symbol_p =
+            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
                 runtime_env_make_number(A_INT_NOT_ZERO);
     }
 
-    p->ctx->out = fake_malloc(sizeof *p->ctx->out);
-    *p->ctx->out = NULL;
+    p->ctx->arg_out = fake_malloc(sizeof *p->ctx->arg_out);
+    *p->ctx->arg_out = NULL;
 
     return 0;
 }
@@ -430,18 +471,18 @@ static int parametric_teardown(void **state) {
 
     if (p->clean_up_fn) p->clean_up_fn(p->ctx);
 
-    if (p->ctx->out) {
-        fake_free(p->ctx->out);
-        p->ctx->out = NULL;
+    if (p->ctx->arg_out) {
+        fake_free(p->ctx->arg_out);
+        p->ctx->arg_out = NULL;
     }
 
-    if (p->ctx->env && !p->env_is_dummy) {
-        runtime_env_unwind(p->ctx->env);
-        p->ctx->env = NULL;
+    if (p->ctx->arg_env && !p->env_is_dummy) {
+        runtime_env_unwind(p->ctx->arg_env);
+        p->ctx->arg_env = NULL;
     }
 
     if (p->runtime_env_get_will_be_called_a_first_time && !p->runtime_env_get_will_fail)
-        runtime_env_value_release(p->ctx->spy.fake_value_bound_to_dummy_symbol_p);
+        runtime_env_value_release(p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
 
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
@@ -468,7 +509,8 @@ static int parametric_teardown(void **state) {
 
 // forward declarations
 static void expected_out_unchanged(test_interpreter_ctx *ctx);
-static void mock_spy_arrange(const test_interpreter_case *);
+static void mock_spy_runtime_env_arrange(const test_interpreter_case *);
+static void mock_spy_read_eval_arrange(const test_interpreter_case *);
 
 static void eval_test(void **state) {
     test_interpreter_case *p = (test_interpreter_case *) *state;
@@ -478,13 +520,17 @@ static void eval_test(void **state) {
 
     // out snapshot to check is invariance
     if (p->expected_out_fn == &expected_out_unchanged) {
-        p->ctx->old_out = p->ctx->out;
-        p->ctx->old_out_value = *p->ctx->out;
+        p->ctx->arg_out_before = p->ctx->arg_out;
+        p->ctx->arg_out_value_before = *p->ctx->arg_out;
     }
 
     // eventual mocks initialisation for runtime_env interaction testing
     if (p->expected_runtime_env_usage_fn)
-        mock_spy_arrange(p);
+        mock_spy_runtime_env_arrange(p);
+
+    // eventual mocks initialisation for callback read_eval usage
+    if (p->expected_runtime_env_usage_fn)
+        mock_spy_read_eval_arrange(p);
 
 
     // ACT
@@ -493,7 +539,12 @@ static void eval_test(void **state) {
     if (p->oom)
         fake_memory_fail_on_all_call();
 
-    interpreter_status status = interpreter_eval(&mock_interpreter_ctx, p->ctx->env, p->ctx->root, p->ctx->out);
+    interpreter_status status =
+        interpreter_eval(
+            p->ctx->arg_ctx,
+            p->ctx->arg_env,
+            p->ctx->arg_root,
+            p->ctx->arg_out );
 
     // Restore normal allocation behavior
     if (p->oom)
@@ -649,7 +700,7 @@ static ast *a_well_formed_addition_of_two_numbers() {
         ast_create_int_node(A_INT_NOT_ZERO) );
 }
 static void make_root_a_well_formed_addition_with_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_ADDITION,
             2,
@@ -692,7 +743,7 @@ static ast *a_well_formed_subtraction_of_two_numbers() {
 }
 
 static void make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_SUBTRACTION,
             2,
@@ -711,7 +762,7 @@ static ast *a_well_formed_multiplication_of_two_numbers() {
         ast_create_int_node(A_INT_NOT_ZERO) );
 }
 static void make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_MULTIPLICATION,
             2,
@@ -723,7 +774,7 @@ static ast *a_ill_formed_division_node(illness_type how) {
     return make_ill_formed_node(AST_TYPE_DIVISION, how);
 }
 static void make_root_a_well_formed_division_by_zero_of_two_numbers(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_DIVISION,
             2,
@@ -731,7 +782,7 @@ static void make_root_a_well_formed_division_by_zero_of_two_numbers(test_interpr
             ast_create_int_node(0) );
 }
 static void make_root_a_well_formed_division_not_by_zero_of_two_numbers(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_DIVISION,
             2,
@@ -739,7 +790,7 @@ static void make_root_a_well_formed_division_not_by_zero_of_two_numbers(test_int
             ast_create_int_node(A_INT_NOT_ZERO) );
 }
 static void make_root_a_well_formed_division_with_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_DIVISION,
             2,
@@ -748,170 +799,170 @@ static void make_root_a_well_formed_division_with_lhs_number_rhs_symbol(test_int
 }
 
 static void make_root_a_int_node(test_interpreter_ctx *ctx) {
-    ctx->root = ast_create_int_node(A_INT_NOT_ZERO);
+    ctx->arg_root = ast_create_int_node(A_INT_NOT_ZERO);
 }
 
 static void make_root_a_string_node(test_interpreter_ctx *ctx) {
-    ctx->root = ast_create_string_node(A_CONSTANT_STRING);
+    ctx->arg_root = ast_create_string_node(A_CONSTANT_STRING);
 }
 
 static void make_root_a_symbol_node(test_interpreter_ctx *ctx) {
-    ctx->root = ast_create_symbol_node(DUMMY_SYMBOL_P);
+    ctx->arg_root = ast_create_symbol_node(DUMMY_SYMBOL_P);
 }
 
 static void make_root_an_error_not_sentinel_node(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_error_node(
             AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED,
             A_CONSTANT_ERROR_MESSAGE );
 }
 
 static void make_root_the_error_sentinel_node(test_interpreter_ctx *ctx) {
-    ctx->root = ast_error_sentinel();
+    ctx->arg_root = ast_error_sentinel();
 }
 
 static void make_root_a_ill_formed_function_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_function_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_function_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_function_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_function_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_function_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_function_node_because_two_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_function_node(ILL_TWO_CHILDREN);
+    ctx->arg_root = a_ill_formed_function_node(ILL_TWO_CHILDREN);
 }
 
 static void make_root_a_function_node_with_duplicate_param(test_interpreter_ctx *ctx) {
-    ctx->root = a_function_node_with_duplicate_param();
+    ctx->arg_root = a_function_node_with_duplicate_param();
 }
 
 static void make_root_an_empty_function_node_with_dummy_name(test_interpreter_ctx *ctx) {
-    ctx->root = an_empty_function_node_with_dummy_name();
+    ctx->arg_root = an_empty_function_node_with_dummy_name();
 }
 
 static void make_root_a_ill_formed_function_definition_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_CHILDREN_NULL);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_function_definition_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_NO_CHILD);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_function_definition_node_because_two_children(test_interpreter_ctx *ctx) {
-    ctx->root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_TWO_CHILDREN);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_FUNCTION_DEFINITION, ILL_TWO_CHILDREN);
 }
 
 static void make_root_a_function_definition_node_with_empty_function(test_interpreter_ctx *ctx) {
-    ctx->root = a_function_definition_node_with_empty_function();
+    ctx->arg_root = a_function_definition_node_with_empty_function();
 }
 
 static void make_root_a_ill_formed_negation_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_negation_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_negation_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_negation_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_negation_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_negation_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_negation_node_because_two_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_negation_node(ILL_TWO_CHILDREN);
+    ctx->arg_root = a_ill_formed_negation_node(ILL_TWO_CHILDREN);
 }
 
 static void make_root_a_negation_node_with_a_number(test_interpreter_ctx *ctx) {
-    ctx->root = a_negation_node_with_a_number(A_INT_NOT_ZERO);
+    ctx->arg_root = a_negation_node_with_a_number(A_INT_NOT_ZERO);
 }
 
 static void make_root_a_negation_node_with_a_symbol(test_interpreter_ctx *ctx) {
-    ctx->root =  a_negation_node_with_a_symbol(DUMMY_SYMBOL_P);
+    ctx->arg_root =  a_negation_node_with_a_symbol(DUMMY_SYMBOL_P);
 }
 
 static void make_root_a_ill_formed_addition_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_addition_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_addition_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_addition_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_addition_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_addition_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_addition_node_because_one_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_addition_node(ILL_ONE_CHILD);
+    ctx->arg_root = a_ill_formed_addition_node(ILL_ONE_CHILD);
 }
 
 static void make_root_a_ill_formed_addition_node_because_three_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_addition_node(ILL_THREE_CHILDREN);
+    ctx->arg_root = a_ill_formed_addition_node(ILL_THREE_CHILDREN);
 }
 
 static void make_root_a_well_formed_addition_of_two_numbers(test_interpreter_ctx *ctx) {
-    ctx->root = a_well_formed_addition_of_two_numbers();
+    ctx->arg_root = a_well_formed_addition_of_two_numbers();
 }
 
 static void make_root_a_ill_formed_subtraction_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_subtraction_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_subtraction_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_subtraction_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_subtraction_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_subtraction_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_subtraction_node_because_one_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_subtraction_node(ILL_ONE_CHILD);
+    ctx->arg_root = a_ill_formed_subtraction_node(ILL_ONE_CHILD);
 }
 
 static void make_root_a_ill_formed_subtraction_node_because_three_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_subtraction_node(ILL_THREE_CHILDREN);
+    ctx->arg_root = a_ill_formed_subtraction_node(ILL_THREE_CHILDREN);
 }
 
 static void make_root_a_well_formed_subtraction_of_two_numbers(test_interpreter_ctx *ctx) {
-    ctx->root = a_well_formed_subtraction_of_two_numbers();
+    ctx->arg_root = a_well_formed_subtraction_of_two_numbers();
 }
 
 static void make_root_a_ill_formed_multiplication_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_multiplication_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_multiplication_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_multiplication_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_multiplication_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_multiplication_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_multiplication_node_because_one_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_multiplication_node(ILL_ONE_CHILD);
+    ctx->arg_root = a_ill_formed_multiplication_node(ILL_ONE_CHILD);
 }
 
 static void make_root_a_ill_formed_multiplication_node_because_three_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_multiplication_node(ILL_THREE_CHILDREN);
+    ctx->arg_root = a_ill_formed_multiplication_node(ILL_THREE_CHILDREN);
 }
 
 static void make_root_a_well_formed_multiplication_of_two_numbers(test_interpreter_ctx *ctx) {
-    ctx->root = a_well_formed_multiplication_of_two_numbers();
+    ctx->arg_root = a_well_formed_multiplication_of_two_numbers();
 }
 
 static void make_root_a_ill_formed_division_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_division_node(ILL_CHILDREN_NULL);
+    ctx->arg_root = a_ill_formed_division_node(ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_ill_formed_division_node_because_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_division_node(ILL_NO_CHILD);
+    ctx->arg_root = a_ill_formed_division_node(ILL_NO_CHILD);
 }
 
 static void make_root_a_ill_formed_division_node_because_one_child(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_division_node(ILL_ONE_CHILD);
+    ctx->arg_root = a_ill_formed_division_node(ILL_ONE_CHILD);
 }
 
 static void make_root_a_ill_formed_division_node_because_three_children(test_interpreter_ctx *ctx) {
-    ctx->root = a_ill_formed_division_node(ILL_THREE_CHILDREN);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_DIVISION, ILL_THREE_CHILDREN);
 }
 
 static void make_root_a_ill_formed_numbers_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = make_ill_formed_node(AST_TYPE_NUMBERS, ILL_CHILDREN_NULL);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_NUMBERS, ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_numbers_node_with_no_child(test_interpreter_ctx *ctx) {
-    ctx->root = ast_create_children_node_var(AST_TYPE_NUMBERS, 0);
+    ctx->arg_root = ast_create_children_node_var(AST_TYPE_NUMBERS, 0);
 }
 
 static void make_root_a_ill_formed_quote_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->root = ast_create_children_node_var(AST_TYPE_QUOTE, 0);
+    ctx->arg_root = ast_create_children_node_var(AST_TYPE_QUOTE, 0);
 }
 
 static ast *a_function_node_with_two_params(void) {
@@ -930,7 +981,7 @@ static ast *a_function_node_with_two_params(void) {
                     ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P) ) ),
             ast_create_children_node_var(
                 AST_TYPE_BLOCK,
-                0//bbb
+                0
             ) );
 }
 
@@ -954,11 +1005,27 @@ static const ast *a_function_call_child_with_params_7_8(void) {
 }
 
 static void make_root_a_quote_node_with_a_function_call_child_with_params_7_8(test_interpreter_ctx *ctx) {
-    ctx->root =
+    ctx->arg_root =
         ast_create_children_node_var(
             AST_TYPE_QUOTE,
             1,
             a_function_call_child_with_params_7_8() );
+}
+
+static void make_root_a_ill_formed_reading_node_because_children_null(test_interpreter_ctx *ctx) {
+    ctx->arg_root = ast_create_children_node_var(AST_TYPE_READING, 0);
+}
+
+static void make_root_a_ill_formed_reading_node_because_three_children(test_interpreter_ctx *ctx) {
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_READING, ILL_THREE_CHILDREN);
+}
+
+static void make_root_a_reading_node(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_READING,
+            1,
+            ast_create_symbol_node(DUMMY_SYMBOL_P) );
 }
 
 
@@ -969,67 +1036,102 @@ static void make_root_a_quote_node_with_a_function_call_child_with_params_7_8(te
 
 
 static void no_runtime_env_usage(test_interpreter_ctx *ctx) {
-    assert_false(ctx->spy.set_local_has_been_called);
-    assert_false(ctx->spy.get_local_has_been_called);
-    assert_false(ctx->spy.get_has_been_called);
+    assert_false(ctx->runtime_spy.set_local_has_been_called);
+    assert_false(ctx->runtime_spy.get_local_has_been_called);
+    assert_false(ctx->runtime_spy.get_has_been_called);
 }
 
 static void expect_runtime_binding_attempt_for_function_definition(test_interpreter_ctx *ctx) {
-    assert_true(ctx->spy.set_local_has_been_called);
+    assert_true(ctx->runtime_spy.set_local_has_been_called);
     assert_ptr_equal(
-        ctx->spy.set_local_arg_e,
-        ctx->env );
+        ctx->runtime_spy.set_local_arg_e,
+        ctx->arg_env );
     assert_ptr_equal(
-        ctx->spy.set_local_arg_key,
-        ctx->root->children->children[0]->children->children[0]->data->data.symbol_value );
+        ctx->runtime_spy.set_local_arg_key,
+        ctx->arg_root->children->children[0]->children->children[0]->data->data.symbol_value );
     assert_int_equal(
-        ctx->spy.set_local_arg_value->type,
+        ctx->runtime_spy.set_local_arg_value->type,
         RUNTIME_VALUE_FUNCTION );
     if (!g_runtime_spy->runtime_env_set_local_will_fail) {
         // refcount is 1 after function node evaluation and then it is incremented by runtime_env_set_local
-        assert_int_equal(ctx->spy.set_local_arg_value->refcount, 2);
+        assert_int_equal(ctx->runtime_spy.set_local_arg_value->refcount, 2);
         assert_ptr_equal(
-            ctx->spy.set_local_arg_value->as.fn.function_node,
-            ctx->root->children->children[0] );
+            ctx->runtime_spy.set_local_arg_value->as.fn.function_node,
+            ctx->arg_root->children->children[0] );
         assert_ptr_equal(
-            ctx->spy.set_local_arg_value->as.fn.closure,
-            ctx->env );
+            ctx->runtime_spy.set_local_arg_value->as.fn.closure,
+            ctx->arg_env );
     }
-    assert_int_equal(ctx->env->refcount, 2);
+    assert_int_equal(ctx->arg_env->refcount, 2);
 }
 
 static void expect_runtime_env_get_attempt(test_interpreter_ctx *ctx) {
-    assert_true(ctx->spy.get_has_been_called);
+    assert_true(ctx->runtime_spy.get_has_been_called);
     assert_ptr_equal(
-        ctx->spy.get_arg_e,
-        ctx->env );
+        ctx->runtime_spy.get_arg_e,
+        ctx->arg_env );
     assert_ptr_equal(
-        ctx->spy.get_arg_key,
-        ctx->root->data->data.symbol_value );
-    assert_false(ctx->spy.set_local_has_been_called);
+        ctx->runtime_spy.get_arg_key,
+        ctx->arg_root->data->data.symbol_value );
+    assert_false(ctx->runtime_spy.set_local_has_been_called);
 }
 
 static void expect_runtime_env_get_attempt_for_child(test_interpreter_ctx *ctx) {
-    assert_true(ctx->spy.get_has_been_called);
+    assert_true(ctx->runtime_spy.get_has_been_called);
     assert_ptr_equal(
-        ctx->spy.get_arg_e,
-        ctx->env );
+        ctx->runtime_spy.get_arg_e,
+        ctx->arg_env );
     assert_ptr_equal(
-        ctx->spy.get_arg_key,
-        ctx->root->children->children[0]->data->data.symbol_value );
-    assert_false(ctx->spy.set_local_has_been_called);
+        ctx->runtime_spy.get_arg_key,
+        ctx->arg_root->children->children[0]->data->data.symbol_value );
+    assert_false(ctx->runtime_spy.set_local_has_been_called);
 }
 
 static void expect_runtime_env_get_attempt_for_rhs(test_interpreter_ctx *ctx) {
-    assert_true(ctx->spy.get_has_been_called);
+    assert_true(ctx->runtime_spy.get_has_been_called);
     assert_ptr_equal(
-        ctx->spy.get_arg_e,
-        ctx->env );
+        ctx->runtime_spy.get_arg_e,
+        ctx->arg_env );
     assert_ptr_equal(
-        ctx->spy.get_arg_key,
-        ctx->root->children->children[1]->data->data.symbol_value );
-    assert_false(ctx->spy.set_local_has_been_called);
+        ctx->runtime_spy.get_arg_key,
+        ctx->arg_root->children->children[1]->data->data.symbol_value );
+    assert_false(ctx->runtime_spy.set_local_has_been_called);
 }
+
+static void expect_runtime_binding_attempt_to_bind_to_read_eval_value(test_interpreter_ctx *ctx) {
+    assert_true(ctx->runtime_spy.set_local_has_been_called);
+    assert_ptr_equal(
+        ctx->runtime_spy.set_local_arg_e,
+        ctx->arg_env );
+    assert_ptr_equal(
+        ctx->runtime_spy.set_local_arg_key,
+        ctx->arg_root->children->children[0]->data->data.symbol_value );
+    assert_int_equal(
+        ctx->runtime_spy.set_local_arg_value,
+        ctx->read_eval_spy.read_eval_out );
+}
+
+
+
+//-----------------------------------------------------------------------------
+// READ_EVAL CALLBACK USAGE EXPECTATIONS
+//-----------------------------------------------------------------------------
+
+
+static void read_eval_usage(test_interpreter_ctx *ctx) {
+    assert_true(ctx->read_eval_spy.read_eval_fn_has_been_called);
+    assert_ptr_equal(
+        ctx->read_eval_spy.read_eval_fn_arg_ctx,
+        ctx->arg_env );
+    assert_ptr_equal(
+        ctx->read_eval_spy.read_eval_fn_arg_env,
+        ctx->arg_env );
+    assert_non_null(ctx->read_eval_spy.read_eval_fn_arg_out);
+    assert_ptr_equal(
+        *ctx->read_eval_spy.read_eval_fn_arg_out,
+        ctx->read_eval_spy.read_eval_out);
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -1037,9 +1139,9 @@ static void expect_runtime_env_get_attempt_for_rhs(test_interpreter_ctx *ctx) {
 //-----------------------------------------------------------------------------
 
 
-static void mock_spy_arrange(const test_interpreter_case *param_case) {
+static void mock_spy_runtime_env_arrange(const test_interpreter_case *param_case) {
     if (param_case->runtime_env_set_local_will_be_called) {
-        // make the spy know how to refcount the runtime value
+        // make the runtime_spy know how to refcount the runtime value
         g_runtime_spy->runtime_env_set_local_will_fail
             = param_case->runtime_env_set_local_will_fail;
         will_return(
@@ -1054,7 +1156,30 @@ static void mock_spy_arrange(const test_interpreter_case *param_case) {
         if (param_case->runtime_env_get_will_fail)
             will_return(spy_runtime_env_get, NULL);
         else
-            will_return(spy_runtime_env_get, param_case->ctx->spy.fake_value_bound_to_dummy_symbol_p);
+            will_return(spy_runtime_env_get, param_case->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
+}
+
+
+
+//-----------------------------------------------------------------------------
+// MOCK INITIALISATION FOR read_eval INTERACTION TESTING
+//-----------------------------------------------------------------------------
+
+
+static void mock_spy_read_eval_arrange(const test_interpreter_case *param_case) {
+    if (!param_case->callback_read_eval_will_be_called) return;
+    switch (param_case->read_eval_out_kind) {
+        case READ_EVAL_OUT_KIND_DUMMY:
+            param_case->ctx->read_eval_spy.read_eval_out = DUMMY_RUNTIME_ENV_VALUE_P;
+            break;
+        case READ_EVAL_OUT_KIND_NUMBER_42:
+            param_case->ctx->read_eval_spy.read_eval_out = runtime_env_make_number(42);
+            break;
+        default:
+            assert_true(false);
+    }
+    g_read_eval_spy->read_eval_out = param_case->ctx->read_eval_spy.read_eval_out;
+    will_return(spy_read_eval_fn, param_case->callback_read_eval_ret);
 }
 
 
@@ -1065,196 +1190,203 @@ static void mock_spy_arrange(const test_interpreter_case *param_case) {
 
 
 static void expected_out_unchanged(test_interpreter_ctx *ctx) {
-    assert_ptr_equal(ctx->out, ctx->old_out);
-    assert_ptr_equal(*ctx->out, ctx->old_out_value);
+    assert_ptr_equal(ctx->arg_out, ctx->arg_out_before);
+    assert_ptr_equal(*ctx->arg_out, ctx->arg_out_value_before);
 }
 
 static void expected_out_points_on_fresh_number_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_int_equal((*ctx->out)->as.i, ctx->root->data->data.int_value);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_int_equal((*ctx->arg_out)->as.i, ctx->arg_root->data->data.int_value);
 }
 
 static void expected_out_points_on_fresh_string_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_STRING);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_string_equal((*ctx->out)->as.s, ctx->root->data->data.string_value);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_STRING);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_string_equal((*ctx->arg_out)->as.s, ctx->arg_root->data->data.string_value);
 }
 
 static void expected_out_points_on_value_bound_to_symbol_and_its_refcount_has_been_incremented(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_ptr_equal(*ctx->out, ctx->spy.fake_value_bound_to_dummy_symbol_p);
+    assert_non_null(*ctx->arg_out);
+    assert_ptr_equal(*ctx->arg_out, ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
     assert_int_equal(DUMMY_RUNTIME_ENV_VALUE_P->refcount, 2);
 }
 /*
 static void expected_out_points_on_fresh_symbol_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_SYMBOL);
-    assert_ptr_equal((*ctx->out)->as.sym, ctx->root->data->data.symbol_value);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_SYMBOL);
+    assert_ptr_equal((*ctx->arg_out)->as.sym, ctx->arg_root->data->data.symbol_value);
 }
 */
 
 static void expected_out_points_on_fresh_error_not_sentinel_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_ERROR);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_int_equal((*ctx->out)->as.err.code, ctx->root->error->code);
-    assert_string_equal((*ctx->out)->as.err.msg, ctx->root->error->message);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_int_equal((*ctx->arg_out)->as.err.code, ctx->arg_root->error->code);
+    assert_string_equal((*ctx->arg_out)->as.err.msg, ctx->arg_root->error->message);
 }
 
 static void expected_out_points_on_fresh_error_sentinel_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_ERROR);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_int_equal((*ctx->out)->as.err.code, ast_error_sentinel()->error->code);
-    assert_string_equal((*ctx->out)->as.err.msg, ast_error_sentinel()->error->message);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_ERROR);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_int_equal((*ctx->arg_out)->as.err.code, ast_error_sentinel()->error->code);
+    assert_string_equal((*ctx->arg_out)->as.err.msg, ast_error_sentinel()->error->message);
 }
 
 static void expected_out_points_on_fresh_function_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_FUNCTION);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_ptr_equal((*ctx->out)->as.fn.function_node, ctx->root);
-    assert_ptr_equal((*ctx->out)->as.fn.closure, ctx->env);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_FUNCTION);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_ptr_equal((*ctx->arg_out)->as.fn.function_node, ctx->arg_root);
+    assert_ptr_equal((*ctx->arg_out)->as.fn.closure, ctx->arg_env);
 }
 
 static void expected_out_points_on_child_function_value_with_refcount_2(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_FUNCTION);
-    assert_int_equal((*ctx->out)->refcount, 2);
-    assert_ptr_equal((*ctx->out)->as.fn.function_node, ctx->root->children->children[0]);
-    assert_ptr_equal((*ctx->out)->as.fn.closure, ctx->env);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_FUNCTION);
+    assert_int_equal((*ctx->arg_out)->refcount, 2);
+    assert_ptr_equal((*ctx->arg_out)->as.fn.function_node, ctx->arg_root->children->children[0]);
+    assert_ptr_equal((*ctx->arg_out)->as.fn.closure, ctx->arg_env);
 }
 
 static void expected_out_points_on_negation_result_when_number(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_int_equal((*ctx->out)->as.i, - ctx->root->children->children[0]->data->data.int_value);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_int_equal((*ctx->arg_out)->as.i, - ctx->arg_root->children->children[0]->data->data.int_value);
 }
 
 static void expected_out_points_on_negation_result_when_symbol(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     // tne runtime value number has been fetched in runtime environment
-    assert_int_equal((*ctx->out)->as.i, - ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i);
+    assert_int_equal((*ctx->arg_out)->as.i, - ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i);
 }
 
 static void expected_out_points_on_addition_result_when_two_numbers(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         +
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_addition_result_when_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         +
-        ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
 }
 
 static void expected_out_points_on_subtraction_result_when_two_numbers(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         -
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_subtraction_result_when_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         -
-        ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
 }
 
 static void expected_out_points_on_subtraction_result(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         -
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_multiplication_result(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         *
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_multiplication_result_when_two_numbers(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         *
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_multiplication_result_when_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         *
-        ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
 }
 
 static void expected_out_points_on_division_result_when_two_numbers(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         /
-        ctx->root->children->children[1]->data->data.int_value );
+        ctx->arg_root->children->children[1]->data->data.int_value );
 }
 
 static void expected_out_points_on_division_result_when_lhs_number_rhs_symbol(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->out)->refcount, 1);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal(
-        (*ctx->out)->as.i,
-        ctx->root->children->children[0]->data->data.int_value
+        (*ctx->arg_out)->as.i,
+        ctx->arg_root->children->children[0]->data->data.int_value
         /
-        ctx->spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
 }
 
 static void expected_out_points_on_quoted_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->out);
-    assert_int_equal((*ctx->out)->type, RUNTIME_VALUE_QUOTED);
-    assert_int_equal((*ctx->out)->refcount, 1);
-    assert_ptr_equal((*ctx->out)->as.quoted, ctx->root->children->children[0]);
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_QUOTED);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_ptr_equal((*ctx->arg_out)->as.quoted, ctx->arg_root->children->children[0]);
+}
+
+static void expected_out_points_on_value_produced_by_callback_read_eval(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 2);
+    assert_ptr_equal((*ctx->arg_out)->as.i, 42);
 }
 
 
@@ -1265,25 +1397,25 @@ static void expected_out_points_on_quoted_value(test_interpreter_ctx *ctx) {
 
 
 static void destroy_root(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->root);
-    ctx->root = NULL;
+    ast_destroy((ast *) ctx->arg_root);
+    ctx->arg_root = NULL;
 }
 
 static void destroy_root_and_release_runtime_value(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->root);
-    ctx->root = NULL;
-    //assert_ptr_equal(*ctx->out, DUMMY_RUNTIME_ENV_VALUE_P);
-    //assert_int_equal(((runtime_env_value *) *ctx->out)->refcount, 3);
-    runtime_env_value_release((runtime_env_value *) *ctx->out);
-    //assert_int_equal(((runtime_env_value *) *ctx->out)->refcount, 2);
+    ast_destroy((ast *) ctx->arg_root);
+    ctx->arg_root = NULL;
+    //assert_ptr_equal(*ctx->arg_out, DUMMY_RUNTIME_ENV_VALUE_P);
+    //assert_int_equal(((runtime_env_value *) *ctx->arg_out)->refcount, 3);
+    runtime_env_value_release((runtime_env_value *) *ctx->arg_out);
+    //assert_int_equal(((runtime_env_value *) *ctx->arg_out)->refcount, 2);
 }
 
 static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->root);
-    ctx->root = NULL;
-    size_t refcount = (*ctx->out)->refcount;
+    ast_destroy((ast *) ctx->arg_root);
+    ctx->arg_root = NULL;
+    size_t refcount = (*ctx->arg_out)->refcount;
     for (size_t i = 0; i < refcount; i++)
-        runtime_env_value_release((runtime_env_value *) *ctx->out);
+        runtime_env_value_release((runtime_env_value *) *ctx->arg_out);
 }
 
 
@@ -4103,9 +4235,11 @@ core of the isolated unit:
 other elements of the isolated unit:
   - root
   - out
+  - env for success path
   - from the runtime_env module:
     - runtime_env_make_quoted
     - runtime_env_value_destroy
+    - runtime_env_make_number
   - from the ast module:
     - ast_create_int_node
     - ast_create_symbol_node
@@ -4114,7 +4248,7 @@ other elements of the isolated unit:
 
 doubles:
   - dummy:
-    - env
+    - env except for success path
   - spy:
     - runtime_env_set_local
     - runtime_env_get_local
@@ -4208,6 +4342,254 @@ static const test_interpreter_case QUOTE_NODE = {
 
     .ctx =&CTX_QUOTE_NODE,
 };
+
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_READING
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - aaa
+
+doubles:
+  - dummy:
+    - aaa
+*/
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed reading node because:
+//    - root->children == NULL
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_CHILDREN_NULL = {0};
+static const test_interpreter_case READING_NODE_ILL_FORMED_CHILDREN_NULL = {
+    .name = "eval_error_invalid_ast_when_reading_node_ill_formed_cause_children_null",
+
+    .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_children_null,
+    .env_is_dummy = true,
+    .oom = false,
+    .callback_read_eval_will_be_called = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_READING_NODE_ILL_FORMED_CHILDREN_NULL,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed reading node because:
+//    - root->children->children_nb == 3
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_THREE_CHILDREN = {0};
+static const test_interpreter_case READING_NODE_ILL_FORMED_THREE_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_reading_node_ill_formed_cause_three_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_three_children,
+    .env_is_dummy = true,
+    .oom = false,
+    .callback_read_eval_will_be_called = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_READING_NODE_ILL_FORMED_THREE_CHILDREN,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed reading node
+//  - all allocations will fail during interpreter_eval call
+// Expected:
+//  - calls read_eval_fn with:
+//    - ctx: arg_ctx
+//    - env: arg_env
+//    - out: read_eval_out (an implementation-owned, opaque pointer)
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_READING_NODE_OOM = {0};
+static const test_interpreter_case READING_NODE_OOM = {
+    .name = "eval_error_when_reading_node_and_oom",
+
+    .root_constructor_fn = &make_root_a_reading_node,
+    .env_is_dummy = true,
+    .oom = true,
+    .callback_read_eval_will_be_called = true,
+    .callback_read_eval_will_fail = true,
+    .callback_read_eval_ret = INTERPRETER_STATUS_OOM,
+    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_READING_NODE_OOM,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed reading node
+//  - all allocations will succeed during interpreter_eval call
+//  - host_read_eval_fn call returns INTERPRETER_STATUS_DIVISION_BY_ZERO
+//    (i.e. it fails and does not return INTERPRETER_STATUS_OK)
+// Expected:
+//  - calls read_eval_fn with:
+//    - ctx: arg_ctx
+//    - env: arg_env
+//    - out: read_eval_out (an implementation-owned, opaque pointer)
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_DIVISION_BY_ZERO
+static test_interpreter_ctx CTX_READING_NODE_CALLBACK_READ_EVAL_FAILS = {0};
+static const test_interpreter_case READING_NODE_CALLBACK_READ_EVAL_FAILS = {
+    .name = "eval_propagate_callback_status_when_reading_node_and_read_eval_fails",
+
+    .root_constructor_fn = &make_root_a_reading_node,
+    .env_is_dummy = true,
+    .oom = false,
+    .callback_read_eval_will_be_called = true,
+    .callback_read_eval_will_fail = true,
+    .callback_read_eval_ret = INTERPRETER_STATUS_DIVISION_BY_ZERO,
+    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_DIVISION_BY_ZERO,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_READING_NODE_CALLBACK_READ_EVAL_FAILS,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed reading node
+//  - all allocations will succeed during interpreter_eval call
+//  - host_read_eval_fn call returns INTERPRETER_STATUS_OK
+//  - symbol binding will fail
+// Expected:
+//  - calls read_eval_fn with:
+//    - ctx: arg_ctx
+//    - env: arg_env
+//    - out: read_eval_out (an implementation-owned, opaque pointer)
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//    - value: *read_eval_out
+//  - destroys *read_eval_out
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_BINDING_ERROR
+static test_interpreter_ctx CTX_READING_NODE_BINDING_FAILS = {0};
+static const test_interpreter_case READING_NODE_BINDING_FAILS = {
+    .name = "eval_error_when_reading_node_and_binding_fails",
+
+    .root_constructor_fn = &make_root_a_reading_node,
+    .env_is_dummy = true,
+    .oom = false,
+    .callback_read_eval_will_be_called = true,
+    .callback_read_eval_will_fail = false,
+    .callback_read_eval_ret = INTERPRETER_STATUS_OK,
+    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = true,
+
+    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_read_eval_value,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_READING_NODE_BINDING_FAILS,
+};
+
+// Given:
+//  - args are well-formed
+//  - root is a well-formed reading node
+//  - all allocations will succeed during interpreter_eval call
+//  - host_read_eval_fn call returns INTERPRETER_STATUS_OK
+//  - calls read_eval_fn will write a fresh RUNTIME_VALUE_NUMBER with value 42 at its arg out
+//  - symbol binding will succeed
+// Expected:
+//  - calls read_eval_fn with:
+//    - ctx: arg_ctx
+//    - env: arg_env
+//    - out: read_eval_out (an implementation-owned, opaque pointer)
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//    - value: *read_eval_out
+//  - root->children->children[0]->data->data.symbol_value is bound to *read_eval_out
+//  - *read_eval_out != NULL
+//  - *out == *read_eval_out
+//      && (*out)->type == RUNTIME_VALUE_NUMBER
+//      && (*out)->refcount == 2
+//      && (*out)->as.i == 42
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_READING_NODE_SUCCESS = {0};
+static const test_interpreter_case READING_NODE_SUCCESS = {
+    .name = "eval_success_when_reading_node_and_eval_read_make_42_and_binding_succeeds",
+
+    .root_constructor_fn = &make_root_a_reading_node,
+    .env_is_dummy = false,
+    .oom = false,
+    .callback_read_eval_will_be_called = true,
+    .callback_read_eval_will_fail = false,
+    .callback_read_eval_ret = INTERPRETER_STATUS_OK,
+    .read_eval_out_kind = READ_EVAL_OUT_KIND_NUMBER_42,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = false,
+
+    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_read_eval_value,
+    .expected_out_fn = &expected_out_points_on_value_produced_by_callback_read_eval,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_READING_NODE_SUCCESS,
+};
+
+
+
+
 
 
 
@@ -4313,6 +4695,12 @@ static const test_interpreter_case QUOTE_NODE = {
     X(QUOTE_NODE_ILL_FORMED_CHILDREN_NULL) \
     X(QUOTE_NODE_OOM) \
     X(QUOTE_NODE) \
+    X(READING_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(READING_NODE_ILL_FORMED_THREE_CHILDREN) \
+    X(READING_NODE_OOM) \
+    X(READING_NODE_CALLBACK_READ_EVAL_FAILS) \
+    X(READING_NODE_BINDING_FAILS) \
+    X(READING_NODE_SUCCESS) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

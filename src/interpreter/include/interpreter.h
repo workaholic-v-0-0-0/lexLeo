@@ -23,34 +23,34 @@ typedef enum {
 	INTERPRETER_STATUS_DUPLICATE_PARAMETER,
     INTERPRETER_STATUS_DIVISION_BY_ZERO,
     INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    INTERPRETER_STATUS_INTERNAL_ERROR,
     INTERPRETER_STATUS_NB_TYPES,
 } interpreter_status;
 
 struct interpreter_ctx; // forward
-typedef interpreter_status (*eval_read_ast_fn_t)(
+
+typedef interpreter_status (*read_eval_fn_t)(
 	struct interpreter_ctx *ctx,
 	struct runtime_env *env,
-	const struct ast *root,
-	const struct runtime_env_value **out);
+	const struct runtime_env_value **out );
 
-typedef struct interpreter_ops {
+typedef struct interpreter_ops_t {
 	// called when evaluating an AST of type AST_TYPE_READING ;
-	// a hook for cli_eval_read_ast
-	eval_read_ast_fn_t eval_read_ast;
-} interpreter_ops;
+	// a hook for cli_read_eval
+	read_eval_fn_t read_eval_fn;
+} interpreter_ops_t;
 
-typedef struct interpreter_ctx {
-	const interpreter_ops *ops;
-
-	// hook for runtime_session instance ;
-	// it will be passed to callback eval_read_ast
-	void *host_ctx;  // opaque
-} interpreter_ctx;
+void interpreter_ctx_init(
+    struct interpreter_ctx *ctx,
+    const interpreter_ops_t *ops,
+    void *host_ctx );
 
 interpreter_status interpreter_eval(
 	struct interpreter_ctx *ctx,
     struct runtime_env *env,
     const struct ast *root,
     const struct runtime_env_value **out );
+
+
 
 #endif //LEXLEO_INTERPRETER_H

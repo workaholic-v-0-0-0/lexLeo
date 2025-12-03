@@ -1,11 +1,13 @@
 // src/interpreter/src/interpreter.c
 
-#include "interpreter.h"
+#include "internal/interpreter_internal.h"
+
 #include "runtime_env.h"
 #include "ast.h"
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h> //todebug
 
 typedef bool (*ast_is_well_formed_fn_t)(const ast *node);
 
@@ -348,6 +350,7 @@ interpreter_status interpreter_eval(
     ast *rhs = NULL;
     const runtime_env_value *evaluated_lhs = NULL;
     const runtime_env_value *evaluated_rhs = NULL;
+    bool binding = false;
 
     switch (root->type) {
 
@@ -422,7 +425,7 @@ interpreter_status interpreter_eval(
             interpreter_eval(ctx, env, function_node, &evaluated_fn_value);
         if (status != INTERPRETER_STATUS_OK)
             return status;
-        bool binding =
+        binding =
             runtime_env_set_local(
                 env,
                 function_node->children->children[0]->data->data.symbol_value,
@@ -636,10 +639,50 @@ interpreter_status interpreter_eval(
         *out = value;
         break;
 
+    case AST_TYPE_READING:
+        if (!ast_is_well_formed_reading(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        if (!ctx || !ctx->ops || !ctx->ops->read_eval_fn)
+            return INTERPRETER_STATUS_INTERNAL_ERROR;
+
+        const runtime_env_value *host_read_eval_value = NULL;
+
+        interpreter_status read_eval_status =
+            ctx->ops->read_eval_fn(
+                ctx,
+                env,
+                &host_read_eval_value );
+
+        if (read_eval_status != INTERPRETER_STATUS_OK)
+            return read_eval_status;
+
+        binding =
+            runtime_env_set_local(
+                env,
+                root->children->children[0]->data->data.symbol_value,
+                host_read_eval_value );
+
+        if (!binding) {
+            runtime_env_value_release(host_read_eval_value);
+            return INTERPRETER_STATUS_BINDING_ERROR;
+        }
+
+        *out = host_read_eval_value;
+
+        break;
 
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;
     }
 
     return INTERPRETER_STATUS_OK;
+}
+
+void interpreter_ctx_init(
+        interpreter_ctx *ctx,
+        const interpreter_ops_t *ops,
+        void *host_ctx ) {
+    ctx->ops = ops;
+    ctx->host_ctx = host_ctx;
 }

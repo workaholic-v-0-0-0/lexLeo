@@ -45,7 +45,7 @@ typedef struct runtime_env_value {
             const struct ast *function_node; // borrowed from ast module
             struct runtime_env *closure; // retained/released
         } fn; // owned container
-        const struct ast *quoted; // borrowed from ast module
+        const struct ast *quoted; // borrowed from ast_pool of runtime_session
     } as; // owned container
 } runtime_env_value;
 

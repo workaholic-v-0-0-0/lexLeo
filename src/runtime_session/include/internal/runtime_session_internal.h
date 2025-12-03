@@ -15,7 +15,7 @@ struct runtime_session {
 	struct input_provider *in;
 	yyscan_t scanner;
 	struct symtab *st;
-	struct runtime_env *env; // maybe another for root
+	struct runtime_env *env;
 	list ast_pool;
 	list symbol_pool;
 };

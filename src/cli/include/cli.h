@@ -12,11 +12,31 @@
 struct ast;
 struct symbol;
 
-interpreter_status cli_eval_read_ast (
+interpreter_status cli_read_eval (
 	struct interpreter_ctx *ctx,
 	struct runtime_env *env,
-	const struct ast *root,
 	const struct runtime_env_value **out );
+/* will do
+init parser ctx
+init resolver ctx
+init interpreter ctx:
+	runtime_session *rs = runtime_session_create();
+	//...
+	static const interpreter_ops CLI_INTERPRETER_OPS = {
+		.read_eval_fn = cli_read_eval,
+	};
+	interpreter_ctx_init(&rs->ictx, &CLI_INTERPRETER_OPS, rs);
+a loop to fill input_provider and try parse while it returns incomplete status (return if it returns error)
+a non resolved ast* root is produced and returned by parser
+resolver_resolve_ast(&root, rctx); // rctx is initialized by cli so that it stores in symbol_pool of the current session
+now root is resolved
+runtime_session_store_ast(root, (runtime_session *) ctx->host_ctx);
+return interpreter_eval(
+	ctx,
+	env,
+	root,
+	out );
+*/
 
 bool cli_store_symbol(struct symbol *sym, void *session); // wrapper
 
