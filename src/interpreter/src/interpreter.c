@@ -672,6 +672,32 @@ interpreter_status interpreter_eval(
 
         break;
 
+    case AST_TYPE_BINDING:
+        if (!ast_is_well_formed_binding(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        rhs = root->children->children[1];
+        evaluated_rhs = NULL;
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        binding =
+            runtime_env_set_local(
+                env,
+                root->children->children[0]->data->data.symbol_value,
+                evaluated_rhs );
+        if (!binding) {
+            runtime_env_value_release(evaluated_rhs);
+            return INTERPRETER_STATUS_BINDING_ERROR;
+        }
+
+        *out = evaluated_rhs;
+        break;
+
+// <here>
+
+
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;
     }

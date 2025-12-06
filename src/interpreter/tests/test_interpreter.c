@@ -1012,7 +1012,7 @@ static void make_root_a_quote_node_with_a_function_call_child_with_params_7_8(te
             a_function_call_child_with_params_7_8() );
 }
 
-static void make_root_a_ill_formed_reading_node_because_children_null(test_interpreter_ctx *ctx) {
+static void make_root_a_ill_formed_reading_node_because_no_child(test_interpreter_ctx *ctx) {
     ctx->arg_root = ast_create_children_node_var(AST_TYPE_READING, 0);
 }
 
@@ -1026,6 +1026,19 @@ static void make_root_a_reading_node(test_interpreter_ctx *ctx) {
             AST_TYPE_READING,
             1,
             ast_create_symbol_node(DUMMY_SYMBOL_P) );
+}
+
+static void make_root_a_ill_formed_binding_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->arg_root = ast_create_children_node_var(AST_TYPE_BINDING, 0);
+}
+
+static void make_root_a_binding_node_with_rhs_number_42(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_BINDING,
+            2,
+            ast_create_symbol_node(DUMMY_SYMBOL_P),
+            ast_create_int_node(42) );
 }
 
 
@@ -1106,9 +1119,27 @@ static void expect_runtime_binding_attempt_to_bind_to_read_eval_value(test_inter
     assert_ptr_equal(
         ctx->runtime_spy.set_local_arg_key,
         ctx->arg_root->children->children[0]->data->data.symbol_value );
-    assert_int_equal(
+    assert_ptr_equal(
         ctx->runtime_spy.set_local_arg_value,
         ctx->read_eval_spy.read_eval_out );
+}
+
+static void expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42(test_interpreter_ctx *ctx) {
+    assert_true(ctx->runtime_spy.set_local_has_been_called);
+    assert_ptr_equal(
+        ctx->runtime_spy.set_local_arg_e,
+        ctx->arg_env );
+    assert_ptr_equal(
+        ctx->runtime_spy.set_local_arg_key,
+        ctx->arg_root->children->children[0]->data->data.symbol_value );
+    if (!g_runtime_spy->runtime_env_set_local_will_fail) {
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value->refcount,
+            2 );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value->as.i,
+            42 );
+    }
 }
 
 
@@ -1387,6 +1418,13 @@ static void expected_out_points_on_value_produced_by_callback_read_eval(test_int
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal((*ctx->arg_out)->refcount, 2);
     assert_ptr_equal((*ctx->arg_out)->as.i, 42);
+}
+
+static void expected_out_points_on_bound_number_42(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 2);
+    assert_int_equal((*ctx->arg_out)->as.i, 42);
 }
 
 
@@ -4235,7 +4273,6 @@ core of the isolated unit:
 other elements of the isolated unit:
   - root
   - out
-  - env for success path
   - from the runtime_env module:
     - runtime_env_make_quoted
     - runtime_env_value_destroy
@@ -4363,12 +4400,31 @@ core of the isolated unit:
         const struct ast *root,
         struct runtime_env_value **out );
 other elements of the isolated unit:
-  - aaa
+  - root
+  - out
+  - env for success path
+- from the runtime_env module:
+    - runtime_env_make_quoted
+    - runtime_env_value_destroy
+    - runtime_env_make_number
+  - from the ast module:
+    - ast_create_int_node
+    - ast_create_symbol_node
+    - ast_create_children_node_var
+    - ast_destroy
 
 doubles:
   - dummy:
-    - aaa
+    - env except for success path
+  - spy:
+    - read_eval
+    - runtime_env_set_local
+  - fake:
+    - functions of standard libray which are used:
+      - malloc, free, strdup
 */
+
+
 
 //-----------------------------------------------------------------------------
 // PARAMETRIC CASES
@@ -4383,11 +4439,11 @@ doubles:
 //  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
-static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_CHILDREN_NULL = {0};
-static const test_interpreter_case READING_NODE_ILL_FORMED_CHILDREN_NULL = {
-    .name = "eval_error_invalid_ast_when_reading_node_ill_formed_cause_children_null",
+static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case READING_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_reading_node_ill_formed_cause_no_child",
 
-    .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_children_null,
+    .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_no_child,
     .env_is_dummy = true,
     .oom = false,
     .callback_read_eval_will_be_called = false,
@@ -4398,7 +4454,7 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_CHILDREN_NULL = {
 
     .clean_up_fn = &destroy_root,
 
-    .ctx =&CTX_READING_NODE_ILL_FORMED_CHILDREN_NULL,
+    .ctx =&CTX_READING_NODE_ILL_FORMED_NO_CHILD,
 };
 
 // Given:
@@ -4589,6 +4645,176 @@ static const test_interpreter_case READING_NODE_SUCCESS = {
 
 
 
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_BINDING
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - ast_is_well_formed_binding
+- from the runtime_env module:
+  - runtime_env_make_number
+  - runtime_env_value_retain
+  - runtime_env_value_release
+  - runtime_env_value_destroy
+- from the ast module:
+  - ast_create_symbol_node
+  - ast_create_int_node
+  - ast_create_children_node_var
+  - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+- spy:
+    - runtime_env_set_local
+- fake:
+  - functions of standard libray which are used:
+    - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed binding node because:
+//    - root->children == NULLbbb
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_BINDING_NODE_ILL_FORMED_NO_CHILD = {0};
+static const test_interpreter_case BINDING_NODE_ILL_FORMED_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_binding_node_ill_formed_cause_no_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_binding_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
+    .runtime_env_set_local_will_be_called = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_BINDING_NODE_ILL_FORMED_NO_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed binding node with rhs 42
+//  - oom
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_BINDING_NODE_OOM = {0};
+static const test_interpreter_case BINDING_NODE_OOM = {
+    .name = "eval_error_when_binding_node_and_oom",
+
+    .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
+    .env_is_dummy = true,
+    .oom = true,
+    .runtime_env_set_local_will_be_called = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_BINDING_NODE_OOM,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed binding node with rhs 42
+//  - symbol binding will fail
+// Expected:
+//  - rhs is correctly evaluated to a RUNTIME_VALUE_NUMBER 42 evaluated_rhs
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//    - value: evaluated_rhs
+//  - destroys evaluated_rhs
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_BINDING_ERROR
+static test_interpreter_ctx CTX_BINDING_NODE_BINDING_FAILS = {0};
+static const test_interpreter_case BINDING_NODE_BINDING_FAILS = {
+    .name = "eval_error_when_binding_node_and_binding_fails",
+
+    .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
+    .env_is_dummy = true,
+    .oom = false,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = true,
+
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_BINDING_NODE_BINDING_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed binding node with rhs 42
+//  - symbol binding will succeed
+// Expected:
+//  - rhs is correctly evaluated to a RUNTIME_VALUE_NUMBER 42 evaluated_rhs
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//    - value: evaluated_rhs
+//  - root->children->children[0]->data->data.symbol_value is bound to evaluated_rhs
+//  - *out == evaluated_rhs
+//      && (*out)->type == RUNTIME_VALUE_NUMBER
+//      && (*out)->refcount == 2
+//      && (*out)->as.i == 42
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_BINDING_NODE_BINDING_SUCCEEDS = {0};
+static const test_interpreter_case BINDING_NODE_BINDING_SUCCEEDS = {
+    .name = "eval_success_when_binding_node_and_binding_succeeds",
+
+    .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
+    .env_is_dummy = true,
+    .oom = false,
+    .runtime_env_set_local_will_be_called = true,
+    .runtime_env_set_local_will_fail = false,
+
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42,
+    .expected_out_fn = &expected_out_points_on_bound_number_42,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_runtime_value,
+
+    .ctx =&CTX_BINDING_NODE_BINDING_SUCCEEDS,
+};
+
+
 
 
 
@@ -4695,12 +4921,16 @@ static const test_interpreter_case READING_NODE_SUCCESS = {
     X(QUOTE_NODE_ILL_FORMED_CHILDREN_NULL) \
     X(QUOTE_NODE_OOM) \
     X(QUOTE_NODE) \
-    X(READING_NODE_ILL_FORMED_CHILDREN_NULL) \
+    X(READING_NODE_ILL_FORMED_NO_CHILD) \
     X(READING_NODE_ILL_FORMED_THREE_CHILDREN) \
     X(READING_NODE_OOM) \
     X(READING_NODE_CALLBACK_READ_EVAL_FAILS) \
     X(READING_NODE_BINDING_FAILS) \
     X(READING_NODE_SUCCESS) \
+    X(BINDING_NODE_ILL_FORMED_NO_CHILD) \
+    X(BINDING_NODE_OOM) \
+    X(BINDING_NODE_BINDING_FAILS) \
+    X(BINDING_NODE_BINDING_SUCCEEDS) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \
