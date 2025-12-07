@@ -100,6 +100,14 @@ static bool ast_is_well_formed_atom(const ast *node) {
         || ast_is_well_formed_symbol_node(node) );
 }
 
+static bool ast_is_well_formed_eval(const ast *node) {
+    return
+        ast_is_well_formed_one_child_node(
+            node,
+            AST_TYPE_EVAL,
+            ast_is_well_formed_symbol_node );
+}
+
 // forward declaration
 static bool ast_is_well_formed_computation(const ast *node);
 
@@ -348,8 +356,11 @@ interpreter_status interpreter_eval(
 
     ast *lhs = NULL;
     ast *rhs = NULL;
+    ast *child = NULL;
     const runtime_env_value *evaluated_lhs = NULL;
     const runtime_env_value *evaluated_rhs = NULL;
+    const runtime_env_value *evaluated_child_value = NULL;
+    const runtime_env_value *evaluated_quoted_ast = NULL;
     bool binding = false;
     interpreter_status rhs_eval_status;
 
@@ -443,8 +454,8 @@ interpreter_status interpreter_eval(
         if (!ast_is_well_formed_negation(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        ast *child = root->children->children[0];
-        const runtime_env_value *evaluated_child_value = NULL;
+        child = root->children->children[0];
+        evaluated_child_value = NULL;
         status = interpreter_eval(ctx, env, child, &evaluated_child_value);
 
         if (status != INTERPRETER_STATUS_OK)
@@ -693,6 +704,41 @@ interpreter_status interpreter_eval(
 
         *out = evaluated_rhs;
         break;
+
+    case AST_TYPE_EVAL:
+        if (!ast_is_well_formed_eval(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        child = root->children->children[0];
+        evaluated_child_value = NULL;
+        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
+
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        if (evaluated_child_value->type != RUNTIME_VALUE_QUOTED) {
+            *out = evaluated_child_value;
+        }
+        else {
+            status =
+                interpreter_eval(
+                    ctx,
+                    env,
+                    evaluated_child_value->as.quoted,
+                    &evaluated_quoted_ast );
+            if (status != INTERPRETER_STATUS_OK) {
+                runtime_env_value_release(evaluated_child_value);
+                return status;
+            }
+            *out = evaluated_quoted_ast;
+        }
+
+        break;
+
+
+/*
+
+*/
 
 // <here>
 

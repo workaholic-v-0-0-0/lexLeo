@@ -6,6 +6,8 @@
 
 - TDD for eval_rule
 
+- refact src/interpreter/tests
+
 - check if there's a memory leak due to strdup in lexer
 
 - except since parser implementation,
@@ -43,12 +45,9 @@
   - rename binding with assignment
 
 - Refactor interpreter/CLI:
-  - Replace read_eval callback with read_ast_fn callback that returns a (resolved) AST,
-    and keep evaluation of that AST inside the interpreter
   - Add an output stream field to interpreter_ctx, used by AST_TYPE_WRITING for output
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_EVAL <here>(probably via "eval <symbol name> ;" when relative symbol is bound to a RUNTIME_VALUE_QUOTED)
   - AST_TYPE_WRITING
   - AST_TYPE_BLOCK_ITEMS
   - AST_TYPE_BLOCK
