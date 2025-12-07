@@ -75,6 +75,11 @@ ast *stub_function_call_action(void) {
     return mock_type(ast *);
 }
 
+// Stub of a stub: placeholder until EVAL rule tests are implemented
+ast *stub_eval_action(void) {
+    return mock_type(ast *);
+}
+
 
 //-----------------------------------------------------------------------------
 // statement_parse TESTS

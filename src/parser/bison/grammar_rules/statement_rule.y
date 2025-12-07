@@ -6,4 +6,5 @@ statement
     | reading { $$ = $1; }
     | function_definition { $$ = $1; }
     | evaluable SEMICOLON { $$ = $1; }
+    | eval
     ;

@@ -20,3 +20,7 @@ function_call:
         SYMBOL_NAME LPAREN SYMBOL_NAME SYMBOL_NAME RPAREN
     { (void)$1; (void)$3; (void)$4;
       $$ = stub_function_call_action(); } ;
+eval:
+        EVAL SYMBOL_NAME SEMICOLON
+    { (void)$2;
+      $$ = stub_eval_action(); } ;

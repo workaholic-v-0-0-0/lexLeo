@@ -7,3 +7,4 @@ ast *stub_writing_action(void);
 ast *stub_reading_action(void);
 ast *stub_function_definition_action(void);
 ast *stub_function_call_action(void);
+ast *stub_eval_action(void);

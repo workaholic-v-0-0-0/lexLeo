@@ -14,6 +14,7 @@ function_definition
 function_call
 statement
 evaluable
+eval
 
 %token SEMICOLON
 %token EQUAL
@@ -23,3 +24,4 @@ evaluable
 %token RPAREN
 %token LBRACE
 %token RBRACE
+%token EVAL

@@ -52,6 +52,7 @@ do {                                                                         \
 "define"            { return DEFINE; }
 "call"              { return CALL; }
 "quote"             { return QUOTE; }
+"eval"             { return EVAL; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);

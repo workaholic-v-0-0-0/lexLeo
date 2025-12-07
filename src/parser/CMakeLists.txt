@@ -59,6 +59,7 @@ set(
 %token DEFINE\n\
 %token CALL\n\
 %token QUOTE\n\
+%token EVAL\n\
 %token END 0 \"end of file\"\n\
 %token INVALID
 "
@@ -86,6 +87,7 @@ computable \
 evaluable \
 translation_unit \
 readable\n\
+eval\n\
 ")
 set(START_SYMBOL "translation_unit")
 set(
