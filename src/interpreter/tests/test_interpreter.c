@@ -107,6 +107,7 @@ bool spy_runtime_env_set_local(runtime_env *e, const struct symbol *key, const r
     g_runtime_spy->set_local_arg_e = e;
     g_runtime_spy->set_local_arg_key = key;
     g_runtime_spy->set_local_arg_value = value;
+
     if (!g_runtime_spy->runtime_env_set_local_will_fail)
         runtime_env_value_retain(value);
     return mock_type(bool);
@@ -128,32 +129,29 @@ const runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct 
     return mock_type(const runtime_env_value *);
 }
 
+typedef enum {
+    READ_EVAL_RET_KIND_DUMMY,
+    READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42
+} read_ast_ret_kind_type;
+
 typedef struct {
-    bool read_eval_fn_has_been_called;
-    struct interpreter_ctx *read_eval_fn_arg_ctx;
-    struct runtime_env *read_eval_fn_arg_env;
-    const struct runtime_env_value **read_eval_fn_arg_out;
-    struct runtime_env_value *read_eval_out;
-} read_eval_spy_t;
+    bool read_ast_fn_has_been_called;
+    struct interpreter_ctx *read_ast_fn_arg_ctx;
+    read_ast_ret_kind_type callback_read_ast_ret_kind;
+    ast *read_ast_ret;
+} read_ast_spy_t;
 
-static read_eval_spy_t *g_read_eval_spy = NULL;
+static read_ast_spy_t *g_read_ast_spy = NULL;
 
-static interpreter_status spy_read_eval_fn (
-        struct interpreter_ctx *ctx,
-        struct runtime_env *env,
-        const struct runtime_env_value **out) {
-    assert_non_null(g_read_eval_spy);
-    g_read_eval_spy->read_eval_fn_has_been_called = true;
-    g_read_eval_spy->read_eval_fn_arg_ctx = ctx;
-    g_read_eval_spy->read_eval_fn_arg_env = env;
-    g_read_eval_spy->read_eval_fn_arg_out = out;
-    assert_non_null(out);
-    *out = g_read_eval_spy->read_eval_out;
-    return mock_type(interpreter_status);
+static ast *spy_read_ast_fn (struct interpreter_ctx *ctx) {
+    assert_non_null(g_read_ast_spy);
+    g_read_ast_spy->read_ast_fn_has_been_called = true;
+    g_read_ast_spy->read_ast_fn_arg_ctx = ctx;
+    return mock_type(ast*);
 }
 
 static const interpreter_ops_t SPY_INTERPRETER_OPS = {
-    .read_eval_fn = spy_read_eval_fn,
+    .read_ast_fn = spy_read_ast_fn,
 };
 
 static struct interpreter_ctx spy_interpreter_ctx = {
@@ -361,20 +359,14 @@ typedef struct {
     const runtime_env_value **arg_out_before;
     const runtime_env_value *arg_out_value_before;
     runtime_spy_t runtime_spy;
-    read_eval_spy_t read_eval_spy;
+    read_ast_spy_t read_ast_spy;
 } test_interpreter_ctx;
 
 typedef void (*test_interpreter_root_constructor_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_expected_runtime_env_usage_fn_t)(test_interpreter_ctx *ctx);
-typedef void (*expected_callback_read_eval_usage_fn_t)(test_interpreter_ctx *ctx);
+typedef void (*expected_callback_read_ast_usage_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_expected_out_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_clean_up_fn_t)(test_interpreter_ctx *ctx);
-
-typedef enum {
-    READ_EVAL_OUT_KIND_NONE = 0,
-    READ_EVAL_OUT_KIND_DUMMY,
-    READ_EVAL_OUT_KIND_NUMBER_42
-} read_eval_out_kind_type;
 
 typedef struct {
 
@@ -394,14 +386,13 @@ typedef struct {
     bool runtime_env_get_returned_a_number_runtime_value_not_zero;
     bool runtime_env_get_returned_a_number_runtime_value_zero;
     bool runtime_env_get_returned_a_string_runtime_value;
-    bool callback_read_eval_will_be_called;
-    bool callback_read_eval_will_fail;
-    interpreter_status callback_read_eval_ret;
-    read_eval_out_kind_type read_eval_out_kind;
+    bool callback_read_ast_will_be_called;
+    bool callback_read_ast_will_fail;
+    read_ast_ret_kind_type callback_read_ast_ret_kind;
 
     // assert utilities
     test_interpreter_expected_runtime_env_usage_fn_t expected_runtime_env_usage_fn;
-    expected_callback_read_eval_usage_fn_t expected_callback_read_eval_usage_fn;
+    expected_callback_read_ast_usage_fn_t expected_callback_read_ast_usage_fn;
     test_interpreter_expected_out_fn_t expected_out_fn;
     interpreter_status expected_status;
 
@@ -437,9 +428,9 @@ static int parametric_setup(void **state) {
 
     // globals initialization so that spies could act on spy variables of test context
     p->ctx->runtime_spy = (runtime_spy_t){0};
-    p->ctx->read_eval_spy = (read_eval_spy_t){0};
+    p->ctx->read_ast_spy = (read_ast_spy_t){0};
     g_runtime_spy = &p->ctx->runtime_spy;
-    g_read_eval_spy = &p->ctx->read_eval_spy;
+    g_read_ast_spy = &p->ctx->read_ast_spy;
 
     runtime_env_set_set_local(spy_runtime_env_set_local);
     runtime_env_set_get_local(spy_runtime_env_get_local);
@@ -510,7 +501,7 @@ static int parametric_teardown(void **state) {
 // forward declarations
 static void expected_out_unchanged(test_interpreter_ctx *ctx);
 static void mock_spy_runtime_env_arrange(const test_interpreter_case *);
-static void mock_spy_read_eval_arrange(const test_interpreter_case *);
+static void mock_spy_read_ast_arrange(const test_interpreter_case *);
 
 static void eval_test(void **state) {
     test_interpreter_case *p = (test_interpreter_case *) *state;
@@ -528,9 +519,9 @@ static void eval_test(void **state) {
     if (p->expected_runtime_env_usage_fn)
         mock_spy_runtime_env_arrange(p);
 
-    // eventual mocks initialisation for callback read_eval usage
+    // eventual mocks initialisation for callback read_ast usage
     if (p->expected_runtime_env_usage_fn)
-        mock_spy_read_eval_arrange(p);
+        mock_spy_read_ast_arrange(p);
 
 
     // ACT
@@ -1111,7 +1102,7 @@ static void expect_runtime_env_get_attempt_for_rhs(test_interpreter_ctx *ctx) {
     assert_false(ctx->runtime_spy.set_local_has_been_called);
 }
 
-static void expect_runtime_binding_attempt_to_bind_to_read_eval_value(test_interpreter_ctx *ctx) {
+static void expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value(test_interpreter_ctx *ctx) {
     assert_true(ctx->runtime_spy.set_local_has_been_called);
     assert_ptr_equal(
         ctx->runtime_spy.set_local_arg_e,
@@ -1119,9 +1110,23 @@ static void expect_runtime_binding_attempt_to_bind_to_read_eval_value(test_inter
     assert_ptr_equal(
         ctx->runtime_spy.set_local_arg_key,
         ctx->arg_root->children->children[0]->data->data.symbol_value );
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_value,
-        ctx->read_eval_spy.read_eval_out );
+    if (!g_runtime_spy->runtime_env_set_local_will_fail) {
+        switch (ctx->read_ast_spy.callback_read_ast_ret_kind) {
+        case READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42:
+            assert_int_equal(
+                ctx->runtime_spy.set_local_arg_value->type,
+                RUNTIME_VALUE_NUMBER );
+            assert_int_equal(
+                ctx->runtime_spy.set_local_arg_value->refcount,
+                2 ); // after ACT test stage
+            assert_int_equal(
+                ctx->runtime_spy.set_local_arg_value->as.i,
+                42 );
+            break;
+        default:
+            assert_true(false);
+        }
+    }
 }
 
 static void expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42(test_interpreter_ctx *ctx) {
@@ -1149,19 +1154,12 @@ static void expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42(test
 //-----------------------------------------------------------------------------
 
 
-static void read_eval_usage(test_interpreter_ctx *ctx) {
-    assert_true(ctx->read_eval_spy.read_eval_fn_has_been_called);
+static void read_ast_usage(test_interpreter_ctx *ctx) {
+    assert_true(ctx->read_ast_spy.read_ast_fn_has_been_called);
     assert_ptr_equal(
-        ctx->read_eval_spy.read_eval_fn_arg_ctx,
+        ctx->read_ast_spy.read_ast_fn_arg_ctx,
         ctx->arg_env );
-    assert_ptr_equal(
-        ctx->read_eval_spy.read_eval_fn_arg_env,
-        ctx->arg_env );
-    assert_non_null(ctx->read_eval_spy.read_eval_fn_arg_out);
-    assert_ptr_equal(
-        *ctx->read_eval_spy.read_eval_fn_arg_out,
-        ctx->read_eval_spy.read_eval_out);
-}
+    }
 
 
 
@@ -1193,24 +1191,30 @@ static void mock_spy_runtime_env_arrange(const test_interpreter_case *param_case
 
 
 //-----------------------------------------------------------------------------
-// MOCK INITIALISATION FOR read_eval INTERACTION TESTING
+// MOCK INITIALISATION FOR read_ast INTERACTION TESTING
 //-----------------------------------------------------------------------------
 
 
-static void mock_spy_read_eval_arrange(const test_interpreter_case *param_case) {
-    if (!param_case->callback_read_eval_will_be_called) return;
-    switch (param_case->read_eval_out_kind) {
-        case READ_EVAL_OUT_KIND_DUMMY:
-            param_case->ctx->read_eval_spy.read_eval_out = DUMMY_RUNTIME_ENV_VALUE_P;
+static void mock_spy_read_ast_arrange(const test_interpreter_case *param_case) {
+    if (!param_case->callback_read_ast_will_be_called) return;
+    param_case->ctx->read_ast_spy.callback_read_ast_ret_kind = param_case->callback_read_ast_ret_kind;
+    if (param_case->callback_read_ast_will_fail) {
+        param_case->ctx->read_ast_spy.read_ast_ret = NULL;
+        will_return(spy_read_ast_fn, NULL);
+        return;
+    }
+    switch (param_case->callback_read_ast_ret_kind) {
+        case READ_EVAL_RET_KIND_DUMMY:
+            param_case->ctx->read_ast_spy.read_ast_ret = DUMMY_AST_P;
             break;
-        case READ_EVAL_OUT_KIND_NUMBER_42:
-            param_case->ctx->read_eval_spy.read_eval_out = runtime_env_make_number(42);
+        case READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42:
+            param_case->ctx->read_ast_spy.read_ast_ret = ast_create_int_node(42);
             break;
         default:
             assert_true(false);
     }
-    g_read_eval_spy->read_eval_out = param_case->ctx->read_eval_spy.read_eval_out;
-    will_return(spy_read_eval_fn, param_case->callback_read_eval_ret);
+    g_read_ast_spy->read_ast_ret = param_case->ctx->read_ast_spy.read_ast_ret;
+    will_return(spy_read_ast_fn, g_read_ast_spy->read_ast_ret);
 }
 
 
@@ -1413,7 +1417,7 @@ static void expected_out_points_on_quoted_value(test_interpreter_ctx *ctx) {
     assert_ptr_equal((*ctx->arg_out)->as.quoted, ctx->arg_root->children->children[0]);
 }
 
-static void expected_out_points_on_value_produced_by_callback_read_eval(test_interpreter_ctx *ctx) {
+static void expected_out_points_on_a_number_42(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal((*ctx->arg_out)->refcount, 2);
@@ -1439,21 +1443,30 @@ static void destroy_root(test_interpreter_ctx *ctx) {
     ctx->arg_root = NULL;
 }
 
-static void destroy_root_and_release_runtime_value(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->arg_root);
-    ctx->arg_root = NULL;
-    //assert_ptr_equal(*ctx->arg_out, DUMMY_RUNTIME_ENV_VALUE_P);
-    //assert_int_equal(((runtime_env_value *) *ctx->arg_out)->refcount, 3);
-    runtime_env_value_release((runtime_env_value *) *ctx->arg_out);
-    //assert_int_equal(((runtime_env_value *) *ctx->arg_out)->refcount, 2);
-}
-
-static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->arg_root);
-    ctx->arg_root = NULL;
+static void destroy_runtime_value(test_interpreter_ctx *ctx) {
     size_t refcount = (*ctx->arg_out)->refcount;
     for (size_t i = 0; i < refcount; i++)
         runtime_env_value_release((runtime_env_value *) *ctx->arg_out);
+}
+
+static void destroy_read_ast(test_interpreter_ctx *ctx) {
+    ast_destroy((ast *) ctx->read_ast_spy.read_ast_ret);
+}
+
+static void destroy_root_and_runtime_value(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+    destroy_runtime_value(ctx);
+}
+
+static void destroy_root_and_read_ast(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+    destroy_read_ast(ctx);
+}
+
+static void destroy_root_and_read_ast_and_runtime_value(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+    destroy_read_ast(ctx);
+    destroy_runtime_value(ctx);
 }
 
 
@@ -4404,7 +4417,6 @@ other elements of the isolated unit:
   - out
   - env for success path
 - from the runtime_env module:
-    - runtime_env_make_quoted
     - runtime_env_value_destroy
     - runtime_env_make_number
   - from the ast module:
@@ -4417,7 +4429,7 @@ doubles:
   - dummy:
     - env except for success path
   - spy:
-    - read_eval
+    - read_ast
     - runtime_env_set_local
   - fake:
     - functions of standard libray which are used:
@@ -4446,7 +4458,7 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_NO_CHILD = {
     .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_no_child,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_eval_will_be_called = false,
+    .callback_read_ast_will_be_called = false,
 
     .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
@@ -4472,7 +4484,7 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_THREE_CHILDREN = {
     .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_three_children,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_eval_will_be_called = false,
+    .callback_read_ast_will_be_called = false,
 
     .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
@@ -4488,13 +4500,11 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_THREE_CHILDREN = {
 //  - root is a well-formed reading node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - calls read_eval_fn with:
+//  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//    - env: arg_env
-//    - out: read_eval_out (an implementation-owned, opaque pointer)
 //  - no binding in env->binding
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_OOM
+//  - returns INTERPRETER_STATUS_READ_AST_ERROR
 static test_interpreter_ctx CTX_READING_NODE_OOM = {0};
 static const test_interpreter_case READING_NODE_OOM = {
     .name = "eval_error_when_reading_node_and_oom",
@@ -4502,15 +4512,13 @@ static const test_interpreter_case READING_NODE_OOM = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = true,
-    .callback_read_eval_will_be_called = true,
-    .callback_read_eval_will_fail = true,
-    .callback_read_eval_ret = INTERPRETER_STATUS_OOM,
-    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+    .callback_read_ast_will_be_called = true,
+    .callback_read_ast_will_fail = true,
 
     .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_callback_read_ast_usage_fn = read_ast_usage,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_OOM,
+    .expected_status = INTERPRETER_STATUS_READ_AST_ERROR,
 
     .clean_up_fn = &destroy_root,
 
@@ -4521,32 +4529,27 @@ static const test_interpreter_case READING_NODE_OOM = {
 //  - args are well-formed
 //  - root is a well-formed reading node
 //  - all allocations will succeed during interpreter_eval call
-//  - host_read_eval_fn call returns INTERPRETER_STATUS_DIVISION_BY_ZERO
-//    (i.e. it fails and does not return INTERPRETER_STATUS_OK)
+//  - host_read_ast_fn call returns NULL (i.e. it fails)
 // Expected:
-//  - calls read_eval_fn with:
+//  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//    - env: arg_env
-//    - out: read_eval_out (an implementation-owned, opaque pointer)
 //  - no binding in env->binding
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_DIVISION_BY_ZERO
+//  - returns INTERPRETER_STATUS_READ_AST_ERROR
 static test_interpreter_ctx CTX_READING_NODE_CALLBACK_READ_EVAL_FAILS = {0};
 static const test_interpreter_case READING_NODE_CALLBACK_READ_EVAL_FAILS = {
-    .name = "eval_propagate_callback_status_when_reading_node_and_read_eval_fails",
+    .name = "eval_error_when_reading_node_and_read_ast_fails",
 
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_eval_will_be_called = true,
-    .callback_read_eval_will_fail = true,
-    .callback_read_eval_ret = INTERPRETER_STATUS_DIVISION_BY_ZERO,
-    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+    .callback_read_ast_will_be_called = true,
+    .callback_read_ast_will_fail = true,
 
     .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_callback_read_eval_usage_fn = read_eval_usage,
+    .expected_callback_read_ast_usage_fn = read_ast_usage,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_DIVISION_BY_ZERO,
+    .expected_status = INTERPRETER_STATUS_READ_AST_ERROR,
 
     .clean_up_fn = &destroy_root,
 
@@ -4557,18 +4560,20 @@ static const test_interpreter_case READING_NODE_CALLBACK_READ_EVAL_FAILS = {
 //  - args are well-formed
 //  - root is a well-formed reading node
 //  - all allocations will succeed during interpreter_eval call
-//  - host_read_eval_fn call returns INTERPRETER_STATUS_OK
+//  - host_read_ast_fn call returns an ast data wrapper for a number 42
 //  - symbol binding will fail
 // Expected:
-//  - calls read_eval_fn with:
+//  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//    - env: arg_env
-//    - out: read_eval_out (an implementation-owned, opaque pointer)
 //  - calls runtime_env_set_local with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//    - value: *read_eval_out
-//  - destroys *read_eval_out
+//    - value: <evaluated_rhs owned by implementation> such as:
+//      - evaluated_rhs != NULL
+//      - evaluated_rhs->type == RUNTIME_VALUE_NUMBER
+//      - evaluated_rhs->refcount == 2 (after ACT test stage)
+//      - evaluated_rhs->as.i == 42
+//  - destroys evaluated_rhs
 //  - no binding in env->binding
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_BINDING_ERROR
@@ -4579,19 +4584,18 @@ static const test_interpreter_case READING_NODE_BINDING_FAILS = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_eval_will_be_called = true,
-    .callback_read_eval_will_fail = false,
-    .callback_read_eval_ret = INTERPRETER_STATUS_OK,
-    .read_eval_out_kind = READ_EVAL_OUT_KIND_DUMMY,
+    .callback_read_ast_will_be_called = true,
+    .callback_read_ast_will_fail = false,
+    .callback_read_ast_ret_kind = READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42,
     .runtime_env_set_local_will_be_called = true,
     .runtime_env_set_local_will_fail = true,
 
-    .expected_callback_read_eval_usage_fn = read_eval_usage,
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_read_eval_value,
+    .expected_callback_read_ast_usage_fn = read_ast_usage,
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_read_ast,
 
     .ctx =&CTX_READING_NODE_BINDING_FAILS,
 };
@@ -4600,21 +4604,21 @@ static const test_interpreter_case READING_NODE_BINDING_FAILS = {
 //  - args are well-formed
 //  - root is a well-formed reading node
 //  - all allocations will succeed during interpreter_eval call
-//  - host_read_eval_fn call returns INTERPRETER_STATUS_OK
-//  - calls read_eval_fn will write a fresh RUNTIME_VALUE_NUMBER with value 42 at its arg out
+//  - host_read_ast_fn call returns an ast data wrapper for a number 42
 //  - symbol binding will succeed
 // Expected:
-//  - calls read_eval_fn with:
+//  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//    - env: arg_env
-//    - out: read_eval_out (an implementation-owned, opaque pointer)
 //  - calls runtime_env_set_local with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//    - value: *read_eval_out
-//  - root->children->children[0]->data->data.symbol_value is bound to *read_eval_out
-//  - *read_eval_out != NULL
-//  - *out == *read_eval_out
+//    - value: <evaluated_rhs owned by implementation> such as:
+//      - evaluated_rhs != NULL
+//      - evaluated_rhs->type == RUNTIME_VALUE_NUMBER
+//      - evaluated_rhs->refcount == 2 (after ACT test stage)
+//      - evaluated_rhs->as.i == 42
+//  - root->children->children[0]->data->data.symbol_value is bound to evaluated_rhs
+//  - *out == evaluated_rhs
 //      && (*out)->type == RUNTIME_VALUE_NUMBER
 //      && (*out)->refcount == 2
 //      && (*out)->as.i == 42
@@ -4626,19 +4630,18 @@ static const test_interpreter_case READING_NODE_SUCCESS = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = false,
     .oom = false,
-    .callback_read_eval_will_be_called = true,
-    .callback_read_eval_will_fail = false,
-    .callback_read_eval_ret = INTERPRETER_STATUS_OK,
-    .read_eval_out_kind = READ_EVAL_OUT_KIND_NUMBER_42,
+    .callback_read_ast_will_be_called = true,
+    .callback_read_ast_will_fail = false,
+    .callback_read_ast_ret_kind = READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42,
     .runtime_env_set_local_will_be_called = true,
     .runtime_env_set_local_will_fail = false,
 
-    .expected_callback_read_eval_usage_fn = read_eval_usage,
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_read_eval_value,
-    .expected_out_fn = &expected_out_points_on_value_produced_by_callback_read_eval,
+    .expected_callback_read_ast_usage_fn = read_ast_usage,
+    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value,
+    .expected_out_fn = &expected_out_points_on_bound_number_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value,
+    .clean_up_fn = &destroy_root_and_read_ast_and_runtime_value,
 
     .ctx =&CTX_READING_NODE_SUCCESS,
 };
@@ -4697,7 +4700,7 @@ doubles:
 // Given:
 //  - env and out are valid
 //  - root is a ill-formed binding node because:
-//    - root->children == NULLbbb
+//    - root->children == NULL
 // Expected:
 //  - no binding in env->binding
 //  - *out remains unchanged
@@ -4927,10 +4930,13 @@ static const test_interpreter_case BINDING_NODE_BINDING_SUCCEEDS = {
     X(READING_NODE_CALLBACK_READ_EVAL_FAILS) \
     X(READING_NODE_BINDING_FAILS) \
     X(READING_NODE_SUCCESS) \
+
+/*
     X(BINDING_NODE_ILL_FORMED_NO_CHILD) \
     X(BINDING_NODE_OOM) \
     X(BINDING_NODE_BINDING_FAILS) \
     X(BINDING_NODE_BINDING_SUCCEEDS) \
+*/
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

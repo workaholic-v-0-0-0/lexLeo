@@ -351,6 +351,7 @@ interpreter_status interpreter_eval(
     const runtime_env_value *evaluated_lhs = NULL;
     const runtime_env_value *evaluated_rhs = NULL;
     bool binding = false;
+    interpreter_status rhs_eval_status;
 
     switch (root->type) {
 
@@ -643,32 +644,30 @@ interpreter_status interpreter_eval(
         if (!ast_is_well_formed_reading(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        if (!ctx || !ctx->ops || !ctx->ops->read_eval_fn)
+        if (!ctx || !ctx->ops || !ctx->ops->read_ast_fn)
             return INTERPRETER_STATUS_INTERNAL_ERROR;
 
-        const runtime_env_value *host_read_eval_value = NULL;
+        rhs = ctx->ops->read_ast_fn(ctx);
+        if (!rhs)
+            return INTERPRETER_STATUS_READ_AST_ERROR;
 
-        interpreter_status read_eval_status =
-            ctx->ops->read_eval_fn(
-                ctx,
-                env,
-                &host_read_eval_value );
-
-        if (read_eval_status != INTERPRETER_STATUS_OK)
-            return read_eval_status;
+        evaluated_rhs = NULL;
+        rhs_eval_status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+        if (rhs_eval_status != INTERPRETER_STATUS_OK)
+            return rhs_eval_status;
 
         binding =
             runtime_env_set_local(
                 env,
                 root->children->children[0]->data->data.symbol_value,
-                host_read_eval_value );
+                evaluated_rhs );
 
         if (!binding) {
-            runtime_env_value_release(host_read_eval_value);
+            runtime_env_value_release(evaluated_rhs);
             return INTERPRETER_STATUS_BINDING_ERROR;
         }
 
-        *out = host_read_eval_value;
+        *out = evaluated_rhs;
 
         break;
 

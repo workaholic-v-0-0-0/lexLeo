@@ -24,20 +24,18 @@ typedef enum {
     INTERPRETER_STATUS_DIVISION_BY_ZERO,
     INTERPRETER_STATUS_UNBOUND_SYMBOL,
     INTERPRETER_STATUS_INTERNAL_ERROR,
+    INTERPRETER_STATUS_READ_AST_ERROR,
     INTERPRETER_STATUS_NB_TYPES,
 } interpreter_status;
 
 struct interpreter_ctx; // forward
 
-typedef interpreter_status (*read_eval_fn_t)(
-	struct interpreter_ctx *ctx,
-	struct runtime_env *env,
-	const struct runtime_env_value **out );
+typedef struct ast *(*read_ast_fn_t)(struct interpreter_ctx *ctx);
 
 typedef struct interpreter_ops_t {
 	// called when evaluating an AST of type AST_TYPE_READING ;
-	// a hook for cli_read_eval
-	read_eval_fn_t read_eval_fn;
+	// a hook for cli_read_parse_resolve
+	read_ast_fn_t read_ast_fn;
 } interpreter_ops_t;
 
 void interpreter_ctx_init(

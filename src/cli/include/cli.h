@@ -23,7 +23,7 @@ init interpreter ctx:
 	runtime_session *rs = runtime_session_create();
 	//...
 	static const interpreter_ops CLI_INTERPRETER_OPS = {
-		.read_eval_fn = cli_read_eval,
+		.read_ast_fn = cli_read_eval,
 	};
 	interpreter_ctx_init(&rs->ictx, &CLI_INTERPRETER_OPS, rs);
 a loop to fill input_provider and try parse while it returns incomplete status (return if it returns error)
