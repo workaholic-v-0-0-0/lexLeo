@@ -176,7 +176,7 @@ void assert_is_error_not_sentinel(ast *a, ast_error_type code, const char *messa
 // stub:
 //  - symtab* param
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 

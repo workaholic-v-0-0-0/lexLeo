@@ -56,7 +56,7 @@ static symtab *current_level = NULL;
 // symbol *symtab_get_local(symtab *st, const char *name)
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 
@@ -133,7 +133,7 @@ static void intern_symbol_register_new_symbol_into_symbol_pool(void **state) {
 // symtab *symtab_unwind_scope(symtab *st);
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 

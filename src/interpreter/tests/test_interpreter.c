@@ -217,7 +217,7 @@ doubles:
     - env
     - root
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free
 */
 
@@ -1516,7 +1516,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -1840,7 +1840,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -2048,7 +2048,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -2281,7 +2281,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -2658,7 +2658,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -3041,7 +3041,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -3423,7 +3423,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -3806,7 +3806,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -4304,7 +4304,7 @@ doubles:
     - runtime_env_get_local
     - runtime_env_get
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -4432,7 +4432,7 @@ doubles:
     - read_ast
     - runtime_env_set_local
   - fake:
-    - functions of standard libray which are used:
+    - functions of standard library which are used:
       - malloc, free, strdup
 */
 
@@ -4686,7 +4686,7 @@ doubles:
 - spy:
     - runtime_env_set_local
 - fake:
-  - functions of standard libray which are used:
+  - functions of standard library which are used:
     - malloc, free, strdup
 */
 

@@ -252,7 +252,7 @@ char *symbol_pool_to_string() { //debug tool
 // list_pop
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 

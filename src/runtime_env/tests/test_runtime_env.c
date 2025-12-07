@@ -162,7 +162,7 @@ static runtime_env *const STUB_RUNTIME_ENV_CHILD_OF_ROOT_P = &STUB_RUNTIME_ENV_C
 // runtime_env_make_number
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -254,7 +254,7 @@ static void make_number_success_when_first_allocation_succeeds(void **state) {
 // runtime_env_make_string
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 
@@ -384,7 +384,7 @@ static void make_string_success_when_two_allocations_succeed_and_s_non_null(void
 // dummy:
 //  - sym
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -476,7 +476,7 @@ static void make_symbol_success_when_first_allocation_succeeds(void **state) {
 // runtime_env_make_error
 
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 
@@ -613,7 +613,7 @@ static void make_error_success_when_two_allocations_succeed_and_msg_non_null(voi
 //  - closure->is_root
 //  - closure->parent
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -729,7 +729,7 @@ static void make_function_success_when_first_allocation_succeeds(void **state) {
 // dummy:
 //  - quoted
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -827,7 +827,7 @@ static void make_quoted_success_when_first_allocation_succeeds(void **state) {
 //  - functions of the hashtable module which are used:
 //    - hashtable_destroy
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -938,7 +938,7 @@ static void unwind_success_when_parent_not_null(void **state) {
 //  - functions of the hashtable module which are used:
 //    - hashtable_destroy
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -1153,7 +1153,7 @@ static void value_release_success_when_type_quoted(void **state) {
 //  - functions of the hashtable module which are used:
 //    - hashtable_create
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -1370,7 +1370,7 @@ static void wind_success_when_parent_not_null_and_hashtable_create_succeeds(void
 //    - hashtable_key_is_in_use
 //    - hashtable_add
 //    - hashtable_reset_value
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free, strdup
 
 
@@ -2491,7 +2491,7 @@ static const struct CMUnitTest set_local_parametric_tests[] = {
 //  - functions of the hashtable module which are used:
 //    - hashtable_get
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
@@ -2593,7 +2593,7 @@ static void get_local_success_when_e_and_key_not_null(void **state) {
 //    - hashtable_key_is_in_use
 //    - hashtable_get
 // fake:
-//  - functions of standard libray which are used:
+//  - functions of standard library which are used:
 //    - malloc, free
 
 
