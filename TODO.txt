@@ -60,28 +60,3 @@
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make tests for stream module
-
-- make AST_TYPE_READING evaluable by the interpreter:
-  - make a module runtime_session with:
-      typedef bool (*resolve_ast_fn_t)(struct ast **a, struct resolver_ctx *ctx);
-      typedef struct runtime_session {
-            input_provider *in;
-            yyscan_t scanner;
-            symtab *st;
-            resolve_ast_fn_t resolve_ast_fn;
-            struct resolver_ctx resolver_ctx;
-            runtime_env *env; // maybe another for root
-            list ast_pool;
-            list symbol_pool;
-      } runtime_session;
-      but don't write "struct runtime_session runtime_session;" to avoid collision
-  - in runtime_env, migrate to frames that reference the runtime_session:
-      typedef struct runtime_env {
-          hashtable *bindings; // key: const symbol* (borrowed), value: runtime_env_value (refcounted)
-          size_t refcount;
-          bool is_root;
-          struct runtime_env *parent;
-      } runtime_env;
-  - replace the static global symbol_pool:
-    - one symbol_pool per session (owned by runtime_session, or internally by symtab).
-
