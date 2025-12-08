@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/writing_rule.y
 
 writing
-  : WRITE symbol_name_atom SEMICOLON {
+  : WRITE evaluable SEMICOLON {
         ast *a = ctx->ops.create_children_node_var(
                             AST_TYPE_WRITING,
                             1,

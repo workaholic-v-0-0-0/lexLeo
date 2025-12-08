@@ -12,7 +12,8 @@
 #include <stdbool.h>
 
 struct runtime_session {
-	struct input_provider *in;
+	struct input_provider *in; // borrowed from client code
+	struct stream *out; // borrowed from client code
 	yyscan_t scanner;
 	struct symtab *st;
 	struct runtime_env *env;

@@ -42,7 +42,6 @@ static list symbol_pool;
 #include <stdio.h>//todebug
 bool fake_store_symbol(symbol *sym, void *user_data) {
     (void)user_data;
-    printf("list_contains(symbol_pool, (void *)sym): %i\n", list_contains(symbol_pool, (void *)sym));
     if (list_contains(symbol_pool, sym)) return true;
     symbol_pool = list_push(symbol_pool, sym);
     return true;

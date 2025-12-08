@@ -187,7 +187,7 @@ static void runtime_env_value_destroy(runtime_env_value *value) {
 		RUNTIME_ENV_FREE(value);
         break;
     case RUNTIME_VALUE_QUOTED:
-        RUNTIME_ENV_FREE(value);
+		RUNTIME_ENV_FREE(value);
         break;
     default:
         // do nothing

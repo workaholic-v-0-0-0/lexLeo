@@ -38,6 +38,21 @@ return interpreter_eval(
 	out );
 */
 
+typedef bool cli_print(
+	const struct interpreter_ctx *ctx,
+	const struct runtime_env_value *value);
+/*
+will do
+rs->out = stdio_stream_to_stdout();
+n
+buf
+<write runtime_env_value_to_string into buf>
+size_t size = stream_write(((runtime_session*)ctx->host_ctx)->out, buf, n);
+
+...
+int stream_close(stream *s);
+*/
+
 bool cli_store_symbol(struct symbol *sym, void *session); // wrapper
 
 
@@ -59,6 +74,9 @@ cli will create an input_provider, bind it to scanner via API of runtime_session
 then manipulate it
 runtime_session read from it automatically via YY_INPUT
 one input_provider per runtime_session
+
+and cli will create a stream to initialize the out field of runtime_session ;
+callback write_runtime_value_fn will use it when evaluating AST_TYPE_WRITING
 */
 
 

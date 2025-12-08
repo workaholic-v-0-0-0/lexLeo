@@ -29,7 +29,7 @@
 static const int A_INT_NOT_ZERO = 7;
 static const runtime_env_value **out = NULL;
 static runtime_env *env = NULL;
-static const char *A_CONSTANT_STRING = "a string";
+static const char *A_CONSTANT_STRING = "abc";
 static ast_error_type AN_AST_ERROR_TYPE = AST_ERROR_CODE_BINDING_NODE_CREATION_FAILED;
 static const char *A_CONSTANT_ERROR_MESSAGE = "an error message";
 static runtime_env_value A_NUMBER_RUNTIME_ENV_VALUE = {.type = RUNTIME_VALUE_NUMBER, .refcount = 2, .as.i = A_INT_NOT_ZERO};
@@ -54,7 +54,7 @@ static ast *DUMMY_AST_P = &DUMMY_AST;
 static ast *DUMMY_AST_CHILDREN_ARR[1] = { &DUMMY_AST };
 static ast_children_t DUMMMY_AST_CHILDREN = {.children_nb = 1, .capacity = 1, .children = DUMMY_AST_CHILDREN_ARR,};
 static ast_children_t *DUMMY_AST_CHILDREN_P = &DUMMMY_AST_CHILDREN;
-static symbol DUMMY_SYMBOL = {.name = "symbol",};
+static symbol DUMMY_SYMBOL = {.name = "dummy_symbol_name",};
 static symbol *DUMMY_SYMBOL_P = &DUMMY_SYMBOL;
 static symbol DUMMY_OTHER_SYMBOL = {.name = "an_other_symbol",};
 static symbol *DUMMY_OTHER_SYMBOL_P = &DUMMY_OTHER_SYMBOL;
@@ -65,95 +65,153 @@ static symbol *DUMMY_SYMBOL_FOR_FUNCTION_NAME_P = &DUMMY_SYMBOL_FOR_FUNCTION_NAM
 static void *const dummy_runtime_session = (void*)0xDEADBEEF;
 
 
-
 // mocks
-
-int mock_hashtable_add(hashtable *ht, const void *key, void *value) {
-    check_expected(ht);
-    check_expected(key);
-    check_expected(value);
-    return mock_type(int);
-} // useless?
 
 
 // spies
 
-typedef struct {
-    bool set_local_has_been_called;
-    bool get_local_has_been_called;
-    bool get_has_been_called;
+typedef enum {
+    ENV_ARR_NONE = 0,
+	ENV_ARR_GET_RET_NULL,
+    ENV_ARR_GET_RET_STR_ABC,
+	ENV_ARR_GET_RET_NUM_42,
+	ENV_ARR_GET_RET_NUM_42_RCNT_2,
+	ENV_ARR_GET_RET_NUM_0,
+	ENV_ARR_GET_RET_QUOTED_ADD_1_PLUS_2,
+	ENV_ARR_SET_LOCAL_RET_FALSE,
+	ENV_ARR_SET_LOCAL_RET_TRUE
+} interpreter_runtime_env_arrange_kind_t;
 
+typedef enum {
+    ENV_ASRT_NONE = 0,
+	ENV_ASRT_EXPECT_GET_CALLED_ON_ROOT_SYMBOL,
+    ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+    ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
+	ENV_ASRT_EXPECT_SET_LOCAL_DEF_FCT,
+	ENV_ASRT_EXPECT_SET_LOCAL_BND_CHILD_TO_READ,
+	ENV_ASRT_EXPECT_SET_LOCAL_BND_LHS_TO_NUM_42
+} interpreter_runtime_env_assert_kind_t;
+
+typedef struct test_interpreter_runtime_value_snapshot {
+	const runtime_env_value *address;
+	runtime_env_value value;
+} test_interpreter_runtime_value_snapshot;
+
+static void make_runtime_env_value_snapshot(const runtime_env_value *v, test_interpreter_runtime_value_snapshot *snapshot) {
+	if (!v) return;
+	snapshot->address = v;
+	memcpy(&snapshot->value, v, sizeof(runtime_env_value));
+}
+
+typedef struct {
     runtime_env *set_local_arg_e;
     const struct symbol *set_local_arg_key;
     const runtime_env_value *set_local_arg_value;
+	test_interpreter_runtime_value_snapshot set_local_arg_value_snapshot;
+	bool set_local_ret;
 
     const runtime_env *get_local_arg_e;
     const struct symbol *get_local_arg_key;
+	runtime_env_value *get_local_ret;
+	test_interpreter_runtime_value_snapshot get_local_ret_snapshot;
+
     const runtime_env *get_arg_e;
     const struct symbol *get_arg_key;
+	runtime_env_value *get_ret;
+	test_interpreter_runtime_value_snapshot get_ret_snapshot;
+} interpreter_runtime_spy_t;
 
-    //bbb ast *gettable_quoted_ast;
-
-    // make spy_runtime_env_set_local know how to refcount the
-    // runtime value argument
-    bool runtime_env_set_local_will_fail;
-    runtime_env_value *fake_value_bound_to_dummy_symbol_p;
-    runtime_env_value *fake_value_bound_to_other_dummy_symbol_p;
-} runtime_spy_t;
-
-static runtime_spy_t *g_runtime_spy = NULL;
+static interpreter_runtime_spy_t *g_runtime_spy = NULL;
 
 bool spy_runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value) {
     assert_non_null(g_runtime_spy);
-    g_runtime_spy->set_local_has_been_called = true;
     g_runtime_spy->set_local_arg_e = e;
     g_runtime_spy->set_local_arg_key = key;
-    g_runtime_spy->set_local_arg_value = value;
-
-    if (!g_runtime_spy->runtime_env_set_local_will_fail)
-        runtime_env_value_retain(value);
-    return mock_type(bool);
+    g_runtime_spy->set_local_arg_value = value;// useless?
+	make_runtime_env_value_snapshot(value, &g_runtime_spy->set_local_arg_value_snapshot);
+    if (g_runtime_spy->set_local_ret) runtime_env_value_retain(value);
+	return g_runtime_spy->set_local_ret;
 }
 
 const runtime_env_value *spy_runtime_env_get_local(const runtime_env *e, const struct symbol *key) {
     assert_non_null(g_runtime_spy);
-    g_runtime_spy->get_local_has_been_called = true;
     g_runtime_spy->get_local_arg_e = e;
     g_runtime_spy->get_local_arg_key = key;
-    return mock_type(const runtime_env_value *);
+    make_runtime_env_value_snapshot(g_runtime_spy->get_ret, &g_runtime_spy->get_local_ret_snapshot);
+	return g_runtime_spy->get_local_ret;
 }
 
 const runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct symbol *key) {
     assert_non_null(g_runtime_spy);
-    g_runtime_spy->get_has_been_called = true;
     g_runtime_spy->get_arg_e = e;
     g_runtime_spy->get_arg_key = key;
-    return mock_type(const runtime_env_value *);
+    make_runtime_env_value_snapshot(g_runtime_spy->get_ret, &g_runtime_spy->get_ret_snapshot);
+	return g_runtime_spy->get_ret;
 }
 
 typedef enum {
-    READ_EVAL_RET_KIND_DUMMY,
-    READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42
-} read_ast_ret_kind_type;
+    READ_AST_ARR_NONE = 0,
+	READ_AST_ARR_READ_FAIL,
+	READ_AST_ARR_READ_NUM_42
+} interpreter_read_ast_arrange_kind_t;
+
+typedef enum {
+    READ_AST_ASRT_NONE = 0,
+	READ_AST_ASRT_CALL
+} interpreter_read_ast_assert_kind_t;
 
 typedef struct {
-    bool read_ast_fn_has_been_called;
-    struct interpreter_ctx *read_ast_fn_arg_ctx;
-    read_ast_ret_kind_type callback_read_ast_ret_kind;
+    const struct interpreter_ctx *read_ast_fn_arg_ctx;
     ast *read_ast_ret;
-} read_ast_spy_t;
+} interpreter_read_ast_spy_t;
 
-static read_ast_spy_t *g_read_ast_spy = NULL;
+static interpreter_read_ast_spy_t *g_read_ast_spy = NULL;
 
-static ast *spy_read_ast_fn (struct interpreter_ctx *ctx) {
+static ast *spy_read_ast_fn (const struct interpreter_ctx *ctx) {
     assert_non_null(g_read_ast_spy);
-    g_read_ast_spy->read_ast_fn_has_been_called = true;
     g_read_ast_spy->read_ast_fn_arg_ctx = ctx;
-    return mock_type(ast*);
+    return g_read_ast_spy->read_ast_ret;
+}
+
+typedef enum {
+    WRITE_RUNTIME_VALUE_ARR_NONE = 0,
+	WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+	WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+} interpreter_write_runtime_value_arrange_kind_t;
+
+typedef enum {
+    WRITE_RUNTIME_VALUE_ASRT_NONE = 0,
+	WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42,
+	WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_3,
+	WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_2,
+	WRITE_RUNTIME_VALUE_ASRT_WRITE_STR_ABC,
+	WRITE_RUNTIME_VALUE_ASRT_WRITE_QUOTED_ADD_1_PLUS_2
+} interpreter_write_runtime_value_assert_kind_t;
+
+typedef struct {
+    const struct interpreter_ctx *write_runtime_value_fn_arg_ctx;
+    const runtime_env_value *write_runtime_value_fn_arg_value;
+	test_interpreter_runtime_value_snapshot write_runtime_value_fn_arg_value_snapshot;
+	bool write_runtime_value_ret;
+} interpreter_write_runtime_value_spy_t;
+
+static interpreter_write_runtime_value_spy_t *g_write_runtime_value_spy = NULL;
+
+static bool spy_write_runtime_value_fn (
+        const struct interpreter_ctx *ctx,
+        const struct runtime_env_value *value ) {
+
+    assert_non_null(g_write_runtime_value_spy);
+    g_write_runtime_value_spy->write_runtime_value_fn_arg_ctx = ctx;
+    g_write_runtime_value_spy->write_runtime_value_fn_arg_value = value;
+	make_runtime_env_value_snapshot(value, &g_write_runtime_value_spy->write_runtime_value_fn_arg_value_snapshot);
+	// no retain!
+    return g_write_runtime_value_spy->write_runtime_value_ret;
 }
 
 static const interpreter_ops_t SPY_INTERPRETER_OPS = {
     .read_ast_fn = spy_read_ast_fn,
+    .write_runtime_value_fn = spy_write_runtime_value_fn
 };
 
 static struct interpreter_ctx spy_interpreter_ctx = {
@@ -354,19 +412,31 @@ static void eval_error_when_unsupported_root_type(void **state) {
 
 
 typedef struct {
+	// args
     struct interpreter_ctx *arg_ctx;
     runtime_env *arg_env;
     const ast *arg_root;
+
+	// spy env interaction
     const runtime_env_value **arg_out;
     const runtime_env_value **arg_out_before;
     const runtime_env_value *arg_out_value_before;
-    runtime_spy_t runtime_spy;
-    read_ast_spy_t read_ast_spy;
+	interpreter_runtime_env_arrange_kind_t runtime_env_arrange_kind;
+	interpreter_runtime_env_assert_kind_t runtime_env_assert_kind;
+    interpreter_runtime_spy_t runtime_spy;
+
+	// spy read_ast callback
+	interpreter_read_ast_arrange_kind_t read_ast_arrange_kind;
+	interpreter_read_ast_assert_kind_t read_ast_assert_kind;
+    interpreter_read_ast_spy_t read_ast_spy;
+
+	// spy write_runtime_value callback
+	interpreter_write_runtime_value_arrange_kind_t write_runtime_value_arrange_kind;
+	interpreter_write_runtime_value_assert_kind_t write_runtime_value_assert_kind;
+    interpreter_write_runtime_value_spy_t spy_write_runtime_value;
 } test_interpreter_ctx;
 
 typedef void (*test_interpreter_root_constructor_fn_t)(test_interpreter_ctx *ctx);
-typedef void (*test_interpreter_expected_runtime_env_usage_fn_t)(test_interpreter_ctx *ctx);
-typedef void (*expected_callback_read_ast_usage_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_expected_out_fn_t)(test_interpreter_ctx *ctx);
 typedef void (*test_interpreter_clean_up_fn_t)(test_interpreter_ctx *ctx);
 
@@ -379,25 +449,16 @@ typedef struct {
     test_interpreter_root_constructor_fn_t root_constructor_fn;
     bool env_is_dummy;
     bool oom;
-    bool runtime_env_set_local_will_be_called;
-    bool runtime_env_set_local_will_fail;
-    bool runtime_env_get_local_will_be_called;
-    bool runtime_env_get_local_will_fail;
-    bool runtime_env_get_will_be_called;
-    bool runtime_env_get_will_fail;
-    bool runtime_env_get_returned_a_number_runtime_value_not_zero;
-    bool runtime_env_get_returned_a_number_runtime_value_zero;
-    bool runtime_env_get_returned_a_string_runtime_value;
-    bool runtime_env_get_returned_a_quoted_addition;
-    bool callback_read_ast_will_be_called;
-    bool callback_read_ast_will_fail;
-    read_ast_ret_kind_type callback_read_ast_ret_kind;
+	interpreter_runtime_env_arrange_kind_t runtime_env_arrange_kind;
+	interpreter_read_ast_arrange_kind_t read_ast_arrange_kind;
+	interpreter_write_runtime_value_arrange_kind_t write_runtime_value_arrange_kind;
 
     // assert utilities
-    test_interpreter_expected_runtime_env_usage_fn_t expected_runtime_env_usage_fn;
-    expected_callback_read_ast_usage_fn_t expected_callback_read_ast_usage_fn;
     test_interpreter_expected_out_fn_t expected_out_fn;
     interpreter_status expected_status;
+	interpreter_runtime_env_assert_kind_t runtime_env_assert_kind;
+	interpreter_read_ast_assert_kind_t read_ast_assert_kind;
+	interpreter_write_runtime_value_assert_kind_t write_runtime_value_assert_kind;
 
     // test infrastructure cleanup utilities
     test_interpreter_clean_up_fn_t clean_up_fn;
@@ -430,39 +491,17 @@ static int parametric_setup(void **state) {
     else p->ctx->arg_env = DUMMY_RUNTIME_ENV_P;
 
     // globals initialization so that spies could act on spy variables of test context
-    p->ctx->runtime_spy = (runtime_spy_t){0};
-    p->ctx->read_ast_spy = (read_ast_spy_t){0};
+    p->ctx->runtime_spy = (interpreter_runtime_spy_t){0};
+    p->ctx->read_ast_spy = (interpreter_read_ast_spy_t){0};
+    p->ctx->spy_write_runtime_value = (interpreter_write_runtime_value_spy_t){0};
     g_runtime_spy = &p->ctx->runtime_spy;
     g_read_ast_spy = &p->ctx->read_ast_spy;
+	g_write_runtime_value_spy = &p->ctx->spy_write_runtime_value;
 
+	// spies initialization
     runtime_env_set_set_local(spy_runtime_env_set_local);
     runtime_env_set_get_local(spy_runtime_env_get_local);
     runtime_env_set_get(spy_runtime_env_get);
-
-    if (p->runtime_env_get_will_be_called && !p->runtime_env_get_will_fail) {
-        if (p->runtime_env_get_returned_a_string_runtime_value)
-            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
-                runtime_env_make_string(A_CONSTANT_STRING);
-        else if (p->runtime_env_get_returned_a_number_runtime_value_not_zero)
-            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
-                runtime_env_make_number(A_INT_NOT_ZERO);
-        else if (p->runtime_env_get_returned_a_number_runtime_value_zero)
-            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
-                runtime_env_make_number(0);
-        else if (p->runtime_env_get_returned_a_quoted_addition) {
-            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
-                runtime_env_make_quoted(
-                    ast_create_children_node_var(
-                        AST_TYPE_ADDITION,
-                        2,
-                        ast_create_int_node(1),
-                        ast_create_int_node(2) )
-                );
-        }
-        else
-            p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p =
-                runtime_env_make_number(A_INT_NOT_ZERO);
-    }
 
     p->ctx->arg_out = fake_malloc(sizeof *p->ctx->arg_out);
     *p->ctx->arg_out = NULL;
@@ -485,14 +524,14 @@ static int parametric_teardown(void **state) {
         p->ctx->arg_env = NULL;
     }
 
-    if (p->runtime_env_get_will_be_called && !p->runtime_env_get_will_fail)
-        runtime_env_value_release(p->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
-
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
     assert_true(fake_memory_no_leak());
 
     g_runtime_spy = NULL;
+	g_read_ast_spy = NULL;
+	g_write_runtime_value_spy = NULL;
+
     runtime_env_set_set_local(NULL);
     runtime_env_set_get_local(NULL);
     runtime_env_set_get(NULL);
@@ -513,8 +552,12 @@ static int parametric_teardown(void **state) {
 
 // forward declarations
 static void expected_out_unchanged(test_interpreter_ctx *ctx);
-static void mock_spy_runtime_env_arrange(const test_interpreter_case *);
-static void mock_spy_read_ast_arrange(const test_interpreter_case *);
+static void spy_runtime_env_arrange(const test_interpreter_case *);
+static void spy_read_ast_arrange(const test_interpreter_case *);
+static void spy_write_runtime_value_arrange(const test_interpreter_case *);
+static void runtime_env_usage_expectation(test_interpreter_ctx *ctx);
+static void read_ast_usage_expectation(test_interpreter_ctx *ctx);
+static void write_runtime_value_usage_expectation(test_interpreter_ctx *ctx);
 
 static void eval_test(void **state) {
     test_interpreter_case *p = (test_interpreter_case *) *state;
@@ -522,19 +565,16 @@ static void eval_test(void **state) {
     // ARRANGE
     p->root_constructor_fn(p->ctx);
 
-    // out snapshot to check is invariance
+    // out snapshot to check its invariance
     if (p->expected_out_fn == &expected_out_unchanged) {
         p->ctx->arg_out_before = p->ctx->arg_out;
         p->ctx->arg_out_value_before = *p->ctx->arg_out;
     }
 
-    // eventual mocks initialisation for runtime_env interaction testing
-    if (p->expected_runtime_env_usage_fn)
-        mock_spy_runtime_env_arrange(p);
-
-    // eventual mocks initialisation for callback read_ast usage
-    if (p->expected_runtime_env_usage_fn)
-        mock_spy_read_ast_arrange(p);
+	// spies arrange
+    spy_runtime_env_arrange(p);
+    spy_read_ast_arrange(p);
+    spy_write_runtime_value_arrange(p);
 
 
     // ACT
@@ -558,7 +598,9 @@ static void eval_test(void **state) {
     // ASSERT
 
     assert_int_equal(status, p->expected_status);
-    if (p->expected_runtime_env_usage_fn) p->expected_runtime_env_usage_fn(p->ctx);
+	runtime_env_usage_expectation(p->ctx);
+	read_ast_usage_expectation(p->ctx);
+    write_runtime_value_usage_expectation(p->ctx);
     if (p->expected_out_fn) p->expected_out_fn(p->ctx);
 }
 
@@ -803,11 +845,11 @@ static void make_root_a_well_formed_division_with_lhs_number_rhs_symbol(test_int
 }
 
 static void make_root_a_int_node(test_interpreter_ctx *ctx) {
-    ctx->arg_root = ast_create_int_node(A_INT_NOT_ZERO);
+    ctx->arg_root = ast_create_int_node(42);
 }
 
-static void make_root_a_string_node(test_interpreter_ctx *ctx) {
-    ctx->arg_root = ast_create_string_node(A_CONSTANT_STRING);
+static void make_root_a_string_node_abc(test_interpreter_ctx *ctx) {
+    ctx->arg_root = ast_create_string_node("abc");
 }
 
 static void make_root_a_symbol_node(test_interpreter_ctx *ctx) {
@@ -1058,6 +1100,62 @@ static void make_root_an_eval_node(test_interpreter_ctx *ctx) {
         make_unary_with_symbol(AST_TYPE_EVAL, DUMMY_SYMBOL_P);
 }
 
+static void make_root_a_ill_formed_writing_node_because_two_children(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        make_ill_formed_node(AST_TYPE_WRITING, ILL_TWO_CHILDREN);
+}
+
+static void make_root_a_writing_node_with_child_number_42(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_WRITING,
+            1,
+            ast_create_int_node(42) );
+}
+
+static void make_root_a_writing_node_with_child_string_abc(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_WRITING,
+            1,
+            ast_create_string_node("abc") );
+}
+
+static void make_root_a_writing_node_with_a_symbol(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_WRITING,
+            1,
+            ast_create_symbol_node(DUMMY_SYMBOL_P) );
+}
+
+static void make_root_a_writing_node_with_an_addition_1_plus_2(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_WRITING,
+            1,
+			ast_create_children_node_var(
+				AST_TYPE_ADDITION,
+				2,
+				ast_create_int_node(1),
+				ast_create_int_node(2) ) );
+}
+
+static void make_root_a_writing_node_with_quoted_add_1_2(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_WRITING,
+            1,
+			ast_create_children_node_var(
+				AST_TYPE_QUOTE,
+				1,
+				ast_create_children_node_var(
+					AST_TYPE_ADDITION,
+					2,
+					ast_create_int_node(1),
+					ast_create_int_node(2) ) ) );
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -1065,182 +1163,317 @@ static void make_root_an_eval_node(test_interpreter_ctx *ctx) {
 //-----------------------------------------------------------------------------
 
 
-static void no_runtime_env_usage(test_interpreter_ctx *ctx) {
-    assert_false(ctx->runtime_spy.set_local_has_been_called);
-    assert_false(ctx->runtime_spy.get_local_has_been_called);
-    assert_false(ctx->runtime_spy.get_has_been_called);
-}
-
-static void expect_runtime_binding_attempt_for_function_definition(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.set_local_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_key,
-        ctx->arg_root->children->children[0]->children->children[0]->data->data.symbol_value );
-    assert_int_equal(
-        ctx->runtime_spy.set_local_arg_value->type,
-        RUNTIME_VALUE_FUNCTION );
-    if (!g_runtime_spy->runtime_env_set_local_will_fail) {
-        // refcount is 1 after function node evaluation and then it is incremented by runtime_env_set_local
-        assert_int_equal(ctx->runtime_spy.set_local_arg_value->refcount, 2);
-        assert_ptr_equal(
-            ctx->runtime_spy.set_local_arg_value->as.fn.function_node,
-            ctx->arg_root->children->children[0] );
-        assert_ptr_equal(
-            ctx->runtime_spy.set_local_arg_value->as.fn.closure,
-            ctx->arg_env );
-    }
-    assert_int_equal(ctx->arg_env->refcount, 2);
-}
-
-static void expect_runtime_env_get_attempt(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.get_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_key,
-        ctx->arg_root->data->data.symbol_value );
-    assert_false(ctx->runtime_spy.set_local_has_been_called);
-}
-
-static void expect_runtime_env_get_attempt_for_child(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.get_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_key,
-        ctx->arg_root->children->children[0]->data->data.symbol_value );
-    assert_false(ctx->runtime_spy.set_local_has_been_called);
-}
-
-static void expect_runtime_env_get_attempt_for_rhs(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.get_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.get_arg_key,
-        ctx->arg_root->children->children[1]->data->data.symbol_value );
-    assert_false(ctx->runtime_spy.set_local_has_been_called);
-}
-
-static void expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.set_local_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_key,
-        ctx->arg_root->children->children[0]->data->data.symbol_value );
-    if (!g_runtime_spy->runtime_env_set_local_will_fail) {
-        switch (ctx->read_ast_spy.callback_read_ast_ret_kind) {
-        case READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42:
-            assert_int_equal(
-                ctx->runtime_spy.set_local_arg_value->type,
-                RUNTIME_VALUE_NUMBER );
-            assert_int_equal(
-                ctx->runtime_spy.set_local_arg_value->refcount,
-                2 ); // after ACT test stage
-            assert_int_equal(
-                ctx->runtime_spy.set_local_arg_value->as.i,
-                42 );
-            break;
-        default:
-            assert_true(false);
-        }
-    }
-}
-
-static void expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42(test_interpreter_ctx *ctx) {
-    assert_true(ctx->runtime_spy.set_local_has_been_called);
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_e,
-        ctx->arg_env );
-    assert_ptr_equal(
-        ctx->runtime_spy.set_local_arg_key,
-        ctx->arg_root->children->children[0]->data->data.symbol_value );
-    if (!g_runtime_spy->runtime_env_set_local_will_fail) {
-        assert_int_equal(
-            ctx->runtime_spy.set_local_arg_value->refcount,
-            2 );
-        assert_int_equal(
-            ctx->runtime_spy.set_local_arg_value->as.i,
-            42 );
+static void runtime_env_usage_expectation(test_interpreter_ctx *ctx) {
+	if (!ctx->runtime_env_assert_kind) return;
+	switch (ctx->runtime_env_assert_kind) {
+	case ENV_ASRT_EXPECT_GET_CALLED_ON_ROOT_SYMBOL:
+	    assert_ptr_equal(ctx->runtime_spy.get_arg_e, ctx->arg_env);
+    	assert_ptr_equal(ctx->runtime_spy.get_arg_key, ctx->arg_root->data->data.symbol_value);
+		break;
+	case ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL:
+	    assert_ptr_equal(ctx->runtime_spy.get_arg_e, ctx->arg_env);
+    	assert_ptr_equal(ctx->runtime_spy.get_arg_key, ctx->arg_root->children->children[0]->data->data.symbol_value);
+		break;
+	case ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL:
+	    assert_ptr_equal(ctx->runtime_spy.get_arg_e, ctx->arg_env);
+    	assert_ptr_equal(ctx->runtime_spy.get_arg_key, ctx->arg_root->children->children[1]->data->data.symbol_value);
+		break;
+	case ENV_ASRT_EXPECT_SET_LOCAL_DEF_FCT:
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->children->children[0]->data->data.symbol_value );
+    	assert_int_equal(
+        	ctx->runtime_spy.set_local_arg_value->type,
+        	RUNTIME_VALUE_FUNCTION );
+    	if (g_runtime_spy->set_local_ret) {
+        	// refcount is 1 after function node evaluation and then it is incremented by runtime_env_set_local
+        	assert_int_equal(ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount, 1);
+        	assert_int_equal(ctx->runtime_spy.set_local_arg_value_snapshot.address->refcount, 2);
+        	assert_ptr_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.function_node,
+            	ctx->arg_root->children->children[0] );
+        	assert_ptr_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.closure,
+            	ctx->arg_env );
+    	}
+    	assert_int_equal(ctx->arg_env->refcount, 2);
+		break;
+	case ENV_ASRT_EXPECT_SET_LOCAL_BND_CHILD_TO_READ:
+	    assert_ptr_equal(
+    	    ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->data->data.symbol_value );
+    	if (g_runtime_spy->set_local_ret) {
+        	switch (ctx->read_ast_arrange_kind) {
+        	case READ_AST_ARR_READ_NUM_42:
+            	assert_int_equal(
+                	ctx->runtime_spy.set_local_arg_value_snapshot.value.type,
+                	RUNTIME_VALUE_NUMBER );
+	            assert_int_equal(
+    	            ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+        	        1 );
+            	assert_int_equal(
+                	ctx->runtime_spy.set_local_arg_value_snapshot.value.as.i,
+                	42 );
+			break;
+        	default:
+            	assert_true(false);
+        	}
+    	} else {
+        	assert_int_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            	1 );
+		}
+        break;
+	case ENV_ASRT_EXPECT_SET_LOCAL_BND_LHS_TO_NUM_42:
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->data->data.symbol_value );
+    	if (g_runtime_spy->set_local_ret) {
+        	assert_int_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            	1 );
+        	assert_int_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.address->refcount,
+            	2 );
+        	assert_int_equal(
+            	ctx->runtime_spy.set_local_arg_value_snapshot.value.as.i,
+            	42 );
+    	}
+	    break;
+    default:
+        assert_true(false);
     }
 }
 
 
 
 //-----------------------------------------------------------------------------
-// READ_EVAL CALLBACK USAGE EXPECTATIONS
+// READ_AST CALLBACK USAGE EXPECTATIONS
 //-----------------------------------------------------------------------------
 
 
-static void read_ast_usage(test_interpreter_ctx *ctx) {
-    assert_true(ctx->read_ast_spy.read_ast_fn_has_been_called);
-    assert_ptr_equal(
-        ctx->read_ast_spy.read_ast_fn_arg_ctx,
-        ctx->arg_env );
-    }
-
-
-
-//-----------------------------------------------------------------------------
-// MOCK INITIALISATION FOR runtime_env INTERACTION TESTING
-//-----------------------------------------------------------------------------
-
-
-static void mock_spy_runtime_env_arrange(const test_interpreter_case *param_case) {
-    if (param_case->runtime_env_set_local_will_be_called) {
-        // make the runtime_spy know how to refcount the runtime value
-        g_runtime_spy->runtime_env_set_local_will_fail
-            = param_case->runtime_env_set_local_will_fail;
-        will_return(
-            spy_runtime_env_set_local,
-            param_case->runtime_env_set_local_will_fail ? false : true );
-    }
-    if (param_case->runtime_env_get_local_will_be_called)
-        will_return(
-            spy_runtime_env_get_local,
-            param_case->runtime_env_get_local_will_fail ? NULL : DUMMY_RUNTIME_ENV_VALUE_P );
-    if (param_case->runtime_env_get_will_be_called)
-        if (param_case->runtime_env_get_will_fail)
-            will_return(spy_runtime_env_get, NULL);
-        else
-            will_return(spy_runtime_env_get, param_case->ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
+static void read_ast_usage_expectation(test_interpreter_ctx *ctx) {
+	if (!ctx->read_ast_assert_kind) return;
+	switch (ctx->read_ast_assert_kind) {
+	case READ_AST_ASRT_NONE:
+		// do nothing
+		break;
+	case READ_AST_ASRT_CALL:
+	    assert_ptr_equal(
+    	    ctx->read_ast_spy.read_ast_fn_arg_ctx,
+        	ctx->arg_ctx );
+		break;
+	default:
+		assert_true(false);
+	}
 }
 
 
 
 //-----------------------------------------------------------------------------
-// MOCK INITIALISATION FOR read_ast INTERACTION TESTING
+// WRITE_RUNTIME_VALUE CALLBACK USAGE EXPECTATIONS
 //-----------------------------------------------------------------------------
 
 
-static void mock_spy_read_ast_arrange(const test_interpreter_case *param_case) {
-    if (!param_case->callback_read_ast_will_be_called) return;
-    param_case->ctx->read_ast_spy.callback_read_ast_ret_kind = param_case->callback_read_ast_ret_kind;
-    if (param_case->callback_read_ast_will_fail) {
-        param_case->ctx->read_ast_spy.read_ast_ret = NULL;
-        will_return(spy_read_ast_fn, NULL);
-        return;
-    }
-    switch (param_case->callback_read_ast_ret_kind) {
-        case READ_EVAL_RET_KIND_DUMMY:
-            param_case->ctx->read_ast_spy.read_ast_ret = DUMMY_AST_P;
-            break;
-        case READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42:
-            param_case->ctx->read_ast_spy.read_ast_ret = ast_create_int_node(42);
-            break;
-        default:
-            assert_true(false);
-    }
-    g_read_ast_spy->read_ast_ret = param_case->ctx->read_ast_spy.read_ast_ret;
-    will_return(spy_read_ast_fn, g_read_ast_spy->read_ast_ret);
+static void write_runtime_value_usage_expectation(test_interpreter_ctx *ctx) {
+	if (!ctx->write_runtime_value_assert_kind) return;
+	assert_ptr_equal(
+		ctx->spy_write_runtime_value.write_runtime_value_fn_arg_ctx,
+		ctx->arg_ctx
+	);
+	test_interpreter_runtime_value_snapshot snapshot =
+		ctx->spy_write_runtime_value.write_runtime_value_fn_arg_value_snapshot;
+	switch (ctx->write_runtime_value_assert_kind) {
+	case WRITE_RUNTIME_VALUE_ASRT_NONE:
+		// do nothing
+		break;
+	case WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42:
+		assert_int_equal(
+			snapshot.value.type,
+			RUNTIME_VALUE_NUMBER
+		);
+		assert_int_equal(
+			snapshot.value.refcount,
+			1
+		);
+		assert_int_equal(
+			snapshot.value.as.i,
+			42
+		);
+		break;
+	case WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_3:
+		assert_int_equal(
+			snapshot.value.type,
+			RUNTIME_VALUE_NUMBER
+		);
+		assert_int_equal(
+			snapshot.value.refcount,
+			1
+		);
+		assert_int_equal(
+			snapshot.value.as.i,
+			3
+		);
+		break;
+	case WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_2:
+		assert_int_equal(
+			snapshot.value.type,
+			RUNTIME_VALUE_NUMBER
+		);
+		assert_int_equal(
+			snapshot.value.refcount,
+			2
+		);
+		assert_int_equal(
+			snapshot.address->refcount,
+			1 );
+		assert_int_equal(
+			snapshot.value.as.i,
+			42
+		);
+		break;
+	case WRITE_RUNTIME_VALUE_ASRT_WRITE_STR_ABC:
+		assert_int_equal(
+			snapshot.value.type,
+			RUNTIME_VALUE_STRING
+		);
+		assert_int_equal(
+			snapshot.value.refcount,
+			1
+		);
+		assert_string_equal(
+			snapshot.value.as.s,
+			"abc"
+		);
+		break;
+	case WRITE_RUNTIME_VALUE_ASRT_WRITE_QUOTED_ADD_1_PLUS_2:
+		assert_int_equal(
+			snapshot.value.type,
+			RUNTIME_VALUE_QUOTED
+		);
+		assert_int_equal(
+			snapshot.value.refcount,
+			1
+		);
+		assert_ptr_equal(
+			snapshot.value.as.quoted,
+			ctx->arg_root->children->children[0]->children->children[0]
+		);
+		break;
+	default:
+		assert_true(false);
+	}
+}
+
+
+
+//-----------------------------------------------------------------------------
+// SPY INITIALIZATION FOR runtime_env INTERACTION TESTING
+//-----------------------------------------------------------------------------
+
+
+static void spy_runtime_env_arrange(const test_interpreter_case *param_case) {
+	param_case->ctx->runtime_env_arrange_kind = param_case->runtime_env_arrange_kind;
+	param_case->ctx->runtime_env_assert_kind = param_case->runtime_env_assert_kind;
+	switch (param_case->ctx->runtime_env_arrange_kind) {
+	case ENV_ARR_NONE:
+		// do nothing
+		break;
+	case ENV_ARR_GET_RET_NULL:
+		param_case->ctx->runtime_spy.get_ret = NULL;
+		break;
+	case ENV_ARR_GET_RET_NUM_42:
+		param_case->ctx->runtime_spy.get_ret = runtime_env_make_number(42);
+		break;
+	case ENV_ARR_GET_RET_NUM_42_RCNT_2:
+		runtime_env_value *value = runtime_env_make_number(42);
+		runtime_env_value_retain(value);
+		assert_int_equal(value->refcount, 2);
+		param_case->ctx->runtime_spy.get_ret = value;
+		break;
+	case ENV_ARR_GET_RET_NUM_0:
+		param_case->ctx->runtime_spy.get_ret = runtime_env_make_number(0);
+		break;
+	case ENV_ARR_GET_RET_QUOTED_ADD_1_PLUS_2:
+		param_case->ctx->runtime_spy.get_ret =
+			runtime_env_make_quoted(
+				ast_create_children_node_var(
+					AST_TYPE_ADDITION,
+					2,
+					ast_create_int_node(1),
+					ast_create_int_node(2) ) );
+		break;
+	case ENV_ARR_GET_RET_STR_ABC:
+		param_case->ctx->runtime_spy.get_ret = runtime_env_make_string("abc");
+		break;
+	case ENV_ARR_SET_LOCAL_RET_FALSE:
+		param_case->ctx->runtime_spy.set_local_ret = false;
+		break;
+	case ENV_ARR_SET_LOCAL_RET_TRUE:
+		param_case->ctx->runtime_spy.set_local_ret = true;
+		break;
+	default:
+		assert_true(false);
+	}
+}
+
+
+
+//-----------------------------------------------------------------------------
+// SPY INITIALIZATION FOR read_ast INTERACTION TESTING
+//-----------------------------------------------------------------------------
+
+
+static void spy_read_ast_arrange(const test_interpreter_case *param_case) {
+	param_case->ctx->read_ast_arrange_kind = param_case->read_ast_arrange_kind;
+	param_case->ctx->read_ast_assert_kind = param_case->read_ast_assert_kind;
+	switch (param_case->ctx->read_ast_arrange_kind) {
+		case READ_AST_ARR_NONE:
+		// do nothing
+		break;
+	case READ_AST_ARR_READ_FAIL:
+		param_case->ctx->read_ast_spy.read_ast_ret = NULL;
+		break;
+	case READ_AST_ARR_READ_NUM_42:
+		param_case->ctx->read_ast_spy.read_ast_ret = ast_create_int_node(42);
+		break;
+	default:
+		assert_true(false);
+	}
+}
+
+
+
+//-----------------------------------------------------------------------------
+// SPY INITIALIZATION FOR write_runtime_value INTERACTION TESTING
+//-----------------------------------------------------------------------------
+
+
+static void spy_write_runtime_value_arrange(const test_interpreter_case *param_case) {
+	param_case->ctx->write_runtime_value_arrange_kind = param_case->write_runtime_value_arrange_kind;
+	param_case->ctx->write_runtime_value_assert_kind = param_case->write_runtime_value_assert_kind;
+	switch (param_case->ctx->write_runtime_value_arrange_kind) {
+	case WRITE_RUNTIME_VALUE_ARR_NONE:
+		// do nothing
+		break;
+	case WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL:
+		param_case->ctx->spy_write_runtime_value.write_runtime_value_ret = false;
+		break;
+	case WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS:
+		param_case->ctx->spy_write_runtime_value.write_runtime_value_ret = true;
+		break;
+	default:
+		assert_true(false);
+	}
 }
 
 
@@ -1255,32 +1488,20 @@ static void expected_out_unchanged(test_interpreter_ctx *ctx) {
     assert_ptr_equal(*ctx->arg_out, ctx->arg_out_value_before);
 }
 
-static void expected_out_points_on_fresh_number_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->arg_out);
-    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
-    assert_int_equal((*ctx->arg_out)->refcount, 1);
-    assert_int_equal((*ctx->arg_out)->as.i, ctx->arg_root->data->data.int_value);
-}
-
-static void expected_out_points_on_fresh_string_value(test_interpreter_ctx *ctx) {
+static void expected_out_points_on_fresh_string_abc(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_STRING);
     assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_string_equal((*ctx->arg_out)->as.s, ctx->arg_root->data->data.string_value);
 }
 
-static void expected_out_points_on_value_bound_to_symbol_and_its_refcount_has_been_incremented(test_interpreter_ctx *ctx) {
+static void expected_out_points_on_get_ret_and_its_refcount_has_been_incremented_to_3(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
-    assert_ptr_equal(*ctx->arg_out, ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
-    assert_int_equal(DUMMY_RUNTIME_ENV_VALUE_P->refcount, 2);
+    assert_ptr_equal(*ctx->arg_out, ctx->runtime_spy.get_ret_snapshot.address);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 3);
+	assert_int_equal((*ctx->arg_out)->as.i, 42);
 }
-/*
-static void expected_out_points_on_fresh_symbol_value(test_interpreter_ctx *ctx) {
-    assert_non_null(*ctx->arg_out);
-    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_SYMBOL);
-    assert_ptr_equal((*ctx->arg_out)->as.sym, ctx->arg_root->data->data.symbol_value);
-}
-*/
 
 static void expected_out_points_on_fresh_error_not_sentinel_value(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
@@ -1321,12 +1542,11 @@ static void expected_out_points_on_negation_result_when_number(test_interpreter_
     assert_int_equal((*ctx->arg_out)->as.i, - ctx->arg_root->children->children[0]->data->data.int_value);
 }
 
-static void expected_out_points_on_negation_result_when_symbol(test_interpreter_ctx *ctx) {
+static void expected_out_points_on_fresh_number_minus_42(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal((*ctx->arg_out)->refcount, 1);
-    // tne runtime value number has been fetched in runtime environment
-    assert_int_equal((*ctx->arg_out)->as.i, - ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i);
+	assert_int_equal((*ctx->arg_out)->as.i, -42);
 }
 
 static void expected_out_points_on_addition_result_when_two_numbers(test_interpreter_ctx *ctx) {
@@ -1348,7 +1568,7 @@ static void expected_out_points_on_addition_result_when_lhs_number_rhs_symbol(te
         (*ctx->arg_out)->as.i,
         ctx->arg_root->children->children[0]->data->data.int_value
         +
-        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.get_ret_snapshot.value.as.i );
 }
 
 static void expected_out_points_on_subtraction_result_when_two_numbers(test_interpreter_ctx *ctx) {
@@ -1370,7 +1590,7 @@ static void expected_out_points_on_subtraction_result_when_lhs_number_rhs_symbol
         (*ctx->arg_out)->as.i,
         ctx->arg_root->children->children[0]->data->data.int_value
         -
-        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.get_ret_snapshot.value.as.i );
 }
 
 static void expected_out_points_on_subtraction_result(test_interpreter_ctx *ctx) {
@@ -1412,7 +1632,7 @@ static void expected_out_points_on_multiplication_result_when_lhs_number_rhs_sym
         (*ctx->arg_out)->as.i,
         ctx->arg_root->children->children[0]->data->data.int_value
         *
-        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.get_ret_snapshot.value.as.i );
 }
 
 static void expected_out_points_on_division_result_when_two_numbers(test_interpreter_ctx *ctx) {
@@ -1433,7 +1653,7 @@ static void expected_out_points_on_division_result_when_lhs_number_rhs_symbol(te
         (*ctx->arg_out)->as.i,
         ctx->arg_root->children->children[0]->data->data.int_value
         /
-        ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.i );
+        ctx->runtime_spy.get_ret_snapshot.value.as.i );
 }
 
 static void expected_out_points_on_quoted_value(test_interpreter_ctx *ctx) {
@@ -1450,11 +1670,11 @@ static void expected_out_points_on_bound_number_42(test_interpreter_ctx *ctx) {
     assert_int_equal((*ctx->arg_out)->as.i, 42);
 }
 
-static void expected_out_points_on_bound_string_A_CONSTANT_STRING(test_interpreter_ctx *ctx) {
+static void expected_out_points_on_bound_string_abc(test_interpreter_ctx *ctx) {
     assert_non_null(*ctx->arg_out);
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_STRING);
     assert_int_equal((*ctx->arg_out)->refcount, 2);
-    assert_string_equal((*ctx->arg_out)->as.s, A_CONSTANT_STRING);
+    assert_string_equal((*ctx->arg_out)->as.s, "abc");
 }
 
 static void expected_out_points_on_fresh_number_3(test_interpreter_ctx *ctx) {
@@ -1462,6 +1682,13 @@ static void expected_out_points_on_fresh_number_3(test_interpreter_ctx *ctx) {
     assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
     assert_int_equal((*ctx->arg_out)->refcount, 1);
     assert_int_equal((*ctx->arg_out)->as.i, 3);
+}
+
+static void expected_out_points_on_fresh_number_42(test_interpreter_ctx *ctx) {
+    assert_non_null(*ctx->arg_out);
+    assert_int_equal((*ctx->arg_out)->type, RUNTIME_VALUE_NUMBER);
+    assert_int_equal((*ctx->arg_out)->refcount, 1);
+    assert_int_equal((*ctx->arg_out)->as.i, 42);
 }
 
 
@@ -1478,53 +1705,52 @@ static void destroy_root(test_interpreter_ctx *ctx) {
 
 static void destroy_runtime_value(const runtime_env_value *value) {
     size_t refcount = value->refcount;
-    for (size_t i = 0; i < refcount; i++)
-        runtime_env_value_release(value);
-}
-
-static void destroy_runtime_value_at_out(test_interpreter_ctx *ctx) {
-    destroy_runtime_value(*ctx->arg_out);
-}
-
-static void destroy_read_ast(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->read_ast_spy.read_ast_ret);
-}
-
-static void destroy_quoted_ast(test_interpreter_ctx *ctx) {
-    ast_destroy((ast *) ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p->as.quoted);
-}
-
-static void destroy_quoted_runtime_value(test_interpreter_ctx *ctx) {
-    destroy_runtime_value(ctx->runtime_spy.fake_value_bound_to_dummy_symbol_p);
+    for (size_t i = 0; i < refcount; i++) runtime_env_value_release(value);
 }
 
 static void destroy_root_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
-    destroy_runtime_value_at_out(ctx);
+    destroy_runtime_value(*ctx->arg_out);
 }
 
 static void destroy_root_and_read_ast(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
-    destroy_read_ast(ctx);
+    ast_destroy((ast *) ctx->read_ast_spy.read_ast_ret);
 }
 
 static void destroy_root_and_read_ast_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
-    destroy_read_ast(ctx);
-    destroy_runtime_value_at_out(ctx);
+    ast_destroy((ast *) ctx->read_ast_spy.read_ast_ret);
+    destroy_runtime_value(*ctx->arg_out);
 }
 
-static void destroy_root_and_quoted_ast_and_quoted_runtime_value_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
+static void destroy_root_and_quoted_ast_in_get_ret_and_get_ret_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
-    destroy_quoted_ast(ctx);
-    destroy_quoted_runtime_value(ctx);
-    destroy_runtime_value_at_out(ctx);
+    ast_destroy((ast *) ctx->runtime_spy.get_ret->as.quoted);
+    destroy_runtime_value(ctx->runtime_spy.get_ret);
+    destroy_runtime_value(*ctx->arg_out);
 }
 
-static void destroy_root_and_quoted_ast_and_quoted_runtime_value(test_interpreter_ctx *ctx) {
+static void destroy_root_and_quoted_ast_in_get_ret_and_get_ret(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
-    destroy_quoted_ast(ctx);
-    destroy_quoted_runtime_value(ctx);
+    ast_destroy((ast *) ctx->runtime_spy.get_ret->as.quoted);
+    destroy_runtime_value(ctx->runtime_spy.get_ret);
+}
+
+static void destroy_root_and_written_runtime_value(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+	destroy_runtime_value(ctx->spy_write_runtime_value.write_runtime_value_fn_arg_value);
+}
+
+static void destroy_root_and_get_ret(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+	destroy_runtime_value(ctx->runtime_spy.get_ret);
+}
+
+static void destroy_root_and_get_ret_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+	destroy_runtime_value(ctx->runtime_spy.get_ret);
+	destroy_runtime_value(*ctx->arg_out);
 }
 
 
@@ -1590,36 +1816,35 @@ doubles:
 //  - root is a number node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_INT_OOM = {0};
 static const test_interpreter_case INT_NODE_OOM = {
-        .name = "eval_error_oom_when_int_node_and_malloc_fails",
+    .name = "eval_error_oom_when_int_node_and_malloc_fails",
 
-        .root_constructor_fn = &make_root_a_int_node,
-        .env_is_dummy = true,
-        .oom = true,
+    .root_constructor_fn = &make_root_a_int_node,
+    .env_is_dummy = true,
+    .oom = true,
 
-        .expected_runtime_env_usage_fn = &no_runtime_env_usage,
-        .expected_out_fn = &expected_out_unchanged,
-        .expected_status = INTERPRETER_STATUS_OOM,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
 
-        .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root,
 
-        .ctx =&CTX_INT_OOM,
+    .ctx =&CTX_INT_OOM,
 };
 
 // Given:
 //  - args are valid
-//  - root is a number node registering integer value A_INT_NOT_ZERO
+//  - root is a number node registering integer value 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
-//    && (*out)->as.i == A_INT_NOT_ZERO
+//    && (*out)->as.i == 42
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_INT_NODE_SUCCESS = {0};
 static const test_interpreter_case INT_NODE_SUCCESS = {
@@ -1629,8 +1854,7 @@ static const test_interpreter_case INT_NODE_SUCCESS = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_out_fn = &expected_out_points_on_fresh_number_value,
+    .expected_out_fn = &expected_out_points_on_fresh_number_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
     .clean_up_fn = &destroy_root_and_runtime_value_at_out,
@@ -1643,18 +1867,17 @@ static const test_interpreter_case INT_NODE_SUCCESS = {
 //  - root is a string node registering the value of the constant string A_CONSTANT_STRING
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_STRING_OOM = {0};
 static const test_interpreter_case STRING_NODE_OOM = {
     .name = "eval_error_oom_when_string_node_and_malloc_fails",
 
-    .root_constructor_fn = &make_root_a_string_node,
+    .root_constructor_fn = &make_root_a_string_node_abc,
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -1665,25 +1888,24 @@ static const test_interpreter_case STRING_NODE_OOM = {
 
 // Given:
 //  - args are valid
-//  - root is a string node registering the value of the constant string A_CONSTANT_STRING
+//  - root is a string node registering the value "abc"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_STRING
 //    && (*out)->refcount == 1
-//    && string_equal((*out)->as.s, A_CONSTANT_STRING)
+//    && string_equal((*out)->as.s, "abc")
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_STRING_NODE_SUCCESS = {0};
 static const test_interpreter_case STRING_NODE_SUCCESS = {
     .name = "eval_success_when_string_node_and_malloc_succeeds",
 
-    .root_constructor_fn = &make_root_a_string_node,
+    .root_constructor_fn = &make_root_a_string_node_abc,
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_out_fn = &expected_out_points_on_fresh_string_value,
+    .expected_out_fn = &expected_out_points_on_fresh_string_abc,
     .expected_status = INTERPRETER_STATUS_OK,
 
     .clean_up_fn = &destroy_root_and_runtime_value_at_out,
@@ -1697,9 +1919,9 @@ static const test_interpreter_case STRING_NODE_SUCCESS = {
 //  - DUMMY_SYMBOL_P is unbound in environment
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_SYMBOL_UNBOUND = {0};
 static const test_interpreter_case SYMBOL_NODE_UNBOUND = {
     .name = "eval_error_when_symbol_node_unbound",
@@ -1707,12 +1929,11 @@ static const test_interpreter_case SYMBOL_NODE_UNBOUND = {
     .root_constructor_fn = &make_root_a_symbol_node,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_ROOT_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -1722,14 +1943,17 @@ static const test_interpreter_case SYMBOL_NODE_UNBOUND = {
 // Given:
 //  - args are valid
 //  - root is a symbol node registering DUMMY_SYMBOL_P
-//  - DUMMY_SYMBOL_P is bound to DUMMY_RUNTIME_ENV_VALUE_P in environment
-//  - DUMMY_RUNTIME_ENV_VALUE_P->refcount == 2
+//  - DUMMY_SYMBOL_P is bound to a RUNTIME_VALUE_NUMBER 42 with
+//    refcount 2 in environment
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - environment is not modified
 //  - *out != NULL
-//    && *out == DUMMY_RUNTIME_ENV_VALUE_P
-//    && DUMMY_RUNTIME_ENV_VALUE_P->refcount == 3
+//    && *out == param_case->ctx->runtime_spy.get_ret_snapshot.address
+//    && *out->refcount == 3
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_SYMBOL_BOUND = {0};
 static const test_interpreter_case SYMBOL_NODE_BOUND = {
@@ -1738,11 +1962,10 @@ static const test_interpreter_case SYMBOL_NODE_BOUND = {
     .root_constructor_fn = &make_root_a_symbol_node,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42_RCNT_2,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt,
-    .expected_out_fn = &expected_out_points_on_value_bound_to_symbol_and_its_refcount_has_been_incremented,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_ROOT_SYMBOL,
+    .expected_out_fn = &expected_out_points_on_get_ret_and_its_refcount_has_been_incremented_to_3,
     .expected_status = INTERPRETER_STATUS_OK,
 
     .clean_up_fn = &destroy_root_and_runtime_value_at_out,
@@ -1755,7 +1978,7 @@ static const test_interpreter_case SYMBOL_NODE_BOUND = {
 //  - root is an error node distinct from the sentinel
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ERROR_NOT_SENTINEL_OOM = {0};
@@ -1766,7 +1989,6 @@ static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_OOM = {
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -1780,7 +2002,7 @@ static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_OOM = {
 //  - root is an error node distinct from the sentinel
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -     *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_ERROR
 //    && (*out)->refcount == 1
@@ -1795,7 +2017,6 @@ static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_SUCCESS = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_fresh_error_not_sentinel_value,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -1809,7 +2030,7 @@ static const test_interpreter_case ERROR_NOT_SENTINEL_NODE_SUCCESS = {
 //  - root is the error node sentinel
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ERROR_SENTINEL_OOM = {0};
@@ -1820,7 +2041,6 @@ static const test_interpreter_case ERROR_SENTINEL_NODE_OOM = {
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -1834,7 +2054,7 @@ static const test_interpreter_case ERROR_SENTINEL_NODE_OOM = {
 //  - root is the error node sentinel
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_ERROR
 //    && (*out)->refcount == 1
@@ -1849,7 +2069,6 @@ static const test_interpreter_case ERROR_SENTINEL_NODE_SUCCESS = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_fresh_error_sentinel_value,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -1914,7 +2133,7 @@ doubles:
 //  - root is a ill-formed function node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -1925,7 +2144,6 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = false,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -1939,7 +2157,7 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a ill-formed function node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -1950,7 +2168,6 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = false,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -1964,7 +2181,7 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed function node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
@@ -1975,7 +2192,6 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN = {
     .env_is_dummy = false,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -1989,7 +2205,7 @@ static const test_interpreter_case FUNCTION_NODE_ILL_FORMED_TWO_CHILDREN = {
 //  - root is a well-formed function node
 //  - but two parameters point on the same symbol
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_DUPLICATE_PARAMETER
 static test_interpreter_ctx CTX_FUNCTION_NODE_DUPLICATE_PARAM = {0};
@@ -2000,7 +2216,6 @@ static const test_interpreter_case FUNCTION_NODE_DUPLICATE_PARAM = {
     .env_is_dummy = false,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_DUPLICATE_PARAMETER,
 
@@ -2014,8 +2229,8 @@ static const test_interpreter_case FUNCTION_NODE_DUPLICATE_PARAM = {
 //  - root is an empty function node (so there is no duplicate parameter)
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
-//  - no binding in env->binding
+//  - environment is not modified
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_FUNCTION_NODE_OOM = {0};
@@ -2026,7 +2241,6 @@ static const test_interpreter_case FUNCTION_NODE_OOM = {
     .env_is_dummy = false,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = &no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -2040,8 +2254,8 @@ static const test_interpreter_case FUNCTION_NODE_OOM = {
 //  - root is an empty function node (so there is no duplicate parameter)
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
-//  - no binding in env->binding
+//  - environment is not modified
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_FUNCTION
 //    && (*out)->refcount == 1
@@ -2056,7 +2270,6 @@ static const test_interpreter_case FUNCTION_NODE_SUCCESS = {
     .env_is_dummy = false,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_fresh_function_value,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -2122,7 +2335,7 @@ doubles:
 //  - root is a ill-formed function definition node because:
 //  - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -2133,7 +2346,6 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2147,7 +2359,7 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_CHILDREN_
 //  - root is a ill-formed function definition node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -2158,7 +2370,6 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD 
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2172,7 +2383,7 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_NO_CHILD 
 //  - root is a ill-formed function definition node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
@@ -2183,7 +2394,6 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILD
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2197,8 +2407,8 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_ILL_FORMED_TWO_CHILD
 //  - root is a function definition node and its child is an empty function node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
-//  - no binding in env->binding
+//  - environment is not modified
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_OOM = {0};
@@ -2209,7 +2419,6 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_OOM = {
     .env_is_dummy = false,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = &no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -2235,7 +2444,7 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_OOM = {
 //    - key: root->children->children[0]->children->children[0]->data->data.symbol_value
 //    - value: v
 //  - destroys v
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_BINDING_ERROR
 static test_interpreter_ctx CTX_FUNCTION_DEFINITION_NODE_BINDING_FAILURE = {0};
@@ -2245,10 +2454,9 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_BINDING_FAILURE = {
     .root_constructor_fn = &make_root_a_function_definition_node_with_empty_function,
     .env_is_dummy = false,
     .oom = false,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_FALSE,
 
-    .expected_runtime_env_usage_fn = &expect_runtime_binding_attempt_for_function_definition,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_DEF_FCT,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
 
@@ -2288,10 +2496,9 @@ static const test_interpreter_case FUNCTION_DEFINITION_NODE_SUCCESS = {
     .root_constructor_fn = &make_root_a_function_definition_node_with_empty_function,
     .env_is_dummy = false,
     .oom = false,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 
-    .expected_runtime_env_usage_fn = &expect_runtime_binding_attempt_for_function_definition,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_DEF_FCT,
     .expected_out_fn = &expected_out_points_on_child_function_value_with_refcount_2,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -2355,7 +2562,7 @@ doubles:
 //  - root is a ill-formed negation node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -2366,7 +2573,6 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2380,7 +2586,7 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a ill-formed negation node because:
 //  - root->children != NULL && root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -2391,7 +2597,6 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2405,7 +2610,7 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed negation node because:
 //    - root->children != NULL && root->children->children_nb == 2
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_NEGATION_NODE_ILL_FORMED_TWO_CHILDREN = {0};
@@ -2416,7 +2621,6 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_TWO_CHILDREN = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2434,9 +2638,9 @@ static const test_interpreter_case NEGATION_NODE_ILL_FORMED_TWO_CHILDREN = {
 //    is not bound to any runtime_env_value*
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND = {0};
 static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND = {
     .name = "eval_error_unbound_when_negation_node_with_symbol_and_unbound",
@@ -2444,12 +2648,11 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND = {
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -2465,9 +2668,9 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND = {
 //    is not bound to any runtime_env_value*
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND_AND_OOM = {0};
 static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND_AND_OOM = {
     .name = "eval_error_unbound_when_negation_node_with_symbol_and_unbound_and_oom",
@@ -2475,12 +2678,11 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND_AND_OOM
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -2495,9 +2697,10 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_UNBOUND_AND_OOM
 //    root->children->children[0]->data->data.symbol_value
 //    is bound to
 //    a runtime value which is not of type RUNTIME_VALUE_NUMBER
+//    (it is bound to a RUNTIME_VALUE_STRING "abc"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_NUMBER = {0};
@@ -2507,15 +2710,13 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_NUMBER,
 };
@@ -2528,9 +2729,10 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_
 //    root->children->children[0]->data->data.symbol_value
 //    is bound to
 //    a runtime value which is not of type RUNTIME_VALUE_NUMBER
+//    (it is bound to a RUNTIME_VALUE_STRING "abc"
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_NUMBER_AND_OOM = {0};
@@ -2540,15 +2742,13 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_NUMBER_AND_OOM,
 };
@@ -2559,11 +2759,13 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_NOT_TO_A_
 //  - root->children->children[0]->data->type == TYPE_SYMBOL
 //  - in runtime environment:
 //    root->children->children[0]->data->data.symbol_value
-//    is bound to
-//    a runtime value which is of type RUNTIME_VALUE_NUMBER
+//    is bound to value such as:
+//      - value->type == RUNTIME_VALUE_NUMBER
+//      - value->refcount == 1
+//      - value->as.i == 42
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMBER_AND_OOM = {0};
@@ -2573,15 +2775,13 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMB
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMBER_AND_OOM,
 };
@@ -2592,15 +2792,17 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMB
 //  - root->children->children[0]->data->type == TYPE_SYMBOL
 //  - in runtime environment:
 //    root->children->children[0]->data->data.symbol_value
-//    is bound to
-//    a runtime value which is of type RUNTIME_VALUE_NUMBER
+//    is bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
-//    && (*out)->as.i == - <number runtime value bound to child>->as.i
+//    && (*out)->as.i == - 42
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMBER = {0};
 static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMBER = {
@@ -2609,15 +2811,13 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMB
     .root_constructor_fn = &make_root_a_negation_node_with_a_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
-    .expected_out_fn = &expected_out_points_on_negation_result_when_symbol,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+    .expected_out_fn = &expected_out_points_on_fresh_number_minus_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value_at_out,
+    .clean_up_fn = &destroy_root_and_get_ret_and_runtime_value_at_out,
 
     .ctx =&CTX_NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMBER,
 };
@@ -2628,7 +2828,7 @@ static const test_interpreter_case NEGATION_NODE_WITH_SYMBOL_AND_BOUND_TO_A_NUMB
 //  - root->children->children[0]->data->type == TYPE_INT
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_NEGATION_NODE_WITH_NUMBER_AND_OOM = {0};
@@ -2639,7 +2839,6 @@ static const test_interpreter_case NEGATION_NODE_WITH_NUMBER_AND_OOM = {
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -2654,7 +2853,7 @@ static const test_interpreter_case NEGATION_NODE_WITH_NUMBER_AND_OOM = {
 //  - root->children->children[0]->data->type == TYPE_INT
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
@@ -2668,7 +2867,6 @@ static const test_interpreter_case NEGATION_NODE_WITH_NUMBER_SUCCESS = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_negation_result_when_number,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -2732,7 +2930,7 @@ doubles:
 //  - root is a ill-formed addition node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -2743,7 +2941,6 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2757,7 +2954,7 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a ill-formed addition node because:
 //    - root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -2768,7 +2965,6 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2782,7 +2978,7 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed addition node because:
 //    - root->children->children_nb == 1
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_ONE_CHILD = {0};
@@ -2793,7 +2989,6 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_ONE_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2807,7 +3002,7 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_ONE_CHILD = {
 //  - root is a ill-formed addition node because:
 //    - root->children->children_nb == 3
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
@@ -2818,7 +3013,6 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -2833,9 +3027,9 @@ static const test_interpreter_case ADDITION_NODE_ILL_FORMED_THREE_CHILDREN = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_ADDITION_NODE_RHS_SYMBOL_UNBOUND = {0};
 static const test_interpreter_case ADDITION_NODE_RHS_SYMBOL_UNBOUND = {
     .name = "eval_error_unbound_when_addition_node_and_rhs_symbol_unbound",
@@ -2843,12 +3037,11 @@ static const test_interpreter_case ADDITION_NODE_RHS_SYMBOL_UNBOUND = {
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -2861,7 +3054,7 @@ static const test_interpreter_case ADDITION_NODE_RHS_SYMBOL_UNBOUND = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ADDITION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {0};
@@ -2871,9 +3064,7 @@ static const test_interpreter_case ADDITION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -2885,10 +3076,17 @@ static const test_interpreter_case ADDITION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {
 // Given:
 //  - args are well-formed
 //  - root is a well-formed addition node
-//  - the first child evaluates to number but the second is a symbol bound to a string
+//  - the first child evaluates to number but the second is
+//    a symbol bound to a value such as:
+//      - value->type == RUNTIME_VALUE_STRING
+//      - value->refcount == 1
+//      - value->as.s == "abc"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_ADDITION_NODE_RHS_NOT_NUMBER = {0};
@@ -2898,15 +3096,13 @@ static const test_interpreter_case ADDITION_NODE_RHS_NOT_NUMBER = {
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_ADDITION_NODE_RHS_NOT_NUMBER,
 };
@@ -2918,7 +3114,7 @@ static const test_interpreter_case ADDITION_NODE_RHS_NOT_NUMBER = {
 //  - RHS would be a symbol bound to a STRING runtime value if no OOM
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ADDITION_NODE_RHS_NOT_NUMBER_AND_OOM = {0};
@@ -2928,9 +3124,7 @@ static const test_interpreter_case ADDITION_NODE_RHS_NOT_NUMBER_AND_OOM = {
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -2943,17 +3137,24 @@ static const test_interpreter_case ADDITION_NODE_RHS_NOT_NUMBER_AND_OOM = {
 //  - args are well-formed
 //  - root is a well-formed addition node
 //  - the two children evaluate to numbers
-//  - the second child is a symbol bound to a number runtime value
+//  - the second child is a symbol whose name is "symbol_name"
+//    bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
 //    && (*out)->as.i ==
 //        root->children->children[0]->data->data->int_value
 //        +
-//        <number runtime value bound to the second child>->as.i
+//        <the RUNTIME_VALUE_NUMBER bound to the second child>->as.i
+//  - environment is not modified
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {0};
 static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {
@@ -2962,15 +3163,13 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_points_on_addition_result_when_lhs_number_rhs_symbol,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value_at_out,
+    .clean_up_fn = &destroy_root_and_get_ret_and_runtime_value_at_out,
 
     .ctx =&CTX_ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER,
 };
@@ -2982,7 +3181,7 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - the second child is a symbol bound to a number runtime value
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_AND_OOM = {0};
@@ -2992,9 +3191,7 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_addition_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3009,7 +3206,7 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_ADDITION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OOM = {0};
@@ -3020,7 +3217,6 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OOM =
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3035,7 +3231,7 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OOM =
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->as.i ==
@@ -3051,7 +3247,6 @@ static const test_interpreter_case ADDITION_NODE_LHS_NUMBER_RHS_NUMBER = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_addition_result_when_two_numbers,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -3115,7 +3310,7 @@ doubles:
 //  - root is a ill-formed subtraction node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -3126,7 +3321,6 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3140,7 +3334,7 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a ill-formed subtraction node because:
 //    - root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -3151,7 +3345,6 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3165,7 +3358,7 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed subtraction node because:
 //    - root->children->children_nb == 1
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD = {0};
@@ -3176,7 +3369,6 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3190,7 +3382,7 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_ONE_CHILD = {
 //  - root is a ill-formed subtraction node because:
 //    - root->children->children_nb == 3
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
@@ -3201,7 +3393,6 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN = 
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3216,9 +3407,9 @@ static const test_interpreter_case SUBTRACTION_NODE_ILL_FORMED_THREE_CHILDREN = 
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND = {0};
 static const test_interpreter_case SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND = {
     .name = "eval_error_unbound_when_subtraction_node_and_rhs_symbol_unbound",
@@ -3226,12 +3417,11 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND = {
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -3244,7 +3434,7 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {0};
@@ -3254,9 +3444,7 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM =
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3268,10 +3456,16 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM =
 // Given:
 //  - args are well-formed
 //  - root is a well-formed subtraction node
-//  - the first child evaluates to number but the second is a symbol bound to a string
+//  - the first child evaluates to number but the second
+//    is bound to
+//    a runtime value which is not of type RUNTIME_VALUE_NUMBER
+//    (it is bound to a RUNTIME_VALUE_STRING "abc")
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_SUBTRACTION_RHS_NOT_NUMBER = {0};
@@ -3281,15 +3475,13 @@ static const test_interpreter_case SUBTRACTION_RHS_NOT_NUMBER = {
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_SUBTRACTION_RHS_NOT_NUMBER,
 };
@@ -3300,7 +3492,7 @@ static const test_interpreter_case SUBTRACTION_RHS_NOT_NUMBER = {
 //  - the first child evaluates to number but the second is a symbol bound to a string
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_RHS_NOT_NUMBER_AND_OOM = {0};
@@ -3310,9 +3502,7 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_NOT_NUMBER_AND_OOM = {
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3325,10 +3515,16 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_NOT_NUMBER_AND_OOM = {
 //  - args are well-formed
 //  - root is a well-formed subtraction node
 //  - the two children evaluate to numbers
-//  - the second child is a symbol bound to a number runtime value
+//  - the second child is a symbol whose name is "symbol_name"
+//    bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
@@ -3336,6 +3532,7 @@ static const test_interpreter_case SUBTRACTION_NODE_RHS_NOT_NUMBER_AND_OOM = {
 //        root->children->children[0]->data->data->int_value
 //        -
 //        <number runtime value bound to the second child>->as.i
+//  - environment is not modified
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {0};
 static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {
@@ -3344,15 +3541,13 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_points_on_subtraction_result_when_lhs_number_rhs_symbol,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value_at_out,
+    .clean_up_fn = &destroy_root_and_get_ret_and_runtime_value_at_out,
 
     .ctx =&CTX_SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER,
 };
@@ -3364,7 +3559,7 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_
 //  - the second child is a symbol bound to a number runtime value
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_AND_OOM = {0};
@@ -3374,9 +3569,7 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_
     .root_constructor_fn = &make_root_a_well_formed_subtraction_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3391,7 +3584,7 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_SUBTRACTION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OOM = {0};
@@ -3402,7 +3595,6 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OO
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3417,7 +3609,7 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OO
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->as.i ==
@@ -3433,7 +3625,6 @@ static const test_interpreter_case SUBTRACTION_NODE_LHS_NUMBER_RHS_NUMBER = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_subtraction_result_when_two_numbers,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -3497,7 +3688,7 @@ doubles:
 //  - root is a ill-formed multiplication node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -3508,7 +3699,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL 
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3522,7 +3712,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_CHILDREN_NULL 
 //  - root is a ill-formed multiplication node because:
 //    - root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -3533,7 +3723,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3547,7 +3736,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed multiplication node because:
 //    - root->children->children_nb == 1
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD = {0};
@@ -3558,7 +3747,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3572,7 +3760,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_ONE_CHILD = {
 //  - root is a ill-formed multiplication node because:
 //    - root->children->children_nb == 3
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
@@ -3583,7 +3771,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3595,12 +3782,16 @@ static const test_interpreter_case MULTIPLICATION_NODE_ILL_FORMED_THREE_CHILDREN
 // Given:
 //  - args are well-formed
 //  - root is a well-formed multiplication node
-//  - the first child evaluates to number but the second is an unbound symbol
+//  - the first child evaluates to number but the second is an unbound symbol whose name is "symbol_name"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
+//  -    *out != NULL
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND = {0};
 static const test_interpreter_case MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND = {
     .name = "eval_error_unbound_when_multiplication_node_and_rhs_symbol_unbound",
@@ -3608,12 +3799,11 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND = {
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -3626,7 +3816,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {0};
@@ -3636,9 +3826,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND_AND_OO
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3650,10 +3838,17 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_SYMBOL_UNBOUND_AND_OO
 // Given:
 //  - args are well-formed
 //  - root is a well-formed multiplication node
-//  - the first child evaluates to number but the second is a symbol bound to a string
+//  - the first child evaluates to number but the second is
+//    a symbol whose name is "symbol_name" bound to a value such as:
+//      - value->type == RUNTIME_VALUE_STRING
+//      - value->refcount == 1
+//      - value->as.s == "abc"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_RHS_NOT_NUMBER = {0};
@@ -3663,15 +3858,13 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_NOT_NUMBER = {
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_MULTIPLICATION_NODE_RHS_NOT_NUMBER,
 };
@@ -3683,7 +3876,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_NOT_NUMBER = {
 //  - RHS would be a symbol bound to a STRING runtime value if no OOM
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_RHS_NOT_NUMBER_AND_OOM = {0};
@@ -3693,9 +3886,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_NOT_NUMBER_AND_OOM = 
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3708,10 +3899,16 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_NOT_NUMBER_AND_OOM = 
 //  - args are well-formed
 //  - root is a well-formed multiplication node
 //  - the two children evaluate to numbers
-//  - the second child is a symbol bound to a number runtime value
+//  - the second child is a symbol whose name is "symbol_name"
+//    bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
@@ -3719,6 +3916,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_RHS_NOT_NUMBER_AND_OOM = 
 //        root->children->children[0]->data->data->int_value
 //        *
 //        <number runtime value bound to the second child>->as.i
+//  - environment is not modified
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {0};
 static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER = {
@@ -3727,15 +3925,13 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOU
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_points_on_multiplication_result_when_lhs_number_rhs_symbol,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value_at_out,
+    .clean_up_fn = &destroy_root_and_get_ret_and_runtime_value_at_out,
 
     .ctx =&CTX_MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER,
 };
@@ -3747,7 +3943,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOU
 //  - the second child is a symbol bound to a number runtime value
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_AND_OOM = {0};
@@ -3757,9 +3953,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOU
     .root_constructor_fn = &make_root_a_well_formed_multiplication_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3774,7 +3968,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_SYMBOL_BOU
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_MULTIPLICATION_NODE_LHS_NUMBER_RHS_NUMBER_AND_OOM = {0};
@@ -3785,7 +3979,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_NUMBER_AND
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -3800,7 +3993,7 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_NUMBER_AND
 //  - the two children are of type AST_TYPE_DATA_WRAPPER with data of type TYPE_INT
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->as.i ==
@@ -3816,7 +4009,6 @@ static const test_interpreter_case MULTIPLICATION_NODE_LHS_NUMBER_RHS_NUMBER = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_multiplication_result_when_two_numbers,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -3880,7 +4072,7 @@ doubles:
 //  - root is a ill-formed division node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -3891,7 +4083,6 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3905,7 +4096,7 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a ill-formed division node because:
 //    - root->children->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -3916,7 +4107,6 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_NO_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3930,7 +4120,7 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed division node because:
 //    - root->children->children_nb == 1
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_ONE_CHILD = {0};
@@ -3941,7 +4131,6 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_ONE_CHILD = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3955,7 +4144,7 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_ONE_CHILD = {
 //  - root is a ill-formed division node because:
 //    - root->children->children_nb == 3
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_DIVISION_NODE_ILL_FORMED_THREE_CHILDREN = {0};
@@ -3966,7 +4155,6 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_THREE_CHILDREN = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -3981,9 +4169,9 @@ static const test_interpreter_case DIVISION_NODE_ILL_FORMED_THREE_CHILDREN = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_DIVISION_NODE_RHS_SYMBOL_UNBOUND = {0};
 static const test_interpreter_case DIVISION_NODE_RHS_SYMBOL_UNBOUND = {
     .name = "eval_error_unbound_when_division_node_and_rhs_symbol_unbound",
@@ -3991,12 +4179,11 @@ static const test_interpreter_case DIVISION_NODE_RHS_SYMBOL_UNBOUND = {
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -4009,7 +4196,7 @@ static const test_interpreter_case DIVISION_NODE_RHS_SYMBOL_UNBOUND = {
 //  - the first child evaluates to number but the second is an unbound symbol
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {0};
@@ -4019,9 +4206,7 @@ static const test_interpreter_case DIVISION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4033,10 +4218,17 @@ static const test_interpreter_case DIVISION_NODE_RHS_SYMBOL_UNBOUND_AND_OOM = {
 // Given:
 //  - args are well-formed
 //  - root is a well-formed division node
-//  - the first child evaluates to number but the second is a symbol bound to a string
+//  - the first child evaluates to number but the second is
+//    a symbol bound to a value such as:
+//      - value->type == RUNTIME_VALUE_STRING
+//      - value->refcount == 1
+//      - value->as.s == "abc"
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_TYPE_ERROR
 static test_interpreter_ctx CTX_DIVISION_NODE_RHS_NOT_NUMBER = {0};
@@ -4046,15 +4238,13 @@ static const test_interpreter_case DIVISION_NODE_RHS_NOT_NUMBER = {
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_TYPE_ERROR,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_DIVISION_NODE_RHS_NOT_NUMBER,
 };
@@ -4066,7 +4256,7 @@ static const test_interpreter_case DIVISION_NODE_RHS_NOT_NUMBER = {
 //  - RHS would be a symbol bound to a STRING runtime value if no OOM
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_RHS_NOT_NUMBER_AND_OOM = {0};
@@ -4076,9 +4266,7 @@ static const test_interpreter_case DIVISION_NODE_RHS_NOT_NUMBER_AND_OOM = {
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4091,10 +4279,17 @@ static const test_interpreter_case DIVISION_NODE_RHS_NOT_NUMBER_AND_OOM = {
 //  - args are well-formed
 //  - root is a well-formed division node
 //  - the two children evaluate to numbers
-//  - the second child is a symbol bound to a number runtime value with value zero
+//  - the second child is a symbol whose name is "symbol_name"
+//    bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 0
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - calls get with:
+//    - st: ctx.st
+//    - name: "symbol_name"
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_DIVISION_BY_ZERO
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_ZERO = {0};
@@ -4104,15 +4299,13 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_0,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_DIVISION_BY_ZERO,
 
-    .clean_up_fn = &destroy_root,
+    .clean_up_fn = &destroy_root_and_get_ret,
 
     .ctx =&CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_ZERO,
 };
@@ -4124,7 +4317,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - the second child is a symbol bound to a number runtime value with value zero
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_ZERO_AND_OOM = {0};
@@ -4134,9 +4327,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4149,10 +4340,13 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - args are well-formed
 //  - root is a well-formed division node
 //  - the two children evaluate to numbers
-//  - the second child is a symbol bound to a number runtime value with value not zero
+//  - the second child is a symbol whose name is "symbol_name"
+//    bound to value such as:
+//    - value->type == RUNTIME_VALUE_NUMBER
+//    - value->refcount == 1
+//    - value->as.i == 42
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->refcount == 1
@@ -4160,6 +4354,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //        root->children->children[0]->data->data->int_value
 //        /
 //        <number runtime value bound to the second child>->as.i
+//  - environment is not modified
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_NOT_ZERO = {0};
 static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_NOT_ZERO = {
@@ -4168,15 +4363,13 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_number_runtime_value_not_zero = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_rhs,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_RHS_SYMBOL,
     .expected_out_fn = &expected_out_points_on_division_result_when_lhs_number_rhs_symbol,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_runtime_value_at_out,
+    .clean_up_fn = &destroy_root_and_get_ret_and_runtime_value_at_out,
 
     .ctx =&CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_NOT_ZERO,
 };
@@ -4188,7 +4381,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - the second child is a symbol bound to a number runtime value with value not zero
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_NUMBER_NOT_ZERO_AND_OOM = {0};
@@ -4198,9 +4391,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
     .root_constructor_fn = &make_root_a_well_formed_division_with_lhs_number_rhs_symbol,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4216,7 +4407,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_SYMBOL_BOUND_TO_
 //  - the second child has value 0
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO_AND_OOM = {0};
@@ -4227,7 +4418,6 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO_AND_
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4243,7 +4433,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO_AND_
 //  - the second child has value 0
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_DIVISION_BY_ZERO
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO = {0};
@@ -4254,7 +4444,6 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_DIVISION_BY_ZERO,
 
@@ -4270,7 +4459,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_ZERO = {
 //  - the second child value is not 0
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO_AND_OOM = {0};
@@ -4281,7 +4470,6 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO_
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4297,7 +4485,7 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO_
 //  - the second child value is not 0
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_NUMBER
 //    && (*out)->as.i ==
@@ -4313,7 +4501,6 @@ static const test_interpreter_case DIVISION_NODE_LHS_NUMBER_RHS_NUMBER_NOT_ZERO 
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_division_result_when_two_numbers,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -4378,7 +4565,7 @@ doubles:
 //  - root is a ill-formed quote node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_QUOTE_NODE_ILL_FORMED_CHILDREN_NULL = {0};
@@ -4389,7 +4576,6 @@ static const test_interpreter_case QUOTE_NODE_ILL_FORMED_CHILDREN_NULL = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -4403,7 +4589,7 @@ static const test_interpreter_case QUOTE_NODE_ILL_FORMED_CHILDREN_NULL = {
 //  - root is a quote node
 //  - all allocations will fail during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_QUOTE_NODE_OOM = {0};
@@ -4414,7 +4600,6 @@ static const test_interpreter_case QUOTE_NODE_OOM = {
     .env_is_dummy = true,
     .oom = true,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4428,7 +4613,7 @@ static const test_interpreter_case QUOTE_NODE_OOM = {
 //  - root is a quote node
 //  - all allocations will succeed during interpreter_eval call
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  -    *out != NULL
 //    && (*out)->type == RUNTIME_VALUE_QUOTED
 //    && (*out)->refcount == 1
@@ -4442,7 +4627,6 @@ static const test_interpreter_case QUOTE_NODE = {
     .env_is_dummy = true,
     .oom = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_points_on_quoted_value,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -4506,7 +4690,7 @@ doubles:
 //  - root is a ill-formed reading node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -4516,9 +4700,8 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_NO_CHILD = {
     .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_no_child,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_ast_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+	.read_ast_assert_kind = READ_AST_ASRT_NONE,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -4532,7 +4715,7 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a ill-formed reading node because:
 //    - root->children->children_nb == 3
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_READING_NODE_ILL_FORMED_THREE_CHILDREN = {0};
@@ -4542,9 +4725,8 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_THREE_CHILDREN = {
     .root_constructor_fn = &make_root_a_ill_formed_reading_node_because_three_children,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_ast_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+	.read_ast_assert_kind = READ_AST_ASRT_NONE,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -4560,7 +4742,7 @@ static const test_interpreter_case READING_NODE_ILL_FORMED_THREE_CHILDREN = {
 // Expected:
 //  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_READ_AST_ERROR
 static test_interpreter_ctx CTX_READING_NODE_OOM = {0};
@@ -4570,11 +4752,9 @@ static const test_interpreter_case READING_NODE_OOM = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = true,
-    .callback_read_ast_will_be_called = true,
-    .callback_read_ast_will_fail = true,
+	.read_ast_arrange_kind = READ_AST_ARR_READ_FAIL,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_callback_read_ast_usage_fn = read_ast_usage,
+	.read_ast_assert_kind = READ_AST_ASRT_CALL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_READ_AST_ERROR,
 
@@ -4591,27 +4771,25 @@ static const test_interpreter_case READING_NODE_OOM = {
 // Expected:
 //  - calls read_ast_fn with:
 //    - ctx: arg_ctx
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_READ_AST_ERROR
-static test_interpreter_ctx CTX_READING_NODE_CALLBACK_READ_EVAL_FAILS = {0};
-static const test_interpreter_case READING_NODE_CALLBACK_READ_EVAL_FAILS = {
+static test_interpreter_ctx CTX_READING_NODE_CALLBACK_READ_AST_FAILS = {0};
+static const test_interpreter_case READING_NODE_CALLBACK_READ_AST_FAILS = {
     .name = "eval_error_when_reading_node_and_read_ast_fails",
 
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_ast_will_be_called = true,
-    .callback_read_ast_will_fail = true,
+	.read_ast_arrange_kind = READ_AST_ARR_READ_FAIL,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
-    .expected_callback_read_ast_usage_fn = read_ast_usage,
+	.read_ast_assert_kind = READ_AST_ASRT_CALL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_READ_AST_ERROR,
 
     .clean_up_fn = &destroy_root,
 
-    .ctx =&CTX_READING_NODE_CALLBACK_READ_EVAL_FAILS,
+    .ctx =&CTX_READING_NODE_CALLBACK_READ_AST_FAILS,
 };
 
 // Given:
@@ -4629,10 +4807,10 @@ static const test_interpreter_case READING_NODE_CALLBACK_READ_EVAL_FAILS = {
 //    - value: <evaluated_rhs owned by implementation> such as:
 //      - evaluated_rhs != NULL
 //      - evaluated_rhs->type == RUNTIME_VALUE_NUMBER
-//      - evaluated_rhs->refcount == 2 (after ACT test stage)
+//      - evaluated_rhs->refcount == 1
 //      - evaluated_rhs->as.i == 42
 //  - destroys evaluated_rhs
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_BINDING_ERROR
 static test_interpreter_ctx CTX_READING_NODE_BINDING_FAILS = {0};
@@ -4642,14 +4820,11 @@ static const test_interpreter_case READING_NODE_BINDING_FAILS = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = true,
     .oom = false,
-    .callback_read_ast_will_be_called = true,
-    .callback_read_ast_will_fail = false,
-    .callback_read_ast_ret_kind = READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = true,
+	.read_ast_arrange_kind = READ_AST_ARR_READ_NUM_42,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_FALSE,
 
-    .expected_callback_read_ast_usage_fn = read_ast_usage,
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value,
+	.read_ast_assert_kind = READ_AST_ASRT_CALL,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_BND_CHILD_TO_READ,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
 
@@ -4688,14 +4863,11 @@ static const test_interpreter_case READING_NODE_SUCCESS = {
     .root_constructor_fn = &make_root_a_reading_node,
     .env_is_dummy = false,
     .oom = false,
-    .callback_read_ast_will_be_called = true,
-    .callback_read_ast_will_fail = false,
-    .callback_read_ast_ret_kind = READ_EVAL_RET_KIND_AST_DATA_WRAPPER_NUMBER_42,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = false,
+	.read_ast_arrange_kind = READ_AST_ARR_READ_NUM_42,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 
-    .expected_callback_read_ast_usage_fn = read_ast_usage,
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_to_evaluated_read_ast_value,
+	.read_ast_assert_kind = READ_AST_ASRT_CALL,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_BND_CHILD_TO_READ,
     .expected_out_fn = &expected_out_points_on_bound_number_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -4760,7 +4932,7 @@ doubles:
 //  - root is a ill-formed binding node because:
 //    - root->children == NULL
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_BINDING_NODE_ILL_FORMED_NO_CHILD = {0};
@@ -4770,9 +4942,7 @@ static const test_interpreter_case BINDING_NODE_ILL_FORMED_NO_CHILD = {
     .root_constructor_fn = &make_root_a_ill_formed_binding_node_because_no_child,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_set_local_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -4786,7 +4956,7 @@ static const test_interpreter_case BINDING_NODE_ILL_FORMED_NO_CHILD = {
 //  - root is a well-formed binding node with rhs 42
 //  - oom
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_BINDING_NODE_OOM = {0};
@@ -4796,9 +4966,7 @@ static const test_interpreter_case BINDING_NODE_OOM = {
     .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_set_local_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
@@ -4818,7 +4986,7 @@ static const test_interpreter_case BINDING_NODE_OOM = {
 //    - key: root->children->children[0]->data->data.symbol_value
 //    - value: evaluated_rhs
 //  - destroys evaluated_rhs
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_BINDING_ERROR
 static test_interpreter_ctx CTX_BINDING_NODE_BINDING_FAILS = {0};
@@ -4828,10 +4996,9 @@ static const test_interpreter_case BINDING_NODE_BINDING_FAILS = {
     .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_FALSE,
 
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_BND_LHS_TO_NUM_42,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
 
@@ -4863,10 +5030,9 @@ static const test_interpreter_case BINDING_NODE_BINDING_SUCCEEDS = {
     .root_constructor_fn = &make_root_a_binding_node_with_rhs_number_42,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_set_local_will_be_called = true,
-    .runtime_env_set_local_will_fail = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 
-    .expected_runtime_env_usage_fn = expect_runtime_binding_attempt_to_bind_lhs_to_a_fresh_number_42,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_BND_LHS_TO_NUM_42,
     .expected_out_fn = &expected_out_points_on_bound_number_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -4934,7 +5100,7 @@ doubles:
 //  - root is a ill-formed eval node because:
 //    - its child is not an ast data wrapper for a symbol
 // Expected:
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_INVALID_AST
 static test_interpreter_ctx CTX_EVAL_NODE_ILL_FORMED_CAUSE_CHILD_NOT_SYMBOL = {0};
@@ -4944,9 +5110,7 @@ static const test_interpreter_case EVAL_NODE_ILL_FORMED_CAUSE_CHILD_NOT_SYMBOL =
     .root_constructor_fn = &make_root_a_ill_formed_eval_node_because_child_is_not_symbol,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = false,
 
-    .expected_runtime_env_usage_fn = no_runtime_env_usage,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_INVALID_AST,
 
@@ -4964,9 +5128,9 @@ static const test_interpreter_case EVAL_NODE_ILL_FORMED_CAUSE_CHILD_NOT_SYMBOL =
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
 //  - runtime_env_get returns NULL
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_UNBOUND_SYMBOL
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
 static test_interpreter_ctx CTX_EVAL_NODE_UNBOUND_SYMBOL = {0};
 static const test_interpreter_case EVAL_NODE_UNBOUND_SYMBOL = {
     .name = "eval_error_when_eval_node_and_child_symbol_is_unbound",
@@ -4974,12 +5138,11 @@ static const test_interpreter_case EVAL_NODE_UNBOUND_SYMBOL = {
     .root_constructor_fn = &make_root_an_eval_node,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
-    .expected_status = INTERPRETER_STATUS_UNBOUND_SYMBOL,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
 
     .clean_up_fn = &destroy_root,
 
@@ -4989,15 +5152,18 @@ static const test_interpreter_case EVAL_NODE_UNBOUND_SYMBOL = {
 // Given:
 //  - env and out are valid
 //  - root is a well-formed eval node
-//  - child symbol of root is bound to a RUNTIME_VALUE_STRING with A_CONSTANT_STRING
+//  - child symbol of root is bound to a value such as:
+//      - value->type == RUNTIME_VALUE_STRING
+//      - value->refcount == 1
+//      - value->as.s == "abc"
 // Expected:
 //  - calls runtime_env_get with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//  - no binding in env->binding
-//    - (*out)->type == RUNTIME_VALUE_STRING
+//  - (*out)->type == RUNTIME_VALUE_STRING
 //    - (*out)->refcount == 2
-//    - (*out)->as.s == A_CONSTANT_STRING
+//    - (*out)->as.s == "abc"
+//  - environment is not modified
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_EVAL_NODE_SYMBOL_BOUND_TO_STRING = {0};
 static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_STRING = {
@@ -5006,12 +5172,10 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_STRING = {
     .root_constructor_fn = &make_root_an_eval_node,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
-    .expected_out_fn = &expected_out_points_on_bound_string_A_CONSTANT_STRING,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+    .expected_out_fn = &expected_out_points_on_bound_string_abc,
     .expected_status = INTERPRETER_STATUS_OK,
 
     .clean_up_fn = &destroy_root_and_runtime_value_at_out,
@@ -5028,7 +5192,7 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_STRING = {
 //  - calls runtime_env_get with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//  - no binding in env->binding
+//  - environment is not modified
 //    - (*out)->type == RUNTIME_VALUE_STRING
 //    - (*out)->refcount == 2
 //    - (*out)->as.s == A_CONSTANT_STRING
@@ -5040,12 +5204,10 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_STRING_OOM = {
     .root_constructor_fn = &make_root_an_eval_node,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_string_runtime_value = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_STR_ABC,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
-    .expected_out_fn = &expected_out_points_on_bound_string_A_CONSTANT_STRING,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+    .expected_out_fn = &expected_out_points_on_bound_string_abc,
     .expected_status = INTERPRETER_STATUS_OK,
 
     .clean_up_fn = &destroy_root_and_runtime_value_at_out,
@@ -5061,7 +5223,7 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_STRING_OOM = {
 //  - calls runtime_env_get with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//  - no binding in env->binding
+//  - environment is not modified
 //    - (*out)->type == RUNTIME_VALUE_NUMBER
 //    - (*out)->refcount == 1
 //    - (*out)->as.i == 3
@@ -5073,16 +5235,13 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION = {
     .root_constructor_fn = &make_root_an_eval_node,
     .env_is_dummy = true,
     .oom = false,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_quoted_addition = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_QUOTED_ADD_1_PLUS_2,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_points_on_fresh_number_3,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_quoted_ast_and_quoted_runtime_value_and_runtime_value_at_out,
-
+    .clean_up_fn = &destroy_root_and_quoted_ast_in_get_ret_and_get_ret_and_runtime_value_at_out,
     .ctx =&CTX_EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION,
 };
 
@@ -5095,7 +5254,7 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION = {
 //  - calls runtime_env_get with:
 //    - e: env
 //    - key: root->children->children[0]->data->data.symbol_value
-//  - no binding in env->binding
+//  - environment is not modified
 //  - *out remains unchanged
 //  - returns INTERPRETER_STATUS_OOM
 static test_interpreter_ctx CTX_EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM = {0};
@@ -5105,21 +5264,580 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM
     .root_constructor_fn = &make_root_an_eval_node,
     .env_is_dummy = true,
     .oom = true,
-    .runtime_env_get_will_be_called = true,
-    .runtime_env_get_will_fail = false,
-    .runtime_env_get_returned_a_quoted_addition = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_QUOTED_ADD_1_PLUS_2,
 
-    .expected_runtime_env_usage_fn = expect_runtime_env_get_attempt_for_child,
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
     .expected_out_fn = &expected_out_unchanged,
     .expected_status = INTERPRETER_STATUS_OOM,
 
-    .clean_up_fn = &destroy_root_and_quoted_ast_and_quoted_runtime_value,
+    .clean_up_fn = &destroy_root_and_quoted_ast_in_get_ret_and_get_ret,
 
     .ctx =&CTX_EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM,
 };
 
 
 
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_WRITING
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - ast
+- from the runtime_env module:
+  - runtime_env_make_string
+  - runtime_env_make_number
+  - runtime_env_make_string
+  - runtime_env_value_retain
+  - runtime_env_value_release
+  - runtime_env_value_destroy
+- from the ast module:
+  - ast_create_string_node
+  - ast_create_symbol_node
+  - ast_create_int_node
+  - ast_create_children_node_var
+  - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_get
+  - fake:
+    - functions of standard library which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed writing node because it has two children
+// Expected:
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN = {0};
+static const test_interpreter_case WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_writing_node_ill_formed_cause_two_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_writing_node_because_two_children,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a number 42
+//  - call write_runtime_value_fn will fail
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_NUMBER
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.i == 42
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR
+static test_interpreter_ctx CTX_WRITING_NODE_NUMBER_CALLBACK_WRITE_FAILS = {0};
+static const test_interpreter_case WRITING_NODE_NUMBER_CALLBACK_WRITE_FAILS = {
+    .name = "eval_error_when_writing_node_and_number_and_callback_write_fails",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_number_42,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_NUMBER_CALLBACK_WRITE_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a number 42
+//  - call write_runtime_value_fn will succeed
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_NUMBER
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.i == 42
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_WRITING_NODE_NUMBER = {0};
+static const test_interpreter_case WRITING_NODE_NUMBER = {
+    .name = "eval_success_when_writing_node_and_number",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_number_42,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_NUMBER,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a number 42
+//  - oom
+// Expected:
+//  - no write_runtime_value_fn call
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_WRITING_NODE_NUMBER_OOM = {0};
+static const test_interpreter_case WRITING_NODE_NUMBER_OOM = {
+    .name = "eval_error_when_writing_node_and_number_and_oom",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_number_42,
+    .env_is_dummy = true,
+    .oom = true,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_NONE,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_NUMBER_OOM,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a string "abc"
+//  - call write_runtime_value_fn will fail
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_STRING
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.s == "abc"
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR
+static test_interpreter_ctx CTX_WRITING_NODE_STRING_CALLBACK_WRITE_FAILS = {0};
+static const test_interpreter_case WRITING_NODE_STRING_CALLBACK_WRITE_FAILS = {
+    .name = "eval_error_when_writing_node_and_string_abc_and_callback_write_fails",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_string_abc,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_STR_ABC,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_STRING_CALLBACK_WRITE_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a string "abc"
+//  - call write_runtime_value_fn will succeed
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_STRING
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.s == "abc"
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_WRITING_NODE_STRING = {0};
+static const test_interpreter_case WRITING_NODE_STRING = {
+    .name = "eval_success_when_writing_node_and_string",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_string_abc,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_STR_ABC,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_STRING,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a string "abc"
+//  - oom
+// Expected:
+//  - no write_runtime_value_fn call
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_WRITING_NODE_STRING_OOM = {0};
+static const test_interpreter_case WRITING_NODE_STRING_OOM = {
+    .name = "eval_error_when_writing_node_and_string_and_oom",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_child_string_abc,
+    .env_is_dummy = true,
+    .oom = true,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_NONE,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_STRING_OOM,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for an unbound symbol or
+//    a one whose value can't be retrieved in environment (runtime_env_get fails)
+// Expected:
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - no write_runtime_value_fn call
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_LOOKUP_FAILED
+static test_interpreter_ctx CTX_WRITING_NODE_SYMBOL_UNBOUND = {0};
+static const test_interpreter_case WRITING_NODE_SYMBOL_UNBOUND = {
+    .name = "eval_error_when_writing_node_and_symbol_unbound",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_a_symbol,
+    .env_is_dummy = true,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NULL,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_NONE,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_LOOKUP_FAILED,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_SYMBOL_UNBOUND,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a bound symbol
+//    whose value can be retrieved in environment (runtime_env_get succeeds)
+//  - the value bound to this symbol is a RUNTIME_VALUE_NUMBER 42
+//  - call write_runtime_value_fn will fail
+// Expected:
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <ret of runtime_env_get>
+//      - value != NULL
+//      - value->type == RUNTIME_VALUE_NUMBER
+//      - value->refcount == 2
+//      - value->as.i == 42
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR
+static test_interpreter_ctx CTX_WRITING_NODE_SYMBOL_CALLBACK_WRITE_FAILS = {0};
+static const test_interpreter_case WRITING_NODE_SYMBOL_CALLBACK_WRITE_FAILS = {
+    .name = "eval_error_when_writing_node_and_symbol_and_callback_write_fails",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_a_symbol,
+    .env_is_dummy = true,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_2,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR,
+
+    .clean_up_fn = &destroy_root_and_get_ret,
+
+    .ctx =&CTX_WRITING_NODE_SYMBOL_CALLBACK_WRITE_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a bound symbol
+//    whose value can be retrieved in environment (runtime_env_get succeeds)
+//  - the value bound to this symbol is a RUNTIME_VALUE_NUMBER 42
+//  - call write_runtime_value_fn will succeed
+// Expected:
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <ret of runtime_env_get>
+//      - value != NULL
+//      - value->type == RUNTIME_VALUE_NUMBER
+//      - value->refcount == 2
+//      - value->as.i == 42
+//  - <ret of runtime_env_get> is released after the callback call (its refcount is decremented) (not checked)
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_WRITING_NODE_SYMBOL = {0};
+static const test_interpreter_case WRITING_NODE_SYMBOL = {
+    .name = "eval_success_when_writing_node_and_symbol",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_a_symbol,
+    .env_is_dummy = true,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_2,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_get_ret,
+
+    .ctx =&CTX_WRITING_NODE_SYMBOL,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast data wrapper for a bound symbol
+//    whose value can be retrieved in environment (runtime_env_get succeeds)
+//  - the value bound to this symbol is a RUNTIME_VALUE_NUMBER 42
+//  - call write_runtime_value_fn will succeed
+//  - global OOM is enabled (all allocations fail), but this execution path does not allocate
+// Expected:
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->data->data.symbol_value
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <ret of runtime_env_get>
+//      - value != NULL
+//      - value->type == RUNTIME_VALUE_NUMBER
+//      - value->refcount == 2
+//      - value->as.i == 42
+//  - <ret of runtime_env_get> is released after the callback call (its refcount is decremented) (not checked)
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_WRITING_NODE_SYMBOL_OOM = {0};
+static const test_interpreter_case WRITING_NODE_SYMBOL_OOM = {
+    .name = "eval_success_when_writing_node_and_symbol_and_oom",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_a_symbol,
+    .env_is_dummy = true,
+    .oom = true,
+	.runtime_env_arrange_kind = ENV_ARR_GET_RET_NUM_42,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_GET_CALLED_ON_CHILD_SYMBOL,
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_2,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_get_ret,
+
+    .ctx =&CTX_WRITING_NODE_SYMBOL_OOM,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast of type AST_TYPE_ADDITION for "1+2"
+//  - call write_runtime_value_fn will fail
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_NUMBER
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.i == 3
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR
+static test_interpreter_ctx CTX_WRITING_NODE_ADDITION_CALLBACK_WRITE_FAILS = {0};
+static const test_interpreter_case WRITING_NODE_ADDITION_CALLBACK_WRITE_FAILS = {
+    .name = "eval_error_when_writing_node_and_addition_and_callback_write_fails",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_an_addition_1_plus_2,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_3,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_ADDITION_CALLBACK_WRITE_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast of type AST_TYPE_QUOTE whose child is an
+//    AST_TYPE_ADDITION "1+2"
+//  - call write_runtime_value_fn will fail
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_QUOTED
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.quoted == root->children->children[0]->children->children[0]
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR
+static test_interpreter_ctx CTX_WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE_FAILS = {0};
+static const test_interpreter_case WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE_FAILS = {
+    .name = "eval_error_when_writing_node_and_quoted_addition_and_callback_write_fails",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_quoted_add_1_2,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_QUOTED_ADD_1_PLUS_2,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast of type AST_TYPE_QUOTE whose child is an
+//    AST_TYPE_ADDITION "1+2"
+//  - call write_runtime_value_fn will succeed
+// Expected:
+//  - calls write_runtime_value_fn with:
+//    - ctx: arg_ctx
+//    - value: <evaluated_child owned by implementation> such as:
+//      - evaluated_child != NULL
+//      - evaluated_child->type == RUNTIME_VALUE_QUOTED
+//      - evaluated_child->refcount == 1
+//      - evaluated_child->as.quoted == root->children->children[0]->children->children[0]
+//  - destroys evaluated_child
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE = {0};
+static const test_interpreter_case WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE = {
+    .name = "eval_error_when_writing_node_and_quoted_addition_and_callback_write_succeeds",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_quoted_add_1_2,
+    .env_is_dummy = true,
+    .oom = false,
+	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_QUOTED_ADD_1_PLUS_2,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed writing node
+//  - child of root is an ast of type AST_TYPE_QUOTE whose child is an
+//    AST_TYPE_ADDITION "1+2"
+//  - oom
+// Expected:
+//  - no write_runtime_value_fn call
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_OOM
+static test_interpreter_ctx CTX_WRITING_NODE_QUOTED_ADDITION_OOM = {0};
+static const test_interpreter_case WRITING_NODE_QUOTED_ADDITION_OOM = {
+    .name = "eval_error_when_writing_node_and_quoted_addition_and_oom",
+
+    .root_constructor_fn = &make_root_a_writing_node_with_quoted_add_1_2,
+    .env_is_dummy = true,
+    .oom = true,
+
+	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_NONE,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_OOM,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_QUOTED_ADDITION_OOM,
+};
 
 
 
@@ -5228,7 +5946,7 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM
     X(READING_NODE_ILL_FORMED_NO_CHILD) \
     X(READING_NODE_ILL_FORMED_THREE_CHILDREN) \
     X(READING_NODE_OOM) \
-    X(READING_NODE_CALLBACK_READ_EVAL_FAILS) \
+    X(READING_NODE_CALLBACK_READ_AST_FAILS) \
     X(READING_NODE_BINDING_FAILS) \
     X(READING_NODE_SUCCESS) \
     X(BINDING_NODE_ILL_FORMED_NO_CHILD) \
@@ -5241,6 +5959,21 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM
     X(EVAL_NODE_SYMBOL_BOUND_TO_STRING_OOM) \
     X(EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION) \
     X(EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM) \
+    X(WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN) \
+	X(WRITING_NODE_NUMBER_CALLBACK_WRITE_FAILS) \
+	X(WRITING_NODE_NUMBER) \
+	X(WRITING_NODE_NUMBER_OOM) \
+	X(WRITING_NODE_STRING_CALLBACK_WRITE_FAILS) \
+	X(WRITING_NODE_STRING) \
+	X(WRITING_NODE_STRING_OOM) \
+	X(WRITING_NODE_SYMBOL_UNBOUND) \
+	X(WRITING_NODE_SYMBOL_CALLBACK_WRITE_FAILS) \
+	X(WRITING_NODE_SYMBOL) \
+	X(WRITING_NODE_SYMBOL_OOM) \
+	X(WRITING_NODE_ADDITION_CALLBACK_WRITE_FAILS) \
+	X(WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE_FAILS) \
+	X(WRITING_NODE_QUOTED_ADDITION_CALLBACK_WRITE) \
+	X(WRITING_NODE_QUOTED_ADDITION_OOM) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

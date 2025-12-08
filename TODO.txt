@@ -5,8 +5,20 @@
 - lexer TDD
 
 - TDD for eval_rule
+- TDD for writing_rule
+
+- runtime_env: distinguish UNBOUND vs OOM and update interpreter to propagate precise errors
 
 - refact src/interpreter/tests
+  - note:
+    - param_case is constant but its ctx field points on a non constant struct
+    - for each expected value, there must be a field in param_case and a field
+      with the same name in ctx ; then during arrange stage, the information
+      is propagated
+    - a lot of pattern mistake has been done ; for example, doubles for values
+      fetched in environment (which is doubled too in a dummy fashion) must be
+      handled through ctx
+
 
 - check if there's a memory leak due to strdup in lexer
 
@@ -48,7 +60,6 @@
   - Add an output stream field to interpreter_ctx, used by AST_TYPE_WRITING for output
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_WRITING
   - AST_TYPE_BLOCK_ITEMS
   - AST_TYPE_BLOCK
   - AST_TYPE_TRANSLATION_UNIT

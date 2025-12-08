@@ -209,6 +209,14 @@ static bool ast_is_well_formed_evaluable(const ast *node) {
         || ast_is_well_formed_quote(node) );
 }
 
+static bool ast_is_well_formed_writing(const ast *node) {
+    return
+        ast_is_well_formed_one_child_node(
+            node,
+            AST_TYPE_WRITING,
+            ast_is_well_formed_evaluable );
+}
+
 static bool ast_is_well_formed_quote(const ast *node) {
     return
         ast_is_well_formed_one_child_node(
@@ -225,14 +233,6 @@ static bool ast_is_well_formed_binding(const ast *node) {
             ast_is_well_formed_symbol_node,
             ast_is_well_formed_evaluable
         );
-}
-
-static bool ast_is_well_formed_writing(const ast *node) {
-    return
-        ast_is_well_formed_one_child_node(
-            node,
-            AST_TYPE_WRITING,
-            ast_is_well_formed_symbol_node );
 }
 
 static bool ast_is_well_formed_reading(const ast *node) {
@@ -317,6 +317,12 @@ static bool params_are_unique(const ast *list_of_params) {
 	return true;
 }
 
+// to debug begin
+typedef struct symbol {
+    char *name; // owned ; must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
+} symbol;
+// to debug end
+
 // Ownership & contract
 // - On success (return == INTERPRETER_STATUS_OK):
 //   *out receives an OWNED reference to the returned value
@@ -362,6 +368,7 @@ interpreter_status interpreter_eval(
     const runtime_env_value *evaluated_child_value = NULL;
     const runtime_env_value *evaluated_quoted_ast = NULL;
     bool binding = false;
+    bool write_runtime_value_ret = false;
     interpreter_status rhs_eval_status;
 
     switch (root->type) {
@@ -393,7 +400,7 @@ interpreter_status interpreter_eval(
                     root->data->data.symbol_value );
 
             if (!value)
-                return INTERPRETER_STATUS_UNBOUND_SYMBOL;
+                return INTERPRETER_STATUS_LOOKUP_FAILED;
 
             runtime_env_value_retain(value);
             *out = value;
@@ -726,8 +733,8 @@ interpreter_status interpreter_eval(
                     env,
                     evaluated_child_value->as.quoted,
                     &evaluated_quoted_ast );
+            runtime_env_value_release(evaluated_child_value);
             if (status != INTERPRETER_STATUS_OK) {
-                runtime_env_value_release(evaluated_child_value);
                 return status;
             }
             *out = evaluated_quoted_ast;
@@ -735,10 +742,26 @@ interpreter_status interpreter_eval(
 
         break;
 
+    case AST_TYPE_WRITING:
+        if (!ast_is_well_formed_writing(root))
+            return INTERPRETER_STATUS_INVALID_AST;
 
-/*
+        if (!ctx || !ctx->ops || !ctx->ops->write_runtime_value_fn)
+            return INTERPRETER_STATUS_INTERNAL_ERROR;
 
-*/
+        evaluated_child_value = NULL;
+        status = interpreter_eval(ctx, env, root->children->children[0], &evaluated_child_value);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        write_runtime_value_ret = ctx->ops->write_runtime_value_fn(ctx, evaluated_child_value);
+        runtime_env_value_release(evaluated_child_value);
+        return
+            (write_runtime_value_ret) ?
+                INTERPRETER_STATUS_OK
+                :
+                INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR;
+
 
 // <here>
 
