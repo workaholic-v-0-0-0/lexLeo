@@ -38,6 +38,21 @@ return interpreter_eval(
 	out );
 */
 
+typedef bool cli_print(
+	struct interpreter_ctx *ctx,
+	const struct runtime_env_value *value);
+/*
+will do
+rs->out = stdio_stream_to_stdout();
+n
+buf
+<write runtime_env_value_to_string into buf>
+size_t size = stream_write(((runtime_session*)ctx->host_ctx)->out, buf, n);
+
+...
+int stream_close(stream *s);
+*/
+
 bool cli_store_symbol(struct symbol *sym, void *session); // wrapper
 
 

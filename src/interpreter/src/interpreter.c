@@ -209,6 +209,14 @@ static bool ast_is_well_formed_evaluable(const ast *node) {
         || ast_is_well_formed_quote(node) );
 }
 
+static bool ast_is_well_formed_writing(const ast *node) {
+    return
+        ast_is_well_formed_one_child_node(
+            node,
+            AST_TYPE_WRITING,
+            ast_is_well_formed_evaluable );
+}
+
 static bool ast_is_well_formed_quote(const ast *node) {
     return
         ast_is_well_formed_one_child_node(
@@ -225,14 +233,6 @@ static bool ast_is_well_formed_binding(const ast *node) {
             ast_is_well_formed_symbol_node,
             ast_is_well_formed_evaluable
         );
-}
-
-static bool ast_is_well_formed_writing(const ast *node) {
-    return
-        ast_is_well_formed_one_child_node(
-            node,
-            AST_TYPE_WRITING,
-            ast_is_well_formed_symbol_node );
 }
 
 static bool ast_is_well_formed_reading(const ast *node) {
@@ -735,7 +735,9 @@ interpreter_status interpreter_eval(
 
         break;
 
-
+        case AST_TYPE_WRITING:
+            if (!ast_is_well_formed_writing(root))
+                return INTERPRETER_STATUS_INVALID_AST;
 /*
 
 */

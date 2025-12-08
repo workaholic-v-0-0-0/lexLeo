@@ -3,6 +3,7 @@
 #include "internal/runtime_session_internal.h"
 
 #include "lexer.h"
+struct stream;// <here>
 #include "runtime_env.h"
 #include "symtab.h"
 #include "ast.h"

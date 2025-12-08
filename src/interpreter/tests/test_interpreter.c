@@ -152,8 +152,27 @@ static ast *spy_read_ast_fn (struct interpreter_ctx *ctx) {
     return mock_type(ast*);
 }
 
+typedef struct {
+    bool write_runtime_value_fn_has_been_called;
+    struct interpreter_ctx *write_runtime_value_fn_arg_ctx;
+    runtime_env_value *write_runtime_value_fn_arg_value;
+} write_runtime_value_fn_spy_t;
+
+static write_runtime_value_fn_spy_t *g_write_runtime_value_spy = NULL;
+
+static bool spy_write_runtime_value_fn (
+        struct interpreter_ctx *ctx,
+        const struct runtime_env_value *value ) {
+    assert_non_null(g_write_runtime_value_spy);
+    g_write_runtime_value_spy->write_runtime_value_fn_has_been_called = true;
+    g_write_runtime_value_spy->write_runtime_value_fn_arg_ctx = ctx;
+    g_write_runtime_value_spy->write_runtime_value_fn_arg_value = value;
+    return mock_type(bool);
+}
+
 static const interpreter_ops_t SPY_INTERPRETER_OPS = {
     .read_ast_fn = spy_read_ast_fn,
+    .write_runtime_value_fn = spy_write_runtime_value_fn
 };
 
 static struct interpreter_ctx spy_interpreter_ctx = {
@@ -362,6 +381,7 @@ typedef struct {
     const runtime_env_value *arg_out_value_before;
     runtime_spy_t runtime_spy;
     read_ast_spy_t read_ast_spy;
+    write_runtime_value_fn_t spy_write_runtime_value;
 } test_interpreter_ctx;
 
 typedef void (*test_interpreter_root_constructor_fn_t)(test_interpreter_ctx *ctx);
@@ -392,6 +412,8 @@ typedef struct {
     bool callback_read_ast_will_be_called;
     bool callback_read_ast_will_fail;
     read_ast_ret_kind_type callback_read_ast_ret_kind;
+    bool write_runtime_value_fn_has_been_called;
+    write_runtime_value_fn_will_fail;
 
     // assert utilities
     test_interpreter_expected_runtime_env_usage_fn_t expected_runtime_env_usage_fn;
@@ -1056,6 +1078,11 @@ static void make_root_a_ill_formed_eval_node_because_child_is_not_symbol(test_in
 static void make_root_an_eval_node(test_interpreter_ctx *ctx) {
     ctx->arg_root =
         make_unary_with_symbol(AST_TYPE_EVAL, DUMMY_SYMBOL_P);
+}
+
+static void make_root_a_ill_formed_writing_node_because_two_children(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        make_ill_formed_node(AST_TYPE_WRITING, ILL_TWO_CHILDREN);
 }
 
 
@@ -5120,6 +5147,85 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM
 
 
 
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_WRITING
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - ast
+- from the runtime_env module:
+  - runtime_env_make_string
+  - runtime_env_make_number
+  - runtime_env_make_string
+  - runtime_env_value_retain
+  - runtime_env_value_release
+  - runtime_env_value_destroy
+- from the ast module:
+  - ast_create_string_node
+  - ast_create_symbol_node
+  - ast_create_int_node
+  - ast_create_children_node_var
+  - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_get
+  - fake:
+    - functions of standard library which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed writing node because it has two children
+// Expected:
+//  - no binding in env->binding
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN = {0};
+static const test_interpreter_case WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN = {
+    .name = "eval_error_invalid_ast_when_writing_node_ill_formed_cause_two_children",
+
+    .root_constructor_fn = &make_root_a_ill_formed_writing_node_because_two_children,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_runtime_env_usage_fn = no_runtime_env_usage,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN,
+};
+
+
+
+
 
 
 
@@ -5241,6 +5347,7 @@ static const test_interpreter_case EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM
     X(EVAL_NODE_SYMBOL_BOUND_TO_STRING_OOM) \
     X(EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION) \
     X(EVAL_NODE_SYMBOL_BOUND_TO_QUOTED_ADDITION_OOM) \
+    X(WRITING_NODE_ILL_FORMED_CAUSE_TWO_CHILDREN) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

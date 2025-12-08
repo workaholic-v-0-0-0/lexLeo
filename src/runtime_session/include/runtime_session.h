@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 struct input_provider;
+struct stream;
 struct runtime_env;
 struct symtab;
 struct ast;
