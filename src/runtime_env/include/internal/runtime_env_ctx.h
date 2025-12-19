@@ -19,8 +19,8 @@ typedef int (*hashtable_reset_value_fn_t)(hashtable *ht, const void *key, void *
 typedef int (*hashtable_remove_fn_t)(hashtable *ht, const void *key);
 
 typedef bool (*runtime_env_set_local_fn_t)(runtime_env *e, const struct symbol *key, const runtime_env_value *value);
-typedef const runtime_env_value *(*runtime_env_get_local_fn_t)(const runtime_env *e, const struct symbol *key);
-typedef const runtime_env_value *(*runtime_env_get_fn_t)(const runtime_env *e, const struct symbol *key);
+typedef runtime_env_value *(*runtime_env_get_local_fn_t)(const runtime_env *e, const struct symbol *key);
+typedef runtime_env_value *(*runtime_env_get_fn_t)(const runtime_env *e, const struct symbol *key);
 
 typedef struct hashtable_ops_t {
     create_bindings_fn_t create_bindings;

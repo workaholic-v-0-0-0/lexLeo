@@ -26,10 +26,10 @@ static bool runtime_env_set_local_impl(
         runtime_env *e,
         const struct symbol *key,
         const runtime_env_value *value);
-static const runtime_env_value *runtime_env_get_local_impl(
+static runtime_env_value *runtime_env_get_local_impl(
         const runtime_env *e,
         const struct symbol *key );
-static const runtime_env_value *runtime_env_get_impl(
+static runtime_env_value *runtime_env_get_impl(
         const runtime_env *e,
         const struct symbol *key );
 
@@ -328,7 +328,7 @@ bool runtime_env_set_local(
     return g_runtime_env_ctx.ops->set_local(e, key, value);
 }
 
-static const runtime_env_value *runtime_env_get_local_impl(
+static runtime_env_value *runtime_env_get_local_impl(
         const runtime_env *e,
         const struct symbol *key ) {
 	if (!e || !key)
@@ -337,13 +337,13 @@ static const runtime_env_value *runtime_env_get_local_impl(
 	return g_runtime_env_ctx.hashtable_ops->hashtable_get(e->bindings, key);
 }
 
-const runtime_env_value *runtime_env_get_local(
+runtime_env_value *runtime_env_get_local(
 		const runtime_env *e,
 		const struct symbol *key) {
     return g_runtime_env_ctx.ops->get_local(e, key);
 }
 
-static const runtime_env_value *runtime_env_get_impl(
+static runtime_env_value *runtime_env_get_impl(
         const runtime_env *e,
         const struct symbol *key ) {
 	if (!e || !key)
@@ -357,7 +357,7 @@ static const runtime_env_value *runtime_env_get_impl(
 		;
 }
 
-const runtime_env_value *runtime_env_get(
+runtime_env_value *runtime_env_get(
 		const runtime_env *e,
 		const struct symbol *key) {
     return g_runtime_env_ctx.ops->get(e, key);

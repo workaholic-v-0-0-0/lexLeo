@@ -60,7 +60,6 @@
   - Add an output stream field to interpreter_ctx, used by AST_TYPE_WRITING for output
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_BLOCK_ITEMS
   - AST_TYPE_BLOCK
   - AST_TYPE_TRANSLATION_UNIT
   - AST_TYPE_FUNCTION_CALL

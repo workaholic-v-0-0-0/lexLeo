@@ -56,6 +56,6 @@ interpreter_status interpreter_eval(
 	struct interpreter_ctx *ctx,
     struct runtime_env *env,
     const struct ast *root,
-    const struct runtime_env_value **out );
+    struct runtime_env_value **out );
 
 #endif //LEXLEO_INTERPRETER_H

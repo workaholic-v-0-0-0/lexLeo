@@ -92,7 +92,7 @@ bool runtime_env_set_local(runtime_env *e, const struct symbol *key, const runti
  * @param key Symbol to look up (must not be NULL)
  * @return Borrowed const pointer to the bound value, or NULL if not found
  */
-const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
+runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
 
 /**
  * Retrieves the value bound to the given symbol, searching the current environment
@@ -108,6 +108,6 @@ const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struc
  * @param key Symbol to look up (must not be NULL)
  * @return Borrowed const pointer to the bound value, or NULL if not found
  */
-const runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
+runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
 
 #endif //LEXLEO_RUNTIME_ENV_H

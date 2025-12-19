@@ -251,7 +251,9 @@ static bool ast_is_well_formed_statement(const ast *node) {
         || ast_is_well_formed_writing(node)
         || ast_is_well_formed_reading(node)
         || ast_is_well_formed_function_definition(node)
-        || ast_is_well_formed_function_call(node) );
+        || ast_is_well_formed_function_call(node)
+		|| ast_is_well_formed_evaluable(node)
+		|| ast_is_well_formed_eval(node) );
 }
 
 static bool ast_is_well_formed_block_items(const ast *node) {
@@ -347,7 +349,7 @@ interpreter_status interpreter_eval(
         struct runtime_env *env,
         //struct runtime_session *session,
         const struct ast *root,
-        const struct runtime_env_value **out ) {
+        struct runtime_env_value **out ) {
 
     if (
                !env
@@ -357,16 +359,16 @@ interpreter_status interpreter_eval(
             || root->type >= AST_TYPE_NB_TYPES )
         return INTERPRETER_STATUS_ERROR;
 
-    const runtime_env_value *value = NULL;
+    runtime_env_value *value = NULL;
     interpreter_status status = INTERPRETER_STATUS_OK;
 
     ast *lhs = NULL;
     ast *rhs = NULL;
     ast *child = NULL;
-    const runtime_env_value *evaluated_lhs = NULL;
-    const runtime_env_value *evaluated_rhs = NULL;
-    const runtime_env_value *evaluated_child_value = NULL;
-    const runtime_env_value *evaluated_quoted_ast = NULL;
+    runtime_env_value *evaluated_lhs = NULL;
+    runtime_env_value *evaluated_rhs = NULL;
+    runtime_env_value *evaluated_child_value = NULL;
+    runtime_env_value *evaluated_quoted_ast = NULL;
     bool binding = false;
     bool write_runtime_value_ret = false;
     interpreter_status rhs_eval_status;
@@ -439,7 +441,7 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_INVALID_AST;
 
         ast *function_node = root->children->children[0];
-        const runtime_env_value *evaluated_fn_value = NULL;
+        runtime_env_value *evaluated_fn_value = NULL;
         status =
             interpreter_eval(ctx, env, function_node, &evaluated_fn_value);
         if (status != INTERPRETER_STATUS_OK)
@@ -751,8 +753,7 @@ interpreter_status interpreter_eval(
 
         evaluated_child_value = NULL;
         status = interpreter_eval(ctx, env, root->children->children[0], &evaluated_child_value);
-        if (status != INTERPRETER_STATUS_OK)
-            return status;
+        if (status != INTERPRETER_STATUS_OK) return status;
 
         write_runtime_value_ret = ctx->ops->write_runtime_value_fn(ctx, evaluated_child_value);
         runtime_env_value_release(evaluated_child_value);
@@ -763,7 +764,40 @@ interpreter_status interpreter_eval(
                 INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR;
 
 
+    case AST_TYPE_BLOCK_ITEMS:
+        if (!ast_is_well_formed_block_items(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+		runtime_env_value *out_saved = *out;
+    	runtime_env_value *out_current = NULL;
+    	runtime_env_value *out_tmp = NULL;
+
+		for (size_t i = 0; i < root->children->children_nb; i++) {
+			out_tmp = NULL;
+			status =
+				interpreter_eval(
+					ctx,
+					env,
+					root->children->children[i],
+					&out_tmp );
+			if (status != INTERPRETER_STATUS_OK) {
+				if (out_tmp) runtime_env_value_release(out_tmp);
+				if (out_current) runtime_env_value_release(out_current);
+				*out = out_saved;
+				return status;
+			}
+			if (out_current) runtime_env_value_release(out_current);
+			out_current = out_tmp;
+		}
+
+		*out = out_current;
+
+		return INTERPRETER_STATUS_OK;
+
 // <here>
+/*
+
+*/
 
 
     default:

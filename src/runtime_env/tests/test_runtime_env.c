@@ -2470,7 +2470,7 @@ static const struct CMUnitTest set_local_parametric_tests[] = {
 
 
 //-----------------------------------------------------------------------------
-// TESTS const runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
+// TESTS runtime_env_value *runtime_env_get_local(const runtime_env *e, const struct symbol *key);
 //-----------------------------------------------------------------------------
 
 
@@ -2563,7 +2563,7 @@ static void get_local_success_when_e_and_key_not_null(void **state) {
 	expect_value(spy_hashtable_get, key, DUMMY_SYMBOL_P);
 	will_return(spy_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
 
-    const runtime_env_value *ret = runtime_env_get_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P);
+    runtime_env_value *ret = runtime_env_get_local(DUMMY_RUNTIME_ENV_P, DUMMY_SYMBOL_P);
 
 	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
 }
@@ -2571,7 +2571,7 @@ static void get_local_success_when_e_and_key_not_null(void **state) {
 
 
 //-----------------------------------------------------------------------------
-// TESTS const runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
+// TESTS runtime_env_value *runtime_env_get(const runtime_env *e, const struct symbol *key);
 //-----------------------------------------------------------------------------
 
 
@@ -2673,7 +2673,7 @@ static void get_success_when_key_in_use_in_current_scope(void **state) {
 	expect_value(spy_hashtable_get, key, DUMMY_SYMBOL_P);
 	will_return(spy_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
 
-	const runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
+	runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
 
 	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
 }
@@ -2706,7 +2706,7 @@ static void get_success_when_key_in_use_in_parent_scope(void **state) {
 	expect_value(spy_hashtable_get, key, DUMMY_SYMBOL_P);
 	will_return(spy_hashtable_get, DUMMY_RUNTIME_ENV_VALUE_P);
 
-	const runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
+	runtime_env_value *ret = runtime_env_get(STUB_RUNTIME_ENV_CHILD_OF_ROOT_P, DUMMY_SYMBOL_P);
 
 	assert_ptr_equal(ret, DUMMY_RUNTIME_ENV_VALUE_P);
 }
