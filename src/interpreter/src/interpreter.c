@@ -803,8 +803,23 @@ interpreter_status interpreter_eval(
 
 		return INTERPRETER_STATUS_OK;
 
+
+    case AST_TYPE_BLOCK:
+        if (!ast_is_well_formed_block(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        return
+            interpreter_eval(
+                ctx,
+                env,
+                root->children->children[0],
+                out );
+
+
 // <here>
 /*
+        AST_TYPE_BLOCK
+        ast_is_well_formed_block
 
 */
 

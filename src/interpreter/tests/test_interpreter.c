@@ -85,8 +85,9 @@ typedef enum {
 	ENV_ASRT_EXPECT_SET_LOCAL_BND_CHILD_TO_READ,
 	ENV_ASRT_EXPECT_SET_LOCAL_BND_LHS_TO_NUM_42,
 	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_NUM_42_GET_STMT_2_CHILD,
-	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
-	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2
+	ENV_ASRT_FOR_BLOCK_ITEMS_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
+	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2,
+	ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD
 } interpreter_runtime_env_assert_kind_t;
 
 typedef struct test_interpreter_runtime_value_snapshot {
@@ -1261,6 +1262,42 @@ static void make_root_a_block_items_node_with_two_statements_bind_quoted_add_1_2
             	ast_create_symbol_node(DUMMY_SYMBOL_P) ) );
 }
 
+static void make_root_a_ill_formed_block_node_because_child_translation_unit(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_BLOCK,
+            1,
+			ast_create_children_node_var(
+				AST_TYPE_TRANSLATION_UNIT,
+				0 ) );
+}
+
+static void make_root_a_block_node_with_two_statements_bind_quoted_add_1_2_and_eval_it(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+		ast_create_children_node_var(
+			AST_TYPE_BLOCK,
+			1,
+	        ast_create_children_node_var(
+    	        AST_TYPE_BLOCK_ITEMS,
+        	    2,
+				ast_create_children_node_var(
+            		AST_TYPE_BINDING,
+            		2,
+            		ast_create_symbol_node(DUMMY_SYMBOL_P),
+            		ast_create_children_node_var(
+						AST_TYPE_QUOTE,
+						1,
+						ast_create_children_node_var(
+            				AST_TYPE_ADDITION,
+            				2,
+            				ast_create_int_node(1),
+            				ast_create_int_node(2) ) ) ),
+				ast_create_children_node_var(
+            		AST_TYPE_EVAL,
+            		1,
+            		ast_create_symbol_node(DUMMY_SYMBOL_P) ) ) );
+}
+
 
 
 //-----------------------------------------------------------------------------
@@ -1376,7 +1413,7 @@ static void runtime_env_usage_expectation(test_interpreter_ctx *ctx) {
 			ctx->runtime_spy.get_ret_snapshot.address,
 			ctx->runtime_spy.set_local_arg_value );
 	    break;
-	case ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD:
+	case ENV_ASRT_FOR_BLOCK_ITEMS_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD:
 	    assert_ptr_equal(
         	ctx->runtime_spy.set_local_arg_e,
         	ctx->arg_env );
@@ -1416,6 +1453,32 @@ static void runtime_env_usage_expectation(test_interpreter_ctx *ctx) {
         assert_ptr_equal(
             ctx->runtime_spy.set_local_arg_value_snapshot.value.as.quoted,
             ctx->arg_root->children->children[0]->children->children[1]->children->children[0] );
+	    break;
+	case ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD:
+	    assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            1 );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.type,
+            RUNTIME_VALUE_QUOTED );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.quoted,
+            ctx->arg_root->children->children[0]->children->children[0]->children->children[1]->children->children[0] );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_arg_e,
+			ctx->arg_env);
+    	assert_ptr_equal(
+			ctx->runtime_spy.get_arg_key,
+			ctx->arg_root->children->children[0]->children->children[1]->children->children[0]->data->data.symbol_value );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_ret_snapshot.address,
+			ctx->runtime_spy.set_local_arg_value );
 	    break;
     default:
         assert_true(false);
@@ -1606,7 +1669,7 @@ static void spy_runtime_env_arrange(const test_interpreter_case *param_case) {
 	case ENV_ARR_SET_LOCAL_RET_TRUE:
 		param_case->ctx->runtime_spy.set_local_ret = true;
 		break;
-	case ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET:
+	case ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET: // <here> should change the name
 		param_case->ctx->runtime_spy.set_local_ret = true;
 		break;
 	default:
@@ -6340,7 +6403,7 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_
     .oom = false,
 	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
 
-	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
+	.runtime_env_assert_kind = ENV_ASRT_FOR_BLOCK_ITEMS_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
     .expected_out_fn = &expected_out_points_on_fresh_number_3,
     .expected_status = INTERPRETER_STATUS_OK,
 
@@ -6384,6 +6447,123 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_
     .clean_up_fn = &destroy_root_and_release_env_owned_value,
 
     .ctx =&CTX_BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL_BINDING_FAILS,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_BLOCK
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - ast
+- from the runtime_env module:
+  - runtime_env_make_number
+  - runtime_env_value_retain
+  - runtime_env_value_release
+  - runtime_env_value_destroy
+- from the ast module:
+  - ast_create_symbol_node
+  - ast_create_int_node
+  - ast_create_children_node_var
+  - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_get
+    - runtime_env_set
+  - fake:
+    - functions of standard library which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed node of type AST_TYPE_BLOCK because
+//    its child is of type AST_TYPE_TRANSLATION_UNIT
+// Expected:
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_BLOCK_NODE_ILL_FORMED_CAUSE_CHILD_TU = {0};
+static const test_interpreter_case BLOCK_NODE_ILL_FORMED_CAUSE_CHILD_TU = {
+    .name = "eval_error_invalid_ast_when_block_node_ill_formed_cause_child_tu",
+
+    .root_constructor_fn = &make_root_a_ill_formed_block_node_because_child_translation_unit,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_BLOCK_NODE_ILL_FORMED_CAUSE_CHILD_TU,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed node of type AST_TYPE_BLOCK
+//    - hence its child is of type AST_TYPE_BLOCK_ITEMS with children which correspond to:
+//      - first statement: x = quote 1 + 2 ;
+//      - second statement: eval x ;
+// Expected:
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: <a RUNTIME_VALUE_QUOTED "1+2"> denoted quoted_add_1_2 such as:
+//      - quoted_add_1_2 != NULL
+//      - quoted_add_1_2->type == RUNTIME_VALUE_QUOTED
+//      - quoted_add_1_2->refcount == 1
+//      - quoted_add_1_2->as.quoted == root->children->children[0]->children->children[1]->children->children[0]
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[1]->children->children[0]->data->data.symbol_value
+//  - *out != NULL
+//    - (*out)->type == RUNTIME_VALUE_NUMBER
+//    - (*out)->refcount == 1
+//    - (*out)->as.i == 3
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL = {0};
+static const test_interpreter_case BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL = {
+    .name = "eval_success_when_block_node_two_statements_bind_quoted_add_1_2_and_eval_it",
+
+    .root_constructor_fn = &make_root_a_block_node_with_two_statements_bind_quoted_add_1_2_and_eval_it,
+    .env_is_dummy = true,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
+
+	.runtime_env_assert_kind = ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
+    .expected_out_fn = &expected_out_points_on_fresh_number_3,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_release_env_owned_value_and_runtime_value_at_out,
+
+    .ctx =&CTX_BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL,
 };
 
 
@@ -6530,6 +6710,8 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_
 	X(BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRITE_CALLBACK_WRITE_FAILS) \
 	X(BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL) \
 	X(BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL_BINDING_FAILS) \
+	X(BLOCK_NODE_ILL_FORMED_CAUSE_CHILD_TU) \
+	X(BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

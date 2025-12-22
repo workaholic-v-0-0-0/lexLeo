@@ -19,9 +19,6 @@
       fetched in environment (which is doubled too in a dummy fashion) must be
       handled through ctx
 
-
-- check if there's a memory leak due to strdup in lexer
-
 - except since parser implementation,
   the unit tests of the modules
   below the parser layer are poorly written and need to be
@@ -60,7 +57,6 @@
   - Add an output stream field to interpreter_ctx, used by AST_TYPE_WRITING for output
 
 - continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_BLOCK
   - AST_TYPE_TRANSLATION_UNIT
   - AST_TYPE_FUNCTION_CALL
 
