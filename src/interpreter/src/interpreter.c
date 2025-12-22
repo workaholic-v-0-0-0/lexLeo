@@ -816,6 +816,17 @@ interpreter_status interpreter_eval(
                 out );
 
 
+    case AST_TYPE_TRANSLATION_UNIT:
+        if (!ast_is_well_formed_translation_unit(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+        return
+            interpreter_eval(
+                ctx,
+                env,
+                root->children->children[0],
+                out );
+
 // <here>
 /*
         AST_TYPE_BLOCK
