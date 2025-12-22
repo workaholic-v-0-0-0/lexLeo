@@ -6238,6 +6238,10 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_ONE_STATEMENT_ADD_1_2_OOM = 
 //      - value_42->type == RUNTIME_VALUE_NUMBER
 //      - value_42->refcount == 3
 //      - value_42->as.i == 42
+//        *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->refcount == 2
+//    && (*out)->as.i == 42
 //  - returns INTERPRETER_STATUS_OK
 static test_interpreter_ctx CTX_BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRITE = {0};
 static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRITE = {
@@ -6251,10 +6255,10 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRIT
 
 	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_NUM_42_GET_STMT_2_CHILD,
 	.write_runtime_value_assert_kind = WRITE_RUNTIME_VALUE_ASRT_WRITE_NUM_42_RCNT_3,
-    .expected_out_fn = &expected_out_unchanged,
+    .expected_out_fn = &expected_out_points_on_bound_number_42,
     .expected_status = INTERPRETER_STATUS_OK,
 
-    .clean_up_fn = &destroy_root_and_release_env_owned_value,
+    .clean_up_fn = &destroy_root_and_release_env_owned_value_and_runtime_value_at_out,
 
     .ctx =&CTX_BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRITE,
 };

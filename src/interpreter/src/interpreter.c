@@ -786,11 +786,20 @@ interpreter_status interpreter_eval(
 				*out = out_saved;
 				return status;
 			}
+
+			if (!out_tmp) {
+        	    continue;
+        	}
+
 			if (out_current) runtime_env_value_release(out_current);
-			out_current = out_tmp;
+        	out_current = out_tmp;
 		}
 
-		*out = out_current;
+		if (out_current) {
+        	*out = out_current;
+    	} else {
+        	*out = out_saved;
+    	}
 
 		return INTERPRETER_STATUS_OK;
 
