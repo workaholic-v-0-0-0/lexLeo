@@ -2,7 +2,6 @@
 
 evaluable
   : function_call { $$ = $1; }
-  | atom { $$ = $1; }
   | computable { $$ = $1; }
   | QUOTE evaluable {
         ast *a = ctx->ops.create_children_node_var(

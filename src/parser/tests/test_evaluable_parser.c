@@ -44,11 +44,6 @@ static mock_token seq_function_call[] = {
     {0, {0}}
 };
 
-static mock_token seq_atom[] = {
-    {SYMBOL_NAME, {.string_value = "symbol_name"}},
-    {0, {0}}
-};
-
 static mock_token seq_computable[] = {
     {INTEGER, {.int_value = 3}},
     {MULTIPLY, {0}},
@@ -73,10 +68,6 @@ static mock_token seq_quote[] = {
 };
 
 ast *stub_function_call_action(void) {
-    return mock_type(ast *);
-}
-
-ast *stub_atom_action(void) {
     return mock_type(ast *);
 }
 
@@ -129,10 +120,10 @@ parser_ctx mock_ctx;
 
 // mocked:
 //  - actions of grammar rules that the rule under tests depends on:
-//    - function_call: symbol_name_atom list_of_numbers
+//    - function_call: symbol_name_atom list_of_arguments
 //    - symbol_name_atom: SYMBOL_NAME
-//    - list_of_numbers: LPAREN numbers RPAREN
-//    - numbers: | numbers number_atom
+//    - list_of_arguments: LPAREN arguments RPAREN
+//    - arguments: | arguments evaluable
 //    - number_atom: INTEGER
 //    - atom : number_atom | string_atom | symbol_name_atom
 //    - string_atom: STRING
@@ -188,7 +179,7 @@ static int evaluable_parse_teardown(void **state) {
 //    - INTEGER(66)
 //    - RPAREN
 // Expected:
-//  - the action of "function_call: symbol_name_atom list_of_numbers" is executed
+//  - the action of "function_call: symbol_name_atom list_of_arguments" is executed
 //  - the semantic value of function_call is propagated to evaluable's semantic value
 static void evaluable_parse_executes_function_call_action_and_propagates_value_when_lexer_returns_function_call(
     void **state) {
@@ -198,21 +189,6 @@ static void evaluable_parse_executes_function_call_action_and_propagates_value_w
     evaluable_parse(NULL, &parsed_ast, NULL);
 
     assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_OR_FUNCTION_CALL_NODE);
-}
-
-// Given:
-//  - lexer returns:
-//    - SYMBOL_NAME("symbol_name")
-// Expected:
-//  - the action of "atom : number_atom | string_atom | symbol_name_atom" is executed
-//  - the semantic value of atom is propagated to evaluable's semantic value
-static void evaluable_parse_executes_atom_action_and_propagates_value_when_lexer_returns_atom(void **state) {
-    mock_lex_set(seq_atom, 2);
-    will_return(stub_atom_action, DUMMY_AST_ERROR_OR_ATOM_NODE);
-
-    evaluable_parse(NULL, &parsed_ast, NULL);
-
-    assert_ptr_equal(parsed_ast, DUMMY_AST_ERROR_OR_ATOM_NODE);
 }
 
 // Given:
@@ -348,9 +324,6 @@ int main(void) {
     const struct CMUnitTest evaluable_parse_tests[] = {
         cmocka_unit_test_setup_teardown(
             evaluable_parse_executes_function_call_action_and_propagates_value_when_lexer_returns_function_call,
-            evaluable_parse_setup, evaluable_parse_teardown),
-        cmocka_unit_test_setup_teardown(
-            evaluable_parse_executes_atom_action_and_propagates_value_when_lexer_returns_atom,
             evaluable_parse_setup, evaluable_parse_teardown),
         cmocka_unit_test_setup_teardown(
             evaluable_parse_executes_computable_action_and_propagates_value_when_lexer_returns_computable,

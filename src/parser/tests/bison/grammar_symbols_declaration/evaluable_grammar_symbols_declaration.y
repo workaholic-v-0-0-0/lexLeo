@@ -6,7 +6,6 @@
 
 %type <ast>
 function_call
-atom
 computable
 evaluable
 

@@ -44,30 +44,28 @@ static runtime_env_ctx g_runtime_env_ctx = {
     .ops = &RUNTIME_ENV_OPS_DEFAULT,
 };
 
-static runtime_env *g_runtime_env_toplevel = NULL;
-
 runtime_env *runtime_env_make_toplevel(void) {
-    g_runtime_env_toplevel = RUNTIME_ENV_MALLOC(sizeof(runtime_env));
-    if (!g_runtime_env_toplevel)
+    runtime_env *ret = RUNTIME_ENV_MALLOC(sizeof(runtime_env));
+    if (!ret)
         return NULL;
 
-    g_runtime_env_toplevel->bindings =
+    ret->bindings =
         g_runtime_env_ctx.hashtable_ops->create_bindings(
             RUNTIME_ENV_SIZE,
             RUNTIME_ENV_KEY_TYPE,
             runtime_env_value_destroy_adapter
         );
-    if (!g_runtime_env_toplevel->bindings) {
-        RUNTIME_ENV_FREE(g_runtime_env_toplevel);
-        g_runtime_env_toplevel = NULL;
+    if (!ret->bindings) {
+        RUNTIME_ENV_FREE(ret);
+        ret = NULL;
         return NULL;
     }
 
-    g_runtime_env_toplevel->refcount = 1;
-    g_runtime_env_toplevel->is_root = true;
-    g_runtime_env_toplevel->parent = NULL;
+    ret->refcount = 1;
+    ret->is_root = true;
+    ret->parent = NULL;
 
-    return g_runtime_env_toplevel;
+    return ret;
 }
 
 runtime_env_value *runtime_env_make_number(int i) {

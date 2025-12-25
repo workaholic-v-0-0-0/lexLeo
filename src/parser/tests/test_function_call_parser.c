@@ -47,7 +47,7 @@ ast *stub_symbol_name_atom_action(void) {
     return mock_type(ast *);
 }
 
-ast *stub_list_of_numbers_action(void) {
+ast *stub_list_of_arguments_action(void) {
     return mock_type(ast *);
 }
 
@@ -92,13 +92,13 @@ parser_ctx mock_ctx;
 
 
 // Action under tests via injected stubs:
-// function_call: symbol_name_atom list_of_numbers
+// function_call: symbol_name_atom list_of_arguments
 
 // mocked:
 //  - actions of grammar rules that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
-//    - list_of_numbers: LPAREN numbers RPAREN
-//    - numbers: | numbers number_atom
+//    - list_of_arguments: LPAREN arguments RPAREN
+//    - arguments: | arguments evaluable
 //    - number_atom: INTEGER
 //  - functions of the ast module which are used:
 //    - ast_create_children_node_var
@@ -150,7 +150,7 @@ static int function_call_parse_teardown(void **state) {
 //    - type: AST_TYPE_FUNCTION_CALL
 //    - children_nb: 2
 //    - first optionnal arg: $1 (symbol_name_atom's semantic value)
-//    - second optionnal arg: $2 (list_of_numbers's semantic value)
+//    - second optionnal arg: $2 (list_of_arguments's semantic value)
 //    - no more arg
 
 // Given:
@@ -159,7 +159,7 @@ static int function_call_parse_teardown(void **state) {
 //  - calls ast_destroy with:
 //    - root: $1 (symbol_name_atom's semantic value)
 //  - calls ast_destroy with:
-//    - root: $2 (list_of_numbers's semantic value)
+//    - root: $2 (list_of_arguments's semantic value)
 //  - calls create_error_node_or_sentinel with:
 //    - code: AST_ERROR_CODE_FUNCTION_CALL_NODE_CREATION_FAILED
 //    - message: "ast creation for a function call node failed"
@@ -168,7 +168,7 @@ static void
 function_call_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_create_children_node_var_fails(
     void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
-    will_return(stub_list_of_numbers_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
+    will_return(stub_list_of_arguments_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_FUNCTION_CALL);
     expect_value(mock_create_children_node_var, children_nb, 2);
     expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
@@ -192,7 +192,7 @@ function_call_parse_cleans_up_and_create_error_node_for_LHS_semantic_value_when_
 static void function_call_parse_create_function_call_node_for_LHS_semantic_value_when_create_children_node_var_succeeds(
     void **state) {
     will_return(stub_symbol_name_atom_action, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);
-    will_return(stub_list_of_numbers_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
+    will_return(stub_list_of_arguments_action, DUMMY_AST_ERROR_OR_LIST_OF_NUMBERS_NODE);
     expect_value(mock_create_children_node_var, type, AST_TYPE_FUNCTION_CALL);
     expect_value(mock_create_children_node_var, children_nb, 2);
     expect_value(mock_create_children_node_var, child, DUMMY_AST_ERROR_OR_SYMBOL_NAME_NODE);

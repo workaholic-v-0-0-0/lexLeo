@@ -6,7 +6,7 @@
 
 %type <ast>
 symbol_name_atom
-list_of_numbers
+list_of_arguments
 function_call
 
 %token LPAREN

@@ -45,6 +45,7 @@ do {                                                                         \
 "/"                 { return DIVIDE; }
 
 ";"                 { return SEMICOLON; }
+","                 { return COMMA; }
 "="                 { return EQUAL; }
 
 "read"              { return READ; }

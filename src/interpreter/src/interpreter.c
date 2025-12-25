@@ -7,7 +7,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h> //todebug
 
 typedef bool (*ast_is_well_formed_fn_t)(const ast *node);
 
@@ -156,11 +155,11 @@ static bool ast_is_well_formed_computation(const ast *node) {
         || ast_is_well_formed_symbol_node(node) );
 }
 
-static bool ast_is_well_formed_numbers(const ast *node) {
+static bool ast_is_well_formed_arguments(const ast *node) {
     return
         ast_is_well_formed_uniform_list(
             node,
-            AST_TYPE_NUMBERS,
+            AST_TYPE_ARGUMENTS,
             ast_is_well_formed_int_node );
 }
 
@@ -172,12 +171,12 @@ static bool ast_is_well_formed_parameters(const ast *node) {
             ast_is_well_formed_symbol_node );
 }
 
-static bool ast_is_well_formed_list_of_numbers(const ast *node) {
+static bool ast_is_well_formed_list_of_arguments(const ast *node) {
     return
         ast_is_well_formed_one_child_node(
             node,
-            AST_TYPE_LIST_OF_NUMBERS,
-            ast_is_well_formed_numbers );
+            AST_TYPE_LIST_OF_ARGUMENTS,
+            ast_is_well_formed_arguments );
 }
 
 static bool ast_is_well_formed_list_of_parameters(const ast *node) {
@@ -194,7 +193,7 @@ static bool ast_is_well_formed_function_call(const ast *node) {
             node,
             AST_TYPE_FUNCTION_CALL,
             ast_is_well_formed_symbol_node,
-            ast_is_well_formed_list_of_numbers
+            ast_is_well_formed_list_of_arguments
         );
 }
 
@@ -827,13 +826,85 @@ interpreter_status interpreter_eval(
                 root->children->children[0],
                 out );
 
-// <here>
-/*
-        AST_TYPE_BLOCK
-        ast_is_well_formed_block
 
-*/
+    case AST_TYPE_FUNCTION_CALL:
+        if (!ast_is_well_formed_function_call(root))
+            return INTERPRETER_STATUS_INVALID_AST;
 
+        runtime_env_value *function = runtime_env_get(
+            env,
+            root->children->children[0]->data->data.symbol_value );
+        if (!function)
+            return INTERPRETER_STATUS_LOOKUP_FAILED;
+
+        runtime_env_value_retain(function);
+
+        if (function->type != RUNTIME_VALUE_FUNCTION) {
+            runtime_env_value_release(function);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
+
+        runtime_env *call_frame = runtime_env_wind(function->as.fn.closure);
+        if (!call_frame) {
+            runtime_env_value_release(function);
+            return INTERPRETER_STATUS_OOM;
+        }
+
+        ast *parameters = function->as.fn.function_node->children->children[1]->children->children[0];
+        ast *ast_arguments = root->children->children[1]->children->children[0];
+        size_t arity = parameters->children->children_nb;
+
+        if (arity != ast_arguments->children->children_nb
+            || arity > AST_MAX_ARITY) { // must be handled in resolver module with RESOLVER_ERROR_MAX_ARITY_OVERFLOW (see TODO.txt)
+            runtime_env_unwind(call_frame);
+            runtime_env_value_release(function);
+            return INTERPRETER_STATUS_ARITY_ERROR;
+        }
+
+        runtime_env_value *evaluated_arguments[AST_MAX_ARITY] = {NULL};
+        for (size_t i = 0; i < arity; i++) {
+            status =
+                interpreter_eval(
+                    ctx,
+                    env,
+                    ast_arguments->children->children[i],
+                    &(evaluated_arguments[i]) );
+            if (status != INTERPRETER_STATUS_OK) {
+                for (size_t j = 0; j < i; j++) {
+                    runtime_env_value_release(evaluated_arguments[j]);
+                }
+                runtime_env_unwind(call_frame);
+                runtime_env_value_release(function);
+                return status;
+            }
+        }
+
+        for (size_t i = 0; i < arity; i++) {
+            binding =
+                runtime_env_set_local(
+                    call_frame,
+                    parameters->children->children[i]->data->data.symbol_value,
+                    evaluated_arguments[i] );
+            if (!binding) {
+                runtime_env_unwind(call_frame);
+                for (size_t j = 0; j < arity; j++)
+                    runtime_env_value_release(evaluated_arguments[j]);
+                runtime_env_value_release(function);
+                return INTERPRETER_STATUS_BINDING_ERROR;
+            }
+            runtime_env_value_release(evaluated_arguments[i]);
+        }
+
+        status =
+            interpreter_eval(
+                ctx,
+                call_frame, // paramaters have been bound previously
+                function->as.fn.function_node->children->children[2], // the body
+                out );
+
+        runtime_env_unwind(call_frame);
+        runtime_env_value_release(function);
+        return status;
 
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;

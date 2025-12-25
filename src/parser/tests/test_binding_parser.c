@@ -96,10 +96,10 @@ parser_ctx mock_ctx;
 //  - actions of grammar rules that the rule under tests depends on:
 //    - symbol_name_atom: SYMBOL_NAME
 //    - evaluable: function_call | atom | computable | QUOTE evaluable
-//    - function_call: symbol_name_atom list_of_numbers
+//    - function_call: symbol_name_atom list_of_arguments
 //    - symbol_name_atom: SYMBOL_NAME
-//    - list_of_numbers: LPAREN numbers RPAREN
-//    - numbers: | numbers number_atom
+//    - list_of_arguments: LPAREN arguments RPAREN
+//    - arguments: | arguments evaluable
 //    - number_atom: INTEGER
 //    - atom : number_atom | string_atom | symbol_name_atom
 //    - string_atom: STRING

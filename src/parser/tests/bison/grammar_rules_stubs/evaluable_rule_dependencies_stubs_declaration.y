@@ -3,5 +3,4 @@
 // the following stubs are implemented in test_evaluable_parser.c
 
 ast *stub_function_call_action(void);
-ast *stub_atom_action(void);
 ast *stub_computable_action(void);

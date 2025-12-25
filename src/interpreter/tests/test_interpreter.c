@@ -42,8 +42,8 @@ static const char *A_CONSTANT_ERROR_MESSAGE = "an error message";
 
 // dummies
 
-static runtime_env DUMMY_RUNTIME_ENV = {.bindings = NULL, .refcount = 2, .is_root = false, .parent = NULL};
-static runtime_env *const DUMMY_RUNTIME_ENV_P = &DUMMY_RUNTIME_ENV;
+static runtime_env DUMMY_ROOT_RUNTIME_ENV = {.bindings = NULL, .refcount = 1, .is_root = true, .parent = NULL};
+static runtime_env *const DUMMY_ROOT_RUNTIME_ENV_P = &DUMMY_ROOT_RUNTIME_ENV;
 static ast DUMMY_AST;
 static ast *DUMMY_AST_P = &DUMMY_AST;
 static ast *DUMMY_AST_CHILDREN_ARR[1] = { &DUMMY_AST };
@@ -73,7 +73,7 @@ typedef enum {
 	ENV_ARR_GET_RET_QUOTED_ADD_1_PLUS_2,
 	ENV_ARR_SET_LOCAL_RET_FALSE,
 	ENV_ARR_SET_LOCAL_RET_TRUE,
-	ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET
+	ENV_ARR_SET_LOCAL_RET_TRUE_IN_ROOT_AND_CALL_FRAME
 } interpreter_runtime_env_arrange_kind_t;
 
 typedef enum {
@@ -87,7 +87,10 @@ typedef enum {
 	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_NUM_42_GET_STMT_2_CHILD,
 	ENV_ASRT_FOR_BLOCK_ITEMS_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
 	ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2,
-	ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD
+	ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
+	ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT,
+	ENV_ASRT_EXPECT_STMT_1_DEF_FCT,
+	ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT_ONE_PARAM
 } interpreter_runtime_env_assert_kind_t;
 
 typedef struct test_interpreter_runtime_value_snapshot {
@@ -102,6 +105,7 @@ static void make_runtime_env_value_snapshot(const runtime_env_value *v, test_int
 }
 
 typedef struct {
+	// spy root scope supposed to be when env->parent == NULL
     runtime_env *set_local_arg_e;
     const struct symbol *set_local_arg_key;
     const runtime_env_value *set_local_arg_value;
@@ -118,31 +122,55 @@ typedef struct {
 	test_interpreter_runtime_value_snapshot get_ret_snapshot;
 
 	runtime_env_value *env_owned_value;
+
+	// spy call_frame supposed to be when env->parent != NULL
+    runtime_env *set_local_arg_e_in_call_frame;
+    const struct symbol *set_local_arg_key_in_call_frame;
+    const runtime_env_value *set_local_arg_value_in_call_frame;
+	test_interpreter_runtime_value_snapshot set_local_arg_value_snapshot_in_call_frame;
+	bool set_local_ret_in_call_frame;
+    const runtime_env *get_arg_e_in_call_frame;
+    const struct symbol *get_arg_key_in_call_frame;
+	test_interpreter_runtime_value_snapshot get_ret_snapshot_in_call_frame;
+	runtime_env_value *call_frame_owned_value;
 } interpreter_runtime_spy_t;
 
 static interpreter_runtime_spy_t *g_runtime_spy = NULL;
 
 bool spy_runtime_env_set_local(runtime_env *e, const struct symbol *key, const runtime_env_value *value) {
-    assert_non_null(g_runtime_spy);
-    g_runtime_spy->set_local_arg_e = e;
-    g_runtime_spy->set_local_arg_key = key;
-    g_runtime_spy->set_local_arg_value = value;
-	make_runtime_env_value_snapshot(value, &g_runtime_spy->set_local_arg_value_snapshot);
-
-	if (g_runtime_spy->env_owned_value) {
-        runtime_env_value_release(g_runtime_spy->env_owned_value);
-        g_runtime_spy->env_owned_value = NULL;
-    }
-
-	if (value && g_runtime_spy->set_local_ret) {
-        runtime_env_value_retain(value);
-        g_runtime_spy->env_owned_value = (runtime_env_value *) value;
-    }
-
-	return g_runtime_spy->set_local_ret;
+	assert_non_null(g_runtime_spy);
+	if (e->is_root) { // e is root
+   		g_runtime_spy->set_local_arg_e = e;
+    	g_runtime_spy->set_local_arg_key = key;
+    	g_runtime_spy->set_local_arg_value = value;
+		make_runtime_env_value_snapshot(value, &g_runtime_spy->set_local_arg_value_snapshot);
+		if (g_runtime_spy->env_owned_value) {
+    	    runtime_env_value_release(g_runtime_spy->env_owned_value);
+        	g_runtime_spy->env_owned_value = NULL;
+    	}
+		if (value && g_runtime_spy->set_local_ret) {
+    	    runtime_env_value_retain(value);
+        	g_runtime_spy->env_owned_value = (runtime_env_value *) value;
+    	}
+		return g_runtime_spy->set_local_ret;
+	} else { // e is call frame
+   		g_runtime_spy->set_local_arg_e_in_call_frame = e;
+    	g_runtime_spy->set_local_arg_key_in_call_frame = key;
+    	g_runtime_spy->set_local_arg_value_in_call_frame = value;
+		make_runtime_env_value_snapshot(value, &g_runtime_spy->set_local_arg_value_snapshot_in_call_frame);
+		if (g_runtime_spy->call_frame_owned_value) {
+        	runtime_env_value_release(g_runtime_spy->call_frame_owned_value);
+        	g_runtime_spy->call_frame_owned_value = NULL;
+    	}
+		if (value && g_runtime_spy->set_local_ret_in_call_frame) {
+        	runtime_env_value_retain(value);
+        	g_runtime_spy->call_frame_owned_value = (runtime_env_value *) value;
+    	}
+		return g_runtime_spy->set_local_ret_in_call_frame;
+	}
 }
 
-runtime_env_value *spy_runtime_env_get_local(const runtime_env *e, const struct symbol *key) {
+runtime_env_value *spy_runtime_env_get_local(const runtime_env *e, const struct symbol *key) {// unused?
     assert_non_null(g_runtime_spy);
     g_runtime_spy->get_arg_e = e;
     g_runtime_spy->get_arg_key = key;
@@ -152,10 +180,17 @@ runtime_env_value *spy_runtime_env_get_local(const runtime_env *e, const struct 
 
 runtime_env_value *spy_runtime_env_get(const runtime_env *e, const struct symbol *key) {
     assert_non_null(g_runtime_spy);
-    g_runtime_spy->get_arg_e = e;
-    g_runtime_spy->get_arg_key = key;
-    make_runtime_env_value_snapshot(g_runtime_spy->env_owned_value, &g_runtime_spy->get_ret_snapshot);
-	return g_runtime_spy->env_owned_value;
+	if (e->is_root) { // e is root
+	    g_runtime_spy->get_arg_e = e;
+    	g_runtime_spy->get_arg_key = key;
+    	make_runtime_env_value_snapshot(g_runtime_spy->env_owned_value, &g_runtime_spy->get_ret_snapshot);
+		return g_runtime_spy->env_owned_value;
+	} else { // e is call frame
+	    g_runtime_spy->get_arg_e_in_call_frame = e;
+    	g_runtime_spy->get_arg_key_in_call_frame = key;
+    	make_runtime_env_value_snapshot(g_runtime_spy->call_frame_owned_value, &g_runtime_spy->get_ret_snapshot_in_call_frame);
+		return g_runtime_spy->call_frame_owned_value;
+	}
 }
 
 typedef enum {
@@ -358,7 +393,7 @@ static void eval_error_when_root_null(void **state) {
     *out = sentinel;
     runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, NULL, out);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, NULL, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, arg_out_before);
@@ -376,7 +411,7 @@ static void eval_error_when_root_null(void **state) {
 static void eval_error_when_out_null(void **state) {
     (void)state;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
 }
@@ -398,7 +433,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
     *out = sentinel;
     runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_RUNTIME_ENV_P, unsupported_ast, out);
+    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, unsupported_ast, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, arg_out_before);
@@ -512,7 +547,7 @@ static int parametric_setup(void **state) {
         p->ctx->arg_env = runtime_env_wind(NULL);
         assert_non_null(p->ctx->arg_env);
     }
-    else p->ctx->arg_env = DUMMY_RUNTIME_ENV_P;
+    else p->ctx->arg_env = DUMMY_ROOT_RUNTIME_ENV_P;
 
     // globals initialization so that spies could act on spy variables of test context
     p->ctx->runtime_spy = (interpreter_runtime_spy_t){0};
@@ -1026,11 +1061,11 @@ static void make_root_a_ill_formed_division_node_because_three_children(test_int
 }
 
 static void make_root_a_ill_formed_numbers_node_because_children_null(test_interpreter_ctx *ctx) {
-    ctx->arg_root = make_ill_formed_node(AST_TYPE_NUMBERS, ILL_CHILDREN_NULL);
+    ctx->arg_root = make_ill_formed_node(AST_TYPE_ARGUMENTS, ILL_CHILDREN_NULL);
 }
 
 static void make_root_a_numbers_node_with_no_child(test_interpreter_ctx *ctx) {
-    ctx->arg_root = ast_create_children_node_var(AST_TYPE_NUMBERS, 0);
+    ctx->arg_root = ast_create_children_node_var(AST_TYPE_ARGUMENTS, 0);
 }
 
 static void make_root_a_ill_formed_quote_node_because_children_null(test_interpreter_ctx *ctx) {
@@ -1064,10 +1099,10 @@ static const ast *a_function_call_child_with_params_7_8(void) {
             2,
             ast_create_symbol_node(DUMMY_SYMBOL_FOR_FUNCTION_NAME_P),
             ast_create_children_node_var(
-                AST_TYPE_LIST_OF_NUMBERS,
+                AST_TYPE_LIST_OF_ARGUMENTS,
                 1,
                 ast_create_children_node_var(
-                    AST_TYPE_NUMBERS,
+                    AST_TYPE_ARGUMENTS,
                     2,
                     ast_create_int_node(7),
                     ast_create_int_node(8)
@@ -1298,6 +1333,94 @@ static void make_root_a_block_node_with_two_statements_bind_quoted_add_1_2_and_e
             		ast_create_symbol_node(DUMMY_SYMBOL_P) ) ) );
 }
 
+static void make_root_a_ill_formed_function_call_node_because_no_child(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_FUNCTION_CALL,
+            0 );
+}
+
+static void make_root_a_block_items_node_define_function_with_no_param_and_call_it(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_BLOCK_ITEMS,
+            2,
+			ast_create_children_node_var(
+            	AST_TYPE_FUNCTION_DEFINITION,
+				1,
+				ast_create_children_node_var(
+					AST_TYPE_FUNCTION,
+					3,
+					ast_create_symbol_node(DUMMY_SYMBOL_P),
+					ast_create_children_node_var(
+						AST_TYPE_LIST_OF_PARAMETERS,
+						1,
+						ast_create_children_node_var(
+							AST_TYPE_PARAMETERS,
+							0 ) ),
+					ast_create_children_node_var(
+						AST_TYPE_BLOCK,
+						1,
+				        ast_create_children_node_var(
+            				AST_TYPE_BLOCK_ITEMS,
+            				1,
+							ast_create_int_node(42) ) ) ) ), // hence returned value is 42
+			ast_create_children_node_var(
+            	AST_TYPE_FUNCTION_CALL,
+            	2,
+				ast_create_symbol_node(DUMMY_SYMBOL_P),
+				ast_create_children_node_var(
+					AST_TYPE_LIST_OF_ARGUMENTS,
+					1,
+					ast_create_children_node_var(
+						AST_TYPE_ARGUMENTS,
+						0 ) ) ) ); // hence function call returns 42
+}
+
+static void make_root_a_block_items_node_define_function_with_one_param_and_call_it(test_interpreter_ctx *ctx) {
+    ctx->arg_root =
+        ast_create_children_node_var(
+            AST_TYPE_BLOCK_ITEMS,
+            2,
+			ast_create_children_node_var(
+            	AST_TYPE_FUNCTION_DEFINITION,
+				1,
+				ast_create_children_node_var(
+					AST_TYPE_FUNCTION,
+					3,
+					ast_create_symbol_node(DUMMY_SYMBOL_P),
+					ast_create_children_node_var(
+						AST_TYPE_LIST_OF_PARAMETERS,
+						1,
+						ast_create_children_node_var(
+							AST_TYPE_PARAMETERS,
+							1,
+							ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P) ) ),
+					ast_create_children_node_var(
+						AST_TYPE_BLOCK,
+						1,
+				        ast_create_children_node_var(
+            				AST_TYPE_BLOCK_ITEMS,
+            				1,
+							ast_create_children_node_var(
+								AST_TYPE_ADDITION,
+								2,
+								ast_create_symbol_node(DUMMY_OTHER_SYMBOL_P),
+								ast_create_int_node(1) ) ) ) ) ),
+			ast_create_children_node_var(
+            	AST_TYPE_FUNCTION_CALL,
+            	2,
+				ast_create_symbol_node(DUMMY_SYMBOL_P),
+				ast_create_children_node_var(
+					AST_TYPE_LIST_OF_ARGUMENTS,
+					1,
+					ast_create_children_node_var(
+						AST_TYPE_ARGUMENTS,
+						1,
+						ast_create_int_node(41) ) ) ) );
+}
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -1479,6 +1602,132 @@ static void runtime_env_usage_expectation(test_interpreter_ctx *ctx) {
 		assert_ptr_equal(
 			ctx->runtime_spy.get_ret_snapshot.address,
 			ctx->runtime_spy.set_local_arg_value );
+	    break;
+	case ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT:
+	    assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            1 );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.function_node,
+            ctx->arg_root->children->children[0]->children->children[0] );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.type,
+            RUNTIME_VALUE_FUNCTION );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.closure,
+            ctx->arg_env );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_arg_e,
+			ctx->arg_env );
+    	assert_ptr_equal(
+			ctx->runtime_spy.get_arg_key,
+			ctx->arg_root->children->children[1]->children->children[0]->data->data.symbol_value );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_ret_snapshot.address,
+			ctx->runtime_spy.set_local_arg_value );
+        assert_int_equal(
+            ctx->arg_env->refcount,
+            2 );
+	    break;
+	case ENV_ASRT_EXPECT_STMT_1_DEF_FCT:
+	    assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            1 );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.function_node,
+            ctx->arg_root->children->children[0]->children->children[0] );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.type,
+            RUNTIME_VALUE_FUNCTION );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.closure,
+            ctx->arg_env );
+	    break;
+	case ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT_ONE_PARAM:
+		// bind for function definition (in root frame)
+	    assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e,
+        	ctx->arg_env );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key,
+        	ctx->arg_root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.refcount,
+            1 );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.function_node,
+            ctx->arg_root->children->children[0]->children->children[0] );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.type,
+            RUNTIME_VALUE_FUNCTION );
+        assert_ptr_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot.value.as.fn.closure,
+            ctx->arg_env );
+        assert_int_equal(
+            ctx->arg_env->refcount,
+            2 );
+
+		// lookup function for function call (in root frame)
+		assert_ptr_equal(
+			ctx->runtime_spy.get_arg_e,
+			ctx->arg_env );
+    	assert_ptr_equal(
+			ctx->runtime_spy.get_arg_key,
+			ctx->arg_root->children->children[1]->children->children[0]->data->data.symbol_value );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_ret_snapshot.address,
+			ctx->runtime_spy.set_local_arg_value );
+
+		// bind parameter to argument 41 in call frame
+		assert_non_null(ctx->runtime_spy.set_local_arg_e_in_call_frame);
+	    assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_e_in_call_frame->parent,
+        	ctx->arg_env );
+		assert_false(ctx->runtime_spy.set_local_arg_e_in_call_frame->is_root);
+	    assert_int_equal(
+        	ctx->runtime_spy.set_local_arg_e_in_call_frame->refcount,
+        	1 );
+    	assert_ptr_equal(
+        	ctx->runtime_spy.set_local_arg_key_in_call_frame,
+        	ctx->arg_root->children->children[0]->children->children[0]->children->children[1]->children->children[0]->children->children[0]->data->data.symbol_value );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot_in_call_frame.value.refcount,
+            1 );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot_in_call_frame.value.type,
+            RUNTIME_VALUE_NUMBER );
+        assert_int_equal(
+            ctx->runtime_spy.set_local_arg_value_snapshot_in_call_frame.value.as.i,
+            41 );
+
+		// lookup value passed to parameter in call frame
+		assert_non_null(ctx->runtime_spy.get_arg_e_in_call_frame);
+		assert_ptr_equal(
+			ctx->runtime_spy.get_arg_e_in_call_frame->parent,
+			ctx->arg_env );
+		assert_false(ctx->runtime_spy.get_arg_e_in_call_frame->is_root);
+		assert_int_equal(
+			ctx->runtime_spy.get_arg_e_in_call_frame->refcount,
+			1 );
+    	assert_ptr_equal(
+			ctx->runtime_spy.get_arg_key_in_call_frame,
+			ctx->arg_root->children->children[0]->children->children[0]->children->children[2]->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value );
+		assert_ptr_equal(
+			ctx->runtime_spy.get_ret_snapshot_in_call_frame.address,
+			ctx->runtime_spy.set_local_arg_value_in_call_frame );
+
 	    break;
     default:
         assert_true(false);
@@ -1669,8 +1918,9 @@ static void spy_runtime_env_arrange(const test_interpreter_case *param_case) {
 	case ENV_ARR_SET_LOCAL_RET_TRUE:
 		param_case->ctx->runtime_spy.set_local_ret = true;
 		break;
-	case ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET: // <here> should change the name
+	case ENV_ARR_SET_LOCAL_RET_TRUE_IN_ROOT_AND_CALL_FRAME:
 		param_case->ctx->runtime_spy.set_local_ret = true;
+		param_case->ctx->runtime_spy.set_local_ret_in_call_frame = true;
 		break;
 	default:
 		assert_true(false);
@@ -1969,6 +2219,11 @@ static void release_env_owned_value(test_interpreter_ctx *ctx) {
     ctx->runtime_spy.env_owned_value = NULL;
 }
 
+static void release_call_frame_owned_value(test_interpreter_ctx *ctx) {
+	runtime_env_value_release(ctx->runtime_spy.call_frame_owned_value);
+    ctx->runtime_spy.call_frame_owned_value = NULL;
+}
+
 static void destroy_root_and_release_runtime_value_at_out(test_interpreter_ctx *ctx) {
     destroy_root(ctx);
     runtime_env_value_release(*ctx->arg_out);
@@ -2009,6 +2264,14 @@ static void destroy_root_and_release_env_owned_value_and_runtime_value_at_out(te
 	release_env_owned_value(ctx);
 	runtime_env_value_release(*ctx->arg_out);
 }
+
+static void destroy_root_and_release_env_owned_values_and_runtime_value_at_out(test_interpreter_ctx *ctx) {
+    destroy_root(ctx);
+	release_call_frame_owned_value(ctx);
+	release_env_owned_value(ctx);
+	runtime_env_value_release(*ctx->arg_out);
+}
+
 
 
 
@@ -6313,7 +6576,7 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRIT
     .root_constructor_fn = &make_root_a_block_items_node_with_two_statements_bind_and_write,
     .env_is_dummy = true,
     .oom = false,
-	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_SUCCESS,
 
 	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_NUM_42_GET_STMT_2_CHILD,
@@ -6359,7 +6622,7 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BIND_AND_WRIT
     .root_constructor_fn = &make_root_a_block_items_node_with_two_statements_bind_and_write,
     .env_is_dummy = true,
     .oom = false,
-	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 	.write_runtime_value_arrange_kind = WRITE_RUNTIME_VALUE_ARR_WRITE_FAIL,
 
 	.runtime_env_assert_kind = ENV_ASRT_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_NUM_42_GET_STMT_2_CHILD,
@@ -6401,7 +6664,7 @@ static const test_interpreter_case BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_
     .root_constructor_fn = &make_root_a_block_items_node_with_two_statements_bind_quoted_add_1_2_and_eval_it,
     .env_is_dummy = true,
     .oom = false,
-	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 
 	.runtime_env_assert_kind = ENV_ASRT_FOR_BLOCK_ITEMS_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
     .expected_out_fn = &expected_out_points_on_fresh_number_3,
@@ -6555,7 +6818,7 @@ static const test_interpreter_case BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EV
     .root_constructor_fn = &make_root_a_block_node_with_two_statements_bind_quoted_add_1_2_and_eval_it,
     .env_is_dummy = true,
     .oom = false,
-	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_GET_VAL_SET,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
 
 	.runtime_env_assert_kind = ENV_ASRT_FOR_BLOCK_EXPECT_SET_LOCAL_STMT_1_BND_LHS_TO_QUOTED_ADD_1_2_GET_STMT_2_CHILD,
     .expected_out_fn = &expected_out_points_on_fresh_number_3,
@@ -6564,6 +6827,227 @@ static const test_interpreter_case BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EV
     .clean_up_fn = &destroy_root_and_release_env_owned_value_and_runtime_value_at_out,
 
     .ctx =&CTX_BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL,
+};
+
+
+
+//-----------------------------------------------------------------------------
+// EVALUATION OF AST OF TYPE AST_TYPE_FUNCTION_CALL
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// ISOLATED UNIT
+//-----------------------------------------------------------------------------
+
+
+/*
+core of the isolated unit:
+    interpreter_status interpreter_eval(
+        struct interpreter_ctx *ctx,
+        struct runtime_env *env,
+        const struct ast *root,
+        struct runtime_env_value **out );
+other elements of the isolated unit:
+  - root
+  - out
+  - ast
+- from the runtime_env module:
+  - runtime_env_make_number
+  - runtime_env_value_retain
+  - runtime_env_value_release
+  - runtime_env_value_destroy
+- from the ast module:
+  - ast_create_symbol_node
+  - ast_create_int_node
+  - ast_create_children_node_var
+  - ast_destroy
+
+doubles:
+  - dummy:
+    - env
+  - spy:
+    - runtime_env_get
+    - runtime_env_set
+  - fake:
+    - functions of standard library which are used:
+      - malloc, free, strdup
+*/
+
+
+
+//-----------------------------------------------------------------------------
+// PARAMETRIC CASES
+//-----------------------------------------------------------------------------
+
+
+// Given:
+//  - env and out are valid
+//  - root is a ill-formed node of type AST_TYPE_FUNCTION_CALL because no child
+// Expected:
+//  - environment is not modified
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_INVALID_AST
+static test_interpreter_ctx CTX_FUNCTION_CALL_NODE_ILL_FORMED_CAUSE_NO_CHILD = {0};
+static const test_interpreter_case FUNCTION_CALL_NODE_ILL_FORMED_CAUSE_NO_CHILD = {
+    .name = "eval_error_invalid_ast_when_function_call_node_ill_formed_cause_no_child",
+
+    .root_constructor_fn = &make_root_a_ill_formed_function_call_node_because_no_child,
+    .env_is_dummy = true,
+    .oom = false,
+
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_INVALID_AST,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_CALL_NODE_ILL_FORMED_CAUSE_NO_CHILD,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed node of type AST_TYPE_BLOCK_ITEMS
+//    - first child: a well-formed node of type AST_TYPE_FUNCTION_DEFINITION which retturns 42
+//                   corresponds to: "define f () {42 ;}"
+//    - second child: a well-formed node of type AST_TYPE_FUNCTION_CALL for calling the aforementionned function
+//                   corresponds to: "f () ;"
+// Expected:
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: <a RUNTIME_VALUE_FUNCTION> denoted fct_ret_42 such as:
+//      - fct_ret_42 != NULL
+//      - fct_ret_42->type == RUNTIME_VALUE_FUNCTION
+//      - fct_ret_42->refcount == 1
+//      - fct_ret_42->as.fn.function_node == root->children->children[0]->children->children[0]
+//      - fct_ret_42->as.fn.closure == env
+//  - env->refcount == 2
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[1]->children->children[0]->data->data.symbol_value
+//        *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->refcount == 1
+//    && (*out)->as.i == 42
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_NO_PARAM = {0};
+static const test_interpreter_case FUNCTION_CALL_NODE_AFTER_ITS_DEF_NO_PARAM = {
+    .name = "eval_success_when_function_call_after_its_def_no_param",
+
+    .root_constructor_fn = &make_root_a_block_items_node_define_function_with_no_param_and_call_it,
+    .env_is_dummy = false,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT,
+    .expected_out_fn = &expected_out_points_on_fresh_number_42,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_release_env_owned_value_and_runtime_value_at_out,
+
+    .ctx =&CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_NO_PARAM,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed node of type AST_TYPE_BLOCK_ITEMS
+//    - first child: a well-formed node of type AST_TYPE_FUNCTION_DEFINITION which retturns 42
+//                   corresponds to: "define f () {42 ;}"
+//    - second child: a well-formed node of type AST_TYPE_FUNCTION_CALL for calling the aforementionned function
+//                   corresponds to: "f () ;"
+//  - runtime_env_set_local fails
+// Expected:
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: <a RUNTIME_VALUE_FUNCTION> denoted fct_ret_42 such as:
+//      - fct_ret_42 != NULL
+//      - fct_ret_42->type == RUNTIME_VALUE_FUNCTION
+//      - fct_ret_42->refcount == 1
+//      - fct_ret_42->as.fn.function_node == root->children->children[0]->children->children[0]
+//      - fct_ret_42->as.fn.closure == env
+//  - env->refcount == 1
+//  - *out remains unchanged
+//  - returns INTERPRETER_STATUS_BINDING_ERROR
+static test_interpreter_ctx CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_FAILS = {0};
+static const test_interpreter_case FUNCTION_CALL_NODE_AFTER_ITS_DEF_FAILS = {
+    .name = "eval_error_when_function_call_after_its_def_fails",
+
+    .root_constructor_fn = &make_root_a_block_items_node_define_function_with_no_param_and_call_it,
+    .env_is_dummy = false,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_FALSE,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_STMT_1_DEF_FCT,
+    .expected_out_fn = &expected_out_unchanged,
+    .expected_status = INTERPRETER_STATUS_BINDING_ERROR,
+
+    .clean_up_fn = &destroy_root,
+
+    .ctx =&CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_FAILS,
+};
+
+// Given:
+//  - env and out are valid
+//  - root is a well-formed node of type AST_TYPE_BLOCK_ITEMS
+//    - first child: a well-formed node of type AST_TYPE_FUNCTION_DEFINITION which retturns 42
+//                   corresponds to: "define f(x) {x + 1;}"
+//    - second child: a well-formed node of type AST_TYPE_FUNCTION_CALL for calling the
+//                    aforementionned function corresponds to: "f(41) ;"
+// Expected:
+//  - calls runtime_env_set_local with:
+//    - e: env
+//    - key: root->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: <a RUNTIME_VALUE_FUNCTION> denoted fct_inc such as:
+//      - fct_inc != NULL
+//      - fct_inc->type == RUNTIME_VALUE_FUNCTION
+//      - fct_inc->refcount == 1
+//      - fct_inc->as.fn.function_node == root->children->children[0]->children->children[0]
+//      - fct_inc->as.fn.closure == env
+//  - env->refcount == 2
+//  - calls runtime_env_get with:
+//    - e: env
+//    - key: root->children->children[1]->children->children[0]->data->data.symbol_value
+//  - calls runtime_env_set_local with:
+//    - e: <a runtime_env*> denoted call_frame such as:
+//      - call_frame != NULL
+//      - call_frame->parent == env
+//      - call_frame->is_root == false
+//      - call_frame->refcount == 1
+//    - key: root->children->children[0]->children->children[0]->children->children[1]->children->children[0]->children->children[0]->data->data.symbol_value
+//    - value: <a RUNTIME_VALUE_NUMBER> denoted value_41 such as:
+//      - value_41 != NULL
+//      - value_41->type == RUNTIME_VALUE_NUMBER
+//      - value_41->refcount == 1
+//      - value_41->as.i == 41
+//  - calls runtime_env_get with:
+//    - e: <a runtime_env*> denoted call_frame such as:
+//      - call_frame != NULL
+//      - call_frame->parent == env
+//      - call_frame->is_root == false
+//      - call_frame->refcount == 1
+//    - key: root->children->children[0]->children->children[0]->children->children[2]->children->children[0]->children->children[0]->children->children[0]->data->data.symbol_value
+//        *out != NULL
+//    && (*out)->type == RUNTIME_VALUE_NUMBER
+//    && (*out)->refcount == 1
+//    && (*out)->as.i == 42
+//  - returns INTERPRETER_STATUS_OK
+static test_interpreter_ctx CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_ONE_PARAM = {0};
+static const test_interpreter_case FUNCTION_CALL_NODE_AFTER_ITS_DEF_ONE_PARAM = {
+    .name = "eval_success_when_function_call_after_its_def_one_param",
+
+    .root_constructor_fn = &make_root_a_block_items_node_define_function_with_one_param_and_call_it,
+    .env_is_dummy = false,
+    .oom = false,
+	.runtime_env_arrange_kind = ENV_ARR_SET_LOCAL_RET_TRUE_IN_ROOT_AND_CALL_FRAME,
+
+	.runtime_env_assert_kind = ENV_ASRT_EXPECT_STMT_1_DEF_FCT_STMT_2_CALL_IT_ONE_PARAM,
+    .expected_out_fn = &expected_out_points_on_fresh_number_42,
+    .expected_status = INTERPRETER_STATUS_OK,
+
+    .clean_up_fn = &destroy_root_and_release_env_owned_values_and_runtime_value_at_out,
+
+    .ctx =&CTX_FUNCTION_CALL_NODE_AFTER_ITS_DEF_ONE_PARAM,
 };
 
 
@@ -6712,6 +7196,10 @@ static const test_interpreter_case BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EV
 	X(BLOCK_ITEMS_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL_BINDING_FAILS) \
 	X(BLOCK_NODE_ILL_FORMED_CAUSE_CHILD_TU) \
 	X(BLOCK_NODE_TWO_STATEMENTS_BND_QTED_ADD_1_2_EVAL) \
+	X(FUNCTION_CALL_NODE_ILL_FORMED_CAUSE_NO_CHILD) \
+	X(FUNCTION_CALL_NODE_AFTER_ITS_DEF_NO_PARAM) \
+	X(FUNCTION_CALL_NODE_AFTER_ITS_DEF_FAILS) \
+	X(FUNCTION_CALL_NODE_AFTER_ITS_DEF_ONE_PARAM) \
 
 #define MAKE_TEST(CASE_SYM) \
     { .name = CASE_SYM.name, \

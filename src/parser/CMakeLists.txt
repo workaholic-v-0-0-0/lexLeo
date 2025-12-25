@@ -53,6 +53,7 @@ set(
 %token MULTIPLY\n\
 %token DIVIDE\n\
 %token SEMICOLON\n\
+%token COMMA\n\
 %token EQUAL\n\
 %token READ\n\
 %token WRITE\n\
@@ -79,10 +80,10 @@ parameters \
 list_of_parameters \
 function \
 function_definition \
-numbers \
-list_of_numbers \
+arguments \
+list_of_arguments \
+argument_list \
 function_call \
-computable_core \
 computable \
 evaluable \
 translation_unit \

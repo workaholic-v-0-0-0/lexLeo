@@ -1,7 +1,7 @@
 // src/parser/bison/grammar_rules/function_call_rule.y
 
 function_call
-  : symbol_name_atom list_of_numbers {
+  : symbol_name_atom list_of_arguments {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_FUNCTION_CALL,
             2,

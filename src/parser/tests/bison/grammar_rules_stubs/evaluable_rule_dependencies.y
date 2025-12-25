@@ -7,8 +7,6 @@ function_call:
         { (void)$1; (void)$3; (void)$4;
           $$ = stub_function_call_action(); } ;
 
-atom: SYMBOL_NAME { (void)$1; $$ = stub_atom_action(); } ;
-
 computable:
         INTEGER MULTIPLY LPAREN INTEGER ADD INTEGER RPAREN
         { (void)$1; (void)$4; (void)$6;

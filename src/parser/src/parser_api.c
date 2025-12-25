@@ -50,13 +50,13 @@ static parse_status map_rc_to_status(
 		const lexer_extra_t *ex,
 		struct parser_ctx *ctx ) {
     if (!ctx || ctx->syntax_errors != 0)
-        return PARSE_STATUS_ERROR;
-    if (rc != 0) {
-        if (ex && ex->reached_input_end)
-            return PARSE_STATUS_INCOMPLETE;
-        return PARSE_STATUS_ERROR;
-    }
-    return (out == NULL) ? PARSE_STATUS_EOF : PARSE_STATUS_OK;
+            return PARSE_STATUS_ERROR;
+        if (rc != 0) {
+            if (ex && ex->reached_input_end)
+                return PARSE_STATUS_INCOMPLETE;
+            return PARSE_STATUS_ERROR;
+        }
+        return (out == NULL) ? PARSE_STATUS_EOF : PARSE_STATUS_OK;
 }
 
 parse_status

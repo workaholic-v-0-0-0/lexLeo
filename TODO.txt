@@ -56,12 +56,22 @@
 - Refactor interpreter/CLI:
   - Add an output stream field to interpreter_ctx, used by AST_TYPE_WRITING for output
 
-- continue to TDD interpreter_eval with the following order:
-  - AST_TYPE_FUNCTION_CALL
-
 - fix ast_destroy so that it destroys AST of type AST_TYPE_ERROR
 
 - Shift the responsibility for detecting duplicate parameter names in function definitions from interpreter_eval to the resolver
   (name/scope phase). This enforces the rule early and keeps the interpreter focused on runtime concerns only.
 
 - make tests for stream module
+
+- Implement a small-buffer optimization for argument evaluation (stack array for small
+  arities, heap allocation for larger arities) and remove the hard fixed AST_MAX_ARITY
+  limitation from the interpreter hot path.
+
+- Add resolver-level validation to detect function definitions and function calls whose
+  arity exceeds the maximum supported limit (AST_MAX_ARITY), and report
+  RESOLVER_ERROR_MAX_ARITY_OVERFLOW before interpreter execution.
+
+- tests for arguments and list_of_arguments
+
+- Handle TYPE_ERROR during computable evaluation (e.g. "string * symbol" now possible
+  after arguments migration)

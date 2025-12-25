@@ -12,64 +12,64 @@
 #include <string.h>
 
 static error_info error_sentinel_payload = {
-    .code = AST_UNRETRIEVABLE_ERROR_CODE,
-    .message = "AST error sentinel: original cause lost due to allocation \
+	.code = AST_UNRETRIEVABLE_ERROR_CODE,
+	.message = "AST error sentinel: original cause lost due to allocation \
 failure while constructing error node",
-    .is_sentinel = true
+	.is_sentinel = true
 };
 static ast error_sentinel = {
-    .type = AST_TYPE_ERROR,
-    .error = &error_sentinel_payload
+	.type = AST_TYPE_ERROR,
+	.error = &error_sentinel_payload
 };
 static ast *const AST_ERROR_SENTINEL = &error_sentinel;
 
 ast *ast_error_sentinel(void) {
-    return AST_ERROR_SENTINEL;
+	return AST_ERROR_SENTINEL;
 }
 
 typed_data *ast_create_typed_data_int(int i) {
-    typed_data *ret = AST_MALLOC(sizeof(typed_data));
+	typed_data *ret = AST_MALLOC(sizeof(typed_data));
 
-    if (!ret)
-        return NULL;
+	if (!ret)
+		return NULL;
 
-    ret->type = TYPE_INT;
-    (ret->data).int_value = i;
+	ret->type = TYPE_INT;
+	(ret->data).int_value = i;
 
-    return ret;
+	return ret;
 }
 
 void ast_destroy_typed_data_int(typed_data *typed_data_int) {
 #ifdef UNIT_TEST
-    ast_destroy_typed_data_int_mockable(typed_data_int);
+	ast_destroy_typed_data_int_mockable(typed_data_int);
 #else
-    AST_FREE(typed_data_int);
+	AST_FREE(typed_data_int);
 #endif
 }
 
 typed_data *ast_create_typed_data_string(const char *s) {
-    typed_data *ret = AST_MALLOC(sizeof(typed_data));
-    if (!ret)
-        return NULL;
+	typed_data *ret = AST_MALLOC(sizeof(typed_data));
+	if (!ret)
+		return NULL;
 
-    char *string_value = (s) ? AST_STRING_DUPLICATE(s) : NULL;
-    if ((!string_value) && (s)) {
-        AST_FREE(ret);
-        return NULL;
-    }
+	char *string_value = (s) ? AST_STRING_DUPLICATE(s) : NULL;
+	if ((!string_value) && (s)) {
+		AST_FREE(ret);
+		return NULL;
+	}
 
-    ret->type = TYPE_STRING;
-    ret->data.string_value = string_value;
+	ret->type = TYPE_STRING;
+	ret->data.string_value = string_value;
 
-    return ret;
+	return ret;
 }
 
 void ast_destroy_typed_data_string(typed_data *typed_data_string) {
 #ifdef UNIT_TEST
-    ast_destroy_typed_data_string_mockable(typed_data_string);
+	ast_destroy_typed_data_string_mockable(typed_data_string);
 #else
-    AST_FREE(typed_data_string->data.string_value);
-    AST_FREE(typed_data_string);
+	AST_FREE(typed_data_string->data.string_value);
+	AST_FREE(typed_data_string);
 #endif
 }
 
@@ -77,20 +77,20 @@ typed_data *ast_create_typed_data_symbol_name(const char *s) {
 	if (!s)
 		return NULL;
 
-    typed_data *ret = AST_MALLOC(sizeof(typed_data));
-    if (!ret)
-        return NULL;
+	typed_data *ret = AST_MALLOC(sizeof(typed_data));
+	if (!ret)
+		return NULL;
 
-    char *string_value = AST_STRING_DUPLICATE(s);
-    if (!string_value) {
-        AST_FREE(ret);
-        return NULL;
-    }
+	char *string_value = AST_STRING_DUPLICATE(s);
+	if (!string_value) {
+		AST_FREE(ret);
+		return NULL;
+	}
 
-    ret->type = TYPE_SYMBOL_NAME;
-    ret->data.string_value = string_value;
+	ret->type = TYPE_SYMBOL_NAME;
+	ret->data.string_value = string_value;
 
-    return ret;
+	return ret;
 }
 
 void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name) {
@@ -98,22 +98,22 @@ void ast_destroy_typed_data_symbol_name(typed_data *typed_data_symbol_name) {
 }
 
 typed_data *ast_create_typed_data_symbol(symbol *s) {
-    typed_data *ret = AST_MALLOC(sizeof(typed_data));
+	typed_data *ret = AST_MALLOC(sizeof(typed_data));
 
-    if (!ret)
-        return NULL;
+	if (!ret)
+		return NULL;
 
-    ret->type = TYPE_SYMBOL;
-    (ret->data).symbol_value = s;
+	ret->type = TYPE_SYMBOL;
+	(ret->data).symbol_value = s;
 
-    return ret;
+	return ret;
 }
 
 void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
 #ifdef UNIT_TEST
-    ast_destroy_typed_data_symbol_mockable(typed_data_symbol);
+	ast_destroy_typed_data_symbol_mockable(typed_data_symbol);
 #else
-    AST_FREE(typed_data_symbol);
+	AST_FREE(typed_data_symbol);
 	// Only frees the typed_data container itself.
 	// Does not free the underlying symbol*, which is owned and freed
 	// by the runtime_session
@@ -121,39 +121,39 @@ void ast_destroy_typed_data_symbol(typed_data *typed_data_symbol) {
 }
 
 ast *ast_create_typed_data_wrapper(typed_data *data) {
-    ast * ret = AST_MALLOC(sizeof(ast));
+	ast *ret = AST_MALLOC(sizeof(ast));
 
-    if (!ret)
-        return NULL;
+	if (!ret)
+		return NULL;
 
-    ret->type = AST_TYPE_DATA_WRAPPER;
-    ret->data = data;
+	ret->type = AST_TYPE_DATA_WRAPPER;
+	ret->data = data;
 
-    return ret;
+	return ret;
 }
 
 void ast_destroy_typed_data_wrapper(ast *ast_data_wrapper) {
 #ifdef UNIT_TEST
-    ast_destroy_typed_data_wrapper_mockable(ast_data_wrapper);
+	ast_destroy_typed_data_wrapper_mockable(ast_data_wrapper);
 #else
-    if ((!ast_data_wrapper) || (ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
-        return;
+	if ((!ast_data_wrapper) || (ast_data_wrapper->type != AST_TYPE_DATA_WRAPPER))
+		return;
 
-    typed_data *data = ast_data_wrapper->data;
-    switch (data->type) {
-        case TYPE_INT:
-            ast_destroy_typed_data_int(data);
-            break;
-        case TYPE_STRING:
-            ast_destroy_typed_data_string(data);
-            break;
-        case TYPE_SYMBOL_NAME:
-            ast_destroy_typed_data_symbol_name(data);
-            break;
-        case TYPE_SYMBOL:
-            ast_destroy_typed_data_symbol(data);
-    }
-    AST_FREE(ast_data_wrapper);
+	typed_data *data = ast_data_wrapper->data;
+	switch (data->type) {
+		case TYPE_INT:
+			ast_destroy_typed_data_int(data);
+			break;
+		case TYPE_STRING:
+			ast_destroy_typed_data_string(data);
+			break;
+		case TYPE_SYMBOL_NAME:
+			ast_destroy_typed_data_symbol_name(data);
+			break;
+		case TYPE_SYMBOL:
+			ast_destroy_typed_data_symbol(data);
+	}
+	AST_FREE(ast_data_wrapper);
 #endif
 }
 
@@ -195,7 +195,7 @@ ast *ast_create_error_node_or_sentinel(ast_error_type code, const char *message)
 }
 
 void ast_destroy_error_node(ast *ast_error_node) {
-    if ((ast_error_node == AST_ERROR_SENTINEL) || (!ast_error_node))
+	if ((ast_error_node == AST_ERROR_SENTINEL) || (!ast_error_node))
 		return;
 
 	AST_FREE(ast_error_node->error->message);
@@ -205,203 +205,201 @@ void ast_destroy_error_node(ast *ast_error_node) {
 
 ast_children_t *ast_create_ast_children_arr(size_t children_nb, ast **children) {
 #ifdef UNIT_TEST
-    return ast_create_ast_children_arr_mockable(children_nb, children);
+	return ast_create_ast_children_arr_mockable(children_nb, children);
 #else
-    ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
-    if (!ret)
-        return NULL;
+	ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
+	if (!ret)
+		return NULL;
 
-    ret->children = children;
-    ret->children_nb = children_nb;
-    ret->capacity = children_nb;
-    return ret;
+	ret->children = children;
+	ret->children_nb = children_nb;
+	ret->capacity = children_nb;
+	return ret;
 #endif
 }
 
-ast_children_t *ast_create_ast_children_var(size_t children_nb,...) {
-    ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
-    if (!ret)
-        return NULL;
+ast_children_t *ast_create_ast_children_var(size_t children_nb, ...) {
+	ast_children_t *ret = AST_MALLOC(sizeof(ast_children_t));
+	if (!ret)
+		return NULL;
 
-    if (children_nb > 0) {
-        ret->children = AST_MALLOC(children_nb * sizeof(ast *));
-        if (!ret->children) {
-            AST_FREE(ret);
-            return NULL;
-        }
+	if (children_nb > 0) {
+		ret->children = AST_MALLOC(children_nb * sizeof(ast *));
+		if (!ret->children) {
+			AST_FREE(ret);
+			return NULL;
+		}
 
-        va_list args;
-        va_start(args, children_nb);
-        for (size_t i = 0; i < children_nb; i++) {
-            ret->children[i] = va_arg(args, ast *);
-        }
-        va_end(args);
+		va_list args;
+		va_start(args, children_nb);
+		for (size_t i = 0; i < children_nb; i++) {
+			ret->children[i] = va_arg(args, ast *);
+		}
+		va_end(args);
+	} else {
+		ret->children = NULL;
+	}
 
-    } else {
-        ret->children = NULL;
-    }
+	ret->children_nb = children_nb;
+	ret->capacity = children_nb;
 
-    ret->children_nb = children_nb;
-    ret->capacity = children_nb;
-
-    return ret;
+	return ret;
 }
 
 void ast_destroy_ast_children(ast_children_t *ast_children) {
 #ifdef UNIT_TEST
-    ast_destroy_ast_children_mockable(ast_children);
+	ast_destroy_ast_children_mockable(ast_children);
 #else
-    if (!ast_children)
-        return;
+	if (!ast_children)
+		return;
 
-    for (size_t i = 0; i < ast_children->children_nb; i++) {
-        ast_destroy(ast_children->children[i]);
-    }
-    AST_FREE(ast_children->children);
-    AST_FREE(ast_children);
+	for (size_t i = 0; i < ast_children->children_nb; i++) {
+		ast_destroy(ast_children->children[i]);
+	}
+	AST_FREE(ast_children->children);
+	AST_FREE(ast_children);
 #endif
 }
 
 bool ast_children_reserve(ast_children_t *ast_children, size_t capacity) {
-    if ((!ast_children) || (capacity < ast_children->children_nb))
-        return false;
+	if ((!ast_children) || (capacity < ast_children->children_nb))
+		return false;
 
-    if (capacity <= ast_children->capacity)
-        return true;
+	if (capacity <= ast_children->capacity)
+		return true;
 
-    void *new_address =
-        AST_REALLOC(
-            ast_children->children,
-            capacity * sizeof(ast *) );
-    if (!new_address)
-        return false;
+	void *new_address =
+			AST_REALLOC(
+				ast_children->children,
+				capacity * sizeof(ast *));
+	if (!new_address)
+		return false;
 
-    ast_children->children = new_address;
-    ast_children->capacity = capacity;
-    return true;
+	ast_children->children = new_address;
+	ast_children->capacity = capacity;
+	return true;
 }
 
 static size_t next_capacity(size_t capacity) {
-    return 1 + 2 * capacity;
+	return 1 + 2 * capacity;
 }
 
 bool ast_children_append_take(ast *parent, ast *child) {
-    if (
-               (!parent)
-            || (!child)
-            || (parent->type == AST_TYPE_DATA_WRAPPER)
-            || (parent->type == AST_TYPE_ERROR))
-        return false;
+	if (
+		(!parent)
+		|| (!child)
+		|| (parent->type == AST_TYPE_DATA_WRAPPER)
+		|| (parent->type == AST_TYPE_ERROR))
+		return false;
 
-    ast_children_t *children = parent->children;
-    if (children->capacity == children->children_nb) {
-        if (!ast_children_reserve(
-                parent->children,
-                next_capacity(children->capacity) ) )
-            return false;
-    }
+	ast_children_t *children = parent->children;
+	if (children->capacity == children->children_nb) {
+		if (!ast_children_reserve(
+			parent->children,
+			next_capacity(children->capacity)))
+			return false;
+	}
 
-    (children->children)[children->children_nb++] = child;
-    return true;
+	(children->children)[children->children_nb++] = child;
+	return true;
 }
 
 ast *ast_create_children_node(ast_type type, ast_children_t *ast_children) {
-    if ((type == AST_TYPE_DATA_WRAPPER)
-            || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children) )
-        return NULL;
+	if ((type == AST_TYPE_DATA_WRAPPER)
+	    || (type < 0) || (type >= AST_TYPE_NB_TYPES) || (!ast_children))
+		return NULL;
 
-    ast *ret = AST_MALLOC(sizeof(ast));
-    if (!ret)
-        return NULL;
+	ast *ret = AST_MALLOC(sizeof(ast));
+	if (!ret)
+		return NULL;
 
-    ret->type = type;
-    ret->children = ast_children;
+	ret->type = type;
+	ret->children = ast_children;
 
-    return ret;
+	return ret;
 }
 
 ast *ast_create_children_node_arr(ast_type type, size_t children_nb, ast **children) {
-    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
-        return NULL;
+	if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
+		return NULL;
 
-    ast_children_t * ast_children = ast_create_ast_children_arr(children_nb, children);
-    if (!ast_children)
-        return NULL;
+	ast_children_t *ast_children = ast_create_ast_children_arr(children_nb, children);
+	if (!ast_children)
+		return NULL;
 
-    ast *ret = AST_MALLOC(sizeof(ast));
-    if (!ret) {
-        AST_FREE(ast_children);
-        return NULL;
-    }
+	ast *ret = AST_MALLOC(sizeof(ast));
+	if (!ret) {
+		AST_FREE(ast_children);
+		return NULL;
+	}
 
-    ret->type = type;
-    ret->children = ast_children;
+	ret->type = type;
+	ret->children = ast_children;
 
-    return ret;
+	return ret;
 }
 
-ast *ast_create_children_node_var(ast_type type, size_t children_nb,...) {
-    if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
-        return NULL;
+ast *ast_create_children_node_var(ast_type type, size_t children_nb, ...) {
+	if ((type == AST_TYPE_DATA_WRAPPER) || (type < 0) || (type >= AST_TYPE_NB_TYPES))
+		return NULL;
 
-    ast *ret = AST_MALLOC(sizeof(ast));
-    if (!ret)
-        return NULL;
+	ast *ret = AST_MALLOC(sizeof(ast));
+	if (!ret)
+		return NULL;
 
-    if (children_nb == 0) {
-        ast_children_t *children_info = ast_create_ast_children_arr(0, NULL);
-        if (!children_info) {
-            AST_FREE(ret);
-            return NULL;
-        }
+	if (children_nb == 0) {
+		ast_children_t *children_info = ast_create_ast_children_arr(0, NULL);
+		if (!children_info) {
+			AST_FREE(ret);
+			return NULL;
+		}
 
-        ret->type = type;
-        ret->children = children_info;
+		ret->type = type;
+		ret->children = children_info;
+	} else {
+		ast **ast_p_arr = AST_MALLOC(children_nb * sizeof(ast *));
+		if (!ast_p_arr) {
+			AST_FREE(ret);
+			return NULL;
+		}
 
-    } else {
-        ast **ast_p_arr = AST_MALLOC(children_nb * sizeof(ast *));
-        if (!ast_p_arr) {
-            AST_FREE(ret);
-            return NULL;
-        }
+		va_list args;
+		va_start(args, children_nb);
+		for (size_t i = 0; i < children_nb; i++) {
+			ast_p_arr[i] = va_arg(args, ast *);
+		}
+		va_end(args);
 
-        va_list args;
-        va_start(args, children_nb);
-        for (size_t i = 0; i < children_nb; i++) {
-            ast_p_arr[i] = va_arg(args, ast *);
-        }
-        va_end(args);
+		ast_children_t *children_info = ast_create_ast_children_arr(children_nb, ast_p_arr);
+		if (!children_info) {
+			AST_FREE(ast_p_arr);
+			AST_FREE(ret);
+			return NULL;
+		}
 
-        ast_children_t *children_info = ast_create_ast_children_arr(children_nb, ast_p_arr);
-        if (!children_info) {
-            AST_FREE(ast_p_arr);
-            AST_FREE(ret);
-            return NULL;
-        }
-
-        ret->type = type;
-        ret->children = children_info;
-    }
-    return ret;
+		ret->type = type;
+		ret->children = children_info;
+	}
+	return ret;
 }
 
 void ast_destroy_children_node(ast *children_node) {
 #ifdef UNIT_TEST
-    ast_destroy_children_node_mockable(children_node);
+	ast_destroy_children_node_mockable(children_node);
 #else
-    if ((children_node) && (children_node->type != AST_TYPE_DATA_WRAPPER)) {
-        ast_destroy_ast_children(children_node->children);
-        AST_FREE(children_node);
-    }
+	if ((children_node) && (children_node->type != AST_TYPE_DATA_WRAPPER)) {
+		ast_destroy_ast_children(children_node->children);
+		AST_FREE(children_node);
+	}
 #endif
 }
 
 void ast_destroy(ast *root) {
 #ifdef UNIT_TEST
-    ast_destroy_mockable(root);
+	ast_destroy_mockable(root);
 #else
-    if (!root)
-        return;
+	if (!root)
+		return;
 
 	switch (root->type) {
 		case AST_TYPE_DATA_WRAPPER:
@@ -409,81 +407,81 @@ void ast_destroy(ast *root) {
 			break;
 		case AST_TYPE_ERROR:
 			ast_destroy_error_node(root);
-        	break;
+			break;
 		default:
-	        ast_destroy_children_node(root);
+			ast_destroy_children_node(root);
 	}
 #endif
 }
 
 bool ast_type_has_children(ast_type type) {
-    switch (type) {
-        case AST_TYPE_BINDING:
-        case AST_TYPE_READING:
-        case AST_TYPE_WRITING:
-        case AST_TYPE_TRANSLATION_UNIT:
-        case AST_TYPE_BLOCK_ITEMS:
-        case AST_TYPE_BLOCK:
-        case AST_TYPE_PARAMETERS:
-        case AST_TYPE_LIST_OF_PARAMETERS:
-        case AST_TYPE_FUNCTION:
-        case AST_TYPE_FUNCTION_DEFINITION:
-        case AST_TYPE_NUMBERS:
-        case AST_TYPE_LIST_OF_NUMBERS:
-        case AST_TYPE_FUNCTION_CALL:
-        case AST_TYPE_QUOTE:
-        case AST_TYPE_NEGATION:
-        case AST_TYPE_ADDITION:
-        case AST_TYPE_SUBTRACTION:
-        case AST_TYPE_MULTIPLICATION:
-        case AST_TYPE_DIVISION:
-            return true;
-        case AST_TYPE_DATA_WRAPPER:
-        case AST_TYPE_ERROR:
-            return false;
-        default:
-            return false;
-    }
+	switch (type) {
+		case AST_TYPE_BINDING:
+		case AST_TYPE_READING:
+		case AST_TYPE_WRITING:
+		case AST_TYPE_TRANSLATION_UNIT:
+		case AST_TYPE_BLOCK_ITEMS:
+		case AST_TYPE_BLOCK:
+		case AST_TYPE_PARAMETERS:
+		case AST_TYPE_LIST_OF_PARAMETERS:
+		case AST_TYPE_FUNCTION:
+		case AST_TYPE_FUNCTION_DEFINITION:
+		case AST_TYPE_ARGUMENTS:
+		case AST_TYPE_LIST_OF_ARGUMENTS:
+		case AST_TYPE_FUNCTION_CALL:
+		case AST_TYPE_QUOTE:
+		case AST_TYPE_NEGATION:
+		case AST_TYPE_ADDITION:
+		case AST_TYPE_SUBTRACTION:
+		case AST_TYPE_MULTIPLICATION:
+		case AST_TYPE_DIVISION:
+			return true;
+		case AST_TYPE_DATA_WRAPPER:
+		case AST_TYPE_ERROR:
+			return false;
+		default:
+			return false;
+	}
 }
 
 bool ast_can_have_children(ast *a) {
-    return (a) && (ast_type_has_children(a->type));
+	return (a) && (ast_type_has_children(a->type));
 }
 
 bool ast_has_any_child(ast *a) {
-    return (ast_can_have_children(a)) && (a->children->children_nb > 0);
+	return (ast_can_have_children(a)) && (a->children->children_nb > 0);
 }
 
 bool ast_is_data_of(const ast *a, data_type dt) {
-    return (a) && (a->type == AST_TYPE_DATA_WRAPPER) && (a->data) && (a->data->type == dt);
+	return (a) && (a->type == AST_TYPE_DATA_WRAPPER) && (a->data) && (a->data->type == dt);
 }
 
 ast *ast_create_int_node(int i) {
-    typed_data *td = ast_create_typed_data_int(i);
-    if (!td)
-        return NULL;
-
-    ast *ret = ast_create_typed_data_wrapper(td);
-	if (!ret) {
-        ast_destroy_typed_data_int(td);
+	typed_data *td = ast_create_typed_data_int(i);
+	if (!td)
 		return NULL;
-    }
 
-    return ret;
+	ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+		ast_destroy_typed_data_int(td);
+		return NULL;
+	}
+
+	return ret;
 }
 
 ast *ast_create_string_node(const char *str) {
-    typed_data *td = ast_create_typed_data_string(str);
-    if (!td)
-        return NULL;
-
-    ast *ret = ast_create_typed_data_wrapper(td);
-	if (!ret) {
-        ast_destroy_typed_data_string(td);
+	typed_data *td = ast_create_typed_data_string(str);
+	if (!td)
 		return NULL;
-    }
 
-    return ret;
+	ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+		ast_destroy_typed_data_string(td);
+		return NULL;
+	}
+
+	return ret;
 }
 
 ast *ast_create_symbol_name_node(const char *str) {
@@ -491,16 +489,16 @@ ast *ast_create_symbol_name_node(const char *str) {
 		return NULL;
 
 	typed_data *td = ast_create_typed_data_symbol_name(str);
-    if (!td)
-        return NULL;
-
-    ast *ret = ast_create_typed_data_wrapper(td);
-	if (!ret) {
-        ast_destroy_typed_data_symbol_name(td);
+	if (!td)
 		return NULL;
-    }
 
-    return ret;
+	ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+		ast_destroy_typed_data_symbol_name(td);
+		return NULL;
+	}
+
+	return ret;
 }
 
 ast *ast_create_symbol_node(symbol *sym) {
@@ -508,14 +506,14 @@ ast *ast_create_symbol_node(symbol *sym) {
 		return NULL;
 
 	typed_data *td = ast_create_typed_data_symbol(sym);
-    if (!td)
-        return NULL;
-
-    ast *ret = ast_create_typed_data_wrapper(td);
-	if (!ret) {
-        ast_destroy_typed_data_symbol(td);
+	if (!td)
 		return NULL;
-    }
+
+	ast *ret = ast_create_typed_data_wrapper(td);
+	if (!ret) {
+		ast_destroy_typed_data_symbol(td);
+		return NULL;
+	}
 
 	return ret;
 }
@@ -527,180 +525,185 @@ ast *ast_create_symbol_node(symbol *sym) {
 #include <ctype.h>
 
 const char *ast_type_to_string(ast_type t) {
-    switch (t) {
-        case AST_TYPE_BINDING:             return "BINDING";
-        case AST_TYPE_READING:             return "READING";
-        case AST_TYPE_WRITING:             return "WRITING";
-        case AST_TYPE_TRANSLATION_UNIT:    return "TRANSLATION_UNIT";
-        case AST_TYPE_BLOCK_ITEMS:         return "BLOCK_ITEMS";
-        case AST_TYPE_BLOCK:               return "BLOCK";
-        case AST_TYPE_PARAMETERS:          return "PARAMETERS";
-        case AST_TYPE_LIST_OF_PARAMETERS:  return "LIST_OF_PARAMETERS";
-        case AST_TYPE_FUNCTION:            return "FUNCTION";
-        case AST_TYPE_FUNCTION_DEFINITION: return "FUNCTION_DEFINITION";
-        case AST_TYPE_NUMBERS:             return "NUMBERS";
-        case AST_TYPE_LIST_OF_NUMBERS:     return "LIST_OF_NUMBERS";
-        case AST_TYPE_FUNCTION_CALL:       return "FUNCTION_CALL";
-        case AST_TYPE_QUOTE:               return "QUOTE";
-        case AST_TYPE_NEGATION:            return "NEGATION";
-        case AST_TYPE_ADDITION:            return "ADDITION";
-        case AST_TYPE_SUBTRACTION:         return "SUBTRACTION";
-        case AST_TYPE_MULTIPLICATION:      return "MULTIPLICATION";
-        case AST_TYPE_DIVISION:            return "DIVISION";
-        case AST_TYPE_DATA_WRAPPER:        return "DATA_WRAPPER";
-        case AST_TYPE_ERROR:               return "ERROR";
-        case AST_TYPE_NB_TYPES:            return "NB_TYPES";
-        default:                           return "<UNKNOWN_AST_TYPE>";
-    }
+	switch (t) {
+		case AST_TYPE_BINDING: return "BINDING";
+		case AST_TYPE_READING: return "READING";
+		case AST_TYPE_WRITING: return "WRITING";
+		case AST_TYPE_TRANSLATION_UNIT: return "TRANSLATION_UNIT";
+		case AST_TYPE_BLOCK_ITEMS: return "BLOCK_ITEMS";
+		case AST_TYPE_BLOCK: return "BLOCK";
+		case AST_TYPE_PARAMETERS: return "PARAMETERS";
+		case AST_TYPE_LIST_OF_PARAMETERS: return "LIST_OF_PARAMETERS";
+		case AST_TYPE_FUNCTION: return "FUNCTION";
+		case AST_TYPE_FUNCTION_DEFINITION: return "FUNCTION_DEFINITION";
+		case AST_TYPE_ARGUMENTS: return "NUMBERS";
+		case AST_TYPE_LIST_OF_ARGUMENTS: return "LIST_OF_NUMBERS";
+		case AST_TYPE_FUNCTION_CALL: return "FUNCTION_CALL";
+		case AST_TYPE_QUOTE: return "QUOTE";
+		case AST_TYPE_NEGATION: return "NEGATION";
+		case AST_TYPE_ADDITION: return "ADDITION";
+		case AST_TYPE_SUBTRACTION: return "SUBTRACTION";
+		case AST_TYPE_MULTIPLICATION: return "MULTIPLICATION";
+		case AST_TYPE_DIVISION: return "DIVISION";
+		case AST_TYPE_DATA_WRAPPER: return "DATA_WRAPPER";
+		case AST_TYPE_ERROR: return "ERROR";
+		case AST_TYPE_NB_TYPES: return "NB_TYPES";
+		default: return "<UNKNOWN_AST_TYPE>";
+	}
 }
 
 static void print_indent(int indent) {
-    for (int i = 0; i < indent; i++)
-        printf(" ");
+	for (int i = 0; i < indent; i++)
+		printf(" ");
 }
 
 static const char *data_type_to_string(data_type dt) {
-    switch (dt) {
-        case TYPE_INT:         return "INT";
-        case TYPE_STRING:      return "STRING";
-        case TYPE_SYMBOL_NAME: return "SYMBOL_NAME";
-        case TYPE_SYMBOL:      return "SYMBOL";
-        default:               return "<?>"; // should not happen
-    }
+	switch (dt) {
+		case TYPE_INT: return "INT";
+		case TYPE_STRING: return "STRING";
+		case TYPE_SYMBOL_NAME: return "SYMBOL_NAME";
+		case TYPE_SYMBOL: return "SYMBOL";
+		default: return "<?>"; // should not happen
+	}
 }
 
 static void print_escaped_string(const char *s) {
-    if (!s) {
-        printf("(null)");
-        return;
-    }
-    printf("\"");
-    for (const unsigned char *p = (const unsigned char *)s; *p; ++p) {
-        unsigned char c = *p;
-        switch (c) {
-            case '\\': printf("\\\\"); break;
-            case '\"': printf("\\\""); break;
-            case '\n': printf("\\n");  break;
-            case '\r': printf("\\r");  break;
-            case '\t': printf("\\t");  break;
-            default:
-                if (isprint(c))
-                    printf("%c", c);
-                else
-                    printf("\\x%02X", (unsigned)c);
-        }
-    }
-    printf("\"");
+	if (!s) {
+		printf("(null)");
+		return;
+	}
+	printf("\"");
+	for (const unsigned char *p = (const unsigned char *) s; *p; ++p) {
+		unsigned char c = *p;
+		switch (c) {
+			case '\\': printf("\\\\");
+				break;
+			case '\"': printf("\\\"");
+				break;
+			case '\n': printf("\\n");
+				break;
+			case '\r': printf("\\r");
+				break;
+			case '\t': printf("\\t");
+				break;
+			default:
+				if (isprint(c))
+					printf("%c", c);
+				else
+					printf("\\x%02X", (unsigned) c);
+		}
+	}
+	printf("\"");
 }
 
 // forward declaration
 static void ast_print_inner(const ast *a, int indent, int max_depth);
 
 static void print_data_node(const ast *a, int indent) {
-    if (!a || !a->data) {
-        print_indent(indent);
-        printf("(data: null)\n");
-        return;
-    }
+	if (!a || !a->data) {
+		print_indent(indent);
+		printf("(data: null)\n");
+		return;
+	}
 
-    const typed_data *d = a->data;
-    print_indent(indent);
-    printf("%s: ", ast_type_to_string(a->type));
+	const typed_data *d = a->data;
+	print_indent(indent);
+	printf("%s: ", ast_type_to_string(a->type));
 
-    switch (d->type) {
-        case TYPE_INT:
-            printf("INT(%d)\n", d->data.int_value);
-            break;
-        case TYPE_STRING:
-        case TYPE_SYMBOL_NAME:
-            printf("%s(", data_type_to_string(d->type));
-            print_escaped_string(d->data.string_value);
-            printf(")\n");
-            break;
-        case TYPE_SYMBOL:
-            printf("SYMBOL(%p)\n", (void *)d->data.symbol_value);
-            break;
-        default:
-            printf("%s(?)\n", data_type_to_string(d->type));
-            break;
-    }
+	switch (d->type) {
+		case TYPE_INT:
+			printf("INT(%d)\n", d->data.int_value);
+			break;
+		case TYPE_STRING:
+		case TYPE_SYMBOL_NAME:
+			printf("%s(", data_type_to_string(d->type));
+			print_escaped_string(d->data.string_value);
+			printf(")\n");
+			break;
+		case TYPE_SYMBOL:
+			printf("SYMBOL(%p)\n", (void *) d->data.symbol_value);
+			break;
+		default:
+			printf("%s(?)\n", data_type_to_string(d->type));
+			break;
+	}
 }
 
 static void print_error_node(const ast *a, int indent) {
-    if (!a || !a->error) {
-        print_indent(indent);
-        printf("ERROR(null)\n");
-        return;
-    }
-    const error_info *e = a->error;
-    print_indent(indent);
-    printf("ERROR(code=%d, sentinel=%s, msg=",
-           (int)e->code,
-           e->is_sentinel ? "true" : "false");
-    print_escaped_string(e->message);
-    printf(")\n");
+	if (!a || !a->error) {
+		print_indent(indent);
+		printf("ERROR(null)\n");
+		return;
+	}
+	const error_info *e = a->error;
+	print_indent(indent);
+	printf("ERROR(code=%d, sentinel=%s, msg=",
+	       (int) e->code,
+	       e->is_sentinel ? "true" : "false");
+	print_escaped_string(e->message);
+	printf(")\n");
 }
 
 static void print_children_node(const ast *a, int indent, int max_depth) {
-    const ast_children_t *ch = a ? a->children : NULL;
+	const ast_children_t *ch = a ? a->children : NULL;
 
-    print_indent(indent);
-    if (!a) {
-        printf("(null AST)\n");
-        return;
-    }
+	print_indent(indent);
+	if (!a) {
+		printf("(null AST)\n");
+		return;
+	}
 
-    printf("%s", ast_type_to_string(a->type));
+	printf("%s", ast_type_to_string(a->type));
 
-    if (!ch) {
-        printf(" (no children)\n");
-        return;
-    }
+	if (!ch) {
+		printf(" (no children)\n");
+		return;
+	}
 
-    printf(" (children=%zu, capacity=%zu)\n", ch->children_nb, ch->capacity);
+	printf(" (children=%zu, capacity=%zu)\n", ch->children_nb, ch->capacity);
 
-    if (max_depth == 0) {
-        print_indent(indent + 2);
-        printf("… (max_depth reached)\n");
-        return;
-    }
+	if (max_depth == 0) {
+		print_indent(indent + 2);
+		printf("… (max_depth reached)\n");
+		return;
+	}
 
-    for (size_t i = 0; i < ch->children_nb; i++) {
-        const ast *ci = ch->children ? ch->children[i] : NULL;
-        print_indent(indent + 2);
-        printf("[%zu]\n", i);
-        if (!ci) {
-            print_indent(indent + 4);
-            printf("(null)\n");
-            continue;
-        }
-        ast_print_inner(ci, indent + 4, max_depth > 0 ? max_depth - 1 : max_depth);
-    }
+	for (size_t i = 0; i < ch->children_nb; i++) {
+		const ast *ci = ch->children ? ch->children[i] : NULL;
+		print_indent(indent + 2);
+		printf("[%zu]\n", i);
+		if (!ci) {
+			print_indent(indent + 4);
+			printf("(null)\n");
+			continue;
+		}
+		ast_print_inner(ci, indent + 4, max_depth > 0 ? max_depth - 1 : max_depth);
+	}
 }
 
 static void ast_print_inner(const ast *a, int indent, int max_depth) {
-    if (!a) {
-        print_indent(indent);
-        printf("(null)\n");
-        return;
-    }
+	if (!a) {
+		print_indent(indent);
+		printf("(null)\n");
+		return;
+	}
 
-    if (a->type == AST_TYPE_DATA_WRAPPER) {
-        print_data_node(a, indent);
-    } else if (a->type == AST_TYPE_ERROR) {
-        print_error_node(a, indent);
-    } else if (ast_type_has_children(a->type)) {
-        print_children_node(a, indent, max_depth);
-    } else {
-        print_indent(indent);
-        printf("%s (leaf)\n", ast_type_to_string(a->type));
-    }
+	if (a->type == AST_TYPE_DATA_WRAPPER) {
+		print_data_node(a, indent);
+	} else if (a->type == AST_TYPE_ERROR) {
+		print_error_node(a, indent);
+	} else if (ast_type_has_children(a->type)) {
+		print_children_node(a, indent, max_depth);
+	} else {
+		print_indent(indent);
+		printf("%s (leaf)\n", ast_type_to_string(a->type));
+	}
 }
 
 void ast_print(const ast *root) {
-    ast_print_inner(root, 0, -1);
+	ast_print_inner(root, 0, -1);
 }
 
 void ast_print_limited(const ast *root, int max_depth) {
-    ast_print_inner(root, 0, max_depth);
+	ast_print_inner(root, 0, max_depth);
 }

@@ -45,7 +45,7 @@ ast *ast;
 
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE
-%precedence UMINUS
+%right UMINUS
 
 %type <ast> @NON_TERMINAL_LEXEMS_LIST@
 %destructor { if ($$) ctx->ops.destroy($$); } <ast>
@@ -73,7 +73,7 @@ start
         *result = NULL;
         YYACCEPT;
     }
-    | READABLE_MODE readable {
+    | READABLE_MODE readable END {
         if (ctx->goal != PARSE_GOAL_READABLE) YYERROR;
         *result = $2;
         YYACCEPT;
