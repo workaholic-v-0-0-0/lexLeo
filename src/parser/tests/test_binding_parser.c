@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 #include "binding_parser.tab.h"
-#include "parser_ctx.h"
+#include "parser_cfg.h"
 #include "mock_lexer.h"
 
 
@@ -76,7 +76,7 @@ ast *mock_create_error_node_or_sentinel(ast_error_type code, const char *message
     return mock_type(ast *);
 }
 
-parser_ctx mock_ctx;
+parser_cfg mock_ctx;
 
 
 //-----------------------------------------------------------------------------

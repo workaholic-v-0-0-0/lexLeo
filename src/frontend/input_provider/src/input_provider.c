@@ -1,5 +1,6 @@
 // src/frontend/src/input_provider.c
 
+#include "stream.h"
 #include "dynamic_buffer_stream.h"
 
 #include <stddef.h>
@@ -99,4 +100,8 @@ size_t input_provider_read(input_provider *p, void *buf, size_t n) {
 	stream *s = input_provider_get_active_stream(p);
 	if (!s) return 0;
 	return stream_read(s, buf, n);
+}
+
+bool input_provider_reset_chunks(input_provider *p) {
+	return input_provider_set_mode_chunks(p);
 }

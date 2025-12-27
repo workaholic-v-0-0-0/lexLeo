@@ -113,8 +113,20 @@ bool runtime_session_bind_input_provider(
 	return true;
 }
 
+bool runtime_session_bind_output_stream(
+		runtime_session *session,
+		struct stream *out) {
+	if (!session) return false;
+	session->out = out;
+	return true;
+}
+
 
 // getters
+
+yyscan_t runtime_session_get_scanner(runtime_session *session) {
+	return session ? session->scanner : NULL;
+}
 
 struct runtime_env *runtime_session_get_env(runtime_session *session) {
 	return session ? session->env : NULL;

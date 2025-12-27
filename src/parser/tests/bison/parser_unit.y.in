@@ -10,11 +10,11 @@
 
 %parse-param { yyscan_t scanner }
 %parse-param { ast **result }
-%parse-param { struct parser_ctx *ctx }
+%parse-param { struct parser_cfg *ctx }
 
 %code requires {
     #include "parser_types.h"
-    struct parser_ctx;
+    struct parser_cfg;
     @STUBS_DECLARATION@
 }
 
@@ -22,7 +22,7 @@
     #include <stdlib.h>
     #include <stdio.h>
     #include "ast.h"
-    #include "parser_ctx.h"
+    #include "parser_cfg.h"
 
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
@@ -35,7 +35,7 @@
     #endif
 
     int @NAME@_lex(YYSTYPE *yylval, yyscan_t scanner);
-    int @NAME@_error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg);
+    int @NAME@_error(yyscan_t scanner, ast **result, struct parser_cfg *ctx, const char *msg);
 %}
 
 %union {
@@ -81,7 +81,7 @@ int @NAME@_lex(YYSTYPE *yylval, yyscan_t scanner) {
 #undef YYLEX_WAS_MACRO
 #undef YYLEX_MACRO_TARGET
 #endif
-int @NAME@_error(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+int @NAME@_error(yyscan_t scanner, ast **result, struct parser_cfg *ctx, const char *msg) {
     (void)scanner; (void)result; (void)ctx;
     fprintf(stderr, "Parse error: %s\n", msg);
     return 1;

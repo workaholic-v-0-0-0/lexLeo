@@ -4,3 +4,4 @@
 
 ast *stub_function_call_action(void);
 ast *stub_computable_action(void);
+ast *stub_symbol_action(void);

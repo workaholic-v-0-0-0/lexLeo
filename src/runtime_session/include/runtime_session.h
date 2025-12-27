@@ -19,8 +19,14 @@ typedef struct runtime_session runtime_session;
 struct runtime_session *runtime_session_create(void);
 void runtime_session_destroy(runtime_session *session);
 
+#ifndef YY_TYPEDEF_YY_SCANNER_T
+#define YY_TYPEDEF_YY_SCANNER_T
+typedef void* yyscan_t;
+#endif
+
+yyscan_t runtime_session_get_scanner(runtime_session *session);
 struct runtime_env *runtime_session_get_env(runtime_session *session);
-struct symtab *runtime_session_get_symtab( runtime_session *session);
+struct symtab *runtime_session_get_symtab(runtime_session *session);
 
 // Bind the given input provider to the session's scanner.
 //
@@ -67,5 +73,12 @@ bool runtime_session_store_ast(struct ast *root, runtime_session *session);
 //   true  on success (stored or already present in pool),
 //   false on infrastructure error (e.g., OOM when pushing to the list).
 bool runtime_session_store_symbol(struct symbol *sym, runtime_session *session);
+
+bool runtime_session_bind_output_stream(
+	runtime_session *session,
+	struct stream *out); // borrowed
+
+struct stream *runtime_session_get_output_stream(
+	runtime_session *session); // borrowed
 
 #endif //LEXLEO_RUNTIME_SESSION_H

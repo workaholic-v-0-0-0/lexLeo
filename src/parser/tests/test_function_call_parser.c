@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 #include "function_call_parser.tab.h"
-#include "parser_ctx.h"
+#include "parser_cfg.h"
 #include "mock_lexer.h"
 
 
@@ -78,7 +78,7 @@ void mock_destroy(ast *root) {
     check_expected(root);
 }
 
-parser_ctx mock_ctx;
+parser_cfg mock_ctx;
 
 
 //-----------------------------------------------------------------------------

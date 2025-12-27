@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 #include "statement_parser.tab.h"
-#include "parser_ctx.h"
+#include "parser_cfg.h"
 #include "mock_lexer.h"
 
 
@@ -77,6 +77,10 @@ ast *stub_function_call_action(void) {
 
 // Stub of a stub: placeholder until EVAL rule tests are implemented
 ast *stub_eval_action(void) {
+    return mock_type(ast *);
+}
+
+ast *stub_set_action(void) {
     return mock_type(ast *);
 }
 

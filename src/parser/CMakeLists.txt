@@ -62,7 +62,9 @@ set(
 %token QUOTE\n\
 %token EVAL\n\
 %token END 0 \"end of file\"\n\
-%token INVALID
+%token INVALID \
+%token SYMBOL \
+%token SET
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -89,6 +91,8 @@ evaluable \
 translation_unit \
 readable\n\
 eval\n\
+symbol\n\
+set\n\
 ")
 set(START_SYMBOL "translation_unit")
 set(
@@ -107,7 +111,13 @@ configure_file(
     @ONLY
 )
 
-BISON_TARGET(parser ${PARSER_Y} ${PARSER_SRC} DEFINES_FILE ${PARSER_HEADER})
+BISON_TARGET(
+    parser
+    ${PARSER_Y}
+    ${PARSER_SRC}
+    DEFINES_FILE
+    ${PARSER_HEADER}
+)
 add_library(
     parser
     STATIC

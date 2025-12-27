@@ -46,16 +46,19 @@ typedef struct interpreter_ops_t {
     interpreter_write_runtime_value_fn_t write_runtime_value_fn;
 } interpreter_ops_t;
 
-void interpreter_ctx_init(
-    struct interpreter_ctx *ctx,
+struct interpreter_ctx *interpreter_ctx_create(
     const interpreter_ops_t *ops,
     // a hook the the relative runtime_session instance
     void *host_ctx );
+
+void interpreter_ctx_destroy(struct interpreter_ctx *ctx);
 
 interpreter_status interpreter_eval(
 	struct interpreter_ctx *ctx,
     struct runtime_env *env,
     const struct ast *root,
     struct runtime_env_value **out );
+
+void *interpreter_ctx_get_host_ctx(const struct interpreter_ctx *ctx);
 
 #endif //LEXLEO_INTERPRETER_H

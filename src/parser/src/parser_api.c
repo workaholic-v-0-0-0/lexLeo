@@ -14,31 +14,31 @@ static const parser_ops PARSER_OPS_DEFAULT = {
     .children_append_take = ast_children_append_take,
 };
 
-static parser_ctx g_parser_ctx_default_one_statement = {
+static const parser_cfg CFG_ONE_STATEMENT = {
     .ops = PARSER_OPS_DEFAULT,
     .goal = PARSE_GOAL_ONE_STATEMENT,
 };
 
-static parser_ctx g_parser_ctx_default_translation_unit = {
+static const parser_cfg CFG_TRANSLATION_UNIT = {
     .ops = PARSER_OPS_DEFAULT,
     .goal = PARSE_GOAL_TU,
 };
 
-static parser_ctx g_parser_ctx_default_readable = {
+static const parser_cfg CFG_READABLE = {
     .ops = PARSER_OPS_DEFAULT,
     .goal = PARSE_GOAL_READABLE,
 };
 
-parser_ctx *get_g_parser_ctx_default_one_statement() {
-    return &g_parser_ctx_default_one_statement;
+parser_cfg get_parser_cfg_one_statement() {
+    return CFG_ONE_STATEMENT;
 }
 
-parser_ctx *get_g_parser_ctx_default_translation_unit() {
-    return &g_parser_ctx_default_translation_unit;
+parser_cfg get_parser_cfg_translation_unit() {
+    return CFG_TRANSLATION_UNIT;
 }
 
-parser_ctx *get_g_parser_ctx_default_readable() {
-    return &g_parser_ctx_default_readable;
+parser_cfg get_parser_cfg_readable() {
+    return CFG_READABLE;
 }
 
 // forward declaration
@@ -48,7 +48,7 @@ static parse_status map_rc_to_status(
 		int rc,
 		const ast *out,
 		const lexer_extra_t *ex,
-		struct parser_ctx *ctx ) {
+		struct parser_cfg *ctx ) {
     if (!ctx || ctx->syntax_errors != 0)
             return PARSE_STATUS_ERROR;
         if (rc != 0) {
@@ -63,7 +63,7 @@ parse_status
 parse_translation_unit(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx,
+        struct parser_cfg *ctx,
         input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;
@@ -84,7 +84,7 @@ parse_status
 parse_one_statement(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx,
+        struct parser_cfg *ctx,
         input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;
@@ -105,7 +105,7 @@ parse_status
 parse_readable(
         yyscan_t scanner,
         ast **out,
-        struct parser_ctx *ctx,
+        struct parser_cfg *ctx,
         input_provider *provider ) {
     if (!out || !ctx)
         return PARSE_STATUS_ERROR;

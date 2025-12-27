@@ -3,6 +3,7 @@
 evaluable
   : function_call { $$ = $1; }
   | computable { $$ = $1; }
+  | symbol { $$ = $1; }
   | QUOTE evaluable {
         ast *a = ctx->ops.create_children_node_var(
             AST_TYPE_QUOTE,

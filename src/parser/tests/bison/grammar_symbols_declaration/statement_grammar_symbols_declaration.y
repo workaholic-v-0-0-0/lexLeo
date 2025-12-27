@@ -15,6 +15,7 @@ function_call
 statement
 evaluable
 eval
+set
 
 %token SEMICOLON
 %token EQUAL
@@ -25,3 +26,4 @@ eval
 %token LBRACE
 %token RBRACE
 %token EVAL
+%token SET

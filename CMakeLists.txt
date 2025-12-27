@@ -216,13 +216,9 @@ add_subdirectory(src/interpreter) # depends on runtime_env, ...?
 # CLI
 #------------------------------------------------------------------------------
 
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
-    add_executable(lexLeo_cli src/cli/src/main.c)
-endif ()
-target_link_libraries(lexLeo_cli
-    PRIVATE osal
-    # PRIVATE logger
-)
+add_subdirectory(src/cli)
+add_executable(lexLeo_cli src/cli/src/main.c)
+target_link_libraries(lexLeo_cli PRIVATE cli)
 
 
 #------------------------------------------------------------------------------

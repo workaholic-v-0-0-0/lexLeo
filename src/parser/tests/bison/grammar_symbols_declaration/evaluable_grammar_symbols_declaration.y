@@ -8,9 +8,11 @@
 function_call
 computable
 evaluable
+symbol
 
 %token LPAREN
 %token RPAREN
 %token QUOTE
 %token MULTIPLY
 %token ADD
+%token SYMBOL

@@ -6,6 +6,7 @@
 
 - TDD for eval_rule
 - TDD for writing_rule
+- TDD for symbol_rule
 
 - runtime_env: distinguish UNBOUND vs OOM and update interpreter to propagate precise errors
 

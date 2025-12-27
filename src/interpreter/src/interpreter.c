@@ -83,7 +83,7 @@ static bool ast_is_well_formed_string_node(const ast *node) {
         && node->data->data.string_value );
 }
 
-static bool ast_is_well_formed_symbol_node(const ast *node) {
+static bool ast_is_well_formed_symbol_node(const ast *node) {// <here> pb with promotion symbol_name -> symbol
     return
         (  node
         && node->type == AST_TYPE_DATA_WRAPPER
@@ -197,6 +197,14 @@ static bool ast_is_well_formed_function_call(const ast *node) {
         );
 }
 
+static bool ast_is_well_formed_symbol_litteral_node(const ast *node) {
+    return
+        ast_is_well_formed_one_child_node(
+            node,
+            AST_TYPE_SYMBOL,
+            ast_is_well_formed_symbol_node );
+}
+
 // forward declaration
 static bool ast_is_well_formed_quote(const ast *node);
 
@@ -205,6 +213,7 @@ static bool ast_is_well_formed_evaluable(const ast *node) {
         (  ast_is_well_formed_function_call(node)
         || ast_is_well_formed_atom(node)
         || ast_is_well_formed_computation(node)
+		|| ast_is_well_formed_symbol_litteral_node(node)
         || ast_is_well_formed_quote(node) );
 }
 
@@ -234,6 +243,16 @@ static bool ast_is_well_formed_binding(const ast *node) {
         );
 }
 
+static bool ast_is_well_formed_set(const ast *node) {
+    return
+        ast_is_well_formed_two_children_node(
+            node,
+            AST_TYPE_SET,
+            ast_is_well_formed_symbol_node,
+            ast_is_well_formed_evaluable
+        );
+}
+
 static bool ast_is_well_formed_reading(const ast *node) {
     return
         ast_is_well_formed_one_child_node(
@@ -247,6 +266,7 @@ static bool ast_is_well_formed_function_definition(const ast *node);
 static bool ast_is_well_formed_statement(const ast *node) {
     return
         (  ast_is_well_formed_binding(node)
+		|| ast_is_well_formed_set(node)
         || ast_is_well_formed_writing(node)
         || ast_is_well_formed_reading(node)
         || ast_is_well_formed_function_definition(node)
@@ -395,6 +415,8 @@ interpreter_status interpreter_eval(
             break;
 
         case TYPE_SYMBOL:
+			if (!ast_is_well_formed_symbol_node(root))
+            	return INTERPRETER_STATUS_INVALID_AST;
             value =
                 runtime_env_get(
                     env,
@@ -906,6 +928,57 @@ interpreter_status interpreter_eval(
         runtime_env_value_release(function);
         return status;
 
+    case AST_TYPE_SYMBOL:
+        if (!ast_is_well_formed_symbol_litteral_node(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+		value = runtime_env_make_symbol(
+			root->children->children[0]->data->data.symbol_value );
+        if (!value)
+            return INTERPRETER_STATUS_OOM;
+
+        *out = value;
+        break;
+
+
+    case AST_TYPE_SET:
+        if (!ast_is_well_formed_set(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+		lhs = root->children->children[0];
+        evaluated_lhs = NULL;
+        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+		if (evaluated_lhs->type != RUNTIME_VALUE_SYMBOL) {
+            runtime_env_value_release(evaluated_lhs);
+            return INTERPRETER_STATUS_TYPE_ERROR;
+        }
+
+        rhs = root->children->children[1];
+        evaluated_rhs = NULL;
+        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+        if (status != INTERPRETER_STATUS_OK) {
+			runtime_env_value_release(evaluated_lhs);
+            return status;
+		}
+
+        binding =
+            runtime_env_set_local(
+                env,
+                evaluated_lhs->as.sym,
+                evaluated_rhs );
+		runtime_env_value_release(evaluated_lhs);
+        if (!binding) {
+            runtime_env_value_release(evaluated_rhs);
+            return INTERPRETER_STATUS_BINDING_ERROR;
+        }
+
+        *out = evaluated_rhs;
+        break;
+
+
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;
     }
@@ -913,10 +986,30 @@ interpreter_status interpreter_eval(
     return INTERPRETER_STATUS_OK;
 }
 
-void interpreter_ctx_init(
-        interpreter_ctx *ctx,
+interpreter_ctx *interpreter_ctx_create(
         const interpreter_ops_t *ops,
         void *host_ctx ) {
-    ctx->ops = ops;
-    ctx->host_ctx = host_ctx;
+	if (!ops || !ops->read_ast_fn || !ops->write_runtime_value_fn)
+    	return NULL;
+
+	struct interpreter_ctx *ret = INTERPRETER_MALLOC(sizeof(interpreter_ctx));
+    if (!ret)
+		return NULL;
+
+    ret->ops = ops;
+    ret->host_ctx = host_ctx;
+
+	return ret;
+}
+
+void interpreter_ctx_destroy(struct interpreter_ctx *ctx)
+{
+    if (!ctx)
+        return;
+
+    INTERPRETER_FREE(ctx);
+}
+
+void *interpreter_ctx_get_host_ctx(const interpreter_ctx *ctx) {
+	return ctx->host_ctx;
 }

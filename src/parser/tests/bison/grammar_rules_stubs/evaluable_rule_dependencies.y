@@ -11,3 +11,7 @@ computable:
         INTEGER MULTIPLY LPAREN INTEGER ADD INTEGER RPAREN
         { (void)$1; (void)$4; (void)$6;
           $$ = stub_computable_action(); } ;
+
+symbol:
+    SYMBOL SYMBOL_NAME
+    { (void)$2; $$ = stub_symbol_action(); } ;

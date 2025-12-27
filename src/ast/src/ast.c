@@ -430,11 +430,14 @@ bool ast_type_has_children(ast_type type) {
 		case AST_TYPE_LIST_OF_ARGUMENTS:
 		case AST_TYPE_FUNCTION_CALL:
 		case AST_TYPE_QUOTE:
+		case AST_TYPE_EVAL:
 		case AST_TYPE_NEGATION:
 		case AST_TYPE_ADDITION:
 		case AST_TYPE_SUBTRACTION:
 		case AST_TYPE_MULTIPLICATION:
 		case AST_TYPE_DIVISION:
+		case AST_TYPE_SYMBOL:
+		case AST_TYPE_SET:
 			return true;
 		case AST_TYPE_DATA_WRAPPER:
 		case AST_TYPE_ERROR:

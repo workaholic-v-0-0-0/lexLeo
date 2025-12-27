@@ -6,10 +6,12 @@
 #include "input_provider.h"
 #include "internal/input_provider_memory_allocator.h"
 
+struct stream;
+
 struct input_provider {
     input_provider_mode mode;
-    stream *borrowed_stream; // borrowed from client code
-    stream *chunks_stream; // owned
+    struct stream *borrowed_stream; // borrowed from client code
+    struct stream *chunks_stream; // owned
     yyscan_t lexer_scanner; // borrowed from lexer
 };
 

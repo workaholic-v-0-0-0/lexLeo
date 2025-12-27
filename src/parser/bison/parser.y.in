@@ -9,11 +9,11 @@
 
 %parse-param { yyscan_t scanner }
 %parse-param { ast **result }
-%parse-param { struct parser_ctx *ctx }
+%parse-param { struct parser_cfg *ctx }
 
 %code requires {
     #include "parser_types.h"
-    struct parser_ctx;
+    struct parser_cfg;
 
     // forward declaration
     typedef void* yyscan_t;
@@ -25,11 +25,11 @@
     #include <stdio.h>
     #include <string.h>
     #include "ast.h"
-    #include "parser_ctx.h"
+    #include "parser_cfg.h"
 %}
 
 %code provides {
-    int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *s);
+    int yyerror(yyscan_t scanner, ast **result, struct parser_cfg *ctx, const char *s);
     int yylex(YYSTYPE *yylval, yyscan_t scanner);
 }
 
@@ -89,7 +89,7 @@ readable
 
 %%
 
-int yyerror(yyscan_t scanner, ast **result, struct parser_ctx *ctx, const char *msg) {
+int yyerror(yyscan_t scanner, ast **result, struct parser_cfg *ctx, const char *msg) {
     (void)result;
     if (!((lexer_extra_t*) yyget_extra(scanner))->reached_input_end) ctx->syntax_errors++;
     fprintf(stderr, "Parse error: %s\n", msg);

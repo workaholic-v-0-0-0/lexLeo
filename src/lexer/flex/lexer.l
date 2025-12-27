@@ -54,6 +54,8 @@ do {                                                                         \
 "call"              { return CALL; }
 "quote"             { return QUOTE; }
 "eval"             { return EVAL; }
+"symbol"            { return SYMBOL; }
+"set"            { return SET; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);

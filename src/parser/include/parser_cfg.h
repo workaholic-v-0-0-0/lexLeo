@@ -1,7 +1,7 @@
-// src/parser/include/parser_ctx.h
+// src/parser/include/parser_cfg.h
 
-#ifndef LEXLEO_PARSER_CTX_H
-#define LEXLEO_PARSER_CTX_H
+#ifndef LEXLEO_PARSER_CFG_H
+#define LEXLEO_PARSER_CFG_H
 
 #include "parser_types.h"
 #include "ast.h"
@@ -16,14 +16,13 @@ typedef struct parser_ops {
     bool (*children_append_take)(ast *parent, ast *child);
 } parser_ops;
 
-typedef struct parser_ctx {
+typedef struct parser_cfg {
     parser_ops ops;
     parse_goal_t goal;
 	int syntax_errors;
-} parser_ctx;
+} parser_cfg;
+parser_cfg get_parser_cfg_one_statement(void);
+parser_cfg get_parser_cfg_translation_unit(void);
+parser_cfg get_parser_cfg_readable(void);
 
-parser_ctx *get_g_parser_ctx_default_one_statement(void);
-parser_ctx *get_g_parser_ctx_default_translation_unit(void);
-parser_ctx *get_g_parser_ctx_default_readable(void);
-
-#endif //LEXLEO_PARSER_CTX_H
+#endif //LEXLEO_PARSER_CFG_H

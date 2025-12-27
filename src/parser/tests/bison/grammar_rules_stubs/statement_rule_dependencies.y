@@ -24,3 +24,7 @@ eval:
         EVAL SYMBOL_NAME SEMICOLON
     { (void)$2;
       $$ = stub_eval_action(); } ;
+set:
+        SET SYMBOL_NAME STRING SEMICOLON
+    { (void)$2; (void)$3;
+      $$ = stub_set_action(); } ;

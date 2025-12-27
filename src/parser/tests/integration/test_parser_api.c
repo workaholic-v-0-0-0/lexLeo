@@ -5,7 +5,7 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "parser_ctx.h"
+#include "parser_cfg.h"
 #include "parser.tab.h"
 #include "parser_api.h"
 #include "lexer.yy.h"
@@ -21,7 +21,7 @@
 typedef struct {
 	yyscan_t arg_scanner;
 	ast *ast_result;
-	struct parser_ctx *arg_ctx;
+	struct parser_cfg arg_ctx;
 	input_provider *arg_input_provider;
 } test_parser_api_ctx;
 
@@ -132,18 +132,18 @@ static void parser_api_test(void **state) {
 	parse_status ret;
 	switch (p->goal) {
 		case PARSE_GOAL_TU:
-			p->ctx->arg_ctx = get_g_parser_ctx_default_translation_unit();
-			ret = parse_translation_unit(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx,
+			p->ctx->arg_ctx = get_parser_cfg_translation_unit();
+			ret = parse_translation_unit(p->ctx->arg_scanner, &p->ctx->ast_result, &p->ctx->arg_ctx,
 			                             p->ctx->arg_input_provider);
 			break;
 		case PARSE_GOAL_ONE_STATEMENT:
-			p->ctx->arg_ctx = get_g_parser_ctx_default_one_statement();
-			ret = parse_one_statement(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx,
+			p->ctx->arg_ctx = get_parser_cfg_one_statement();
+			ret = parse_one_statement(p->ctx->arg_scanner, &p->ctx->ast_result, &p->ctx->arg_ctx,
 			                          p->ctx->arg_input_provider);
 			break;
 		case PARSE_GOAL_READABLE:
-			p->ctx->arg_ctx = get_g_parser_ctx_default_readable();
-			ret = parse_readable(p->ctx->arg_scanner, &p->ctx->ast_result, p->ctx->arg_ctx, p->ctx->arg_input_provider);
+			p->ctx->arg_ctx = get_parser_cfg_readable();
+			ret = parse_readable(p->ctx->arg_scanner, &p->ctx->ast_result, &p->ctx->arg_ctx, p->ctx->arg_input_provider);
 			break;
 		default:
 			assert_false(true);
@@ -389,13 +389,13 @@ static void test_parse_one_statement_three_calls(void **state) {
 	// prepare lexer input
 	input_provider_append_string_as_line(provider, src);
 
-	struct parser_ctx *ctx = get_g_parser_ctx_default_one_statement();
+	struct parser_cfg ctx = get_parser_cfg_one_statement();
 	struct ast *node = NULL;
 
 
 	// ACT
 
-	parse_status ret = parse_one_statement(scanner, &node, ctx, provider);
+	parse_status ret = parse_one_statement(scanner, &node, &ctx, provider);
 
 
 	// ASSERT
@@ -423,7 +423,7 @@ static void test_parse_one_statement_three_calls(void **state) {
 
 	// ACT
 
-	ret = parse_one_statement(scanner, &node, ctx, provider);
+	ret = parse_one_statement(scanner, &node, &ctx, provider);
 
 
 	// ASSERT
@@ -451,7 +451,7 @@ static void test_parse_one_statement_three_calls(void **state) {
 
 	// ACT
 
-	ret = parse_one_statement(scanner, &node, ctx, provider);
+	ret = parse_one_statement(scanner, &node, &ctx, provider);
 
 
 	// ASSERT

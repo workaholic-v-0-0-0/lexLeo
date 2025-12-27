@@ -17,6 +17,10 @@ docs/
 Doxyfile
 Doxyfile_to_fetch_links
 doc_to_fetch_links_tmp/
+/parser.tab.c
+/parser.tab.h
+/parser.output
+/parser.tab.*
 
 # IDE artifacts
 .idea/

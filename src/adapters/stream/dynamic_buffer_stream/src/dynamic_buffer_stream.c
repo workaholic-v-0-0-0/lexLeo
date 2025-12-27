@@ -47,8 +47,26 @@ static size_t dynamic_buffer_stream_write(void *ctx, const void* buf, size_t n) 
 	return n;
 }
 
+// do it but be aware this is not a kind of stdio flush
 static int dynamic_buffer_stream_flush(void *ctx) {
-	return 0; // N/A
+	if (!ctx) return -1;
+
+	dynamic_buffer_stream_ctx *dbs = (dynamic_buffer_stream_ctx*)ctx;
+
+	if (dbs->read_pos == 0) return 0;
+
+	if (dbs->read_pos >= dbs->len) {
+		dbs->len = 0;
+		dbs->read_pos = 0;
+		return 0;
+	}
+
+	size_t remaining = dbs->len - dbs->read_pos;
+	memmove(dbs->buf, dbs->buf + dbs->read_pos, remaining);
+	dbs->len = remaining;
+	dbs->read_pos = 0;
+
+	return 0;
 }
 
 static int dynamic_buffer_stream_close(void *ctx) {

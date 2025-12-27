@@ -142,6 +142,78 @@ bool resolver_resolve_ast(ast **a, resolver_ctx *ctx) {
         }
         ast *current_ast = current_frame->node;
 
+        if (
+                   current_ast
+                && current_ast->type == AST_TYPE_DATA_WRAPPER
+                && current_ast->data
+                && current_ast->data->type == TYPE_SYMBOL_NAME ) {
+            const char *name = current_ast->data->data.string_value;
+
+            // intern
+            if (ctx->ops.intern_symbol(ctx->st, name) == 1) {
+                ast *error_node = ast_create_error_node_or_sentinel(
+                    RESOLVER_ERROR_CODE_SYMBOL_INTERN_FAILED,
+                    "resolver: failed to intern symbol during promotion from SYMBOL_NAME"
+                );
+                ast_destroy(current_ast);
+
+                if (current_frame->parent) {
+                    current_frame->parent->children->children[current_frame->parent_idx] = error_node;
+                } else {
+                    *a = error_node;
+                }
+
+                ret = false;
+                RESOLVER_FREE(current_frame);
+                continue;
+            }
+
+            // get
+            symbol *s = ctx->ops.get(ctx->st, name);
+            if (!s) {
+                ast *error_node = ast_create_error_node_or_sentinel(
+                    RESOLVER_ERROR_CODE_SYMBOL_LOOKUP_FAILED,
+                    "resolver: unretrievable interned symbol (inconsistent symtab state)"
+                );
+                ast_destroy(current_ast);
+
+                if (current_frame->parent) {
+                    current_frame->parent->children->children[current_frame->parent_idx] = error_node;
+                } else {
+                    *a = error_node;
+                }
+
+                ret = false;
+                RESOLVER_FREE(current_frame);
+                continue;
+            }
+
+            // store
+            if (ctx->ops.store_symbol) {
+                if (!ctx->ops.store_symbol(s, ctx->user_data)) {
+                    ast *error_node = ast_create_error_node_or_sentinel(
+                        RESOLVER_ERROR_CODE_SYMBOL_STORE_FAILED,
+                        "resolver: failed to store symbol in symbol pool"
+                    );
+                    ast_destroy(current_ast);
+
+                    if (current_frame->parent) {
+                        current_frame->parent->children->children[current_frame->parent_idx] = error_node;
+                    } else {
+                        *a = error_node;
+                    }
+
+                    ret = false;
+                    RESOLVER_FREE(current_frame);
+                    continue;
+                }
+            }
+
+            RESOLVER_FREE(current_ast->data->data.string_value);
+            current_ast->data->data.symbol_value = s;
+            current_ast->data->type = TYPE_SYMBOL;
+        }
+
         if (ast_can_have_children(current_ast)) {
 
             if (current_ast->type == AST_TYPE_FUNCTION) {
@@ -181,72 +253,6 @@ bool resolver_resolve_ast(ast **a, resolver_ctx *ctx) {
                     }
             }
 
-
-        } else if (ast_is_data_of(current_ast, TYPE_SYMBOL_NAME)) {
-
-            // make internment symbol relative to symbol name leaf
-            if (ctx->ops.intern_symbol(
-                    ctx->st,
-                    current_ast->data->data.string_value )
-                    == 1 ) {
-                ast *error_node = ast_create_error_node_or_sentinel(
-                    RESOLVER_ERROR_CODE_SYMBOL_INTERN_FAILED,
-                    "\
-resolver: failed to intern symbol during promotion from SYMBOL_NAME"
-                );
-                ast_destroy(current_ast);
-                if (current_frame->parent) {
-                    current_frame->parent->children->children
-                            [current_frame->parent_idx]
-                        = error_node;
-                } else {
-                    *a = error_node;
-                }
-                ret = false;
-            } else { // promote into symbol data wrapper ast
-                symbol *s =
-                    ctx->ops.get(
-                        ctx->st,
-                        current_ast->data->data.string_value );
-                if (!s) {
-                    ast *error_node = ast_create_error_node_or_sentinel(
-                        RESOLVER_ERROR_CODE_SYMBOL_LOOKUP_FAILED,
-                        "\
-resolver: unretrievable interned symbol (inconsistent symtab state)" );
-                    ast_destroy(current_ast);
-                    if (current_frame->parent) {
-                        current_frame->parent->children->children
-                                [current_frame->parent_idx] =
-                            error_node;
-                    } else {
-                        *a = error_node;
-                    }
-                    ret = false;
-                } else {
-                    bool store_ok = true;
-                    if (ctx->ops.store_symbol) {
-                        store_ok = ctx->ops.store_symbol(s, ctx->user_data);
-                    }
-                    if (!store_ok) {
-                        ast *error_node = ast_create_error_node_or_sentinel(
-                            RESOLVER_ERROR_CODE_SYMBOL_STORE_FAILED,
-                            "\
-resolver: failed to store symbol in symbol pool" );
-                        ast_destroy(current_ast);
-                        if (current_frame->parent) {
-                            current_frame->parent->children->children
-                                    [current_frame->parent_idx] =
-                                error_node;
-                        } else {
-                            *a = error_node;
-                        }
-                        ret = false;
-                    }
-                    RESOLVER_FREE(current_ast->data->data.string_value);
-                    current_ast->data->data.symbol_value = s;
-                    current_ast->data->type = TYPE_SYMBOL;
-                }
-            }
         }
 
         RESOLVER_FREE(current_frame);

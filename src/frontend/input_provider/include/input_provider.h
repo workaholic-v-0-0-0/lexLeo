@@ -3,11 +3,11 @@
 #ifndef LEXLEO_INPUT_PROVIDER_H
 #define LEXLEO_INPUT_PROVIDER_H
 
-#include "stream.h"
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+struct stream;
 
 #ifndef YY_TYPEDEF_YY_SCANNER_T
 #define YY_TYPEDEF_YY_SCANNER_T
@@ -46,7 +46,7 @@ bool input_provider_bind_to_scanner(input_provider *p, yyscan_t scanner);
 bool input_provider_set_mode_chunks(input_provider *p);
 
 // s is borrowed from client code
-bool input_provider_set_mode_borrowed_stream(input_provider *p, stream *s);
+bool input_provider_set_mode_borrowed_stream(input_provider *p, struct stream *s);
 
 
 
@@ -71,6 +71,8 @@ bool input_provider_append_line(
 bool input_provider_append_string_as_line(
 		input_provider *p,
 		const char *s );
+
+bool input_provider_reset_chunks(input_provider *p);
 
 
 #endif //LEXLEO_INPUT_PROVIDER_H

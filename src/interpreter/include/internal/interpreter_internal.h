@@ -5,5 +5,6 @@
 
 #include "interpreter.h"
 #include "interpreter_ctx.h"
+#include "interpreter_memory_allocator.h"
 
 #endif //LEXLEO_INTERPRETER_INTERNAL_H

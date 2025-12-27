@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 #include "evaluable_parser.tab.h"
-#include "parser_ctx.h"
+#include "parser_cfg.h"
 #include "mock_lexer.h"
 #include "list.h"
 
@@ -75,6 +75,10 @@ ast *stub_computable_action(void) {
     return mock_type(ast *);
 }
 
+ast *stub_symbol_action(void) {
+    return mock_type(ast *);
+}
+
 ast *mock_create_children_node_var(ast_type type, size_t children_nb, ...) {
     check_expected(type);
     check_expected(children_nb);
@@ -102,7 +106,7 @@ void mock_destroy(ast *root) {
     check_expected(root);
 }
 
-parser_ctx mock_ctx;
+parser_cfg mock_ctx;
 
 
 //-----------------------------------------------------------------------------

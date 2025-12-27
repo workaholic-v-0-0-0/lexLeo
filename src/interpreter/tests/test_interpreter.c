@@ -259,10 +259,12 @@ static const interpreter_ops_t SPY_INTERPRETER_OPS = {
     .write_runtime_value_fn = spy_write_runtime_value_fn
 };
 
+/*
 static struct interpreter_ctx spy_interpreter_ctx = {
     .ops = &SPY_INTERPRETER_OPS,
     .host_ctx = dummy_runtime_session
 };
+*/
 
 
 // stubs
@@ -366,18 +368,20 @@ static int eval_with_invalid_args_teardown(void **state) {
 //  - returns INTERPRETER_STATUS_ERROR
 static void eval_error_when_env_null(void **state) {
     (void)state;
+	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
     out = fake_malloc(sizeof(runtime_env_value *));
     runtime_env_value *sentinel = (runtime_env_value *)0x1;
     *out = sentinel;
     runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, NULL, DUMMY_AST_P, out);
+    interpreter_status status = interpreter_eval(spy_ctx, NULL, DUMMY_AST_P, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
     fake_free(out);
+	interpreter_ctx_destroy(spy_ctx);
     out = NULL;
 }
 
@@ -388,18 +392,20 @@ static void eval_error_when_env_null(void **state) {
 //  - returns INTERPRETER_STATUS_ERROR
 static void eval_error_when_root_null(void **state) {
     (void)state;
+	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
     out = fake_malloc(sizeof(runtime_env_value *));
     runtime_env_value *sentinel = (runtime_env_value *)0x1;
     *out = sentinel;
     runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, NULL, out);
+    interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, NULL, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
     fake_free(out);
+	interpreter_ctx_destroy(spy_ctx);
     out = NULL;
 }
 
@@ -410,10 +416,13 @@ static void eval_error_when_root_null(void **state) {
 //  - returns INTERPRETER_STATUS_ERROR
 static void eval_error_when_out_null(void **state) {
     (void)state;
+	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
+    interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
+
+	interpreter_ctx_destroy(spy_ctx);
 }
 
 // Given:
@@ -424,6 +433,7 @@ static void eval_error_when_out_null(void **state) {
 //  - returns INTERPRETER_STATUS_ERROR
 static void eval_error_when_unsupported_root_type(void **state) {
     (void)state;
+	interpreter_ctx *spy_ctx = interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
     out = fake_malloc(sizeof(runtime_env_value *));
     ast *unsupported_ast = fake_malloc(sizeof(ast));
     memset(unsupported_ast, 0, sizeof(ast));
@@ -433,7 +443,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
     *out = sentinel;
     runtime_env_value **arg_out_before = out;
 
-    interpreter_status status = interpreter_eval(&spy_interpreter_ctx, DUMMY_ROOT_RUNTIME_ENV_P, unsupported_ast, out);
+    interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, unsupported_ast, out);
 
     assert_int_equal(status, INTERPRETER_STATUS_ERROR);
     assert_ptr_equal(out, arg_out_before);
@@ -441,6 +451,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
 
     *out = NULL;
     fake_free(out);
+	interpreter_ctx_destroy(spy_ctx);
     fake_free(unsupported_ast);
 }
 
@@ -541,7 +552,7 @@ static int parametric_setup(void **state) {
     set_string_duplicate(fake_strdup);
     fake_memory_reset();
 
-    p->ctx->arg_ctx = &spy_interpreter_ctx;
+	p->ctx->arg_ctx = interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
 
     if (!p->env_is_dummy) {
         p->ctx->arg_env = runtime_env_wind(NULL);
@@ -584,6 +595,8 @@ static int parametric_teardown(void **state) {
         runtime_env_unwind(p->ctx->arg_env);
         p->ctx->arg_env = NULL;
     }
+
+	interpreter_ctx_destroy(p->ctx->arg_ctx);
 
     assert_true(fake_memory_no_invalid_free());
     assert_true(fake_memory_no_double_free());
