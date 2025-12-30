@@ -67,7 +67,9 @@ set(
 %token SET \
 %token IF \
 %token THEN \
-%token ELSE
+%token ELSE \
+%token WHILE \
+%token DO
 "
 )
 set(NON_TERMINAL_LEXEMS_LIST "\n\
@@ -97,6 +99,7 @@ eval\n\
 symbol\n\
 set\n\
 conditional_block\n\
+while_block\n\
 ")
 set(START_SYMBOL "translation_unit")
 set(

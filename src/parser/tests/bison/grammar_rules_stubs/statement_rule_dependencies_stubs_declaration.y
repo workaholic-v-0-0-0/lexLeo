@@ -10,3 +10,4 @@ ast *stub_function_call_action(void);
 ast *stub_eval_action(void);
 ast *stub_set_action(void);
 ast *stub_conditional_block_action(void);
+ast *stub_while_block_action(void);

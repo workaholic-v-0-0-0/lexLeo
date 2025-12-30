@@ -59,6 +59,8 @@ do {                                                                         \
 "if"                { return IF; }
 "then"              { return THEN; }
 "else"              { return ELSE; }
+"while"             { return WHILE; }
+"do"                { return DO; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);

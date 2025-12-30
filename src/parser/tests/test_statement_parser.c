@@ -88,6 +88,9 @@ ast *stub_conditional_block_action(void) {
     return mock_type(ast *);
 }
 
+ast *stub_while_block_action(void) {
+    return mock_type(ast *);
+}
 
 
 //-----------------------------------------------------------------------------

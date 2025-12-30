@@ -365,7 +365,7 @@ static int eval_with_invalid_args_teardown(void **state) {
 //  - env == NULL
 // Expected:
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_ERROR
+//  - returns INTERPRETER_STATUS_INTERNAL_ERROR
 static void eval_error_when_env_null(void **state) {
     (void)state;
 	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
@@ -376,7 +376,7 @@ static void eval_error_when_env_null(void **state) {
 
     interpreter_status status = interpreter_eval(spy_ctx, NULL, DUMMY_AST_P, out);
 
-    assert_int_equal(status, INTERPRETER_STATUS_ERROR);
+    assert_int_equal(status, INTERPRETER_STATUS_INTERNAL_ERROR);
     assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
@@ -389,7 +389,7 @@ static void eval_error_when_env_null(void **state) {
 //  - root == NULL
 // Expected:
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_ERROR
+//  - returns INTERPRETER_STATUS_INTERNAL_ERROR
 static void eval_error_when_root_null(void **state) {
     (void)state;
 	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
@@ -400,7 +400,7 @@ static void eval_error_when_root_null(void **state) {
 
     interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, NULL, out);
 
-    assert_int_equal(status, INTERPRETER_STATUS_ERROR);
+    assert_int_equal(status, INTERPRETER_STATUS_INTERNAL_ERROR);
     assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 
@@ -413,14 +413,14 @@ static void eval_error_when_root_null(void **state) {
 //  - out == NULL
 // Expected:
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_ERROR
+//  - returns INTERPRETER_STATUS_INTERNAL_ERROR
 static void eval_error_when_out_null(void **state) {
     (void)state;
 	interpreter_ctx *spy_ctx =interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
 
     interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, DUMMY_AST_P, NULL);
 
-    assert_int_equal(status, INTERPRETER_STATUS_ERROR);
+    assert_int_equal(status, INTERPRETER_STATUS_INTERNAL_ERROR);
 
 	interpreter_ctx_destroy(spy_ctx);
 }
@@ -430,7 +430,7 @@ static void eval_error_when_out_null(void **state) {
 //  - root->type is not supported
 // Expected:
 //  - *out remains unchanged
-//  - returns INTERPRETER_STATUS_ERROR
+//  - returns INTERPRETER_STATUS_INTERNAL_ERROR
 static void eval_error_when_unsupported_root_type(void **state) {
     (void)state;
 	interpreter_ctx *spy_ctx = interpreter_ctx_create(&SPY_INTERPRETER_OPS, dummy_runtime_session);
@@ -445,7 +445,7 @@ static void eval_error_when_unsupported_root_type(void **state) {
 
     interpreter_status status = interpreter_eval(spy_ctx, DUMMY_ROOT_RUNTIME_ENV_P, unsupported_ast, out);
 
-    assert_int_equal(status, INTERPRETER_STATUS_ERROR);
+    assert_int_equal(status, INTERPRETER_STATUS_INTERNAL_ERROR);
     assert_ptr_equal(out, arg_out_before);
     assert_ptr_equal(*out, sentinel);
 

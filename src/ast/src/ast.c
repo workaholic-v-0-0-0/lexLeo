@@ -439,6 +439,7 @@ bool ast_type_has_children(ast_type type) {
 		case AST_TYPE_SYMBOL:
 		case AST_TYPE_SET:
 		case AST_TYPE_CONDITIONAL_BLOCK:
+		case AST_TYPE_WHILE_BLOCK:
 			return true;
 		case AST_TYPE_DATA_WRAPPER:
 		case AST_TYPE_ERROR:

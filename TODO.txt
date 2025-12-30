@@ -76,3 +76,5 @@
 
 - Handle TYPE_ERROR during computable evaluation (e.g. "string * symbol" now possible
   after arguments migration)
+
+- fix bug so that get lookups in parents scopes

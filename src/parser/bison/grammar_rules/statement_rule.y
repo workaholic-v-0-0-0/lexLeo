@@ -7,6 +7,7 @@ statement
     | set { $$ = $1; }
     | function_definition { $$ = $1; }
     | conditional_block { $$ = $1; }
+    | while_block { $$ = $1; }
     | evaluable SEMICOLON { $$ = $1; }
     | eval
     ;

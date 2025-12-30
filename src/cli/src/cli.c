@@ -168,27 +168,27 @@ int cli_run() { // in a very dirty draft state!
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("ip: %p\n", ip);
+	//printf("ip: %p\n", ip);
 
 	struct stream *out = stdio_stream_to_stdout();
 	if (!out) {
-		printf("out: %p\n", out);
+		//printf("out: %p\n", out);
 		stream_close(in); //sure?
 		input_provider_destroy(ip);
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("out: %p\n", out);
+	//printf("out: %p\n", out);
 
 	if (!runtime_session_bind_output_stream(rs, out)) {
-		printf("rs: %p\n", rs);
+		//printf("rs: %p\n", rs);
 		stream_close(in); //sure?
 		stream_close(out); //sure?
 		input_provider_destroy(ip);
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("rs: %p\n", rs);
+	//printf("rs: %p\n", rs);
 
 	if (!input_provider_set_mode_chunks(ip)) {
 		stream_close(in); //sure?
@@ -197,19 +197,19 @@ int cli_run() { // in a very dirty draft state!
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("input_provider_set_mode_chunks\n");
+	//printf("input_provider_set_mode_chunks\n");
 
 	if (!runtime_session_bind_input_provider(rs, ip)) {
-		printf("ip: %p\n", ip);
-		printf("rs->scanner: %p\n", rs->scanner);
-		printf("ip->lexer_scanner: %p\n", ip->lexer_scanner);
+		//printf("ip: %p\n", ip);
+		//printf("rs->scanner: %p\n", rs->scanner);
+		//printf("ip->lexer_scanner: %p\n", ip->lexer_scanner);
 		stream_close(in); //sure?
 		stream_close(out); //sure?
 		input_provider_destroy(ip);
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("runtime_session_bind_input_provider\n");
+	//printf("runtime_session_bind_input_provider\n");
 
 	resolver_ctx rctx = {
     	.ops = RESOLVER_OPS_DEFAULT,
@@ -227,7 +227,7 @@ int cli_run() { // in a very dirty draft state!
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	printf("ic: %p\n", ic);
+	//printf("ic: %p\n", ic);
 
 	parser_cfg pc = get_parser_cfg_one_statement();
 
@@ -271,17 +271,17 @@ int cli_run() { // in a very dirty draft state!
 		}
 		if (st == PARSE_STATUS_OK) {//<here> pb with the symbols
 			if (!resolver_resolve_ast(&parsed_ast, &rctx)) break;
-			printf("parsed_ast->type: %i\n", parsed_ast->type);
-			if (parsed_ast->type == AST_TYPE_DATA_WRAPPER) printf("parsed_ast->data->type: %i\n", parsed_ast->data->type);
+			//printf("parsed_ast->type: %i\n", parsed_ast->type);
+			//if (parsed_ast->type == AST_TYPE_DATA_WRAPPER) printf("parsed_ast->data->type: %i\n", parsed_ast->data->type);
 			if (!runtime_session_store_ast(parsed_ast, rs)) break;
 			ist = interpreter_eval(
 				ic,
 				runtime_session_get_env(rs),
 			    parsed_ast,
     			&value );
-			printf("ist: %i\n", ist);
+			//printf("ist: %i\n", ist);
 			// stream_write(out, "This is ok\n", 11);
-			printf("value->type: %i\n", value->type);
+			//printf("value->type: %i\n", value->type);
 			if (!cli_print(ic, value)) break;
 			continue;
 		}

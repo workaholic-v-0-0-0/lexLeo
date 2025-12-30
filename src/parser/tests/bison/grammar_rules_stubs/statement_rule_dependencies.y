@@ -35,3 +35,10 @@ conditional_block:
             RBRACE
     { (void)$2; (void)$5; (void)$7;
       $$ = stub_conditional_block_action(); } ;
+while_block:
+        WHILE INTEGER DO
+            LBRACE
+                SYMBOL_NAME EQUAL INTEGER SEMICOLON
+            RBRACE
+    { (void)$2; (void)$5; (void)$7;
+      $$ = stub_while_block_action(); } ;

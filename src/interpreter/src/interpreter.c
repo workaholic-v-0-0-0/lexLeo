@@ -286,6 +286,7 @@ static bool ast_is_well_formed_reading(const ast *node) {
 
 static bool ast_is_well_formed_function_definition(const ast *node);
 static bool ast_is_well_formed_conditional_block(const ast *node);
+static bool ast_is_well_formed_while_block(const ast *node);
 
 static bool ast_is_well_formed_statement(const ast *node) {
     return
@@ -297,7 +298,8 @@ static bool ast_is_well_formed_statement(const ast *node) {
         || ast_is_well_formed_function_call(node)
 		|| ast_is_well_formed_evaluable(node)
 		|| ast_is_well_formed_eval(node)
-		|| ast_is_well_formed_conditional_block(node) );
+		|| ast_is_well_formed_conditional_block(node)
+		|| ast_is_well_formed_while_block(node) );
 }
 
 static bool ast_is_well_formed_block_items(const ast *node) {
@@ -329,6 +331,15 @@ static bool ast_is_well_formed_conditional_block(const ast *node) {
             AST_TYPE_CONDITIONAL_BLOCK,
             ast_is_well_formed_evaluable,
             ast_is_well_formed_block,
+            ast_is_well_formed_block );
+}
+
+static bool ast_is_well_formed_while_block(const ast *node) {
+    return
+        ast_is_well_formed_two_children_node(
+            node,
+            AST_TYPE_WHILE_BLOCK,
+            ast_is_well_formed_evaluable,
             ast_is_well_formed_block );
 }
 
@@ -383,6 +394,16 @@ static bool is_true(runtime_env_value *value) {
 	return (value) && (value->type != RUNTIME_VALUE_NUMBER || value->as.i != 0);
 }
 
+#define EVAL_TRUTHY_OR_RETURN(ctx, env, cond, cond_true) 				  	  \
+	do {																	  \
+		interpreter_status _st = INTERPRETER_STATUS_OK;					  	  \
+		runtime_env_value *_v = NULL;									  	  \
+		_st = interpreter_eval((ctx), (env), (cond), &(_v));   			  	  \
+        if (_st != INTERPRETER_STATUS_OK) return _st;					  	  \
+		cond_true = is_true(_v);								  			  \
+		runtime_env_value_release(_v);										  \
+	} while (false)															  \
+
 // to debug begin
 typedef struct symbol {
     char *name; // owned ; must be not NULL and not exceeding MAXIMUM_SYMBOL_NAME_LENGTH characters
@@ -421,7 +442,7 @@ interpreter_status interpreter_eval(
             || !out
             || root->type < 0
             || root->type >= AST_TYPE_NB_TYPES )
-        return INTERPRETER_STATUS_ERROR;
+        return INTERPRETER_STATUS_INTERNAL_ERROR;
 
     runtime_env_value *value = NULL;
     interpreter_status status = INTERPRETER_STATUS_OK;
@@ -429,40 +450,56 @@ interpreter_status interpreter_eval(
     ast *lhs = NULL;
     ast *rhs = NULL;
     ast *child = NULL;
+    ast *cond = NULL;
     runtime_env_value *evaluated_lhs = NULL;
     runtime_env_value *evaluated_rhs = NULL;
     runtime_env_value *evaluated_child_value = NULL;
     runtime_env_value *evaluated_quoted_ast = NULL;
+    runtime_env_value *evaluated_cond = NULL;
     bool binding = false;
     bool write_runtime_value_ret = false;
     interpreter_status rhs_eval_status;
 
     switch (root->type) {
 
-    case AST_TYPE_DATA_WRAPPER:
+    case AST_TYPE_DATA_WRAPPER: {
 
         switch (root->data->type) {
 
-        case TYPE_INT:
-            value = runtime_env_make_number(root->data->data.int_value);
+
+        case TYPE_INT: {
+			if (!ast_is_well_formed_int_node(root))
+            	return INTERPRETER_STATUS_INVALID_AST;
+
+            runtime_env_value *value =
+				runtime_env_make_number(root->data->data.int_value);
             if (!value)
                 return INTERPRETER_STATUS_OOM;
 
             *out = value;
-            break;
+            return INTERPRETER_STATUS_OK;
+		}
 
-        case TYPE_STRING:
-            value = runtime_env_make_string(root->data->data.string_value);
+
+        case TYPE_STRING: {
+			if (!ast_is_well_formed_string_node(root))
+            	return INTERPRETER_STATUS_INVALID_AST;
+
+            runtime_env_value *value =
+				runtime_env_make_string(root->data->data.string_value);
             if (!value)
                 return INTERPRETER_STATUS_OOM;
 
             *out = value;
-            break;
+            return INTERPRETER_STATUS_OK;
+		}
 
-        case TYPE_SYMBOL:
+
+        case TYPE_SYMBOL: {
 			if (!ast_is_well_formed_symbol_node(root))
             	return INTERPRETER_STATUS_INVALID_AST;
-            value =
+
+            runtime_env_value *value =
                 runtime_env_get(
                     env,
                     root->data->data.symbol_value );
@@ -472,47 +509,63 @@ interpreter_status interpreter_eval(
 
             runtime_env_value_retain(value);
             *out = value;
-            break;
+            return INTERPRETER_STATUS_OK;
+		}
+
 
         default:
             // should never happen due precondition
             return INTERPRETER_STATUS_INVALID_AST;
         }
-    break;
 
-    case AST_TYPE_ERROR:
-        value = runtime_env_make_error(root->error->code, root->error->message);
+	}
+
+	return INTERPRETER_STATUS_INVALID_AST; // for security
+
+
+    case AST_TYPE_ERROR: {
+        runtime_env_value *value =
+        	runtime_env_make_error(root->error->code, root->error->message);
         if (!value)
             return INTERPRETER_STATUS_OOM;
         *out = value;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_FUNCTION:
+
+    case AST_TYPE_FUNCTION: {
         if (!ast_is_well_formed_function(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
 		if (!params_are_unique(root->children->children[1]))
-			return INTERPRETER_STATUS_DUPLICATE_PARAMETER; // should be better in resolver
+			return INTERPRETER_STATUS_DUPLICATE_PARAMETER; // to do in resolver
 
-        value = runtime_env_make_function(root, env);
+        runtime_env_value *value = runtime_env_make_function(root, env);
 
         if (!value)
             return INTERPRETER_STATUS_OOM;
 
         *out = value;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_FUNCTION_DEFINITION:
+
+    case AST_TYPE_FUNCTION_DEFINITION: {
         if (!ast_is_well_formed_function_definition(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
         ast *function_node = root->children->children[0];
         runtime_env_value *evaluated_fn_value = NULL;
-        status =
-            interpreter_eval(ctx, env, function_node, &evaluated_fn_value);
+        interpreter_status status =
+            interpreter_eval(
+				ctx,
+				env,
+				function_node,
+				&evaluated_fn_value );
         if (status != INTERPRETER_STATUS_OK)
             return status;
-        binding =
+
+        bool binding =
             runtime_env_set_local(
                 env,
                 function_node->children->children[0]->data->data.symbol_value,
@@ -523,48 +576,63 @@ interpreter_status interpreter_eval(
         }
 
         *out = evaluated_fn_value;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_NEGATION:
+
+    case AST_TYPE_NEGATION: {
         if (!ast_is_well_formed_negation(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        child = root->children->children[0];
-        evaluated_child_value = NULL;
-        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
+        const ast *child = root->children->children[0];
+        runtime_env_value *number = NULL;
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				child,
+				&number );
 
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        if (evaluated_child_value->type != RUNTIME_VALUE_NUMBER) {
-            runtime_env_value_release(evaluated_child_value);
+        if (number->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(number);
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        value = runtime_env_make_number(- evaluated_child_value->as.i);
-        runtime_env_value_release(evaluated_child_value);
-        if (!value)
+        runtime_env_value *opposite = runtime_env_make_number(- number->as.i);
+        runtime_env_value_release(number);
+        if (!opposite)
             return INTERPRETER_STATUS_OOM;
 
-        *out = value;
-        break;
+        *out = opposite;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_ADDITION:
+
+    case AST_TYPE_ADDITION: {
         if (!ast_is_well_formed_addition(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        lhs = root->children->children[0];
-        rhs = root->children->children[1];
+        const ast *lhs = root->children->children[0];
+        const ast *rhs = root->children->children[1];
+        runtime_env_value *evaluated_lhs = NULL;
+        runtime_env_value *evaluated_rhs = NULL;
 
-        evaluated_lhs = NULL;
-        evaluated_rhs = NULL;
-
-        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				lhs,
+				&evaluated_lhs );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER) {
+		    runtime_env_value_release(evaluated_lhs);
             return INTERPRETER_STATUS_TYPE_ERROR;
+		}
 
         status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
@@ -578,33 +646,43 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        value =
+        runtime_env_value *sum =
             runtime_env_make_number(
                 evaluated_lhs->as.i
                 +
                 evaluated_rhs->as.i );
-
-        runtime_env_value_release(evaluated_lhs);
         runtime_env_value_release(evaluated_rhs);
-        *out = value;
-        break;
+        runtime_env_value_release(evaluated_lhs);
+		if (!sum)
+			return INTERPRETER_STATUS_OOM;
 
-    case AST_TYPE_SUBTRACTION:
+        *out = sum;
+        return INTERPRETER_STATUS_OK;
+	}
+
+
+    case AST_TYPE_SUBTRACTION: {
         if (!ast_is_well_formed_subtraction(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        lhs = root->children->children[0];
-        rhs = root->children->children[1];
+        const ast *lhs = root->children->children[0];
+        const ast *rhs = root->children->children[1];
+        runtime_env_value *evaluated_lhs = NULL;
+        runtime_env_value *evaluated_rhs = NULL;
 
-        evaluated_lhs = NULL;
-        evaluated_rhs = NULL;
-
-        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				lhs,
+				&evaluated_lhs );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER) {
+			runtime_env_value_release(evaluated_lhs);
             return INTERPRETER_STATUS_TYPE_ERROR;
+		}
 
         status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
@@ -618,33 +696,43 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        value =
+        runtime_env_value *difference =
             runtime_env_make_number(
                 evaluated_lhs->as.i
                 -
                 evaluated_rhs->as.i );
-
-        runtime_env_value_release(evaluated_lhs);
         runtime_env_value_release(evaluated_rhs);
-        *out = value;
-        break;
+        runtime_env_value_release(evaluated_lhs);
+		if (!difference)
+			return INTERPRETER_STATUS_OOM;
 
-    case AST_TYPE_MULTIPLICATION:
+        *out = difference;
+        return INTERPRETER_STATUS_OK;
+	}
+
+
+    case AST_TYPE_MULTIPLICATION: {
         if (!ast_is_well_formed_multiplication(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        lhs = root->children->children[0];
-        rhs = root->children->children[1];
+        const ast *lhs = root->children->children[0];
+        const ast *rhs = root->children->children[1];
+        runtime_env_value *evaluated_lhs = NULL;
+        runtime_env_value *evaluated_rhs = NULL;
 
-        evaluated_lhs = NULL;
-        evaluated_rhs = NULL;
-
-        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				lhs,
+				&evaluated_lhs );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER) {
+			runtime_env_value_release(evaluated_lhs);
             return INTERPRETER_STATUS_TYPE_ERROR;
+		}
 
         status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
@@ -658,112 +746,141 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        value =
+        runtime_env_value *product =
             runtime_env_make_number(
                 evaluated_lhs->as.i
                 *
                 evaluated_rhs->as.i );
-
-        runtime_env_value_release(evaluated_lhs);
         runtime_env_value_release(evaluated_rhs);
-        *out = value;
-        break;
+        runtime_env_value_release(evaluated_lhs);
+		if (!product)
+			return INTERPRETER_STATUS_OOM;
 
-    case AST_TYPE_DIVISION:
+        *out = product;
+        return INTERPRETER_STATUS_OK;
+	}
+
+
+    case AST_TYPE_DIVISION: {
         if (!ast_is_well_formed_division(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        lhs = root->children->children[0];
-        rhs = root->children->children[1];
+        const ast *dividend = root->children->children[0];
+        const ast *divisor = root->children->children[1];
+        runtime_env_value *evaluated_dividend = NULL;
+        runtime_env_value *evaluated_divisor = NULL;
 
-        evaluated_lhs = NULL;
-        evaluated_rhs = NULL;
-
-        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				dividend,
+				&evaluated_dividend );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
-        if (evaluated_lhs->type != RUNTIME_VALUE_NUMBER)
+        if (evaluated_dividend->type != RUNTIME_VALUE_NUMBER) {
+			runtime_env_value_release(evaluated_dividend);
             return INTERPRETER_STATUS_TYPE_ERROR;
+		}
 
-        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+        status = interpreter_eval(ctx, env, divisor, &evaluated_divisor);
         if (status != INTERPRETER_STATUS_OK) {
-            runtime_env_value_release(evaluated_lhs);
+            runtime_env_value_release(evaluated_dividend);
             return status;
         }
 
-        if (evaluated_rhs->type != RUNTIME_VALUE_NUMBER) {
-            runtime_env_value_release(evaluated_lhs);
-            runtime_env_value_release(evaluated_rhs);
+        if (evaluated_divisor->type != RUNTIME_VALUE_NUMBER) {
+            runtime_env_value_release(evaluated_divisor);
+            runtime_env_value_release(evaluated_dividend);
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        if (evaluated_rhs->as.i == 0) {
-            runtime_env_value_release(evaluated_lhs);
-            runtime_env_value_release(evaluated_rhs);
+        if (evaluated_divisor->as.i == 0) {
+            runtime_env_value_release(evaluated_divisor);
+            runtime_env_value_release(evaluated_dividend);
             return INTERPRETER_STATUS_DIVISION_BY_ZERO;
         }
 
-        value =
+        runtime_env_value *quotient =
             runtime_env_make_number(
-                evaluated_lhs->as.i
+                evaluated_dividend->as.i
                 /
-                evaluated_rhs->as.i );
+                evaluated_divisor->as.i );
+        runtime_env_value_release(evaluated_divisor);
+        runtime_env_value_release(evaluated_dividend);
+		if (!quotient)
+			return INTERPRETER_STATUS_OOM;
 
-        runtime_env_value_release(evaluated_lhs);
-        runtime_env_value_release(evaluated_rhs);
-        *out = value;
-        break;
+        *out = quotient;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_QUOTE:
+
+    case AST_TYPE_QUOTE: {
         if (!ast_is_well_formed_quote(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        value = runtime_env_make_quoted(root->children->children[0]);
-        if (!value)
+        runtime_env_value *quoted =
+			runtime_env_make_quoted(
+				root->children->children[0] );
+        if (!quoted)
             return INTERPRETER_STATUS_OOM;
 
-        *out = value;
-        break;
+        *out = quoted;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_READING:
+
+    case AST_TYPE_READING: {
         if (!ast_is_well_formed_reading(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
         if (!ctx || !ctx->ops || !ctx->ops->read_ast_fn)
             return INTERPRETER_STATUS_INTERNAL_ERROR;
 
-        rhs = ctx->ops->read_ast_fn(ctx);
-        if (!rhs)
+        const ast *read = ctx->ops->read_ast_fn(ctx);
+        if (!read)
             return INTERPRETER_STATUS_READ_AST_ERROR;
 
-        evaluated_rhs = NULL;
-        rhs_eval_status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
-        if (rhs_eval_status != INTERPRETER_STATUS_OK)
-            return rhs_eval_status;
+        runtime_env_value *evaluated_read = NULL;
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				read,
+				&evaluated_read );
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
 
         binding =
             runtime_env_set_local(
                 env,
                 root->children->children[0]->data->data.symbol_value,
-                evaluated_rhs );
+                evaluated_read );
 
         if (!binding) {
-            runtime_env_value_release(evaluated_rhs);
+            runtime_env_value_release(evaluated_read);
             return INTERPRETER_STATUS_BINDING_ERROR;
         }
 
-        *out = evaluated_rhs;
+        *out = evaluated_read;
+		return INTERPRETER_STATUS_OK;
+	}
 
-        break;
 
-    case AST_TYPE_BINDING:
+    case AST_TYPE_BINDING: {
         if (!ast_is_well_formed_binding(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        rhs = root->children->children[1];
-        evaluated_rhs = NULL;
-        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+        ast *rhs = root->children->children[1];
+        runtime_env_value *evaluated_rhs = NULL;
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				rhs,
+				&evaluated_rhs );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
@@ -778,65 +895,91 @@ interpreter_status interpreter_eval(
         }
 
         *out = evaluated_rhs;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
-    case AST_TYPE_EVAL:
+
+    case AST_TYPE_EVAL: {
         if (!ast_is_well_formed_eval(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        child = root->children->children[0];
-        evaluated_child_value = NULL;
-        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
+        const ast *child = root->children->children[0];
+        runtime_env_value *evaluated_child_value = NULL;
+
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				child,
+				&evaluated_child_value );
 
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
         if (evaluated_child_value->type != RUNTIME_VALUE_QUOTED) {
             *out = evaluated_child_value;
-        }
-        else {
-            status =
-                interpreter_eval(
-                    ctx,
-                    env,
-                    evaluated_child_value->as.quoted,
-                    &evaluated_quoted_ast );
-            runtime_env_value_release(evaluated_child_value);
-            if (status != INTERPRETER_STATUS_OK) {
-                return status;
-            }
-            *out = evaluated_quoted_ast;
+        	return INTERPRETER_STATUS_OK;
         }
 
-        break;
+        const ast *quoted = evaluated_child_value->as.quoted;
+		runtime_env_value *evaluated_quoted_ast = NULL;
 
-    case AST_TYPE_WRITING:
+		runtime_env_value_release(evaluated_child_value);
+
+        status =
+            interpreter_eval(
+                ctx,
+                env,
+                quoted,
+                &evaluated_quoted_ast );
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+        *out = evaluated_quoted_ast;
+        return INTERPRETER_STATUS_OK;
+	}
+
+
+    case AST_TYPE_WRITING: {
         if (!ast_is_well_formed_writing(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
         if (!ctx || !ctx->ops || !ctx->ops->write_runtime_value_fn)
             return INTERPRETER_STATUS_INTERNAL_ERROR;
 
-        evaluated_child_value = NULL;
-        status = interpreter_eval(ctx, env, root->children->children[0], &evaluated_child_value);
-        if (status != INTERPRETER_STATUS_OK) return status;
+        runtime_env_value *evaluated_child_value = NULL;
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				root->children->children[0],
+				&evaluated_child_value );
+        if (status != INTERPRETER_STATUS_OK)
+			return status;
 
-        write_runtime_value_ret = ctx->ops->write_runtime_value_fn(ctx, evaluated_child_value);
+        bool is_written =
+			ctx->ops->write_runtime_value_fn(
+				ctx,
+				evaluated_child_value );
+
         runtime_env_value_release(evaluated_child_value);
+
         return
-            (write_runtime_value_ret) ?
+            (is_written) ?
                 INTERPRETER_STATUS_OK
                 :
                 INTERPRETER_STATUS_WRITE_RUNTIME_VALUE_ERROR;
+	}
 
 
-    case AST_TYPE_BLOCK_ITEMS:
+    case AST_TYPE_BLOCK_ITEMS: {
         if (!ast_is_well_formed_block_items(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
 		runtime_env_value *out_saved = *out;
     	runtime_env_value *out_current = NULL;
     	runtime_env_value *out_tmp = NULL;
+		interpreter_status status = INTERPRETER_STATUS_OK;
 
 		for (size_t i = 0; i < root->children->children_nb; i++) {
 			out_tmp = NULL;
@@ -847,7 +990,6 @@ interpreter_status interpreter_eval(
 					root->children->children[i],
 					&out_tmp );
 			if (status != INTERPRETER_STATUS_OK) {
-				if (out_tmp) runtime_env_value_release(out_tmp);
 				if (out_current) runtime_env_value_release(out_current);
 				*out = out_saved;
 				return status;
@@ -868,9 +1010,10 @@ interpreter_status interpreter_eval(
     	}
 
 		return INTERPRETER_STATUS_OK;
+	}
 
 
-    case AST_TYPE_BLOCK:
+    case AST_TYPE_BLOCK: {
         if (!ast_is_well_formed_block(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
@@ -880,9 +1023,10 @@ interpreter_status interpreter_eval(
                 env,
                 root->children->children[0],
                 out );
+	}
 
 
-    case AST_TYPE_TRANSLATION_UNIT:
+    case AST_TYPE_TRANSLATION_UNIT: {
         if (!ast_is_well_formed_translation_unit(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
@@ -892,15 +1036,17 @@ interpreter_status interpreter_eval(
                 env,
                 root->children->children[0],
                 out );
+	}
 
 
-    case AST_TYPE_FUNCTION_CALL:
+    case AST_TYPE_FUNCTION_CALL: {
         if (!ast_is_well_formed_function_call(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-        runtime_env_value *function = runtime_env_get(
-            env,
-            root->children->children[0]->data->data.symbol_value );
+        runtime_env_value *function =
+			runtime_env_get(
+            	env,
+            	root->children->children[0]->data->data.symbol_value );
         if (!function)
             return INTERPRETER_STATUS_LOOKUP_FAILED;
 
@@ -917,18 +1063,23 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_OOM;
         }
 
-        ast *parameters = function->as.fn.function_node->children->children[1]->children->children[0];
-        ast *ast_arguments = root->children->children[1]->children->children[0];
+		const ast *function_node = function->as.fn.function_node;
+        const ast *parameters =
+			function_node->children->children[1]->children->children[0];
+        const ast *ast_arguments =
+			root->children->children[1]->children->children[0];
         size_t arity = parameters->children->children_nb;
 
-        if (arity != ast_arguments->children->children_nb
-            || arity > AST_MAX_ARITY) { // must be handled in resolver module with RESOLVER_ERROR_MAX_ARITY_OVERFLOW (see TODO.txt)
+        if (
+				   arity != ast_arguments->children->children_nb
+            	|| arity > AST_MAX_ARITY ) { // must be handled in resolver module with RESOLVER_ERROR_MAX_ARITY_OVERFLOW (see TODO.txt)
             runtime_env_unwind(call_frame);
             runtime_env_value_release(function);
             return INTERPRETER_STATUS_ARITY_ERROR;
         }
 
         runtime_env_value *evaluated_arguments[AST_MAX_ARITY] = {NULL};
+		interpreter_status status = INTERPRETER_STATUS_OK;
         for (size_t i = 0; i < arity; i++) {
             status =
                 interpreter_eval(
@@ -960,6 +1111,7 @@ interpreter_status interpreter_eval(
                 return INTERPRETER_STATUS_BINDING_ERROR;
             }
             runtime_env_value_release(evaluated_arguments[i]);
+			evaluated_arguments[i] = NULL;
         }
 
         status =
@@ -972,27 +1124,39 @@ interpreter_status interpreter_eval(
         runtime_env_unwind(call_frame);
         runtime_env_value_release(function);
         return status;
+	}
 
-    case AST_TYPE_SYMBOL:
+
+    case AST_TYPE_SYMBOL: {
         if (!ast_is_well_formed_symbol_litteral_node(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-		value = runtime_env_make_symbol(
-			root->children->children[0]->data->data.symbol_value );
+		runtime_env_value *value =
+			runtime_env_make_symbol(
+				root->children->children[0]->data->data.symbol_value );
         if (!value)
             return INTERPRETER_STATUS_OOM;
 
         *out = value;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
 
-    case AST_TYPE_SET:
+    case AST_TYPE_SET: {
         if (!ast_is_well_formed_set(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-		lhs = root->children->children[0];
-        evaluated_lhs = NULL;
-        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+		const ast *lhs = root->children->children[0];
+        const ast *rhs = root->children->children[1];
+        runtime_env_value *evaluated_lhs = NULL;
+        runtime_env_value *evaluated_rhs = NULL;
+
+        interpreter_status status =
+			interpreter_eval(
+				ctx,
+				env,
+				lhs,
+				&evaluated_lhs );
         if (status != INTERPRETER_STATUS_OK)
             return status;
 
@@ -1001,70 +1165,115 @@ interpreter_status interpreter_eval(
             return INTERPRETER_STATUS_TYPE_ERROR;
         }
 
-        rhs = root->children->children[1];
-        evaluated_rhs = NULL;
         status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
         if (status != INTERPRETER_STATUS_OK) {
 			runtime_env_value_release(evaluated_lhs);
             return status;
 		}
 
-        binding =
+        bool binding =
             runtime_env_set_local(
                 env,
                 evaluated_lhs->as.sym,
                 evaluated_rhs );
+
 		runtime_env_value_release(evaluated_lhs);
+
         if (!binding) {
             runtime_env_value_release(evaluated_rhs);
             return INTERPRETER_STATUS_BINDING_ERROR;
         }
 
         *out = evaluated_rhs;
-        break;
+        return INTERPRETER_STATUS_OK;
+	}
 
 
-	case AST_TYPE_CONDITIONAL_BLOCK:
+	case AST_TYPE_CONDITIONAL_BLOCK: {
         if (!ast_is_well_formed_conditional_block(root))
             return INTERPRETER_STATUS_INVALID_AST;
 
-		child = root->children->children[0];
-        evaluated_child_value = NULL;
-        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
-        if (status != INTERPRETER_STATUS_OK)
-            return status;
+		const ast *cond = root->children->children[0];
+		const ast *true_block = root->children->children[1];
+		const ast *else_block =
+			(root->children->children_nb == 3) ?
+			root->children->children[2]
+			:
+			NULL;
 
-		if (is_true(evaluated_child_value)) {
-			runtime_env_value_release(evaluated_child_value);
-			lhs = root->children->children[1];
-			evaluated_lhs = NULL;
-	        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+		runtime_env_value *evaluated_true_block = NULL;
+		runtime_env_value *evaluated_else_block = NULL;
+
+		bool cond_true;
+		EVAL_TRUTHY_OR_RETURN(ctx, env, cond, cond_true);
+
+		if (cond_true) {
+	        status = interpreter_eval(ctx, env, true_block, &evaluated_true_block);
 			if (status != INTERPRETER_STATUS_OK)
 				return status;
-			*out = evaluated_lhs;
-			return INTERPRETER_STATUS_OK;
 
-		} else if (root->children->children_nb == 3) { // else block
-			runtime_env_value_release(evaluated_child_value);
-			rhs = root->children->children[2];
-			evaluated_rhs = NULL;
-	        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+			*out = evaluated_true_block;
+
+		} else if (else_block) {
+	        status =
+				interpreter_eval(
+					ctx,
+					env,
+					else_block,
+					&evaluated_else_block );
 			if (status != INTERPRETER_STATUS_OK)
 				return status;
-			*out = evaluated_rhs;
-			return INTERPRETER_STATUS_OK;
+
+			*out = evaluated_else_block;
 		}
 
-		runtime_env_value_release(evaluated_child_value);
 		return INTERPRETER_STATUS_OK;
+	}
 
+
+	case AST_TYPE_WHILE_BLOCK: {
+        if (!ast_is_well_formed_while_block(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+		const ast *cond = root->children->children[0];
+		const ast *block = root->children->children[1];
+
+		bool cond_true;
+		runtime_env_value *out_saved = *out;
+    	runtime_env_value *out_current = NULL;
+    	runtime_env_value *out_tmp = NULL;
+		interpreter_status status = INTERPRETER_STATUS_OK;
+
+		while (true) {
+			EVAL_TRUTHY_OR_RETURN(ctx, env, cond, cond_true);
+			if (!cond_true) break;
+
+			out_tmp = NULL;
+	        status = interpreter_eval(ctx, env, block, &out_tmp);
+			if (status != INTERPRETER_STATUS_OK) {
+				if (out_current) runtime_env_value_release(out_current);
+				*out = out_saved;
+				return status;
+			}
+
+			if (!out_tmp)
+        	    continue;
+
+			if (out_current) runtime_env_value_release(out_current);
+        	out_current = out_tmp;
+		}
+
+		*out = (out_current) ? out_current : out_saved;
+
+		return INTERPRETER_STATUS_OK;
+	}
 
 
     default:
         return INTERPRETER_STATUS_UNSUPPORTED_AST;
     }
 
-    return INTERPRETER_STATUS_OK;
+    return INTERPRETER_STATUS_INVALID_AST; // for security
 }
 
 interpreter_ctx *interpreter_ctx_create(

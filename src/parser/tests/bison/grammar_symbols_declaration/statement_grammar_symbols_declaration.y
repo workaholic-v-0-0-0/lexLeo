@@ -17,6 +17,7 @@ evaluable
 eval
 set
 conditional_block
+while_block
 
 %token SEMICOLON
 %token EQUAL
@@ -31,3 +32,6 @@ conditional_block
 %token IF
 %token THEN
 %token ELSE
+%token WHILE
+%token DO
+
