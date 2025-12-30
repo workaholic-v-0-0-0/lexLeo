@@ -44,7 +44,7 @@ symtab *symtab_unwind_scope(symtab *st) {
     return ret;
 }
 
-int symtab_intern_symbol(symtab *st, char *name) {
+int symtab_intern_symbol(symtab *st, const char *name) {
     if ((!st) || (!(st->symbols)) || (!name) || (strlen(name) > MAXIMUM_SYMBOL_NAME_LENGTH))
         return 1;
 

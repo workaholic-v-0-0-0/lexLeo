@@ -11,7 +11,7 @@
 typedef struct resolver_ops {
     list (*push)(list l, void *e);
     void *(*pop)(list *l_p);
-    int (*intern_symbol)(symtab *st, char *name);
+    int (*intern_symbol)(symtab *st, const char *name);
     symbol *(*get)(symtab *st, const char *name);
     symtab *(*wind_scope)(symtab *st);
     symtab *(*unwind_scope)(symtab *st);

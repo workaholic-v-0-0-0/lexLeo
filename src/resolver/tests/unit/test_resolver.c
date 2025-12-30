@@ -33,7 +33,7 @@ resolver_ctx ctx;
 //-----------------------------------------------------------------------------
 
 // mocks
-int mock_intern_symbol(symtab *st, char *name) {
+int mock_intern_symbol(symtab *st, const char *name) {
     check_expected(st);
     check_expected(name);
     return mock_type(int);
