@@ -53,9 +53,12 @@ do {                                                                         \
 "define"            { return DEFINE; }
 "call"              { return CALL; }
 "quote"             { return QUOTE; }
-"eval"             { return EVAL; }
+"eval"              { return EVAL; }
 "symbol"            { return SYMBOL; }
-"set"            { return SET; }
+"set"               { return SET; }
+"if"                { return IF; }
+"then"              { return THEN; }
+"else"              { return ELSE; }
 
 [0-9]+ { // number
     yylval->int_value = atoi(yytext);

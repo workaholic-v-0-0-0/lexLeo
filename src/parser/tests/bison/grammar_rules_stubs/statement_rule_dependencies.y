@@ -28,3 +28,10 @@ set:
         SET SYMBOL_NAME STRING SEMICOLON
     { (void)$2; (void)$3;
       $$ = stub_set_action(); } ;
+conditional_block:
+        IF INTEGER THEN
+            LBRACE
+                SYMBOL_NAME EQUAL INTEGER SEMICOLON
+            RBRACE
+    { (void)$2; (void)$5; (void)$7;
+      $$ = stub_conditional_block_action(); } ;

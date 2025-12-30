@@ -6,6 +6,7 @@ statement
     | reading { $$ = $1; }
     | set { $$ = $1; }
     | function_definition { $$ = $1; }
+    | conditional_block { $$ = $1; }
     | evaluable SEMICOLON { $$ = $1; }
     | eval
     ;

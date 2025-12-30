@@ -84,6 +84,11 @@ ast *stub_set_action(void) {
     return mock_type(ast *);
 }
 
+ast *stub_conditional_block_action(void) {
+    return mock_type(ast *);
+}
+
+
 
 //-----------------------------------------------------------------------------
 // statement_parse TESTS

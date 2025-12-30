@@ -44,6 +44,29 @@ static bool ast_is_well_formed_two_children_node(
         && second_child_is_well_formed_fn(node->children->children[1]) );
 }
 
+static bool ast_is_well_formed_three_children_node(
+        const ast *node,
+        ast_type type,
+        ast_is_well_formed_fn_t first_child_is_well_formed_fn,
+        ast_is_well_formed_fn_t second_child_is_well_formed_fn,
+        ast_is_well_formed_fn_t third_child_is_well_formed_fn ) {
+    return
+        (  node
+        && node->type == type
+        && node->children
+        && node->children->children
+        && node->children->children_nb == 3
+        && node->children->children[0]
+        && first_child_is_well_formed_fn
+        && first_child_is_well_formed_fn(node->children->children[0])
+        && node->children->children[1]
+        && second_child_is_well_formed_fn
+        && second_child_is_well_formed_fn(node->children->children[1])
+        && node->children->children[2]
+        && third_child_is_well_formed_fn
+        && third_child_is_well_formed_fn(node->children->children[2]) );
+}
+
 static bool ast_is_well_formed_uniform_list(
         const ast *node,
         ast_type type,
@@ -262,6 +285,7 @@ static bool ast_is_well_formed_reading(const ast *node) {
 }
 
 static bool ast_is_well_formed_function_definition(const ast *node);
+static bool ast_is_well_formed_conditional_block(const ast *node);
 
 static bool ast_is_well_formed_statement(const ast *node) {
     return
@@ -272,7 +296,8 @@ static bool ast_is_well_formed_statement(const ast *node) {
         || ast_is_well_formed_function_definition(node)
         || ast_is_well_formed_function_call(node)
 		|| ast_is_well_formed_evaluable(node)
-		|| ast_is_well_formed_eval(node) );
+		|| ast_is_well_formed_eval(node)
+		|| ast_is_well_formed_conditional_block(node) );
 }
 
 static bool ast_is_well_formed_block_items(const ast *node) {
@@ -289,6 +314,22 @@ static bool ast_is_well_formed_block(const ast *node) {
             node,
             AST_TYPE_BLOCK,
             ast_is_well_formed_block_items );
+}
+
+static bool ast_is_well_formed_conditional_block(const ast *node) {
+    return
+        ast_is_well_formed_two_children_node(
+            node,
+            AST_TYPE_CONDITIONAL_BLOCK,
+            ast_is_well_formed_evaluable,
+            ast_is_well_formed_block )
+		||
+        ast_is_well_formed_three_children_node(
+            node,
+            AST_TYPE_CONDITIONAL_BLOCK,
+            ast_is_well_formed_evaluable,
+            ast_is_well_formed_block,
+            ast_is_well_formed_block );
 }
 
 static bool ast_is_well_formed_function(const ast *node) {
@@ -336,6 +377,10 @@ static bool params_are_unique(const ast *list_of_params) {
 		}
 	}
 	return true;
+}
+
+static bool is_true(runtime_env_value *value) {
+	return (value) && (value->type != RUNTIME_VALUE_NUMBER || value->as.i != 0);
 }
 
 // to debug begin
@@ -977,6 +1022,42 @@ interpreter_status interpreter_eval(
 
         *out = evaluated_rhs;
         break;
+
+
+	case AST_TYPE_CONDITIONAL_BLOCK:
+        if (!ast_is_well_formed_conditional_block(root))
+            return INTERPRETER_STATUS_INVALID_AST;
+
+		child = root->children->children[0];
+        evaluated_child_value = NULL;
+        status = interpreter_eval(ctx, env, child, &evaluated_child_value);
+        if (status != INTERPRETER_STATUS_OK)
+            return status;
+
+		if (is_true(evaluated_child_value)) {
+			runtime_env_value_release(evaluated_child_value);
+			lhs = root->children->children[1];
+			evaluated_lhs = NULL;
+	        status = interpreter_eval(ctx, env, lhs, &evaluated_lhs);
+			if (status != INTERPRETER_STATUS_OK)
+				return status;
+			*out = evaluated_lhs;
+			return INTERPRETER_STATUS_OK;
+
+		} else if (root->children->children_nb == 3) { // else block
+			runtime_env_value_release(evaluated_child_value);
+			rhs = root->children->children[2];
+			evaluated_rhs = NULL;
+	        status = interpreter_eval(ctx, env, rhs, &evaluated_rhs);
+			if (status != INTERPRETER_STATUS_OK)
+				return status;
+			*out = evaluated_rhs;
+			return INTERPRETER_STATUS_OK;
+		}
+
+		runtime_env_value_release(evaluated_child_value);
+		return INTERPRETER_STATUS_OK;
+
 
 
     default:

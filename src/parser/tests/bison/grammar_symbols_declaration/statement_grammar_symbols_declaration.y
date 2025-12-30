@@ -16,6 +16,7 @@ statement
 evaluable
 eval
 set
+conditional_block
 
 %token SEMICOLON
 %token EQUAL
@@ -27,3 +28,6 @@ set
 %token RBRACE
 %token EVAL
 %token SET
+%token IF
+%token THEN
+%token ELSE
