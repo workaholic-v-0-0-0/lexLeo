@@ -21,8 +21,5 @@ typedef struct parser_cfg {
     parse_goal_t goal;
 	int syntax_errors;
 } parser_cfg;
-parser_cfg get_parser_cfg_one_statement(void);
-parser_cfg get_parser_cfg_translation_unit(void);
-parser_cfg get_parser_cfg_readable(void);
 
 #endif //LEXLEO_PARSER_CFG_H

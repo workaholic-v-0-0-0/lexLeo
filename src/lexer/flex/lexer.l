@@ -15,7 +15,7 @@
 
 #define YY_INPUT(buf, result, max_size)                                      \
 do {                                                                         \
-    input_provider *prov = LEX_EXTRA ? LEX_EXTRA->provider : NULL;     \
+    input_provider *prov = LEX_EXTRA ? LEX_EXTRA->provider : NULL;           \
     if (!prov) {                                                             \
         (result) = 0;                                                        \
         break;                                                               \

@@ -59,6 +59,29 @@ static parse_status map_rc_to_status(
         return (out == NULL) ? PARSE_STATUS_EOF : PARSE_STATUS_OK;
 }
 
+/*
+parse_status
+parse_with_goal(
+    yyscan_t scanner,
+    ast **out,
+    struct parser_cfg *ctx,
+    input_provider *provider,
+    parse_goal_t goal ) {
+    if (!out || !ctx)
+        return PARSE_STATUS_ERROR;
+    *out = NULL;
+    lexer_extra_t ex = {
+        .goal = goal,
+        .sent_mode_token = 0,
+        .reached_input_end = 0,
+        .provider = provider };
+    yyset_extra(&ex, scanner);
+    ctx->syntax_errors = 0;
+    int rc = yyparse(scanner, out, ctx);
+    return map_rc_to_status(rc, *out, &ex, ctx);
+}
+*/
+
 parse_status
 parse_translation_unit(
         yyscan_t scanner,

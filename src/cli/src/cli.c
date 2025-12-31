@@ -27,6 +27,8 @@
 struct ast *cli_read_ast(const struct interpreter_ctx *ctx) {
 	return NULL; // placeholder
 /* will do
+fetch info via: interpreter_ctx -> host_ctx (this is runtime_session)
+                and then ...?
 init parser ctx
 init resolver ctx
 init interpreter ctx:
@@ -49,7 +51,7 @@ return interpreter_eval(
 */
 }
 
-
+//<here> implement cli_read ; think about parser_config... add fields in runtime_session?
 bool runtime_env_value_to_string(
     const runtime_env_value *v,
     char *buf,
@@ -151,7 +153,6 @@ static bool readline(
     return true;
 }
 
-//<here> make a new unary operator "symbol" to make a symbol runtime value
 int cli_run() { // in a very dirty draft state!
 	struct stream *in = stdio_stream_from_stdin();
 	if (!in) return EXIT_FAILURE;
@@ -269,7 +270,7 @@ int cli_run() { // in a very dirty draft state!
 			need_prompt = true;
         	continue;
 		}
-		if (st == PARSE_STATUS_OK) {//<here> pb with the symbols
+		if (st == PARSE_STATUS_OK) {
 			if (!resolver_resolve_ast(&parsed_ast, &rctx)) break;
 			//printf("parsed_ast->type: %i\n", parsed_ast->type);
 			//if (parsed_ast->type == AST_TYPE_DATA_WRAPPER) printf("parsed_ast->data->type: %i\n", parsed_ast->data->type);
@@ -301,93 +302,3 @@ int cli_run() { // in a very dirty draft state!
 
 	return EXIT_SUCCESS;
 }
-
-
-
-/* draft of next main
-parser_ops pops = {
-    .create_int_node = ast_create_int_node,
-    .create_string_node = ast_create_string_node,
-    .create_symbol_name_node = ast_create_symbol_name_node,
-    .create_error_node_or_sentinel = ast_create_error_node_or_sentinel,
-    .create_children_node_var = ast_create_children_node_var,
-    .destroy = ast_destroy,
-    .children_append_take = ast_children_append_take,
-};
-parser_cfg pctx = {
-    .ops = pops,
-};
-symtab *st = symtab_wind_scope(NULL);
-resolver_ops rops {
-    .push = list_push,
-    .pop = list_pop,
-    .intern_symbol = symtab_intern_symbol,
-    .get = symtab_get,
-};
-resolver_ctx rctx = {
-    .ops = rops,
-    .st = *st,
-};
-// interpreter MUST NOT KNOW SYMBOL TABLE!
-interpreter_ctx ictx = {
-    .symbol_table = *symbol_table,
-};
-value *out = malloc(sizeof(value));
-while true {
-    printf("> "); fflush(stdout);
-
-    char *line = osal_readline();
-    if (!line) break;
-
-    if (strcmp(line, ":q\n") == 0 || strcmp(line, ":quit\n") == 0) {
-        free(line);
-        break;
-    }
-    if (line[0] == '\n') {
-        free(line);
-        continue;
-    }
-
-    ast *root = NULL;
-    if (parse_string(line, &pctx, &root) != 0 || !root) {
-        fprintf(stderr, "parse error\n");
-        free(line);
-        continue;
-    }
-    free(line);
-
-    if (root->type == AST_TYPE_ERROR) {
-        printf("ast error (construction)\n");
-        ast_destroy(root);
-        continue;
-    }
-
-    if (resolver_resolve_ast(root, rctx) != 0) {
-        printf("resolve error\n");
-        ast_destroy(root);
-        continue;
-    }
-
-    value out = value_nil();
-    int rc = interpreter_eval(ictx, root, &out);
-
-    print_value(out);
-    interpreter_destroy_value(&out);
-    ast_destroy(root);
-}
-symtab_destroy(st);
-return 0;
-
-int parse_string(const char *src, parser_cfg *pctx, ast **out_ast) {
-    yyscan_t scanner;
-    if (yylex_init(&scanner)) return 1;
-
-    YY_BUFFER_STATE buf = yy_scan_string(src, scanner);
-    if (!buf) { yylex_destroy(scanner); return 1; }
-
-    int status = yyparse(scanner, out_ast, pctx);
-    yy_delete_buffer(buf, scanner);
-    yylex_destroy(scanner);
-    return status;
-}
-*/

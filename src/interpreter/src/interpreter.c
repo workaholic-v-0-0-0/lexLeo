@@ -106,7 +106,7 @@ static bool ast_is_well_formed_string_node(const ast *node) {
         && node->data->data.string_value );
 }
 
-static bool ast_is_well_formed_symbol_node(const ast *node) {// <here> pb with promotion symbol_name -> symbol
+static bool ast_is_well_formed_symbol_node(const ast *node) {
     return
         (  node
         && node->type == AST_TYPE_DATA_WRAPPER
