@@ -12,3 +12,5 @@ EXCLUDE_PATTERNS = @DOXYGEN_EXCLUDE_PATTERN@
 EXTENSION_MAPPING = dox=C++
 GENERATE_LATEX = NO
 SHOW_FILES = YES
+HTML_EXTRA_FILES = \
+  @CMAKE_SOURCE_DIR@/doxygen_management/static_doc_pages/draft/lexer_parser_draft_design.pdf

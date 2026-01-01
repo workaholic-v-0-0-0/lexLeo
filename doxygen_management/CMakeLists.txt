@@ -142,6 +142,7 @@ set(
     "${CMAKE_SOURCE_DIR}/Doxyfile"
 )
 
+
 configure_file(${DOXYGEN_TEMPLATE} ${DOXYGEN_CONFIG} @ONLY)
 
 find_package(Doxygen)
@@ -280,6 +281,14 @@ add_custom_target(static-doc
 )
 add_dependencies(static-doc generate_project_tree_dox)
 
+add_custom_target(copy_static_doc_pages
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/doxygen_management/static_doc_pages
+    ${CMAKE_BINARY_DIR}/docs/html/static_doc_pages
+    COMMENT "Copying static_doc_pages into Doxygen HTML output"
+)
+add_dependencies(copy_static_doc_pages static-doc)
+
 # copy doc in sources directory
 add_custom_target(
     copy_doc_into_sources_directory
@@ -288,7 +297,8 @@ add_custom_target(
     ${CMAKE_SOURCE_DIR}/docs
     COMMENT "Copying documentation from build to source directory."
 )
-add_dependencies(copy_doc_into_sources_directory static-doc)
+add_dependencies(copy_doc_into_sources_directory copy_static_doc_pages)
+
 add_dependencies(static-doc verbinclude_all_git_tracked_files)
 add_dependencies(copy_doc_into_sources_directory map_dox_to_html)
 
@@ -296,7 +306,7 @@ add_dependencies(copy_doc_into_sources_directory map_dox_to_html)
 add_custom_target(open_doc
     COMMAND ${CMAKE_COMMAND} -E echo "Opening documentation via Firefox..."
     COMMAND $<TARGET_FILE:open_doc_executable> "${CMAKE_BINARY_DIR}/docs/html/index.html"
-    DEPENDS static-doc
+    DEPENDS copy_static_doc_pages
     COMMENT "Opening documentation via Firefox."
 )
 
@@ -304,6 +314,6 @@ add_custom_target(open_doc
 add_custom_target(update_docs_on_droplet
     COMMAND ${CMAKE_COMMAND} -E echo "Updating documentation on droplet..."
     COMMAND $<TARGET_FILE:update_docs_on_droplet_executable> "${CMAKE_BINARY_DIR}"
-    DEPENDS static-doc
+    DEPENDS copy_static_doc_pages
     COMMENT "Updating documentation on droplet."
 )

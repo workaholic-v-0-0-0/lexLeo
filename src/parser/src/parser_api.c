@@ -81,7 +81,7 @@ parse_with_goal(
     return map_rc_to_status(rc, *out, &ex, ctx);
 }
 */
-
+//<here> see commit message
 parse_status
 parse_translation_unit(
         yyscan_t scanner,
@@ -103,6 +103,7 @@ parse_translation_unit(
     return map_rc_to_status(rc, *out, &ex, ctx);
 }
 
+/*
 parse_status
 parse_one_statement(
         yyscan_t scanner,
@@ -120,6 +121,26 @@ parse_one_statement(
     yyset_extra(&ex, scanner);
     ctx->goal = PARSE_GOAL_ONE_STATEMENT;
 	ctx->syntax_errors = 0;
+    int rc = yyparse(scanner, out, ctx);
+    return map_rc_to_status(rc, *out, &ex, ctx);
+}
+*/
+
+parse_status
+parse_one_statement(
+        yyscan_t scanner,
+        ast **out,
+        struct parser_cfg *ctx,
+        input_provider *provider ) {
+    if (!out || !ctx)
+        return PARSE_STATUS_ERROR;
+    *out = NULL;
+    lexer_extra_t ex = {
+        .reached_input_end = 0,
+        .provider = provider };
+    yyset_extra(&ex, scanner);
+    ctx->goal = PARSE_GOAL_ONE_STATEMENT;
+    ctx->syntax_errors = 0;
     int rc = yyparse(scanner, out, ctx);
     return map_rc_to_status(rc, *out, &ex, ctx);
 }
@@ -144,3 +165,4 @@ parse_readable(
     int rc = yyparse(scanner, out, ctx);
     return map_rc_to_status(rc, *out, &ex, ctx);
 }
+q

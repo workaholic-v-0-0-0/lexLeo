@@ -1,31 +1,30 @@
 %option reentrant
+%option extra-type="lexer_scanner_extra_t *"
 %option bison-bridge
 %option header-file="lexer.yy.h"
 
 %{
-#include "osal.h"
 #include "parser.tab.h"
-#include "parser_types.h"
 #include "input_provider_reader.h"
+#include "osal.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
 
 #define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 
-#define LEX_EXTRA  ((lexer_extra_t*) yyget_extra(yyscanner))
-#define GOAL       (LEX_EXTRA->goal)
-
-#define YY_INPUT(buf, result, max_size)                                      \
-do {                                                                         \
-    input_provider *prov = LEX_EXTRA ? LEX_EXTRA->provider : NULL;           \
-    if (!prov) {                                                             \
-        (result) = 0;                                                        \
-        break;                                                               \
-    }                                                                        \
-    (result) = (int)input_provider_read(prov, buf, (size_t)max_size);        \
+#define YY_INPUT(buf, result, max_size)                                       \
+do {                                                                          \
+    lexer_scanner_extra_t *ex = yyget_extra(yyscanner);                       \
+    struct input_provider *prov = ex ? ex->provider : NULL;                   \
+    if (!prov) {                                                              \
+        (result) = 0;                                                         \
+        break;                                                                \
+    }                                                                         \
+    (result) = (int) input_provider_read(prov, buf, (size_t) max_size);       \
 } while (0)
 
-/* Prototypes de la vraie func et du wrapper */
-//int lex_lex(YYSTYPE *yylval_param, yyscan_t scanner);       /* générée par Flex */
-//int yylex(YYSTYPE *yylval_param, yyscan_t scanner);         /* wrapper exposé à Bison */
 %}
 
 %option nounput
@@ -63,31 +62,37 @@ do {                                                                         \
 "do"                { return DO; }
 
 [0-9]+ { // number
-    yylval->int_value = atoi(yytext);
+    yylval_param->int_value = atoi(yytext);
     return INTEGER;
 }
 
 \"([^\\\"]|\\.)*\" { // string
-    size_t len = yyleng - 2;
-    char *s = malloc(len + 1);
-    if (!s) { // parser must handle this error
-        yylval->string_value = NULL;
+    size_t len = (size_t)yyleng;
+    if (len < 2) {
+        yylval_param->string_value = NULL;
         return STRING;
     }
-    memcpy(s, yytext + 1, len);
-    s[len] = '\0';
 
-    yylval->string_value = s;
+    char *s = malloc(len - 1); // len-2 + 1
+    if (!s) {
+        yylval_param->string_value = NULL;
+        return STRING;
+    }
+
+    memcpy(s, yytext + 1, len - 2);
+    s[len - 2] = '\0';
+
+    yylval_param->string_value = s;
     return STRING;
 }
 
 [a-zA-Z_][a-zA-Z0-9_]* { // symbol name
     char *s = osal_strdup(yytext);
     if (!s) { // parser must handle this error
-        yylval->string_value = NULL;
+        yylval_param->string_value = NULL;
         return SYMBOL_NAME;
     }
-    yylval->string_value = s;
+    yylval_param->string_value = s;
     return SYMBOL_NAME;
 }
 
@@ -98,25 +103,26 @@ do {                                                                         \
 . { return INVALID; }
 
 %%
+
 int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 {
-    lexer_extra_t *ex = LEX_EXTRA;
-    if (ex && !ex->sent_mode_token) {
-        ex->sent_mode_token = 1;
-        switch (ex->goal) {
-            case PARSE_GOAL_TU:
-                return TU_MODE;
-            case PARSE_GOAL_ONE_STATEMENT:
-                return ONE_STATEMENT_MODE;
-            case PARSE_GOAL_READABLE:
-                return READABLE_MODE;
-            default:
-                break;
-        }
+    lexer_scanner_extra_t *ex = yyget_extra(yyscanner);
+
+    if (!ex || !ex->state) {
+        return 0;
     }
+
+    lexer_state_t *state = ex->state;
+
+    if (state->first_token_is_pending) {
+        state->first_token_is_pending = false;
+        return state->first_token;
+    }
+
     int token = lex_lex(yylval_param, yyscanner);
-    if (token == 0 && ex) {
-        ex->reached_input_end = 1;
+    if (token == 0) {
+        state->reached_input_end = true;
     }
+
     return token;
 }

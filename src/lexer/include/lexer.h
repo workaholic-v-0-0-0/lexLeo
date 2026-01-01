@@ -3,13 +3,14 @@
 #ifndef LEXLEO_LEXER_H
 #define LEXLEO_LEXER_H
 
-#ifndef YY_TYPEDEF_YY_SCANNER_T
-#define YY_TYPEDEF_YY_SCANNER_T
-typedef void *yyscan_t;
-#endif
+struct input_provider;
 
-int yylex_init(yyscan_t *scanner);
-int yylex_destroy(yyscan_t scanner);
-void yyset_extra(void *user_defined, yyscan_t scanner);
+typedef struct lexer_t lexer_t; // opaque
+
+lexer_t *lexer_create(struct input_provider *ip);
+void lexer_destroy(lexer_t *lx);
+
+// for semantic mode ; called only by parser
+void lexer_inject_first_token(lexer_t *lx, int tk);
 
 #endif //LEXLEO_LEXER_H

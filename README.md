@@ -157,6 +157,11 @@ directory:
    ./scripts/update_docs_on_droplet.sh 
    ```
 
+## Architecture (draft)
+
+- Lexer / Parser design draft:
+    - [PDF](static_doc_pages/draft/lexer_parser_draft_design.pdf)
+
 ## Contribute
 
 Contributions to the lexLeo project are welcome! Whether it involves
@@ -167,3 +172,4 @@ code of conduct and the process for submitting pull requests to us.
 ## License
 
 This project is licensed under the GPLv3 - see the LICENSE file for details.
+
