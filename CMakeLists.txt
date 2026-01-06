@@ -67,19 +67,25 @@ if (BUILD_TESTING)
 
 endif ()
 
+#------------------------------------------------------------------------------
+# POLICY MANAGEMENT
+#------------------------------------------------------------------------------
+
+add_subdirectory(src/policy)
+
 
 #------------------------------------------------------------------------------
 # PORTABILITY MANAGEMENT
 #------------------------------------------------------------------------------
 
-add_subdirectory(src/osal)
+add_subdirectory(src/foundation/osal)
 
 
 #------------------------------------------------------------------------------
 # LOGGER MANAGEMENT
 #------------------------------------------------------------------------------
 
-add_subdirectory(src/logger)
+add_subdirectory(src/foundation/logger)
 
 # configure CACHE VARIABLES for logger dependency injection into sub-projects:
 set(
@@ -93,7 +99,7 @@ set(
     "CMake target to use for logger"
 )
 set(
-    LOGGER_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/logger/include
+    LOGGER_HEADER_DIR ${CMAKE_SOURCE_DIR}/src/foundation/logger/include
     CACHE PATH "Path to logger header directory"
 )
 # logger library dependency injection ("at cmake scope") will be automatically
@@ -193,23 +199,22 @@ set(
 # OTHER LIBRARIES
 #------------------------------------------------------------------------------
 
-add_subdirectory(src/data_structures)
-add_subdirectory(src/ast) # depends on data_structures
-add_subdirectory(src/symtab) # depends on data_structures and ast
-add_subdirectory(src/parser) # depends on lexer and ast
-add_subdirectory(src/lexer) # depends on parser interface—opaque types
-add_subdirectory(src/resolver) # depends on ast and symtab
-add_subdirectory(src/runtime_env) # depends on hashtable
-add_subdirectory(src/frontend/input_provider) # depends on lexer
-add_subdirectory(src/frontend/ports/stream)
-add_subdirectory(src/adapters/stream/stdio_stream) # depends on stream
-add_subdirectory(src/adapters/stream/fs_stream) # depends on stream
-add_subdirectory(src/adapters/stream/dynamic_buffer_stream) # depends on stream
-add_subdirectory(src/runtime_session) # depends on ...?
-add_subdirectory(src/interpreter) # depends on runtime_env, ...?
+add_subdirectory(src/ports/stream_legacy)
+add_subdirectory(src/ports/stream)
 
-# TO BE IMPLEMENTED
-# add_subdirectory(src/compiler)
+add_subdirectory(src/adapters)
+
+add_subdirectory(src/foundation/data_structures)
+add_subdirectory(src/core/ast) # depends on data_structures
+add_subdirectory(src/core/symtab) # depends on data_structures and ast
+add_subdirectory(src/ports/parser) # depends on lexer and ast
+add_subdirectory(src/ports/lexer_legacy) # depends on parser interface—opaque types
+add_subdirectory(src/ports/lexer)
+add_subdirectory(src/core/resolver) # depends on ast and symtab
+add_subdirectory(src/core/runtime_env) # depends on hashtable
+add_subdirectory(src/foundation/input_provider_legacy) # depends on lexer
+add_subdirectory(src/core/runtime_session) # depends on ...?
+add_subdirectory(src/core/interpreter) # depends on runtime_env, ...?
 
 
 #------------------------------------------------------------------------------

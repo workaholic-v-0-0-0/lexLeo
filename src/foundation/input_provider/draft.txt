@@ -1,0 +1,37 @@
+NOTE (input_provider v2) — new implementation with a stream stack
+
+Goal:
+- input_provider becomes a pure "stream stack" orchestrator.
+- It never knows stream concrete types (fs_stream / dbs / zip / ...).
+- It only owns and manages generic stream_t* objects.
+
+Public API idea:
+- input_provider_push_stream(provider, stream_t *s)
+- input_provider_pop(provider) / input_provider_destroy(provider)
+
+Ownership contract (IMPORTANT):
+- On push SUCCESS: ownership of `stream_t *s` is transferred to input_provider.
+  The caller must NOT use or destroy `s` anymore.
+- On push FAILURE: ownership is NOT transferred.
+  The caller remains responsible for destroying `s`.
+
+Destruction rule used by input_provider:
+- When a stream is popped or when provider is destroyed,
+  input_provider must destroy the stream with stream_destroy(s).
+
+Current stream_destroy(s) implementation (kept for now):
+- stream_destroy closes the backend (if close != NULL) then frees the wrapper.
+
+    void stream_destroy(stream_t *s)
+    {
+        if (!s) return;
+        if (s->vtbl.close) s->vtbl.close(s->backend);
+        LEXLEO_ASSERT(s->mem && s->mem->free);
+        s->mem->free(s);
+    }
+
+Notes / invariants:
+- input_provider must call stream_destroy(s) exactly once for each owned stream.
+- stream_vtbl.close(backend) must free/cleanup backend resources only
+  (must NOT free the stream_t wrapper, to avoid double-free).
+- No ctx/wiring types involved at runtime: the stack is ctx-free.

@@ -119,15 +119,27 @@ set(
     "${DOXYGEN_DIR}/Doxyfile.template"
 )
 
-set(
-    DOXYGEN_INPUT_DIR
-    "${CMAKE_SOURCE_DIR}"
+set(DOXYGEN_INPUT_DIR
+    "${CMAKE_SOURCE_DIR}/README.md"
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/doxygen_management/static_doc_pages"
+)
+string(JOIN " " DOXYGEN_INPUT_DIR_STR ${DOXYGEN_INPUT_DIR})
+
+set(DOXYGEN_MAINPAGE
+    "${CMAKE_SOURCE_DIR}/doxygen_management/static_doc_pages/welcome_page.md"
 )
 
 set(
     DOXYGEN_EXAMPLE_PATH
     "${CMAKE_SOURCE_DIR}"
 )
+
+set(
+    DOXYGEN_IMAGE_PATH
+    "${CMAKE_SOURCE_DIR}/doxygen_management/static_doc_pages/architecture/diagrams/png"
+)
+
 set(
     DOXYGEN_OUTPUT_DIR
     "${CMAKE_BINARY_DIR}/docs"

@@ -24,26 +24,26 @@ target_include_directories(
     cli
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_SOURCE_DIR}/src/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/frontend/ports/stream/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/adapters/stream/stdio_stream/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/runtime_env/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/runtime_session/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/interpreter/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/frontend/input_provider/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/lexer/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/parser/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/resolver/include
-    PRIVATE ${CMAKE_SOURCE_DIR}/src/interpreter/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/ports/stream_legacy/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/adapters/stream_legacy/stdio_stream_legacy/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/core/runtime_env/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/core/runtime_session/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/core/interpreter/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/foundation/input_provider_legacy/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/ports/lexer_legacy/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/ports/parser/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/core/resolver/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/src/core/interpreter/include
 )
 target_link_libraries(
     cli
-    PRIVATE stream
-    PRIVATE stdio_stream
+    PRIVATE stream_legacy
+    PRIVATE stdio_stream_legacy
     PRIVATE runtime_env
     PRIVATE runtime_session
     PRIVATE interpreter
-    PRIVATE input_provider
-    PRIVATE lexer
+    PRIVATE input_provider_legacy
+    PRIVATE lexer_legacy
     PRIVATE parser
     PRIVATE resolver
     PRIVATE interpreter

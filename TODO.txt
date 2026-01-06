@@ -10,7 +10,7 @@
 
 - runtime_env: distinguish UNBOUND vs OOM and update interpreter to propagate precise errors
 
-- refact src/interpreter/tests
+- refact src/core/interpreter/tests
   - note:
     - param_case is constant but its ctx field points on a non constant struct
     - for each expected value, there must be a field in param_case and a field
@@ -78,3 +78,40 @@
   after arguments migration)
 
 - fix bug so that get lookups in parents scopes
+
+- Add a stream abstract factory to input_provider ctx
+  (for stream creation/destruction, no switch)
+- Add a stream_stack to input_provider (push/pop active streams)
+
+- complete doc: explain lexleo_assert is for invariant, explain lexleo_panic too
+
+- suppress string_utils, memory_allocators
+
+- Add Flex buffer-state stack for import/include directives
+  Support `import "file.leo"` as a lexer-level directive (no AST node) by using
+  Flex buffer-state stacking. This enables safe switching of input sources
+  (REPL chunks ↔ file ↔ chunks) despite Flex internal buffering.
+  - Keep the existing `input_provider_legacy_read()` contract unchanged.
+  - Extend input_provider with source stack operations (`push_file`, `pop_source`).
+  - lexleo_flex handles `import` by pushing/popping:
+    - Flex buffer states (`yypush_buffer_state` / `yypop_buffer_state`)
+    - input_provider sources.
+  - On EOF of an imported file, restore the previous source transparently.
+  Out of scope:
+  - No AST `import` node.
+  - No module / namespace system (source inclusion only).
+
+
+- typo in lexleo_flex diagram: flex_next-> next
+
+- must runtime_session be lexleo_vm?
+
+- dbs:
+  - integration test
+  - unit test for factory
+
+- handle different build type with regard to test
+
+- make osal module properly
+- make logger module properly and adjust osal, stream and dbs
+- complete doc with diagrams

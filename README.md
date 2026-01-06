@@ -2,35 +2,77 @@
 
 ## Project overview
 
-Welcome to the lexLeo programming language project! This repository contains the source code for lexLeo's compiler and
-interpreter, designed to explore and implement the capabilities of this new programming language.
-**The full documentation is available online at [https://caltuli.online/lexleo](https://caltuli.online/lexleo).**
+**lexLeo** is a Lisp-like programming language interpreter with a C-style syntax.
+It is designed as an educational and experimental project focused on the
+implementation of language semantics, evaluation models, and interpreter
+architecture.
 
-This project is primarily an educational initiative designed to deepen understanding and practical application of
-fundamental programming language concepts, as well as the principles of compilers and interpreters. It aims to provide
-an interactive learning platform where participants can explore the intricacies of language construction, understand the
-stages of compilation, and master the process of interpretation.
+The project explores core concepts found in Lisp-inspired languages such as:
 
-The framework of this project allows students and computer enthusiasts to engage in a structured environment that
-fosters skill development in language design, compiler construction, and the creation of efficient interpreters.
+- symbolic expressions and values,
+- first-class functions,
+- dynamic evaluation (`eval`),
+- quotation and delayed evaluation (`quote`),
+- explicit environments and runtime state.
 
-Beyond its pedagogical focus on programming languages and compilers, lexLeo is also a pretext for applying and refining
-modern software engineering practices. The project emphasizes:
+Unlike traditional Lisp dialects, lexLeo deliberately adopts a more C-like
+surface syntax, while preserving Lisp-style semantics and execution principles.
 
-- Clean and scalable software architecture
-- Test-Driven Development (TDD)
-- Robust build and dependency management using CMake
-- Automated documentation generation with Doxygen
+📘 **Full documentation is available at:**  
+<https://caltuli.online/lexleo>
 
-By adhering to these professional practices, lexLeo serves as a real-world playground for mastering not only theoretical
-concepts, but also the tools, workflows, and discipline that underpin high-quality software development. The ultimate
-goal is to cultivate both technical expertise and rigorous methodology, equipping contributors with skills that
-translate directly into industry standards.
+---
 
-This project includes:
+## Project goals
 
-- **lexLeo Compiler**: Translates lexLeo code into an intermediate or target language.
-- **lexLeo Interpreter**: Executes lexLeo code directly for rapid testing and development.
+lexLeo is primarily an educational project aimed at deepening the understanding
+of programming language implementation, with a strong emphasis on **interpreters**
+rather than compilation.
+
+The project focuses on:
+
+- lexical analysis and parsing,
+- abstract syntax trees (AST),
+- environment-based evaluation,
+- runtime value representation,
+- memory management and execution flow.
+
+By concentrating on interpretation instead of compilation, lexLeo prioritizes
+clarity, correctness, and architectural soundness over breadth of features.
+
+---
+
+## Software engineering focus
+
+Beyond language theory, lexLeo is also a practical exercise in professional
+software engineering. The project emphasizes:
+
+- clean and modular C architecture,
+- explicit dependency injection,
+- test-driven development (TDD),
+- robust build configuration using CMake,
+- memory abstraction through an OSAL layer,
+- automated documentation generation with Doxygen.
+
+lexLeo is intended as a **serious portfolio project**, demonstrating not only
+knowledge of language design, but also the ability to structure, document, and
+maintain a non-trivial C codebase to professional standards.
+
+---
+
+## Scope
+
+At its current stage, lexLeo provides:
+
+- a **Lisp-like interpreter** with a well-defined evaluation model,
+- a modular lexer and parser architecture,
+- an explicit runtime environment and symbol management,
+- a strong emphasis on correctness, testability, and maintainability.
+
+A compiler backend is **intentionally out of scope** for now, in order to keep
+the project focused and technically rigorous.
+
+---
 
 ## Getting Started
 
@@ -157,6 +199,32 @@ directory:
    ./scripts/update_docs_on_droplet.sh 
    ```
 
+## Design draft
+
+- Lexer / Parser design draft:
+    - [PDF](static_doc_pages/draft/lexer_parser_draft_design.pdf)
+
+## Architecture (WIP section)
+
+### Diagrams
+
+- [c4_context (PNG)](static_doc_pages/architecture/diagrams/png/c4_context.png)
+- [c4_container (PNG)](static_doc_pages/architecture/diagrams/png/c4_container.png)
+- [dynamic_buffer_stream (PNG)](static_doc_pages/architecture/diagrams/png/diagram_dynamic_buffer_stream.png)
+- [lexleo_flex (PNG)](static_doc_pages/architecture/diagrams/png/diagram_lexleo_flex.png)
+
+### Standards
+
+- [Module layout standards](@ref arch_standards_module_layout)
+- [Type standards](@ref arch_standards_types)
+- [Naming conventions](@ref arch_standards_naming)
+- [Module context model](@ref module_context_model)
+- [Lifecycle Visibility Rules (create / destroy)](@ref lifecycle_visibility_rules)
+
+### draft section
+
+- [lexleo_flex module](@ref lexleo_flex_module)
+
 ## Contribute
 
 Contributions to the lexLeo project are welcome! Whether it involves
@@ -164,6 +232,15 @@ fixing bugs, adding new features, or improving documentation, your
 help is appreciated. Please read CONTRIBUTING.md for details on our
 code of conduct and the process for submitting pull requests to us.
 
-## License
+## Licensing
 
-This project is licensed under the GPLv3 - see the LICENSE file for details.
+lexLeo is licensed under the GNU General Public License v3.0 or later.
+
+This project uses the following third-party components:
+
+- Flex (BSD-like license with exception)
+- Bison (GPL with special exception)
+- Standard C library (glibc / musl, LGPL)
+
+These components are compatible with the GPLv3 and impose no additional
+restrictions on the distribution of lexLeo.

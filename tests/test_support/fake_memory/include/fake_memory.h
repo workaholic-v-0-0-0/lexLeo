@@ -19,7 +19,10 @@ bool fake_memory_no_double_free(void);
 
 void *fake_malloc(size_t size);
 void fake_free(void *ptr);
-char *fake_strdup(const char *s);
+void *fake_calloc(size_t nmemb, size_t size);
 void *fake_realloc(void *ptr, size_t size);
+char *fake_strdup(const char *s);
+void *fake_memcpy(void *dst, const void *src, size_t n);
+void *fake_memset(void *dst, int c, size_t n);
 
 #endif //LEXLEO_FAKE_MEMORY_H

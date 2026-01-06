@@ -29,3 +29,5 @@ This project includes:
 
 - **lexLeo Compiler**: Translates lexLeo code into an intermediate or target language.
 - **lexLeo Interpreter**: Executes lexLeo code directly for rapid testing and development.
+
+A link to lexLeo's documentation : @ref docs_index
