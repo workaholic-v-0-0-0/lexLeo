@@ -1,0 +1,6 @@
+add_subdirectory(fake_provider)
+
+add_library(dynamic_buffer_stream_test_support INTERFACE)
+target_link_libraries(dynamic_buffer_stream_test_support INTERFACE
+    dynamic_buffer_stream_fake_provider
+)

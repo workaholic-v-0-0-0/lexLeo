@@ -31,7 +31,7 @@ then manipulate it
 runtime_session read from it automatically via YY_INPUT
 one input_provider per runtime_session
 
-and cli will create a stream to initialize the out field of runtime_session ;
+and cli will create a stream_legacy to initialize the out field of runtime_session ;
 callback write_runtime_value_fn will use it when evaluating AST_TYPE_WRITING
 */
 

@@ -104,7 +104,7 @@ add_custom_target(
 # TEST SUPPORT UTILITIES
 #------------------------------------------------------------------------------
 
-add_subdirectory(test_support/fake_memory)
+add_subdirectory(test_support)
 
 
 #------------------------------------------------------------------------------
