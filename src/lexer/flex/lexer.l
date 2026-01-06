@@ -8,7 +8,7 @@
 #include "parser_types.h"
 #include "input_provider_reader.h"
 
-#define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)
+//#define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 
 #define LEX_EXTRA  ((lexer_extra_t*) yyget_extra(yyscanner))
 #define GOAL       (LEX_EXTRA->goal)
@@ -98,6 +98,7 @@ do {                                                                         \
 . { return INVALID; }
 
 %%
+/*
 int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
 {
     lexer_extra_t *ex = LEX_EXTRA;
@@ -120,3 +121,4 @@ int yylex(YYSTYPE *yylval_param, yyscan_t yyscanner)
     }
     return token;
 }
+*/

@@ -193,6 +193,8 @@ set(
 # OTHER LIBRARIES
 #------------------------------------------------------------------------------
 
+add_subdirectory(src/integration)
+
 add_subdirectory(src/data_structures)
 add_subdirectory(src/ast) # depends on data_structures
 add_subdirectory(src/symtab) # depends on data_structures and ast

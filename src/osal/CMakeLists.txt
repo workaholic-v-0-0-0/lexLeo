@@ -22,7 +22,10 @@ configure_file(
 
 set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_library(osal STATIC
+add_library(
+    osal
+    STATIC
+    ${SRC}/osal_mem.c
     $<$<PLATFORM_ID:Windows>:${SRC}/osal_windows.c>
     $<$<PLATFORM_ID:Darwin>:${SRC}/osal_macos.c>
     $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD,SunOS>:${SRC}/osal_unix.c>
@@ -32,7 +35,11 @@ target_include_directories(osal
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
-target_compile_definitions(osal PRIVATE _GNU_SOURCE)
+target_compile_definitions(
+    osal
+    PRIVATE
+    $<$<PLATFORM_ID:Linux>:_GNU_SOURCE>
+)
 
 # fake time zone
 if (WIN32)

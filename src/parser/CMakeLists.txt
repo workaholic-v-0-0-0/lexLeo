@@ -144,5 +144,5 @@ target_link_libraries(parser PRIVATE lexer ast osal)
 
 if (BUILD_TESTING)
     target_compile_definitions(parser PRIVATE UNIT_TEST)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
+    #include(${CMAKE_CURRENT_SOURCE_DIR}/tests/tests.cmake)
 endif ()

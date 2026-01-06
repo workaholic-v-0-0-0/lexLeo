@@ -157,6 +157,20 @@ directory:
    ./scripts/update_docs_on_droplet.sh 
    ```
 
+## Design draft
+
+- Lexer / Parser design draft:
+    - [PDF](static_doc_pages/draft/lexer_parser_draft_design.pdf)
+
+## Architecture
+
+### Standards
+
+- [Module layout standards](@ref arch_standards_module_layout)
+- [Type standards](@ref arch_standards_types)
+- [Naming conventions](@ref arch_standards_naming)
+- [Module context model](@ref module_context_model)
+
 ## Contribute
 
 Contributions to the lexLeo project are welcome! Whether it involves
