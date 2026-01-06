@@ -1,0 +1,225 @@
+// src/foundation/osal/tests/support/src/osal_mem_test_api.c
+
+#include "osal_mem_test_api.h"
+#include "osal.h"
+#include <stdint.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdbool.h>
+
+/*
+#ifndef TEST_ARENA_SIZE
+  #define TEST_ARENA_SIZE (64 * 1048576)
+#endif
+
+OSAL_ALIGNED_MAX static uint8_t g_arena[TEST_ARENA_SIZE];
+
+static size_t g_off;
+static size_t g_alloc_count;
+static size_t g_in_use; // nb of octets currently allocated
+
+#define FAKE_MAGIC_ALLOC 0xC0DEFACEu // for allocated block
+#define FAKE_MAGIC_FREE  0xDEADFA11u // for freed block
+
+static size_t g_invalid_free_count;
+static size_t g_double_free_count;
+
+#define MAX_FAILS 64
+static size_t g_fail_points[MAX_FAILS];
+static size_t g_fail_points_len;
+
+void fake_memory_fail_on_calls(size_t n, const size_t *idxs) {
+  if (n > MAX_FAILS) n = MAX_FAILS;
+  for (size_t i = 0; i < n; ++i) g_fail_points[i] = idxs[i];
+  g_fail_points_len = n;
+  g_alloc_count = 0;
+}
+
+void fake_memory_fail_only_on_call(size_t n) {
+  fake_memory_fail_on_calls(1, &n);
+}
+
+void fake_memory_fail_on_all_call(void) {
+  g_fail_points_len = MAX_FAILS;
+  for (size_t i = 0 ; i < MAX_FAILS ; ++i)  g_fail_points[i] = i + 1; // fails[i] = ++i;
+  g_alloc_count = 0;
+}
+
+void fake_memory_fail_since(size_t n) {
+  g_fail_points_len = MAX_FAILS;
+  for (size_t i = 0 ; i < MAX_FAILS ; i++) g_fail_points[i] = n + i; // fails[i] = n + i;
+  g_alloc_count = 0;
+}
+
+static bool should_fail_now(size_t cur) {
+  for (size_t i = 0; i < g_fail_points_len; ++i) {
+    if (g_fail_points[i] == cur) {
+      g_fail_points[i] = g_fail_points[--g_fail_points_len];
+      return true;
+    }
+  }
+  return false;
+}
+
+typedef struct {
+  uint32_t magic;
+  uint32_t _pad;
+  size_t size_aligned;
+  size_t size_requested;
+} fake_hdr;
+
+void fake_memory_reset(void) {
+  g_off = 0;
+  g_alloc_count = 0;
+  g_in_use = 0;
+  g_invalid_free_count = 0;
+  g_double_free_count = 0;
+  memset(g_arena, 0, sizeof(g_arena));
+  memset(g_fail_points, 0, MAX_FAILS * sizeof(size_t));
+  g_fail_points_len = 0;
+}
+
+bool fake_memory_no_leak(void) {
+  return g_in_use == 0;
+}
+
+bool fake_memory_no_invalid_free(void) {
+  return g_invalid_free_count == 0;
+}
+
+bool fake_memory_no_double_free(void) {
+  return g_double_free_count == 0;
+}
+
+static void *fake_malloc(size_t size) {
+  if (should_fail_now(++g_alloc_count)) return NULL;
+  if (size == 0) size = 1; // to simplify
+
+  const size_t a = OSAL_ALIGNOF_MAX;
+  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+  size_t payload = OSAL_ALIGN_UP(size, a);
+
+  if (hdr_size + payload > (TEST_ARENA_SIZE - g_off)) return NULL;
+
+  fake_hdr *h = (fake_hdr *) (g_arena + g_off);
+  h->magic = FAKE_MAGIC_ALLOC;
+  h->_pad = 0;
+  h->size_aligned = payload;
+  h->size_requested = size;
+
+  g_off += hdr_size + payload;
+  g_in_use += payload;
+
+  return (void *) ((uint8_t*) h + hdr_size);
+}
+
+static void fake_free(void *ptr) {
+  if (!ptr) return;
+  const size_t a = OSAL_ALIGNOF_MAX;
+  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+  fake_hdr *h = (fake_hdr *) ((uint8_t*) ptr - hdr_size);
+
+  switch (h->magic) {
+    case FAKE_MAGIC_ALLOC:
+      // valid free
+      h->magic = FAKE_MAGIC_FREE;
+      if (g_in_use >= h->size_aligned) g_in_use -= h->size_aligned;
+      else g_in_use = 0; // prevent from underflow
+      break;
+    case FAKE_MAGIC_FREE:
+      g_double_free_count++;
+      break;
+    default: // corrupted or not owned pointer
+      g_invalid_free_count++;
+  }
+}
+
+static void *fake_calloc(size_t nmemb, size_t size) {
+  if (should_fail_now(++g_alloc_count)) return NULL;
+
+  // protect overflow
+  if (nmemb != 0 && size > (SIZE_MAX / nmemb)) return NULL;
+
+  size_t total = nmemb * size;
+  void *p = fake_malloc(total);
+  if (!p) return NULL;
+
+  // Use our fake_memset to keep behaviour centralized (counts if you later add counters)
+  memset(p, 0, total);
+  return p;
+}
+
+static char *fake_strdup(const char *s) {
+  if (!s) return NULL;
+  size_t n = strlen(s) + 1;
+  char *p = (char *) fake_malloc(n);
+  if (!p) return NULL;
+  memcpy(p, s, n);
+  return p;
+}
+
+static void *fake_realloc(void *ptr, size_t size) {
+  if (should_fail_now(++g_alloc_count)) return NULL;
+
+  // realloc(NULL, size) => malloc(size)
+  if (!ptr) {
+    return fake_malloc(size);
+  }
+
+  // realloc(ptr, 0) => free(ptr) and return NULL
+  if (size == 0) {
+    fake_free(ptr);
+    return NULL;
+  }
+
+  const size_t a = OSAL_ALIGNOF_MAX;
+  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+
+  fake_hdr *oldh = (fake_hdr *)((uint8_t*)ptr - hdr_size);
+
+  if (oldh->magic != FAKE_MAGIC_ALLOC) {
+    // Unknown pointer: count as invalid and return NULL (glibc would be UB; in tests we want signal)
+    g_invalid_free_count++;
+    return NULL;
+  }
+
+  size_t old_req  = oldh->size_requested;
+  // Allocate a new block
+  void *newp = fake_malloc(size);
+  if (!newp) {
+    // Fail atomically: keep the old block intact
+    return NULL;
+  }
+
+  // Copy the minimum of old requested size and new requested size
+  size_t ncopy = (old_req < size) ? old_req : size;
+  memcpy(newp, ptr, ncopy);
+
+  // Free the old block (updates g_in_use appropriately)
+  fake_free(ptr);
+
+  return newp;
+}
+
+static void *fake_memcpy(void *dst, const void *src, size_t n) {
+  return memcpy(dst, src, n);
+}
+
+static void *fake_memset(void *dst, int c, size_t n) {
+  return memset(dst, c, n);
+}
+*/
+
+static const osal_mem_ops_t OSAL_MEM_FAKE_OPS = {
+	.malloc = fake_malloc,
+	.free = fake_free,
+	.calloc = fake_calloc,
+	.realloc = fake_realloc,
+	.strdup = fake_strdup,
+	.memcpy = fake_memcpy,
+	.memset = fake_memset
+};
+
+const osal_mem_ops_t *osal_mem_test_fake_ops(void) {
+  return &OSAL_MEM_FAKE_OPS;
+}

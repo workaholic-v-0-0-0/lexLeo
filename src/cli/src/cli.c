@@ -4,20 +4,20 @@
 #include <stdbool.h>
 
 #include "cli.h"
-#include "stream.h"
-#include "stdio_stream.h"
+#include "stream_legacy.h"
+#include "stdio_stream_legacy.h"
 #include "internal/cli_internal.h"
-#include "input_provider.h"
+#include "input_provider_legacy.h"
 #include "runtime_env.h"
 #include "runtime_session.h"
-#include "lexer.h"
+#include "lexer_legacy.h"
 #include "parser_types.h"
 #include "parser_api.h"
 #include "resolver.h"
 #include "interpreter.h"
 
 #ifdef DEBUG
-	#include "internal/input_provider_internal.h"
+	#include "internal/input_provider_legacy_internal.h"
 	#include "internal/runtime_session_internal.h"
 	#include "internal/interpreter_ctx.h"
 #endif
@@ -102,11 +102,11 @@ bool cli_print(
         return false;
 
     if (len > 0) {
-        stream_write(rs->out, buf, len);
+        stream_legacy_write(rs->out, buf, len);
     }
 
-    stream_write(rs->out, "\n", 1);
-    stream_flush(rs->out);
+    stream_legacy_write(rs->out, "\n", 1);
+    stream_legacy_flush(rs->out);
 
     return true;
 }
@@ -121,7 +121,7 @@ bool cli_store_symbol(struct symbol *sym, void *session) {
 }
 
 static bool readline(
-	    stream *in,
+	    stream_legacy *in,
     	char *buf,
     	size_t cap,
     	size_t *out_len ) {
@@ -131,7 +131,7 @@ static bool readline(
 
     while (len + 1 < cap) {
         char c;
-        size_t r = stream_read(in, &c, 1);
+        size_t r = stream_legacy_read(in, &c, 1);
 
         if (r == 0) {
             // EOF
@@ -153,28 +153,28 @@ static bool readline(
 
 //<here> make a new unary operator "symbol" to make a symbol runtime value
 int cli_run() { // in a very dirty draft state!
-	struct stream *in = stdio_stream_from_stdin();
+	struct stream_legacy *in = stdio_stream_legacy_from_stdin();
 	if (!in) return EXIT_FAILURE;
 
 	struct runtime_session *rs = runtime_session_create();
 	if (!rs) {
-		stream_close(in); //sure?
+		stream_legacy_close(in); //sure?
 		return EXIT_FAILURE;
 	}
 
-	struct input_provider *ip = input_provider_create();
+	struct input_provider *ip = input_provider_legacy_create();
 	if (!ip) {
-		stream_close(in); //sure?
+		stream_legacy_close(in); //sure?
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
 	//printf("ip: %p\n", ip);
 
-	struct stream *out = stdio_stream_to_stdout();
+	struct stream_legacy *out = stdio_stream_legacy_to_stdout();
 	if (!out) {
 		//printf("out: %p\n", out);
-		stream_close(in); //sure?
-		input_provider_destroy(ip);
+		stream_legacy_close(in); //sure?
+		input_provider_legacy_destroy(ip);
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
@@ -182,30 +182,30 @@ int cli_run() { // in a very dirty draft state!
 
 	if (!runtime_session_bind_output_stream(rs, out)) {
 		//printf("rs: %p\n", rs);
-		stream_close(in); //sure?
-		stream_close(out); //sure?
-		input_provider_destroy(ip);
+		stream_legacy_close(in); //sure?
+		stream_legacy_close(out); //sure?
+		input_provider_legacy_destroy(ip);
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
 	//printf("rs: %p\n", rs);
 
-	if (!input_provider_set_mode_chunks(ip)) {
-		stream_close(in); //sure?
-		stream_close(out); //sure?
-		input_provider_destroy(ip);
+	if (!input_provider_legacy_set_mode_chunks(ip)) {
+		stream_legacy_close(in); //sure?
+		stream_legacy_close(out); //sure?
+		input_provider_legacy_destroy(ip);
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
-	//printf("input_provider_set_mode_chunks\n");
+	//printf("input_provider_legacy_set_mode_chunks\n");
 
 	if (!runtime_session_bind_input_provider(rs, ip)) {
 		//printf("ip: %p\n", ip);
 		//printf("rs->scanner: %p\n", rs->scanner);
 		//printf("ip->lexer_scanner: %p\n", ip->lexer_scanner);
-		stream_close(in); //sure?
-		stream_close(out); //sure?
-		input_provider_destroy(ip);
+		stream_legacy_close(in); //sure?
+		stream_legacy_close(out); //sure?
+		input_provider_legacy_destroy(ip);
 		runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
@@ -221,9 +221,9 @@ int cli_run() { // in a very dirty draft state!
 	struct interpreter_ctx *ic =
 	interpreter_ctx_create(&CLI_INTERPRETER_OPS, rs);
 	if (!ic) {
-		stream_close(out);//sure?
-		stream_close(in); //sure?
-		input_provider_destroy(ip);
+		stream_legacy_close(out);//sure?
+		stream_legacy_close(in); //sure?
+		input_provider_legacy_destroy(ip);
 	    runtime_session_destroy(rs);
     	return EXIT_FAILURE;
 	}
@@ -243,25 +243,25 @@ int cli_run() { // in a very dirty draft state!
 	while (true) {
 		printf("new loop!\n");
 		if (need_prompt) {
-			stream_write(out, "> ", 2);
-        	stream_flush(out);
+			stream_legacy_write(out, "> ", 2);
+        	stream_legacy_flush(out);
 			if (!readline(in, buf, sizeof(buf), &n)) break;
-			if (!input_provider_append(ip, buf, n)) break;
+			if (!input_provider_legacy_append(ip, buf, n)) break;
 	        need_prompt = false;
 		}
 
 		st = parse_one_statement(runtime_session_get_scanner(rs), &parsed_ast, &pc, ip);
 		if (st == PARSE_STATUS_INCOMPLETE) {
-        	stream_write(out, "... ", 4);
-        	stream_flush(out);
+        	stream_legacy_write(out, "... ", 4);
+        	stream_legacy_flush(out);
 			if (!readline(in, buf, CLI_SIZE_OF_BUFFER, &n)) break;
-			if (!input_provider_append(ip, buf, n)) break;
+			if (!input_provider_legacy_append(ip, buf, n)) break;
 			continue;
 		}
 		if (st == PARSE_STATUS_ERROR) {
-	        stream_write(out, "parse error\n", 12);
-    	    stream_flush(out);
-	        input_provider_reset_chunks(ip); //close+recreate chunks_stream
+	        stream_legacy_write(out, "parse error\n", 12);
+    	    stream_legacy_flush(out);
+	        input_provider_legacy_reset_chunks(ip); //close+recreate chunks_stream_legacy
 	        need_prompt = true;
     	    continue;
 		}
@@ -293,9 +293,9 @@ int cli_run() { // in a very dirty draft state!
 		// break; // when?how?
 	}
 
-	stream_close(in); //sure?
-	stream_close(out); //sure?
-	input_provider_destroy(ip);
+	stream_legacy_close(in); //sure?
+	stream_legacy_close(out); //sure?
+	input_provider_legacy_destroy(ip);
 	runtime_session_destroy(rs);
 	interpreter_ctx_destroy(ic);
 

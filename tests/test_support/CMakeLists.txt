@@ -1,0 +1,2 @@
+add_subdirectory(lexleo_cmocka_support)
+add_subdirectory(fake_memory)
