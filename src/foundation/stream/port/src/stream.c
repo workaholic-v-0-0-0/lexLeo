@@ -49,8 +49,7 @@ int stream_flush(stream_t *s) {
 	return s->vtbl.flush(s->backend);
 }
 
-const stream_ops_t *stream_default_ops(void)
-{
+const stream_ops_t *stream_default_ops(void) {
 	static const stream_ops_t OPS = {
 		.read = stream_read,
 		.write = stream_write,

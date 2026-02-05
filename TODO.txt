@@ -117,3 +117,6 @@
 - make osal module properly
 - complete doc with diagrams
 
+- Refactor module layout:
+  move wiring-only headers (include/internal/*) to src/internal/
+  and expose them only via *_wiring_headers (BUILD_INTERFACE)

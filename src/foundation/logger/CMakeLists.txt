@@ -10,3 +10,5 @@ target_compile_definitions(logger PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 if(BUILD_TESTING)
     include(tests/tests.cmake)
 endif()
+
+add_subdirectory(port)
