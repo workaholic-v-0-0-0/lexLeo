@@ -5,7 +5,7 @@
 %{
 #include "osal.h"
 #include "parser.tab.h"
-#include "parser_types.h"
+#include "policy/parser_types.h"
 #include "input_provider_legacy_reader.h"
 
 #define YY_DECL int lex_lex(YYSTYPE *yylval_param, yyscan_t yyscanner)

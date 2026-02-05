@@ -21,8 +21,8 @@
 %option noyywrap
 
 %{
-#include "lexleo_assert.h"
-#include "lexleo_panic.h"
+#include "policy/lexleo_assert.h"
+#include "policy/lexleo_panic.h"
 #include "lexleo_token.h"
 #include "lexleo_flex_state.h"
 

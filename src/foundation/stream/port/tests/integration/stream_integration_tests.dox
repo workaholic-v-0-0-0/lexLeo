@@ -1,0 +1,8 @@
+/**
+ * @defgroup stream_integration_tests stream integration tests
+ * @ingroup stream_tests_group
+ *
+ * @brief Integration tests for the stream port.
+ *
+ * todo
+ */

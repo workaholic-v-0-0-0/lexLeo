@@ -1,0 +1,14 @@
+/**
+* @defgroup logger_api logger API
+* @ingroup logger_family_group
+* 
+* @brief Structured logging interface (port).
+*
+* This module defines the stable logging API used by the rest of the
+* codebase. Concrete logging backends (file, stderr, stream, etc.) are
+* provided by adapters and injected through the wiring context.
+*
+* The public API is intentionally small: create/destroy are wiring-only
+* (see internal headers), while consumers use @ref logger_log to emit
+* messages through an injected @ref logger_t instance.
+*/

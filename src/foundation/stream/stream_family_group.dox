@@ -1,0 +1,7 @@
+/** @defgroup stream_family_group Stream family
+ *  @ingroup foundation_group
+ */
+
+/** @defgroup stream_family_tests_group Stream family tests
+ *  @ingroup foundation_tests_group
+ */

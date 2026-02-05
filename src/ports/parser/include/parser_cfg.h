@@ -3,7 +3,7 @@
 #ifndef LEXLEO_PARSER_CFG_H
 #define LEXLEO_PARSER_CFG_H
 
-#include "parser_types.h"
+#include "policy/parser_types.h"
 #include "ast.h"
 
 typedef struct parser_ops {

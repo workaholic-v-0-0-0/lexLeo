@@ -1,0 +1,11 @@
+/** @defgroup foundation_group Foundation
+ *  @ingroup api_reference
+ */
+
+/** @defgroup foundation_internal_group Foundation internals
+ *  @ingroup internal_reference
+ */
+
+/** @defgroup foundation_tests_group Foundation tests
+ *  @ingroup tests_reference
+ */

@@ -1,0 +1,164 @@
+\chapter{Lex\+Leo}
+\hypertarget{md_README}{}\label{md_README}\index{LexLeo@{LexLeo}}
+\label{md_README_autotoc_md0}%
+\Hypertarget{md_README_autotoc_md0}%
+ Lex\+Leo is a modular interpreter project written in C.
+
+It explores the design and implementation of a Lisp-\/inspired language while placing strong emphasis on software architecture, testability, and professional engineering practices.
+
+📘 Full documentation\+: \href{https://caltuli.online/lexleo}{\texttt{ https\+://caltuli.\+online/lexleo}}
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md2}{}\doxysection{\texorpdfstring{Overview}{Overview}}\label{md_README_autotoc_md2}
+Lex\+Leo implements\+:
+
+
+\begin{DoxyItemize}
+\item lexical analysis and parsing,
+\item abstract syntax trees (AST),
+\item environment-\/based evaluation,
+\item runtime value representation,
+\item structured memory management.
+\end{DoxyItemize}
+
+The project prioritizes clarity, architectural discipline, and correctness over feature breadth.
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md4}{}\doxysection{\texorpdfstring{Engineering Focus}{Engineering Focus}}\label{md_README_autotoc_md4}
+Lex\+Leo emphasizes\+:
+
+
+\begin{DoxyItemize}
+\item modular architecture with explicit boundaries,
+\item dependency injection (CR vs runtime separation),
+\item handle-\/based state management,
+\item test-\/driven development (TDD),
+\item memory abstraction through an OSAL layer,
+\item automated documentation with Doxygen.
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md6}{}\doxysection{\texorpdfstring{Getting Started}{Getting Started}}\label{md_README_autotoc_md6}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git\ clone\ https://github.com/workaholic-\/v-\/0-\/0-\/0/lexLeo.git}
+\DoxyCodeLine{cd\ lexLeo}
+
+\end{DoxyCode}
+
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md8}{}\doxysection{\texorpdfstring{Build}{Build}}\label{md_README_autotoc_md8}
+\hypertarget{md_README_autotoc_md9}{}\doxysubsection{\texorpdfstring{Requirements}{Requirements}}\label{md_README_autotoc_md9}
+
+\begin{DoxyItemize}
+\item C compiler (GCC, Clang, MSVC)
+\item CMake ≥ 3.\+x
+\item Flex and Bison (for parser generation)
+\end{DoxyItemize}
+
+\DoxyHorRuler{0}
+\hypertarget{md_README_autotoc_md11}{}\doxysection{\texorpdfstring{Build the project with CMake}{Build the project with CMake}}\label{md_README_autotoc_md11}
+\hypertarget{md_README_autotoc_md12}{}\doxysubsection{\texorpdfstring{For Production Builds (\+Tests disabled)}{For Production Builds (Tests disabled)}}\label{md_README_autotoc_md12}
+\hypertarget{md_README_autotoc_md13}{}\doxysubsubsection{\texorpdfstring{For Linux\+:}{For Linux:}}\label{md_README_autotoc_md13}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/G\ "{}Unix\ Makefiles"{}\ -\/DCMAKE\_BUILD\_TYPE=Release\ -\/DBUILD\_TESTING=OFF}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md14}{}\doxysubsubsection{\texorpdfstring{For Windows (with x64 architecture and the Visual Studio 2022 17 generator)\+:}{For Windows (with x64 architecture and the Visual Studio 2022 17 generator):}}\label{md_README_autotoc_md14}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/G\ "{}Visual\ Studio\ 17\ 2022"{}\ -\/A\ x64\ -\/DBUILD\_TESTING=OFF}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/config\ Release}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md15}{}\doxysubsubsection{\texorpdfstring{For Mac\+OS (using the default “\+Unix Makefiles” generator)\+:}{For MacOS (using the default “Unix Makefiles” generator):}}\label{md_README_autotoc_md15}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/DCMAKE\_BUILD\_TYPE=Release\ -\/DBUILD\_TESTING=OFF}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md16}{}\doxysubsection{\texorpdfstring{For Development/\+Testing Builds (\+Tests enabled)}{For Development/Testing Builds (Tests enabled)}}\label{md_README_autotoc_md16}
+By default, BUILD\+\_\+\+TESTING is ON, but you can specify it explicitly for clarity.\hypertarget{md_README_autotoc_md17}{}\doxysubsubsection{\texorpdfstring{For Linux\+:}{For Linux:}}\label{md_README_autotoc_md17}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{rm\ -\/r\ build}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/G\ "{}Unix\ Makefiles"{}\ -\/DCMAKE\_BUILD\_TYPE=Debug\ -\/DBUILD\_TESTING=ON}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check\_memory}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md18}{}\doxysubsubsection{\texorpdfstring{For Windows (with x64 architecture and the Visual Studio 2022 17 generator)\+:}{For Windows (with x64 architecture and the Visual Studio 2022 17 generator):}}\label{md_README_autotoc_md18}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{rm\ -\/r\ build}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/G\ "{}Visual\ Studio\ 17\ 2022"{}\ -\/A\ x64\ -\/DCMAKE\_BUILD\_TYPE=Debug\ -\/DBUILD\_TESTING=ON}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/config\ Debug}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check\_memory}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md19}{}\doxysubsubsection{\texorpdfstring{For Mac\+OS (using the default “\+Unix Makefiles” generator)\+:}{For MacOS (using the default “Unix Makefiles” generator):}}\label{md_README_autotoc_md19}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{rm\ -\/r\ build}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/DCMAKE\_BUILD\_TYPE=Debug\ -\/DBUILD\_TESTING=ON}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/target\ check\_memory}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md20}{}\doxysection{\texorpdfstring{Run}{Run}}\label{md_README_autotoc_md20}
+After building, the CLI executable is located inside the {\ttfamily build/} directory. The exact path depends on the platform and CMake generator used.\hypertarget{md_README_autotoc_md21}{}\doxysubsection{\texorpdfstring{Quick run}{Quick run}}\label{md_README_autotoc_md21}
+
+\begin{DoxyItemize}
+\item Linux / mac\+OS\+:
+\end{DoxyItemize}
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./build/lexLeo\_cli}
+
+\end{DoxyCode}
+
+
+
+\begin{DoxyItemize}
+\item Windows (Visual Studio generator)\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{.\(\backslash\)build\(\backslash\)Release\(\backslash\)lexLeo\_cli.exe}
+
+\end{DoxyCode}
+
+\end{DoxyItemize}\hypertarget{md_README_autotoc_md22}{}\doxysubsection{\texorpdfstring{Platform-\/specific details}{Platform-specific details}}\label{md_README_autotoc_md22}
+\hypertarget{md_README_autotoc_md23}{}\doxysubsubsection{\texorpdfstring{Linux (\+Unix Makefiles generator)}{Linux (Unix Makefiles generator)}}\label{md_README_autotoc_md23}
+When using the Unix Makefiles generator, the executable is created directly inside the {\ttfamily build/} directory\+:
+
+./build/lex\+Leo\+\_\+cli\hypertarget{md_README_autotoc_md24}{}\doxysubsubsection{\texorpdfstring{mac\+OS (default generator)}{macOS (default generator)}}\label{md_README_autotoc_md24}
+As on Linux, the executable is generated directly inside the {\ttfamily build/} directory\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./build/lexLeo\_cli}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md25}{}\doxysubsubsection{\texorpdfstring{Windows (\+Visual Studio 2022 generator)}{Windows (Visual Studio 2022 generator)}}\label{md_README_autotoc_md25}
+Visual Studio generators place binaries inside configuration subdirectories (e.\+g., {\ttfamily Release/} or {\ttfamily Debug/}).
+
+Release build\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{.\(\backslash\)build\(\backslash\)Release\(\backslash\)lexLeo\_cli.exe}
+
+\end{DoxyCode}
+\hypertarget{md_README_autotoc_md26}{}\doxysection{\texorpdfstring{Licensing}{Licensing}}\label{md_README_autotoc_md26}
+Lex\+Leo is licensed under the GNU General Public License v3.\+0 or later.\hypertarget{md_README_autotoc_md27}{}\doxysection{\texorpdfstring{Third-\/party components\+:}{Third-party components:}}\label{md_README_autotoc_md27}
+
+\begin{DoxyItemize}
+\item Flex (BSD-\/like license with exception)
+\item Bison (GPL with special exception)
+\item Standard C library (glibc / musl, LGPL) 
+\end{DoxyItemize}

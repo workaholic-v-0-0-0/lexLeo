@@ -1,4 +1,4 @@
-// src/osal/include/osal_mem.h
+// src/foundation/osal/include/osal_mem.h
 
 #ifndef LEXLEO_OSAL_MEM_H
 #define LEXLEO_OSAL_MEM_H

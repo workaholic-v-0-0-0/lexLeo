@@ -10,18 +10,10 @@
 #define LEXLEO_STREAM_CR_API_API_H
 
 #include "stream/borrowers/stream_types.h"
-#include "mem/osal_mem_ops.h"
-
-#include <stddef.h>
-
-typedef struct stream_ctx_t {
-	const osal_mem_ops_t *mem;
-} stream_ctx_t;
-
-void stream_destroy(stream_t *s); // stream_t creation via adapter or factory
-
-stream_ctx_t stream_default_ctx(const osal_mem_ops_t *mem_ops);
+#include "stream/adapters/stream_env.h"
 
 const stream_ops_t *stream_default_ops(void);
+
+stream_env_t stream_default_env(const osal_mem_ops_t *mem_ops);
 
 #endif //LEXLEO_STREAM_CR_API_API_H
