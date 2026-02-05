@@ -108,8 +108,7 @@ void stream_destroy(stream_t *s)
 	mem->free(s);
 }
 
-const stream_ops_t *stream_default_ops(void)
-{
+const stream_ops_t *stream_default_ops(void) {
 	static const stream_ops_t OPS = {
 		.read = stream_read,
 		.write = stream_write,

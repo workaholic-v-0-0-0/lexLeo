@@ -46,6 +46,7 @@ typedef struct dynamic_buffer_stream_ctx_t {
 	const stream_ctx_t *port_ctx; // opaque
 } dynamic_buffer_stream_ctx_t;
 
+
 /**
  * @brief Create a stream instance backed by a dynamic_buffer_stream.
  *

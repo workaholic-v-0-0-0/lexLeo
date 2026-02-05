@@ -39,7 +39,12 @@ add_library(
     ${FLEX_lexleo_flex_scanner_OUTPUTS}
 )
 
-target_link_libraries(lexleo_integration_flex lexleo_panic)
+target_link_libraries(
+    lexleo_integration_flex
+    PRIVATE
+        osal_mem
+        lexleo_panic
+)
 
 target_include_directories(lexleo_integration_flex
     PUBLIC
@@ -52,7 +57,6 @@ target_include_directories(lexleo_integration_flex
     "${FLEX_SRC_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/internal"
     "${CMAKE_SOURCE_DIR}/src/foundation/input_provider_legacy/include"
-    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include"
     "${CMAKE_SOURCE_DIR}/src/core/lexer/port/include"
     "${CMAKE_SOURCE_DIR}"
 )

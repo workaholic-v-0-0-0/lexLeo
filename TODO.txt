@@ -123,3 +123,14 @@
 
 - adjust unit_test_dynamic_buffer_stream.c (it's put on off)
 
+- Refactor module layout:
+  introduce src/wiring/ for composition-root-only headers
+  move former include/internal/* (wiring-only) to src/wiring/
+  restrict exposure to *_wiring_headers targets using $<BUILD_INTERFACE:...>
+  keep src/internal/ strictly private (never exposed via include dirs)
+
+
+- Clarify wiring headers visibility (BUILD_INTERFACE vs install)
+
+- update doc pages into standards/
+

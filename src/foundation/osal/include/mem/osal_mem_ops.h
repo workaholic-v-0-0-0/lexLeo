@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "osal_mem_types.h"
+#include "mem/osal_mem_types.h"
 
 typedef struct osal_mem_ops_t {
 	osal_malloc_fn_t malloc;

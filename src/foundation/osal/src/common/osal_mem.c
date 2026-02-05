@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem/osal_mem_ops.h"
+
 void *osal_malloc(size_t size) { return malloc(size); }
 void *osal_calloc(size_t nmemb, size_t size) { return calloc(nmemb, size); }
 void *osal_realloc(void *ptr, size_t size) { return realloc(ptr, size); }
