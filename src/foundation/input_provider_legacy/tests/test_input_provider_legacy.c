@@ -11,7 +11,7 @@
 #include <assert.h>
 
 #include "internal/input_provider_legacy_internal.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 #include "internal/stream_legacy_internal.h"
 #include "internal/dynamic_buffer_stream_legacy_internal.h"
 

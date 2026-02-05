@@ -13,7 +13,7 @@
 
 #include "internal/fs_stream_legacy_internal.h"
 #include "internal/stream_legacy_internal.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 #include "osal.h"
 
 

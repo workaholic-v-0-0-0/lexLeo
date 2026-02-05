@@ -14,7 +14,7 @@
 #include "symtab.h"
 #include "list.h"
 #include "ast.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 #include "memory_allocator.h"
 
 

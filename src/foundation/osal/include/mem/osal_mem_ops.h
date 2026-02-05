@@ -1,4 +1,4 @@
-// src/osal/include/osal_mem_ops.h
+// src/foundation/osal/include/osal_mem_ops.h
 
 #ifndef LEXLEO_OSAL_MEM_OPS_H
 #define LEXLEO_OSAL_MEM_OPS_H
@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "osal_mem_types.h"
+#include "mem/osal_mem_types.h"
 
 typedef struct osal_mem_ops_t {
 	osal_malloc_fn_t malloc;

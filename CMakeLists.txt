@@ -265,4 +265,4 @@ add_subdirectory(tools)
 # DOCUMENTATION MANAGEMENT
 #------------------------------------------------------------------------------
 
-add_subdirectory(doxygen_management)
+add_subdirectory(docs)

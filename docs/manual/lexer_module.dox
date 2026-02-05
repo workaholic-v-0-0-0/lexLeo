@@ -1,0 +1,3 @@
+/** @defgroup lexer Lexer
+ *  @brief Lexer port and adapters.
+ */

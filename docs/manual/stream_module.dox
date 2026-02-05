@@ -1,0 +1,3 @@
+/** @defgroup stream Stream
+ *  @brief Stream port and adapters.
+ */

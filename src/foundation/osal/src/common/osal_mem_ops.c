@@ -1,4 +1,4 @@
-// src/osal/src/internal/osal_mem_ops.c
+// src/foundation/osal/src/internal/osal_mem_ops.c
 
 #include "internal/osal_mem_ops.h"
 

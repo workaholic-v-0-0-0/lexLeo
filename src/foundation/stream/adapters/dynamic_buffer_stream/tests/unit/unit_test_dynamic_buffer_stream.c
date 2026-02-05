@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "lexleo_cmocka_xmacro_helpers.h"
-#include "osal_mem_fake_provider.h"
+#include "osal/mem/test/osal_mem_fake_provider.h"
 
 // value used to pre-fill buf when check_buf_unchanged
 static const uint8_t BUF_FILL = (uint8_t)0xCC;

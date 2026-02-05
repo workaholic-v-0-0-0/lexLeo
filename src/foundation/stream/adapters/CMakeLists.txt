@@ -6,3 +6,4 @@
 # CMakeLists.txt
 
 add_subdirectory(dynamic_buffer_stream)
+add_subdirectory(fs_stream)

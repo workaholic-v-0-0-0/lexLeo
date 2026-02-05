@@ -1,7 +1,7 @@
-// src/policy/scr/lexleo_panic.c
+// src/policy/src/lexleo_panic.c
 
-#include "lexleo_panic.h"
-#include "lexleo_assert.h"
+#include "policy/lexleo_panic.h"
+#include "policy/lexleo_assert.h"
 
 #include <stdio.h>
 #include <stdlib.h>

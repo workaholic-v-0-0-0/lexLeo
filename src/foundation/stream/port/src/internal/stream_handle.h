@@ -4,7 +4,7 @@
 #define LEXLEO_STREAM_HANDLE_H
 
 #include "stream/adapters/stream_adapters_api.h"
-#include "mem/osal_mem_ops.h"
+#include "osal/mem/osal_mem_ops.h"
 
 struct stream_t {
 	stream_vtbl_t vtbl;

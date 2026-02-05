@@ -1,4 +1,4 @@
-// src/osal/include/internal/osal_mem_ctx.h
+// src/foundation/osal/include/internal/osal_mem_ctx.h
 
 #ifndef LEXLEO_OSAL_MEM_CTX_H
 #define LEXLEO_OSAL_MEM_CTX_H

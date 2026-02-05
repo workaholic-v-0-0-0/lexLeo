@@ -1,10 +1,10 @@
 // src/foundation/osal/src/posix/osal_file_posix.c
 
-#include "file/internal/osal_file_ctx.h"
+#include "file/osal_file_env.h"
 #include "file/osal_file_types.h"
 #include "file/osal_file_ops.h"
 #include "mem/osal_mem_ops.h"
-#include "lexleo_panic.h"
+#include "policy/lexleo_panic.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -83,20 +83,20 @@ static osal_file_t *posix_open(
 	const char *path_utf8,
 	uint32_t flags,
 	osal_file_status_t *st,
-	const osal_file_ctx_t *ctx )
+	const osal_file_env_t *env )
 {
     if (st) *st = OSAL_FILE_ERR;
 	if (!path_utf8 || !*path_utf8) return NULL;
 
-    osal_file_ctx_t default_ctx;
-    const osal_file_ctx_t *use_ctx = ctx;
+    osal_file_env_t default_env;
+    const osal_file_env_t *use_env = env;
 
-    if (!use_ctx) {
-        default_ctx = osal_file_default_ctx(osal_mem_default_ops());
-        use_ctx = &default_ctx;
+    if (!use_env) {
+        default_env = osal_file_default_env(osal_mem_default_ops());
+        use_env = &default_env;
     }
 
-    const osal_mem_ops_t *mem = use_ctx->deps.mem;
+    const osal_mem_ops_t *mem = use_env->mem;
     if (!mem || !mem->calloc || !mem->free) return NULL;
 
     const char *mode = mode_from_flags(flags, st);

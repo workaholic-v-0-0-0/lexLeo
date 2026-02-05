@@ -12,14 +12,14 @@
 extern "C" {
 #endif
 
-typedef struct osal_file_ctx_t osal_file_ctx_t;
+typedef struct osal_file_env_t osal_file_env_t;
 
 typedef struct osal_file_ops_t {
 	osal_file_t *(*open)(
 		const char *path_utf8,
 		uint32_t flags,
 		osal_file_status_t *status,
-		const osal_file_ctx_t *ctx );
+		const osal_file_env_t *env );
 	size_t (*read)(
 		osal_file_t *f,
 		void *buf,

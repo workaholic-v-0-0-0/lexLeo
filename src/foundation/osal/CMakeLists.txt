@@ -45,13 +45,13 @@ target_compile_definitions(
     $<$<PLATFORM_ID:Linux>:_GNU_SOURCE>
 )
 add_library(
-    osal_mem
+    osal_mem_legacy
     STATIC
     ${SRC}/common/osal_mem.c
 )
 
 target_include_directories(
-    osal_mem
+    osal_mem_legacy
     PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
@@ -64,19 +64,19 @@ target_link_libraries(
 )
 
 add_library(
-    osal_file
+    osal_file_legacy
     STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/osal_file.c"
     "$<$<PLATFORM_ID:Windows>:${SRC}/win32/osal_file_win32.c>"
     "$<$<PLATFORM_ID:Linux,Darwin,FreeBSD,OpenBSD,SunOS>:${SRC}/posix/osal_file_posix.c>"
 )
 target_include_directories(
-    osal_file
+    osal_file_legacy
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_link_libraries(
-    osal_file
+    osal_file_legacy
     PRIVATE
         lexleo_panic
 )
@@ -91,3 +91,8 @@ endif ()
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()
+
+# MIGRATION
+
+add_subdirectory(osal_mem)
+add_subdirectory(osal_file)

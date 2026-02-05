@@ -4,11 +4,9 @@
 #define LEXLEO_STREAM_ADAPTERS_API_H
 
 #include "stream/borrowers/stream_types.h"
-#include "stream/adapters/stream_constructor.h"
+#include "stream/adapters/stream_env.h"
 
 #include <stddef.h>
-
-typedef struct stream_ctx_t stream_ctx_t; // to put in adapter ctx
 
 typedef size_t (*stream_read_fn_t)(void *backend, void* buf, size_t n, stream_status_t *st);
 typedef size_t (*stream_write_fn_t)(void *backend, const void* buf, size_t n, stream_status_t *st);
@@ -27,6 +25,6 @@ stream_status_t stream_create(
 	stream_t **out,
 	const stream_vtbl_t *vtbl,
 	void *backend,
-	const stream_ctx_t *ctx );
+	const stream_env_t *env );
 
 #endif //LEXLEO_STREAM_ADAPTERS_API_H

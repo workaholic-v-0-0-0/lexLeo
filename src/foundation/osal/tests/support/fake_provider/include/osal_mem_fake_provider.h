@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #include "mem/osal_mem_ops.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 
 const osal_mem_ops_t *osal_mem_test_fake_ops(void);
 

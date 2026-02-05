@@ -11,7 +11,7 @@
 #include <assert.h>
 
 #include "internal/interpreter_internal.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 #include "memory_allocator.h"
 #include "string_utils.h"
 #include "internal/runtime_env_internal.h"

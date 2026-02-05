@@ -117,9 +117,16 @@
 - make osal module properly
 - complete doc with diagrams
 
-- adjust dbs with new dtream vtbl (an additionnal param for status)
-
-- suppress vtbl from ctx of stream adapters
-
 - adjust unit_test_dynamic_buffer_stream.c (it's put on off)
 
+- Refactor module layout
+
+- Clarify wiring headers visibility (BUILD_INTERFACE vs install)
+
+- update doc pages into standards/
+
+- explain Mechanism of a non-port module for providing creators in
+  docs/manual/architecture/module_taxonomy.md
+
+
+<here> continue cleanup doc ; arrange project tree ; see message (how to suppress tree pages on the left side bar?)

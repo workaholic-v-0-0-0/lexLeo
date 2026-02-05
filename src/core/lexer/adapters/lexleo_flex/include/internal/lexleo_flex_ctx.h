@@ -13,6 +13,10 @@
 #include "mem/osal_mem_ops.h"
 #include "input_provider_legacy_ops.h"
 
+/** @addtogroup lexer_flex
+ *  @{
+ */
+
 /**
  * @brief Dependencies required by the Flex lexer adapter.
  *
@@ -75,5 +79,7 @@ lexer_status_t lexleo_flex_create_lexer(
 lexleo_flex_ctx_t lexleo_flex_default_ctx(
 	const osal_mem_ops_t *mem_ops,
 	const input_provider_legacy_ops_t *prov_ops );
+
+/** @} */ /* fs_stream_cr_api */
 
 #endif //LEXLEO_FLEX_CTX_H

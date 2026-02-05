@@ -24,7 +24,7 @@ target_link_libraries(
         dynamic_buffer_stream_wiring_headers
         dynamic_buffer_stream_test_headers
         stream
-        osal_mem_fake_provider
+        osal_mem_fake_provider_legacy
 )
 
 target_link_libraries(
