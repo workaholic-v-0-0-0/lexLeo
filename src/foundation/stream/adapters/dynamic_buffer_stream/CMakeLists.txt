@@ -1,3 +1,4 @@
+
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
 #
@@ -22,7 +23,7 @@ target_link_libraries(
     PUBLIC
         stream
     PRIVATE
-        osal_mem
+        osal_mem_legacy
         lexleo_assert
 )
 

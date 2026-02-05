@@ -3,8 +3,8 @@
 #ifndef LEXLEO_STREAM_FACTORY_HANDLE_H
 #define LEXLEO_STREAM_FACTORY_HANDLE_H
 
-#include "stream/owners/stream_key_type.h"
-#include "stream/adapters/stream_constructor.h"
+#include "stream/adapters/stream_key_type.h"
+#include "stream/adapters/stream_install.h"
 #include "mem/osal_mem_ops.h"
 
 #include <stddef.h>
@@ -13,6 +13,7 @@ typedef struct stream_branch_t {
 	stream_key_t key;
 	stream_ctor_fn_t ctor;
 	void *ud;
+	ud_dtor_fn_t ud_dtor;
 } stream_branch_t;
 
 typedef struct stream_registry_t {

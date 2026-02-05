@@ -1,4 +1,4 @@
-// src/osal/src/common/internal/osal_file_internal.h
+// src/foundation/osal/src/common/internal/osal_file_internal.h
 
 #ifndef LEXLEO_OSAL_FILE_INTERNAL_H
 #define LEXLEO_OSAL_FILE_INTERNAL_H

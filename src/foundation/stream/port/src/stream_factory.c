@@ -1,11 +1,10 @@
 // src/foundation/stream/src/stream_factory.c
 
-#include "stream/owners/stream_factory.h"
 #include "stream/cr/stream_factory_cr_api.h"
 #include "internal/stream_factory_handle.h"
 
-#include <string.h>
-#include <stddef.h>
+#include "policy/lexleo_cstring.h"
+#include "policy/lexleo_cstd_types.h"
 
 static const stream_branch_t *stream_registry_find(
 	const stream_registry_t *reg,
@@ -35,101 +34,75 @@ static stream_status_t stream_registry_create(
 	return e->ctor(e->ud, args, out_stream);
 }
 
-stream_status_t stream_factory_create_stream(
-	const stream_factory_t *f,
-	stream_key_t key,
-	const void *args,
-	stream_t **out)
+stream_status_t stream_create_factory(
+    stream_factory_t **out,
+    const stream_factory_cfg_t *cfg,
+    const stream_env_t *env )
 {
-	if (!out) return STREAM_STATUS_INVALID;
-	*out = NULL;
-	if (!f || !key) return STREAM_STATUS_INVALID;
-	return stream_registry_create(&f->reg, key, args, out);
-}
+    if (out) *out = NULL;
 
-stream_status_t stream_create_empty_factory(
-	stream_factory_t **out,
-	size_t capacity,
-	const stream_ctx_t *ctx )
-{
-	if (out) *out = NULL;
-
-    if (!out || !ctx || !ctx->mem || !ctx->mem->calloc || !ctx->mem->free) {
+    if (
+               !out
+            || !cfg
+            || !env
+            || !env->mem
+            || !env->mem->calloc
+            || !env->mem->free )
         return STREAM_STATUS_INVALID;
-    }
 
-    stream_factory_t *f = (stream_factory_t *)ctx->mem->calloc(1, sizeof(*f));
-    if (!f) {
-        return STREAM_STATUS_OOM;
-    }
+    stream_factory_t *f = env->mem->calloc(1, sizeof(*f));
+    if (!f) return STREAM_STATUS_OOM;
 
-    f->mem = ctx->mem;
+    f->mem = env->mem;
     f->reg.entries = NULL;
     f->reg.count = 0;
     f->reg.cap = 0;
 
-    if (capacity > 0) {
-        f->reg.entries = (stream_branch_t *)ctx->mem->calloc(
-            capacity, sizeof(*f->reg.entries));
+    if (cfg->fact_cap > 0) {
+        f->reg.entries = env->mem->calloc(cfg->fact_cap, sizeof(*f->reg.entries));
         if (!f->reg.entries) {
-            ctx->mem->free(f);
+            env->mem->free(f);
             return STREAM_STATUS_OOM;
         }
-        f->reg.cap = capacity;
+        f->reg.cap = cfg->fact_cap;
     }
 
     *out = f;
     return STREAM_STATUS_OK;
 }
 
-static int stream_key_equals(stream_key_t a, stream_key_t b) {
-    if (a == b) return 1;
-    if (!a || !b) return 0;
-
-    const char *pa = (const char *)a;
-    const char *pb = (const char *)b;
-
-    while (*pa && *pb) {
-        if (*pa != *pb) return 0;
-        ++pa; ++pb;
-    }
-    return *pa == *pb;
-}
-
-stream_status_t stream_destroy_factory(stream_factory_t **fact)
+void stream_destroy_factory(stream_factory_t **fact)
 {
-    if (!fact || !*fact) {
-        return STREAM_STATUS_INVALID;
-    }
+    if (!fact || !*fact) return;
 
     stream_factory_t *f = *fact;
     *fact = NULL;
 
     const osal_mem_ops_t *mem = f->mem;
-    if (!mem || !mem->free) {
-        return STREAM_STATUS_INVALID;
-    }
+    if (!mem || !mem->free) return;
 
     if (f->reg.entries) {
-        mem->free(f->reg.entries);
-        f->reg.entries = NULL;
-    }
-    f->reg.count = 0;
-    f->reg.cap = 0;
-
+		for (size_t i = 0; i < f->reg.count; ++i) {
+        	stream_branch_t *e = &f->reg.entries[i];
+        	if (e->ud_dtor) e->ud_dtor(e->ud, mem);
+    	}
+		mem->free(f->reg.entries);
+	}
     mem->free(f);
-    return STREAM_STATUS_OK;
 }
 
 stream_status_t stream_factory_add_adapter(
     stream_factory_t *fact,
-    stream_key_t key,
-    stream_ctor_fn_t ctor,
-    void *ud)
+    const stream_adapter_desc_t *desc )
 {
-    if (!fact || !key || !ctor || !ud) {
+    if (
+			   !fact
+			|| !desc
+			|| !desc->key
+			|| *desc->key == '\0'
+			|| !desc->ctor
+			|| (desc->ud && !desc->ud_dtor) )
         return STREAM_STATUS_INVALID;
-    }
 
     stream_registry_t *reg = &fact->reg;
 
@@ -143,16 +116,32 @@ stream_status_t stream_factory_add_adapter(
 
     // Enforce uniqueness
     for (size_t i = 0; i < reg->count; ++i) {
-        if (stream_key_equals(reg->entries[i].key, key)) {
-            return STREAM_STATUS_INVALID; /* duplicate key */
-        }
+        if (
+				   reg->entries[i].key
+				&& strcmp(reg->entries[i].key, desc->key) == 0 ) {
+ 		   	return STREAM_STATUS_INVALID; // duplicate key
+		}
     }
 
     reg->entries[reg->count++] = (stream_branch_t){
-        .key  = key,
-        .ctor = ctor,
-        .ud   = ud
+        .key = desc->key,
+        .ctor = desc->ctor,
+        .ud = desc->ud,
+		.ud_dtor = desc->ud_dtor
     };
 
     return STREAM_STATUS_OK;
+}
+
+stream_status_t stream_factory_create_stream(
+    const stream_factory_t *f,
+    stream_key_t key,
+    const void *args,
+    stream_t **out )
+{
+    if (!out) return STREAM_STATUS_INVALID;
+    *out = NULL;
+
+    if (!f || !key) return STREAM_STATUS_INVALID;
+    return stream_registry_create(&f->reg, key, args, out);
 }

@@ -1,10 +1,12 @@
-// src/osal/src/osal_mem.c
+// src/foundation/osal/src/osal_mem.c
 
 #include "mem/osal_mem.h"
 #include "mem/internal/osal_mem_ctx.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "mem/osal_mem_ops.h"
 
 void *osal_malloc(size_t size) { return malloc(size); }
 void *osal_calloc(size_t nmemb, size_t size) { return calloc(nmemb, size); }

@@ -3,7 +3,7 @@
 #ifndef LEXLEO_PARSER_API_H
 #define LEXLEO_PARSER_API_H
 
-#include "parser_types.h"
+#include "policy/parser_types.h"
 #include "parser_cfg.h"
 #include "ast.h"
 

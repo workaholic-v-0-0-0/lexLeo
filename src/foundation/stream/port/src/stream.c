@@ -1,10 +1,10 @@
 // src/foundation/stream/port/src/stream.c
 
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/adapters/stream_adapters_api.h"
-#include "stream/cr/stream_cr_api.h"
 #include "internal/stream_handle.h"
-#include "lexleo_assert.h"
+#include "policy/lexleo_assert.h"
 
 size_t stream_read(stream_t *s, void *buf, size_t n, stream_status_t *st) {
     if (st) *st = STREAM_STATUS_OK;
@@ -68,25 +68,25 @@ stream_status_t stream_create(
 		stream_t **out,
 		const stream_vtbl_t *vtbl,
 		void *backend,
-		const stream_ctx_t *ctx ) {
+		const stream_env_t *env ) {
 	if (out) *out = NULL;
 	if (
 			   !out
 			|| !vtbl
 			|| !vtbl->read
 			|| !vtbl->write
-			|| !ctx
-			|| !ctx->mem
-			|| !ctx->mem->calloc
-			|| !ctx->mem->free )
+			|| !env
+			|| !env->mem
+			|| !env->mem->calloc
+			|| !env->mem->free )
 		return STREAM_STATUS_INVALID;
 
-	stream_t *s = ctx->mem->calloc(1, sizeof(*s));
+	stream_t *s = env->mem->calloc(1, sizeof(*s));
 	if (!s) return STREAM_STATUS_OOM;
 
 	s->vtbl = *vtbl;
 	s->backend = backend;
-	s->mem = ctx->mem;
+	s->mem = env->mem;
 
 	*out = s;
 	return STREAM_STATUS_OK;
@@ -108,8 +108,7 @@ void stream_destroy(stream_t *s)
 	mem->free(s);
 }
 
-const stream_ops_t *stream_default_ops(void)
-{
+const stream_ops_t *stream_default_ops(void) {
 	static const stream_ops_t OPS = {
 		.read = stream_read,
 		.write = stream_write,

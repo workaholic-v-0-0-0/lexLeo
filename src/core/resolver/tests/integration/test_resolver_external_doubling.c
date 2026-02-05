@@ -14,7 +14,7 @@
 #include "internal/resolver_test_utils.h"
 #include "internal/symtab_test_utils.h"
 #include "ast.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 
 
 

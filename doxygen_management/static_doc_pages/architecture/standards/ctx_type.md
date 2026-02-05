@@ -50,11 +50,26 @@ typedef struct <module>_ctx_t {
 } <module>_ctx_t;
 ```
 
+<here> adjust ctx role and maybe name because it is used by handle
+constructors which are used in turn during runtime via factories ;
+so it leads to ctx leacks during runtime ;
+and there's a pb with git : modif of main with sub of stream/port/include/
+are not anymore in the branch feat/logger in spite of the fact that 
+a rebase on main has benn done
+<module>_create(
+  <module>_t **out,
+  ...,
+  const <module>_cfg_t *cfg,   /* optional: may be NULL => defaults */
+  const <module>_env_t *env );  /* required (usually) */
+
+
 IMPORTANT  
 This structure represents the *upper bound* of what can be injected.  
 A real module is expected to **keep only the fields it actually needs**.
 
 The ctx is optional: if `NULL`, the module falls back to its default configuration.
+
+
 
 ---
 

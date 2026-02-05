@@ -12,7 +12,7 @@
 #include <stdlib.h>
 
 #include "runtime_session_internal.h"
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 #include "string_utils.h"
 #include "symtab.h"
 #include "ast.h"

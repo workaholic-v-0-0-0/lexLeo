@@ -1,6 +1,6 @@
 // tests/test_support/fake_memory/src/fake_memory.c
 
-#include "fake_memory.h"
+#include "lexleo/test/fake_memory.h"
 
 #include "osal.h"
 #include <stddef.h>

@@ -10,7 +10,7 @@
  */
 
 #include "lexleo_token.h"
-#include "lexleo_assert.h"
+#include "policy/lexleo_assert.h"
 #include "internal/lexleo_flex_internal.h"
 #include "mem/osal_mem_ops.h"
 #include "lexer.yy.h"

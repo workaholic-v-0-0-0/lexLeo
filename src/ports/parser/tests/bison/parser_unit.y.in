@@ -13,7 +13,7 @@
 %parse-param { struct parser_cfg *ctx }
 
 %code requires {
-    #include "parser_types.h"
+    #include "policy/parser_types.h"
     struct parser_cfg;
     @STUBS_DECLARATION@
 }
