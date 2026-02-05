@@ -112,6 +112,8 @@
 
 - handle different build type with regard to test
 
-- make osal module properly
+- make fs_stream properly
 - make logger module properly and adjust osal, stream and dbs
+- make osal module properly
 - complete doc with diagrams
+

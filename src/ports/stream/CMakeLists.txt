@@ -21,7 +21,7 @@ target_link_libraries(
     stream_wiring_headers
     INTERFACE
     stream
-    osal_wiring_headers
+    osal_mem_wiring_headers
 )
 
 add_subdirectory(tests)

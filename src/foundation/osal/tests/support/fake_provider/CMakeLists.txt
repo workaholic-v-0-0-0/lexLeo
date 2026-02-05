@@ -16,6 +16,12 @@ target_include_directories(
     osal_mem_fake_provider
     PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    #[[
+    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include/mem"
     "${CMAKE_SOURCE_DIR}/src/foundation/osal/include"
+    #]]
+    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include/mem"
+    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include"
+    PRIVATE
+    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include/mem/internal"
 )
-

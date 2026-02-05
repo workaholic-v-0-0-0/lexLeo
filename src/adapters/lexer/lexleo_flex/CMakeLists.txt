@@ -52,7 +52,7 @@ target_include_directories(lexleo_integration_flex
     "${FLEX_SRC_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/internal"
     "${CMAKE_SOURCE_DIR}/src/foundation/input_provider_legacy/include"
-    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include"
+    "${CMAKE_SOURCE_DIR}/src/foundation/osal/include/mem"
     "${CMAKE_SOURCE_DIR}/src/ports/lexer/include"
     "${CMAKE_SOURCE_DIR}"
 )

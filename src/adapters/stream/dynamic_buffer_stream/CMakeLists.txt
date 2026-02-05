@@ -22,7 +22,7 @@ target_link_libraries(
     PUBLIC
         stream
     PRIVATE
-        osal
+        osal_mem
         lexleo_assert
 )
 
@@ -32,7 +32,7 @@ target_link_libraries(
     INTERFACE
         dynamic_buffer_stream
         stream_wiring_headers
-        osal_wiring_headers
+        osal_mem_wiring_headers
 )
 
 add_subdirectory(tests)

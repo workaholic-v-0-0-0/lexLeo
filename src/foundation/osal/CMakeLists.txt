@@ -25,15 +25,16 @@ set(SRC src)
 add_library(
     osal
     STATIC
-    ${SRC}/osal_mem.c
-    $<$<PLATFORM_ID:Windows>:${SRC}/osal_windows.c>
-    $<$<PLATFORM_ID:Darwin>:${SRC}/osal_macos.c>
-    $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD,SunOS>:${SRC}/osal_unix.c>
+    ${SRC}/common/osal_mem.c
+    $<$<PLATFORM_ID:Windows>:${SRC}/win32/osal_windows.c>
+    $<$<PLATFORM_ID:Darwin>:${SRC}/macos/osal_macos.c>
+    $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD,SunOS>:${SRC}/posix/osal_unix.c>
 )
 
 target_include_directories(osal
     PUBLIC
-    include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/mem
     ${CMAKE_CURRENT_BINARY_DIR}/include
     PRIVATE
     ${CMAKE_SOURCE_DIR}/src/include
@@ -43,26 +44,42 @@ target_compile_definitions(
     PRIVATE
     $<$<PLATFORM_ID:Linux>:_GNU_SOURCE>
 )
-
 add_library(
     osal_mem
     STATIC
-    ${SRC}/osal_mem.c
-)
-target_include_directories(osal_mem
-    PUBLIC
-    include
-    PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/include
+    ${SRC}/common/osal_mem.c
 )
 
-add_library(osal_wiring_headers INTERFACE)
-#[[
+target_include_directories(
+    osal_mem
+    PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/mem"
+)
+
+add_library(osal_mem_wiring_headers INTERFACE)
+
 target_link_libraries(
-    osal_wiring_headers
+    osal_mem_wiring_headers
     INTERFACE
 )
-#]]
+
+add_library(
+    osal_file
+    STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/osal_file.c"
+    "$<$<PLATFORM_ID:Windows>:${SRC}/win32/osal_file_win32.c>"
+    "$<$<PLATFORM_ID:Linux,Darwin,FreeBSD,OpenBSD,SunOS>:${SRC}/posix/osal_file_posix.c>"
+)
+target_include_directories(
+    osal_file
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(
+    osal_file
+    PRIVATE
+        lexleo_panic
+)
 
 # fake time zone
 if (WIN32)
@@ -74,4 +91,3 @@ endif ()
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()
-
