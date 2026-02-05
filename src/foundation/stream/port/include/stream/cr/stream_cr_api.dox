@@ -1,0 +1,19 @@
+/** @defgroup stream_cr_api stream CR API
+ *  @ingroup stream_api
+ *
+ *  @brief Composition Root (CR) API for the `stream` port.
+ *
+ *  @details
+ *  This API is intended to be used by the Composition Root only.
+ *  It exposes the public wiring and factory-oriented services required to:
+ *  - build stream-related descriptors,
+ *  - configure factory-based creation,
+ *  - connect adapters to the `stream` port at composition time.
+ *
+ *  Typical contents:
+ *  - CR helpers from `stream_cr_api.h`
+ *  - factory-oriented CR services from `stream_factory_cr_api.h`
+ *
+ *  @note This API is part of the CR surface. Runtime modules should not
+ *        include it directly.
+ */

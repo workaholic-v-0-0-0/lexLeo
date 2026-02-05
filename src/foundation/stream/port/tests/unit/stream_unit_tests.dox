@@ -1,0 +1,18 @@
+/**
+ * @defgroup stream_unit_tests stream unit tests
+ * @ingroup stream_tests_group
+ *
+ * @brief Unit tests for the stream port.
+ *
+ * This test suite validates:
+ * - default CR helpers (`stream_default_ops()`, `stream_default_env()`)
+ * - port lifecycle (`stream_create()`, `stream_destroy()`)
+ * - borrower API forwarding and validation (`stream_read()`, `stream_write()`, `stream_flush()`)
+ *
+ * See @ref testing_foundation_stream_unit "Stream port unit test specification"
+ * for the editorial contract reference.
+ *
+ * Test doubles:
+ * - `fake_memory` (allocator fault injection + leak checks)
+ * - `fake_stream_backend_t` + `fake_stream_vtbl` (spy/fake adapter backend)
+ */

@@ -1,0 +1,13 @@
+/** @defgroup stream_lifecycle_api stream lifecycle API
+ *  @ingroup stream_api
+ *
+ *  @brief Lifecycle API for `stream_t` handles.
+ *
+ *  @details
+ *  This API exposes creation and destruction services for the `stream` port.
+ *  It defines the public lifecycle boundary between stream allocation,
+ *  initialization, and teardown.
+ *
+ *  Typical contents:
+ *  - lifecycle services from `stream_lifecycle.h`
+ */

@@ -11,7 +11,7 @@
 #include "runtime_env.h"
 #include "runtime_session.h"
 #include "lexer_legacy.h"
-#include "parser_types.h"
+#include "policy/parser_types.h"
 #include "parser_api.h"
 #include "resolver.h"
 #include "interpreter.h"

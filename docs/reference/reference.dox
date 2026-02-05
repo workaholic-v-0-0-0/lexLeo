@@ -1,0 +1,29 @@
+/** @page reference_page Reference
+ *
+ * Generated documentation extracted from source comments.
+ *
+ * - @ref api_reference "API"
+ * - @ref internal_reference "Internal"
+ * - @ref tests_reference "Tests"
+ */
+
+/** @defgroup api_reference API
+ *  Public API documentation generated from source headers.
+ */
+
+/** @defgroup internal_reference Private API
+ *  Generated documentation for non-public module headers.
+ */
+
+/** @defgroup tests_reference Tests
+ *  Documentation of the unit and integration tests.
+ *
+ *  The test suites serve as executable specifications validating
+ *  the behavior of the modules.
+ *
+ *  Typical contents include:
+ *  - test fixtures
+ *  - test scenarios
+ *  - test doubles (fake_memory, fake_file, etc.)
+ *  - behavioral validation of modules
+ */

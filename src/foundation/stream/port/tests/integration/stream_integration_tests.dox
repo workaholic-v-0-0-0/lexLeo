@@ -1,0 +1,17 @@
+/**
+ * @defgroup stream_integration_tests stream integration tests
+ * @ingroup stream_tests_group
+ *
+ * @brief Integration tests for the stream family.
+ *
+ * @details
+ * This group gathers integration-level tests for stream-related public APIs.
+ *
+ * It currently covers:
+ * - stream factory core integration tests
+ * - adapter-specific integration tests for factory-based stream creation
+ *
+ * Main specifications:
+ * - @ref testing_foundation_stream_factory_integration
+ * - @ref testing_foundation_stream_factory_fs_stream_integration
+ */

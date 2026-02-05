@@ -18,7 +18,7 @@ target_include_directories(
 target_link_libraries(
     stream
     PRIVATE
-        osal
+        osal_mem
         lexleo_assert
 )
 

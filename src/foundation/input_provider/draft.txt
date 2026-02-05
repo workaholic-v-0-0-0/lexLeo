@@ -17,12 +17,12 @@ Ownership contract (IMPORTANT):
 
 Destruction rule used by input_provider:
 - When a stream is popped or when provider is destroyed,
-  input_provider must destroy the stream with stream_destroy(s).
+  input_provider must destroy the stream with stream_destroy(&s).
 
-Current stream_destroy(s) implementation (kept for now):
+Current stream_destroy(&s) implementation (kept for now):
 - stream_destroy closes the backend (if close != NULL) then frees the wrapper.
 
-    void stream_destroy(stream_t *s)
+    void stream_destroy(stream_t **s)
     {
         if (!s) return;
         if (s->vtbl.close) s->vtbl.close(s->backend);
@@ -31,7 +31,7 @@ Current stream_destroy(s) implementation (kept for now):
     }
 
 Notes / invariants:
-- input_provider must call stream_destroy(s) exactly once for each owned stream.
+- input_provider must call stream_destroy(&s) exactly once for each owned stream.
 - stream_vtbl.close(backend) must free/cleanup backend resources only
   (must NOT free the stream_t wrapper, to avoid double-free).
 - No ctx/wiring types involved at runtime: the stack is ctx-free.

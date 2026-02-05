@@ -1,22 +1,18 @@
 // src/foundation/stream/port/src/stream.c
 
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/adapters/stream_adapters_api.h"
-#include "stream/cr/stream_cr_api.h"
 #include "internal/stream_handle.h"
-#include "lexleo_assert.h"
+#include "policy/lexleo_assert.h"
 
 size_t stream_read(stream_t *s, void *buf, size_t n, stream_status_t *st) {
-    if (st) *st = STREAM_STATUS_OK;
+    if (n == 0) {
+		if (st) *st = STREAM_STATUS_OK;
+		return (size_t)0;
+	}
 
-    if (n == 0) return (size_t)0;
-
-    if (!s || (n && !buf)) {
-        if (st) *st = STREAM_STATUS_INVALID;
-        return (size_t)0;
-    }
-
-    if (!s->vtbl.read) {
+    if (!s || !buf) {
         if (st) *st = STREAM_STATUS_INVALID;
         return (size_t)0;
     }
@@ -35,16 +31,12 @@ size_t stream_write(
 	size_t n,
 	stream_status_t *st )
 {
-    if (st) *st = STREAM_STATUS_OK;
+    if (n == 0) {
+		if (st) *st = STREAM_STATUS_OK;
+		return (size_t)0;
+	}
 
-    if (n == 0) return (size_t)0;
-
-    if (!s || (n && !buf)) {
-        if (st) *st = STREAM_STATUS_INVALID;
-        return (size_t)0;
-    }
-
-    if (!s->vtbl.write) {
+    if (!s || !buf) {
         if (st) *st = STREAM_STATUS_INVALID;
         return (size_t)0;
     }
@@ -68,52 +60,65 @@ stream_status_t stream_create(
 		stream_t **out,
 		const stream_vtbl_t *vtbl,
 		void *backend,
-		const stream_ctx_t *ctx ) {
-	if (out) *out = NULL;
+		const stream_env_t *env )
+{
 	if (
 			   !out
 			|| !vtbl
 			|| !vtbl->read
 			|| !vtbl->write
-			|| !ctx
-			|| !ctx->mem
-			|| !ctx->mem->calloc
-			|| !ctx->mem->free )
+			|| !vtbl->flush
+			|| !vtbl->close
+			|| !env
+			|| !env->mem )
 		return STREAM_STATUS_INVALID;
 
-	stream_t *s = ctx->mem->calloc(1, sizeof(*s));
-	if (!s) return STREAM_STATUS_OOM;
+	stream_t *tmp = env->mem->calloc(1, sizeof(*tmp));
+	if (!tmp)
+		return STREAM_STATUS_OOM;
 
-	s->vtbl = *vtbl;
-	s->backend = backend;
-	s->mem = ctx->mem;
+	tmp->vtbl = *vtbl;
+	tmp->backend = backend;
+	tmp->mem = env->mem;
 
-	*out = s;
+	*out = tmp;
 	return STREAM_STATUS_OK;
 }
 
-void stream_destroy(stream_t *s)
+void stream_destroy(stream_t **s)
 {
-	if (!s) return;
+	if (!s || !*s) {
+		return;
+	}
 
-	const osal_mem_ops_t *mem = s->mem;
-	stream_close_fn_t close_fn = s->vtbl.close;
-	void *backend = s->backend;
+	stream_t *stream = *s;
+	*s = NULL;
+
+	const osal_mem_ops_t *mem = stream->mem;
+	stream_close_fn_t close_fn = stream->vtbl.close;
+	void *backend = stream->backend;
 
 	if (close_fn) {
 		stream_status_t st = close_fn(backend);
-		LEXLEO_ASSERT(st == STREAM_STATUS_OK || st == STREAM_STATUS_IO_ERROR);
+		LEXLEO_ASSERT(
+			st == STREAM_STATUS_OK ||
+			st == STREAM_STATUS_IO_ERROR ||
+			st == STREAM_STATUS_NO_BACKEND);
 	}
+
 	LEXLEO_ASSERT(mem && mem->free);
-	mem->free(s);
+	mem->free(stream);
 }
 
-const stream_ops_t *stream_default_ops(void)
-{
+const stream_ops_t *stream_default_ops(void) {
 	static const stream_ops_t OPS = {
 		.read = stream_read,
 		.write = stream_write,
 		.flush = stream_flush
 	};
 	return &OPS;
+}
+
+stream_env_t stream_default_env(const osal_mem_ops_t *mem_ops) {
+	return (stream_env_t) { .mem = mem_ops };
 }

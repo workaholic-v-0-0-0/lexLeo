@@ -12,10 +12,8 @@ cmake-build-debug/
 CMakeFiles/
 CMakeCache.txt
 Testing/
-doxygen_management/doc_to_fetch_links_tmp/
-docs/
+site/
 Doxyfile
-Doxyfile_to_fetch_links
 doc_to_fetch_links_tmp/
 /parser.tab.c
 /parser.tab.h
@@ -27,3 +25,6 @@ doc_to_fetch_links_tmp/
 
 # backup artifacts
 *~
+
+# draft
+draft/

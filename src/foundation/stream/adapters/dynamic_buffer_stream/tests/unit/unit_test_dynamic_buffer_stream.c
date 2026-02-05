@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "lexleo_cmocka_xmacro_helpers.h"
-#include "osal_mem_fake_provider.h"
+#include "osal/mem/test/osal_mem_fake_provider.h"
 
 // value used to pre-fill buf when check_buf_unchanged
 static const uint8_t BUF_FILL = (uint8_t)0xCC;
@@ -114,7 +114,7 @@ static int teardown_create_stream(void **state) {
 		(test_dynamic_buffer_stream_create_stream_fixture_t *) (*state);
 
 	if (fx->out) {
-		stream_destroy(fx->out);
+		stream_destroy(&fx->out);
 		fx->out = NULL;
 	}
 
@@ -344,7 +344,7 @@ static int teardown_read(void **state) {
 		(test_dynamic_buffer_stream_read_fixture_t *) (*state);
 
 	if (fx->stream) {
-		stream_destroy(fx->stream);
+		stream_destroy(&fx->stream);
 		fx->stream = NULL;
 	}
 
@@ -537,7 +537,7 @@ static void test_read_consumes_progressively(void **state) {
 	assert_memory_equal(buf, "llo", 3);
 
 	// Cleanup
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -563,7 +563,7 @@ static void test_read_drains_then_returns_0(void **state) {
 	memset(buf, BUF_FILL, sizeof(buf));
 	assert_true((size_t)0 == stream_read(s, buf, 1));
 
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -688,7 +688,7 @@ static int teardown_write(void **state) {
 		(test_dynamic_buffer_stream_write_fixture_t *) (*state);
 
 	if (fx->stream) {
-		stream_destroy(fx->stream);
+		stream_destroy(&fx->stream);
 		fx->stream = NULL;
 	}
 
@@ -857,7 +857,7 @@ static void test_write_appends_progressively(void **state) {
 	assert_memory_equal(readbuf, all, 5);
 
 	// Cleanup
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -894,7 +894,7 @@ static void test_write_grows_buffer_for_large_write(void **state) {
 	assert_memory_equal(readbuf, expected, BIG_N);
 
 	// Cleanup
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -933,7 +933,7 @@ static void test_write_fails_on_oom_and_preserves_existing_data(void **state) {
 	assert_true((size_t)0 == stream_read(s, extra, 1));
 
 	// Cleanup
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -995,7 +995,7 @@ static void test_flush_no_op(void **state) {
 	assert_true((size_t)0 == stream_read(s, readbuf, 1));
 
 	// Cleanup
-	stream_destroy(s);
+	stream_destroy(&s);
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
@@ -1012,7 +1012,7 @@ static const struct CMUnitTest flush_stateful_tests[] = {
 //-----------------------------------------------------------------------------
 // CONTRACT — dynamic_buffer_stream (destroy/close behavior via stream port)
 //
-// void stream_destroy(stream_t *s);
+// void stream_destroy(stream_t **s);
 //
 // - releases the stream object and its backend resources
 // - safe on NULL (no-op)
@@ -1069,7 +1069,7 @@ static void test_destroy_after_partial_io(void **state) {
 	assert_memory_equal(readbuf, "he", 2);
 
 	// Act
-	stream_destroy(s);
+	stream_destroy(&s);
 
 	// Assert
 	assert_true(fake_memory_no_leak());

@@ -1,4 +1,4 @@
-// src/osal/include/osal_mem_types.h
+// src/foundation/osal/include/osal_mem_types.h
 
 #ifndef LEXLEO_OSAL_MEM_TYPES_H
 #define LEXLEO_OSAL_MEM_TYPES_H

@@ -1,0 +1,22 @@
+/** @defgroup stream_api stream API
+ *  @ingroup stream_family_group
+ *
+ *  @brief Public API of the `stream` port.
+ *
+ *  @details
+ *  This group gathers the public headers exposed by the `stream` port.
+ *
+ *  The API is structured by visibility and usage role:
+ *  - @ref stream_borrowers_api
+ *  - @ref stream_lifecycle_api
+ *  - @ref stream_cr_api
+ *  - @ref stream_adapters_api
+ *  - @ref stream_owners_api
+ *
+ *  These sub-APIs separate:
+ *  - borrower-facing runtime usage,
+ *  - lifecycle management,
+ *  - Composition Root wiring,
+ *  - adapter-facing support contracts,
+ *  - owner-style creator helpers.
+ */

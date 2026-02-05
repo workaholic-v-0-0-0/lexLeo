@@ -1,99 +1,63 @@
-# README
+# LexLeo
 
-## Project overview
+LexLeo is a modular interpreter project written in C.
 
-**lexLeo** is a Lisp-like programming language interpreter with a C-style syntax.
-It is designed as an educational and experimental project focused on the
-implementation of language semantics, evaluation models, and interpreter
-architecture.
+It explores the design and implementation of a Lisp-inspired language
+while placing strong emphasis on software architecture, testability,
+and professional engineering practices.
 
-The project explores core concepts found in Lisp-inspired languages such as:
-
-- symbolic expressions and values,
-- first-class functions,
-- dynamic evaluation (`eval`),
-- quotation and delayed evaluation (`quote`),
-- explicit environments and runtime state.
-
-Unlike traditional Lisp dialects, lexLeo deliberately adopts a more C-like
-surface syntax, while preserving Lisp-style semantics and execution principles.
-
-📘 **Full documentation is available at:**  
-<https://caltuli.online/lexleo>
+📘 Full documentation: https://caltuli.online/lexleo
 
 ---
 
-## Project goals
+## Overview
 
-lexLeo is primarily an educational project aimed at deepening the understanding
-of programming language implementation, with a strong emphasis on **interpreters**
-rather than compilation.
-
-The project focuses on:
+LexLeo implements:
 
 - lexical analysis and parsing,
 - abstract syntax trees (AST),
 - environment-based evaluation,
 - runtime value representation,
-- memory management and execution flow.
+- structured memory management.
 
-By concentrating on interpretation instead of compilation, lexLeo prioritizes
-clarity, correctness, and architectural soundness over breadth of features.
+The project prioritizes clarity, architectural discipline, and correctness
+over feature breadth.
 
 ---
 
-## Software engineering focus
+## Engineering Focus
 
-Beyond language theory, lexLeo is also a practical exercise in professional
-software engineering. The project emphasizes:
+LexLeo emphasizes:
 
-- clean and modular C architecture,
-- explicit dependency injection,
+- modular architecture with explicit boundaries,
+- dependency injection (CR vs runtime separation),
+- handle-based state management,
 - test-driven development (TDD),
-- robust build configuration using CMake,
 - memory abstraction through an OSAL layer,
-- automated documentation generation with Doxygen.
-
-lexLeo is intended as a **serious portfolio project**, demonstrating not only
-knowledge of language design, but also the ability to structure, document, and
-maintain a non-trivial C codebase to professional standards.
-
----
-
-## Scope
-
-At its current stage, lexLeo provides:
-
-- a **Lisp-like interpreter** with a well-defined evaluation model,
-- a modular lexer and parser architecture,
-- an explicit runtime environment and symbol management,
-- a strong emphasis on correctness, testability, and maintainability.
-
-A compiler backend is **intentionally out of scope** for now, in order to keep
-the project focused and technically rigorous.
+- automated documentation with Doxygen.
 
 ---
 
 ## Getting Started
-
-To get started with lexLeo, clone this repository to your local machine:
 
 ```bash
 git clone https://github.com/workaholic-v-0-0-0/lexLeo.git
 cd lexLeo
 ```
 
-## Prerequisites
+---
 
-Ensure you have the following installed on your system:
+## Build
 
-- GCC (or any preferred C compiler)
-- CMake
-- A generator as Make or Visual Studio 2022 17
+### Requirements
+
+- C compiler (GCC, Clang, MSVC)
+- CMake ≥ 3.x
+- Flex and Bison (for parser generation)
+
+---
 
 ## Build the project with CMake
-
-To build the compiler and interpreter using CMake, follow these steps:
 
 ### For Production Builds (Tests disabled)
 
@@ -152,95 +116,57 @@ By default, BUILD_TESTING is ON, but you can specify it explicitly for clarity.
     cmake --build build --target check_memory
    ```
 
-## Run the project
+## Run
 
-After building the project, you can run the executable directly from the project
-directory:
+After building, the CLI executable is located inside the `build/` directory.
+The exact path depends on the platform and CMake generator used.
 
-### For Linux:
+### Quick run
 
-   ```bash
-   ./build/lexLeo_cli
-   ```
+- Linux / macOS:
 
-### For Windows:
+```bash
+./build/lexLeo_cli
+```
 
-   ```bash
-   .\build\Release\lexLeo_cli.exe
-   ```
+- Windows (Visual Studio generator):
+```bash
+.\build\Release\lexLeo_cli.exe
+```
 
-### For MacOS:
+### Platform-specific details
 
-   ```bash
-   ./build/lexLeo_cli
-   ```
+#### Linux (Unix Makefiles generator)
 
-## Rebuild, generate documentation and open it with a web browser
+When using the Unix Makefiles generator, the executable is created
+directly inside the `build/` directory:
 
-   ```bash
-   ./scripts/re_debug_build-make_and_open_doc.sh
-   ```
+./build/lexLeo_cli
 
-## Rebuild and run unit tests without memory checking
+#### macOS (default generator)
 
-   ```bash
-   ./scripts/re_debug_build-check.sh 
-   ```
+As on Linux, the executable is generated directly inside the `build/` directory:
 
-## Rebuild and run unit tests with memory checking
+```bash
+./build/lexLeo_cli
+```
 
-   ```bash
-   ./scripts/re_debug_build-check_memory.sh
-   ```
+#### Windows (Visual Studio 2022 generator)
 
-## Rebuild and update documentation on droplet (if SSH access is configured) :
+Visual Studio generators place binaries inside configuration
+subdirectories (e.g., `Release/` or `Debug/`).
 
-   ```bash
-   ./scripts/update_docs_on_droplet.sh 
-   ```
-
-## Design draft
-
-- Lexer / Parser design draft:
-    - [PDF](static_doc_pages/draft/lexer_parser_draft_design.pdf)
-
-## Architecture (WIP section)
-
-### Diagrams
-
-- [c4_context (PNG)](static_doc_pages/architecture/diagrams/png/c4_context.png)
-- [c4_container (PNG)](static_doc_pages/architecture/diagrams/png/c4_container.png)
-- [dynamic_buffer_stream (PNG)](static_doc_pages/architecture/diagrams/png/diagram_dynamic_buffer_stream.png)
-- [lexleo_flex (PNG)](static_doc_pages/architecture/diagrams/png/diagram_lexleo_flex.png)
-
-### Standards
-
-- [Module layout standards](@ref arch_standards_module_layout)
-- [Type standards](@ref arch_standards_types)
-- [Naming conventions](@ref arch_standards_naming)
-- [Module context model](@ref module_context_model)
-- [Lifecycle Visibility Rules (create / destroy)](@ref lifecycle_visibility_rules)
-
-### draft section
-
-- [lexleo_flex module](@ref lexleo_flex_module)
-
-## Contribute
-
-Contributions to the lexLeo project are welcome! Whether it involves
-fixing bugs, adding new features, or improving documentation, your
-help is appreciated. Please read CONTRIBUTING.md for details on our
-code of conduct and the process for submitting pull requests to us.
+Release build:
+```bash
+.\build\Release\lexLeo_cli.exe
+```
 
 ## Licensing
 
-lexLeo is licensed under the GNU General Public License v3.0 or later.
+LexLeo is licensed under the GNU General Public License v3.0 or later.
 
-This project uses the following third-party components:
+## Third-party components:
 
 - Flex (BSD-like license with exception)
 - Bison (GPL with special exception)
 - Standard C library (glibc / musl, LGPL)
-
-These components are compatible with the GPLv3 and impose no additional
-restrictions on the distribution of lexLeo.

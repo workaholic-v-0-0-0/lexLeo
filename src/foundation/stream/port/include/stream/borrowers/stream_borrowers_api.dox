@@ -1,0 +1,14 @@
+/** @defgroup stream_borrowers_api stream borrowers API
+ *  @ingroup stream_api
+ *
+ *  @brief Borrower-facing runtime API for the `stream` port.
+ *
+ *  @details
+ *  This API exposes the public runtime operations and borrower-visible types
+ *  used to manipulate `stream_t` handles without owning their construction
+ *  logic.
+ *
+ *  Typical contents:
+ *  - borrower-facing operations from `stream.h`
+ *  - borrower-visible support types from `stream_types.h`
+ */

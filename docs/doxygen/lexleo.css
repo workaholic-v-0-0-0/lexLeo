@@ -1,0 +1,80 @@
+#titlearea {
+    padding: 12px 12px;
+}
+
+#projectlogo {
+    padding: 0px 0px 0 0px;
+    vertical-align: middle;
+}
+
+#projectlogo a {
+    display: inline-block;
+}
+
+#projectlogo a:hover {
+    opacity: 0.9;
+}
+
+#projectlogo img {
+    height: 56px;
+    width: auto;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#titlearea {
+    padding: 10px 20px;     /* espace gauche + droite */
+    box-sizing: border-box;
+}
+
+#header-flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+#header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#projectlogo img {
+    height: 48px;
+    width: auto;
+}
+
+#header-right {
+    flex-shrink: 0;          /* empêche le débordement */
+    padding-left: 12px;      /* petit espace avant GitHub */
+}
+
+#header-right img {
+    height: 22px;
+    width: auto;
+    display: block;
+}
+
+#projectlogo img,
+#header-right img {
+    display: block;
+}
+
+.github-label {
+    font-size: 13px;
+    margin-left: 6px;
+    opacity: 0.7;
+}
+
+#header-right a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+#projectnumber {
+    font-size: 14px;
+    margin-left: 8px;
+    opacity: 0.75;
+}

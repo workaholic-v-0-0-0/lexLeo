@@ -1,0 +1,17 @@
+/** @defgroup stream_owners_api stream owners API
+ *  @ingroup stream_api
+ *
+ *  @brief Owner-style creator API related to the `stream` port.
+ *
+ *  @details
+ *  This API exposes public creator helpers that build owner-side stream
+ *  instances for specific usage contexts.
+ *
+ *  These helpers complement the generic port/factory surfaces by providing
+ *  higher-level creation entry points for selected owner workflows.
+ *
+ *  Typical contents:
+ *  - buffer-backed creator helpers from `stream_buffer_creator.h`
+ *  - file-backed creator helpers from `stream_file_creator.h`
+ *  - generic I/O creator helpers from `stream_io_creator.h`
+ */

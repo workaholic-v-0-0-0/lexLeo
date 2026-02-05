@@ -1,8 +1,0 @@
-
-
-#ifndef LEXLEO_STREAM_TEST_API_H
-#define LEXLEO_STREAM_TEST_API_H
-
-// todo
-
-#endif //LEXLEO_STREAM_TEST_API_H

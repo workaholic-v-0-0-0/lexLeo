@@ -1,0 +1,21 @@
+/** @defgroup stream_adapters_api stream adapters API
+ *  @ingroup stream_api
+ *
+ *  @brief Public adapter-facing API for the `stream` port.
+ *
+ *  @details
+ *  This API exposes the public contracts used by modules that implement
+ *  concrete adapters for the `stream` port.
+ *
+ *  It provides the shared adapter-side vocabulary needed to:
+ *  - declare adapter descriptors,
+ *  - expose adapter installation hooks,
+ *  - exchange adapter environment/configuration data,
+ *  - identify adapters through public stream keys.
+ *
+ *  Typical contents:
+ *  - adapter contracts from `stream_adapters_api.h`
+ *  - adapter environment support from `stream_env.h`
+ *  - installation support from `stream_install.h`
+ *  - key definitions from `stream_key_type.h`
+ */
