@@ -200,7 +200,7 @@ set(
 #------------------------------------------------------------------------------
 
 add_subdirectory(src/ports/stream_legacy)
-add_subdirectory(src/ports/stream)
+add_subdirectory(src/foundation/stream)
 
 add_subdirectory(src/adapters)
 

@@ -2,7 +2,8 @@
 # Copyright (C) 2026 Sylvain Labopin
 #
 # File:
-# src/adapters/stream/
+# src/foundation/stream/
 # CMakeLists.txt
 
-add_subdirectory(dynamic_buffer_stream)
+add_subdirectory(port)
+add_subdirectory(adapters)

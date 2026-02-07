@@ -1,4 +1,4 @@
-# src/ports/stream/CMakeLists.txt
+# src/foundation/stream/ports/CMakeLists.txt
 
 add_library(stream STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/stream.c"

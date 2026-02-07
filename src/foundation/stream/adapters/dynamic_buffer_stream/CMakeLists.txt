@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Sylvain Labopin
 #
 # File:
-# src/adapters/stream/dynamic_buffer_stream/
+# src/foundation/stream/adapters/dynamic_buffer_stream/
 # CMakeLists.txt
 
 add_library(
