@@ -200,7 +200,7 @@ set(
 #------------------------------------------------------------------------------
 
 add_subdirectory(src/ports/stream_legacy)
-add_subdirectory(src/ports/stream)
+add_subdirectory(src/foundation/stream)
 
 add_subdirectory(src/adapters)
 
@@ -209,7 +209,7 @@ add_subdirectory(src/core/ast) # depends on data_structures
 add_subdirectory(src/core/symtab) # depends on data_structures and ast
 add_subdirectory(src/ports/parser) # depends on lexer and ast
 add_subdirectory(src/ports/lexer_legacy) # depends on parser interface—opaque types
-add_subdirectory(src/ports/lexer)
+add_subdirectory(src/core/lexer)
 add_subdirectory(src/core/resolver) # depends on ast and symtab
 add_subdirectory(src/core/runtime_env) # depends on hashtable
 add_subdirectory(src/foundation/input_provider_legacy) # depends on lexer
