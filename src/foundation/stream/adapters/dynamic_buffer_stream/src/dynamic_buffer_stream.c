@@ -10,30 +10,49 @@
 
 #include "internal/dynamic_buffer_stream_ctx.h"
 #include "internal/dynamic_buffer_stream_internal.h"
-#include "internal/stream_ctx.h"
 #include "dynamic_buffer_stream_factory.h"
 #include "lexleo_assert.h"
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-static size_t read(void *b, void* buf, size_t n) {
-	if (!b || n==0 || !buf) return 0;
+static size_t read(void *b, void* buf, size_t n, stream_status_t *st) {
+	    if (st) *st = STREAM_STATUS_OK;
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t*)b;
-	LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy);
-	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
-	LEXLEO_ASSERT(dbuf->read_pos <= dbuf->len);
+    if (!b || !buf) {
+        if (st) *st = STREAM_STATUS_INVALID;
+        return 0;
+    }
 
-	if (dbuf->len <= dbuf->read_pos) return 0;
+    if (n == 0) {
+        return 0;
+    }
 
-	size_t ret = (dbuf->len - dbuf->read_pos < n) ? dbuf->len - dbuf->read_pos : n;
-	dbs->mem->memcpy(buf, dbuf->buf + dbuf->read_pos, ret);
-	dbuf->read_pos += ret;
+    dynamic_buffer_stream_t *dbs =
+        (dynamic_buffer_stream_t *)b;
 
-	return ret;
+    LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy);
+
+    dynamic_buffer_t *dbuf = &dbs->state.dbuf;
+    LEXLEO_ASSERT(dbuf->read_pos <= dbuf->len);
+
+    if (dbuf->read_pos >= dbuf->len) {
+        if (st) *st = STREAM_STATUS_EOF;
+        return 0;
+    }
+
+    size_t avail = dbuf->len - dbuf->read_pos;
+    size_t ret = (avail < n) ? avail : n;
+
+    dbs->mem->memcpy(buf,
+                    dbuf->buf + dbuf->read_pos,
+                    ret);
+
+    dbuf->read_pos += ret;
+
+    return ret;
 }
 
 static bool buffer_reserve(dynamic_buffer_stream_t *dbs, size_t cap) {
@@ -53,121 +72,162 @@ static size_t next_cap(size_t cap) {
 	return 2 * cap;
 }
 
-static size_t write(void *b, const void* buf, size_t n) {
-	if (!b || (!buf && n)) return 0;
+static size_t write(
+    void *b,
+    const void *buf,
+    size_t n,
+    stream_status_t *st)
+{
+    if (st) *st = STREAM_STATUS_OK;
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t*)b;
-	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
+    if (!b || (!buf && n)) {
+        if (st) *st = STREAM_STATUS_INVALID;
+        return 0;
+    }
 
-	LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy);
-	LEXLEO_ASSERT(dbuf->cap > 0);
+    if (n == 0) {
+        return 0;
+    }
 
-	if (n > SIZE_MAX - dbuf->len) return 0;
-	size_t need = dbuf->len + n;
+    dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)b;
+    dynamic_buffer_t *dbuf = &dbs->state.dbuf;
 
-	size_t new_cap = dbuf->cap;
-	if (new_cap == 0) return 0;
+    LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy);
+    LEXLEO_ASSERT(dbuf->cap > 0);
 
-	while (need > new_cap) {
-		size_t grown = next_cap(new_cap);
-		if (grown == 0 || grown <= new_cap) return 0; // overflow/stuck guard
-		new_cap = grown;
-	}
+    if (n > SIZE_MAX - dbuf->len) {
+        if (st) *st = STREAM_STATUS_INVALID;
+        return 0;
+    }
 
-	if (!buffer_reserve(dbs, new_cap)) return 0;
+    size_t need = dbuf->len + n;
 
-	dbs->mem->memcpy(dbuf->buf + dbuf->len, buf, n);
-	dbuf->len += n;
+    size_t new_cap = dbuf->cap;
+    if (new_cap == 0) {
+        if (st) *st = STREAM_STATUS_INVALID;
+        return 0;
+    }
 
-	return n;
+    while (need > new_cap) {
+        size_t grown = next_cap(new_cap);
+        if (grown == 0 || grown <= new_cap) {
+            if (st) *st = STREAM_STATUS_OOM;
+            return 0;
+        }
+        new_cap = grown;
+    }
+
+    if (!buffer_reserve(dbs, new_cap)) {
+        return 0;
+    }
+
+    dbs->mem->memcpy(dbuf->buf + dbuf->len, buf, n);
+    dbuf->len += n;
+
+    return n;
 }
 
-static int flush(void *b) {
-	(void)b;
-	return 0;
+static stream_status_t flush(void *b)
+{
+    (void)b;
+    return STREAM_STATUS_OK;
 }
 
-static int close(void *b) {
-	if (!b) return 0;
+static stream_status_t close(void *b)
+{
+    if (!b) return STREAM_STATUS_OK;
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t*)b;
-	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
+    dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)b;
+    dynamic_buffer_t *dbuf = &dbs->state.dbuf;
 
-	LEXLEO_ASSERT(dbs->mem && dbs->mem->free);
+    LEXLEO_ASSERT(dbs->mem && dbs->mem->free);
 
-	if (dbuf->autoclose) {
-		dbs->mem->free(dbuf->buf);
-		dbuf->buf = NULL;
-	}
+    if (dbuf->autoclose && dbuf->buf) {
+        dbs->mem->free(dbuf->buf);
+        dbuf->buf = NULL;
+    }
 
-	dbs->mem->free(b);
-
-	return 0;
+    dbs->mem->free(dbs);
+    return STREAM_STATUS_OK;
 }
 
-static const stream_vtbl_t DEFAULT_VTBL = {
+static const stream_vtbl_t VTBL = {
 	.read = read,
 	.write = write,
 	.flush = flush,
 	.close = close,
 };
 
-static stream_status_t create_backend (
-		dynamic_buffer_stream_t **out,
-		const dynamic_buffer_stream_ctx_t *ctx ) {
-	if (out) *out = NULL;
-	if (
-			   !out
-			|| !ctx
-			|| !ctx->deps.mem
-			|| !ctx->deps.mem->calloc
-			|| !ctx->deps.mem->free )
-		return STREAM_STATUS_ERROR;
+static stream_status_t create_backend(
+    dynamic_buffer_stream_t **out,
+    const dynamic_buffer_stream_ctx_t *ctx)
+{
+    if (out) *out = NULL;
 
-	dynamic_buffer_stream_t *backend = ctx->deps.mem->calloc(1, sizeof(*backend));
-	if (!backend)
-		return STREAM_STATUS_ERROR;
-	backend->mem = ctx->deps.mem;
-	backend->state.dbuf.cap = DYNAMIC_BUFFER_STREAM_DEFAULT_CAPACITY;
-	backend->state.dbuf.buf =
-		ctx->deps.mem->calloc(backend->state.dbuf.cap, sizeof(char));
-	if (!backend->state.dbuf.buf) {
-		ctx->deps.mem->free(backend);
-		return STREAM_STATUS_ERROR;
-	}
-	backend->state.dbuf.len = 0;
-	backend->state.dbuf.read_pos = 0;
-	backend->state.dbuf.autoclose = true;
+    if (!out || !ctx || !ctx->deps.mem ||
+        !ctx->deps.mem->calloc || !ctx->deps.mem->free) {
+        return STREAM_STATUS_INVALID;
+    }
 
-	*out = backend;
-	return STREAM_STATUS_OK;
+    dynamic_buffer_stream_t *backend =
+        (dynamic_buffer_stream_t *)ctx->deps.mem->calloc(1, sizeof(*backend));
+    if (!backend) {
+        return STREAM_STATUS_OOM;
+    }
+
+    backend->mem = ctx->deps.mem;
+
+    backend->state.dbuf.cap = DYNAMIC_BUFFER_STREAM_DEFAULT_CAPACITY;
+    backend->state.dbuf.buf = (char *)ctx->deps.mem->calloc(
+        backend->state.dbuf.cap, sizeof(char));
+
+    if (!backend->state.dbuf.buf) {
+        ctx->deps.mem->free(backend);
+        return STREAM_STATUS_OOM;
+    }
+
+    backend->state.dbuf.len = 0;
+    backend->state.dbuf.read_pos = 0;
+    backend->state.dbuf.autoclose = true;
+
+    *out = backend;
+    return STREAM_STATUS_OK;
 }
 
+
 stream_status_t dynamic_buffer_stream_create_stream(
-		stream_t **out,
-		const dynamic_buffer_stream_ctx_t *ctx ) {
-	if (out) *out = NULL;
-	if (!out || !ctx) return STREAM_STATUS_ERROR;
+    stream_t **out,
+    const dynamic_buffer_stream_ctx_t *ctx)
+{
+    if (out) *out = NULL;
 
-	dynamic_buffer_stream_t *backend = NULL;
+    if (!out || !ctx) {
+        return STREAM_STATUS_INVALID;
+    }
 
-	if (create_backend(&backend, ctx) != STREAM_STATUS_OK)
-		return STREAM_STATUS_ERROR;
+    dynamic_buffer_stream_t *backend = NULL;
 
-	stream_ctx_t stream_ctx = { .mem = ctx->deps.mem };
+    stream_status_t st = create_backend(&backend, ctx);
+    if (st != STREAM_STATUS_OK) {
+        return st;
+    }
 
-	if (stream_create(out, ctx->stream_vtbl, backend, &stream_ctx) != STREAM_STATUS_OK) {
-		if (ctx->stream_vtbl->close) ctx->stream_vtbl->close(backend); // rollback
-		return STREAM_STATUS_ERROR;
-	}
-	return STREAM_STATUS_OK;
+    st = stream_create(out, &VTBL, backend, ctx->port_ctx);
+    if (st != STREAM_STATUS_OK) {
+        VTBL.close(backend);
+        return st;
+    }
+
+    return STREAM_STATUS_OK;
 }
 
 dynamic_buffer_stream_ctx_t dynamic_buffer_stream_default_ctx(
-		const osal_mem_ops_t *mem_ops ) {
+	const osal_mem_ops_t *mem_ops,
+	const stream_ctx_t *port_ctx )
+{
 	dynamic_buffer_stream_ctx_t ctx;
 	ctx.deps.mem = mem_ops ? mem_ops : osal_mem_default_ops();
-	ctx.stream_vtbl = &DEFAULT_VTBL;
+	ctx.port_ctx = port_ctx;
 	return ctx;
 }
 
@@ -181,11 +241,11 @@ static stream_status_t factory_create_adapter(void *userdata, stream_t **out) {
 		(const dynamic_buffer_stream_factory_userdata_t *) userdata;
 
 	if (out) *out = NULL;
-	if (!ud || !ud->vtbl || !ud->mem || !out) return STREAM_STATUS_ERROR;
+	if (!ud || !ud->vtbl || !ud->mem || !out) return STREAM_STATUS_INVALID;
 
     dynamic_buffer_stream_ctx_t tmp = {
         .deps = { .mem = ud->mem },
-        .stream_vtbl = ud->vtbl,
+		.port_ctx = NULL // is depreciated anyway
     };
 
     return dynamic_buffer_stream_create_stream(out, &tmp);
@@ -200,25 +260,24 @@ stream_status_t dynamic_buffer_stream_create_factory(
 			|| !ctx
 			|| !ctx->deps.mem
 			|| !ctx->deps.mem->calloc
-			|| !ctx->deps.mem->free
-			|| !ctx->stream_vtbl )
-		return STREAM_STATUS_ERROR;
+			|| !ctx->deps.mem->free )
+		return STREAM_STATUS_INVALID;
 
 	const osal_mem_ops_t *mem = ctx->deps.mem;
 
 	dynamic_buffer_stream_factory_t *fact = mem->calloc(1, sizeof(*fact));
 
-	if (!fact) return STREAM_STATUS_ERROR;
+	if (!fact) return STREAM_STATUS_INVALID;
 
 	dynamic_buffer_stream_factory_userdata_t *ud = mem->calloc(1, sizeof(*ud));
 
 	if (!ud) {
 		mem->free(fact);
-		return STREAM_STATUS_ERROR;
+		return STREAM_STATUS_INVALID;
 	}
 
 	ud->mem  = mem;
-	ud->vtbl = ctx->stream_vtbl;
+	ud->vtbl = NULL;
 
 	fact->userdata = ud;
 	fact->create   = factory_create_adapter;
@@ -237,7 +296,7 @@ stream_status_t dynamic_buffer_stream_destroy_factory(
 
     if (!mem || !mem->free) {
 		// log
-		return STREAM_STATUS_ERROR;
+		return STREAM_STATUS_INVALID;
 	}
 
 	if ((*fact)->userdata) {

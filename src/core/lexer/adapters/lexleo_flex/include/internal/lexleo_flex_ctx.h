@@ -10,7 +10,7 @@
 #define LEXLEO_FLEX_CTX_H
 
 #include "internal/lexer_ctx.h" // lexer port / vtable contract
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 #include "input_provider_legacy_ops.h"
 
 /**

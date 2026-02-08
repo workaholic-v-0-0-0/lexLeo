@@ -117,3 +117,9 @@
 - make osal module properly
 - complete doc with diagrams
 
+- adjust dbs with new dtream vtbl (an additionnal param for status)
+
+- suppress vtbl from ctx of stream adapters
+
+- adjust unit_test_dynamic_buffer_stream.c (it's put on off)
+

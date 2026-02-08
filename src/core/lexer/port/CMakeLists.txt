@@ -12,5 +12,5 @@ target_include_directories(lexer
 )
 
 target_link_libraries(lexer PUBLIC
-    osal
+    osal_mem
 )

@@ -9,8 +9,9 @@
 #ifndef LEXLEO_DYNAMIC_BUFFER_STREAM_FACTORY_H
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_FACTORY_H
 
-#include "stream.h"
-#include "osal_mem.h"
+#include "stream/borrowers/stream.h"
+#include "mem/osal_mem.h"
+#include "mem/osal_mem_ops.h"
 
 #ifdef __cplusplus
 extern "C" {

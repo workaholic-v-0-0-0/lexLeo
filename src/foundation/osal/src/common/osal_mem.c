@@ -1,7 +1,7 @@
 // src/osal/src/osal_mem.c
 
-#include "osal_mem.h"
-#include "internal/osal_mem_ctx.h"
+#include "mem/osal_mem.h"
+#include "mem/internal/osal_mem_ctx.h"
 
 #include <stdlib.h>
 #include <string.h>

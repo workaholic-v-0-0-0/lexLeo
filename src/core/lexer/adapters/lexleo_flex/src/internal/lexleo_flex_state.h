@@ -16,7 +16,7 @@
 
 #include "lexleo_token.h"
 #include "input_provider_legacy_types.h"
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 typedef void *lexleo_flex_yyscan_t;
 

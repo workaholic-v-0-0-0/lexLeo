@@ -9,9 +9,10 @@
 #ifndef LEXLEO_DYNAMIC_BUFFER_STREAM_CTX_H
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_CTX_H
 
-#include "internal/stream_ctx.h" // stream port / vtable contract
+//#include "internal/stream_ctx.h" // stream port / vtable contract
+#include "stream/adapters/stream_adapters_api.h"
 #include "dynamic_buffer_stream_factory.h"
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,8 +43,7 @@ typedef struct dynamic_buffer_stream_ctx_t {
 	/** Injected dependencies. */
 	dynamic_buffer_stream_deps_t deps;
 
-	/** stream virtual table used by the port stream module. */
-	const stream_vtbl_t *stream_vtbl;
+	const stream_ctx_t *port_ctx; // opaque
 } dynamic_buffer_stream_ctx_t;
 
 /**
@@ -67,9 +67,16 @@ stream_status_t dynamic_buffer_stream_create_stream(
  * @param[in] mem_ops  Memory operations (or NULL for default)
  *
  * @return Initialized dynamic_buffer_stream adapter context
+ * todo adjustment
  */
 dynamic_buffer_stream_ctx_t dynamic_buffer_stream_default_ctx(
-	const osal_mem_ops_t *mem_ops );
+	const osal_mem_ops_t *mem_ops,
+	const stream_ctx_t *port_ctx );
+
+// called by CR to finalize ctx
+void dynamic_buffer_stream_ctx_set_port_ctx(
+    dynamic_buffer_stream_ctx_t *ctx,
+    const stream_ctx_t *port_ctx);
 
 /**
  * @brief Create a dynamic_buffer_stream factory (heap handle) for dependency

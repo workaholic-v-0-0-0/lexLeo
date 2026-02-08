@@ -3,7 +3,7 @@
 #ifndef LEXLEO_OSAL_MEM_CTX_H
 #define LEXLEO_OSAL_MEM_CTX_H
 
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 // todo
 

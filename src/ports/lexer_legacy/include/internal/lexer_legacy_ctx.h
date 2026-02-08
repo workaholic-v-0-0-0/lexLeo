@@ -5,7 +5,7 @@
 
 #include "lexer.h"
 
-#include "internal/osal_mem_ctx.h"
+#include "mem/internal/osal_mem_ctx.h"
 
 #ifdef __cplusplus
 extern "C" {

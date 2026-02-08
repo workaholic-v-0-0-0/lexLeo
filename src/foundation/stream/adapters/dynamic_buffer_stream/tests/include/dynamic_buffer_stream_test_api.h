@@ -11,7 +11,7 @@
 #ifndef LEXLEO_DYNAMIC_BUFFER_STREAM_TEST_API_H
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_TEST_API_H
 
-#include "stream.h"
+#include "stream/borrowers/stream.h"
 #include "internal/dynamic_buffer_stream_ctx.h"
 
 #endif //LEXLEO_DYNAMIC_BUFFER_STREAM_TEST_API_H

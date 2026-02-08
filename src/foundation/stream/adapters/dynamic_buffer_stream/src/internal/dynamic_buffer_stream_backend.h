@@ -17,7 +17,7 @@
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_BACKEND_H
 
 #include "internal/dynamic_buffer_stream_state.h"
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 typedef struct dynamic_buffer_stream_t {
 	dynamic_buffer_stream_state_t state;

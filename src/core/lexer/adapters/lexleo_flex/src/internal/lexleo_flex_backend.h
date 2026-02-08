@@ -17,7 +17,7 @@
 #define LEXLEO_FLEX_BACKEND_H
 
 #include "internal/lexleo_flex_state.h"
-#include "osal_mem_ops.h"
+#include "mem/osal_mem_ops.h"
 
 struct osal_mem_ops_t;
 

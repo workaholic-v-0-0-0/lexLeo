@@ -2,7 +2,7 @@
  * Copyright (C) 2026 Sylvain Labopin
  * File:
  * src/foundation/stream/adapters/dynamic_buffer_stream/tests/unit/
- * unit_test_dynamic_buffer_stream_state.c
+ * unit_test_dynamic_buffer_stream.c
  *
  */
 

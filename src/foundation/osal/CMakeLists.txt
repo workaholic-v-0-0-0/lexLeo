@@ -53,13 +53,13 @@ add_library(
 target_include_directories(
     osal_mem
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/mem"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-add_library(osal_mem_wiring_headers INTERFACE)
+add_library(osal_mem_cr_headers INTERFACE)
 
 target_link_libraries(
-    osal_mem_wiring_headers
+    osal_mem_cr_headers
     INTERFACE
 )
 

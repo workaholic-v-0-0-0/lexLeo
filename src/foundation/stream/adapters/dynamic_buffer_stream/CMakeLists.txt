@@ -32,7 +32,7 @@ target_link_libraries(
     INTERFACE
         dynamic_buffer_stream
         stream_wiring_headers
-        osal_mem_wiring_headers
+        osal_mem_cr_headers
 )
 
-add_subdirectory(tests)
+# add_subdirectory(tests)

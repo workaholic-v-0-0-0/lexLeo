@@ -43,8 +43,9 @@ typedef struct <module>_ctx_t {
     <module>_deps_t deps;
     const <module>_backends_t *backends;
     const <module>_hooks_t *hooks;
-    const <module>_ops_t *ops; // or "<abstraction>_vtbl_t ops;"
+    const <module>_ops_t *ops;
     <module>_callbacks_t callbacks;
+    const <port>_ctx_t *<port>_ctx;
     void *user_data;
 } <module>_ctx_t;
 ```
@@ -87,7 +88,7 @@ This keeps external effects **visible, controlled, and auditable**.
 ### Example: injectable OSAL memory dependency
 
 ```c
-#include "osal_mem.h"
+#include "mem/osal_mem.h"
 
 typedef struct module_deps_t {
     const osal_mem_ops_t *mem;

@@ -11,6 +11,7 @@ typedef struct osal_file_t osal_file_t;
 
 typedef enum {
 	OSAL_FILE_OK = 0,
+	OSAL_FILE_EOF,
 	OSAL_FILE_ERR,
 	OSAL_FILE_NOENT,
 	OSAL_FILE_PERM,

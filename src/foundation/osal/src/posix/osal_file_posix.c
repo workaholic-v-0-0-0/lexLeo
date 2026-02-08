@@ -124,13 +124,15 @@ static osal_file_t *posix_open(
 }
 
 static size_t posix_read(
-	osal_file_t *f,
-	void *buf,
-	size_t n,
-	osal_file_status_t *st )
+    osal_file_t *f,
+    void *buf,
+    size_t n,
+    osal_file_status_t *st)
 {
     if (st) *st = OSAL_FILE_ERR;
     if (!f || !f->fp || (!buf && n)) return 0;
+
+    if (n == 0) { if (st) *st = OSAL_FILE_OK; return 0; }
 
     errno = 0;
     size_t got = fread(buf, 1, n, f->fp);
@@ -138,61 +140,84 @@ static size_t posix_read(
     if (got < n) {
         if (ferror(f->fp)) {
             clearerr(f->fp);
-            set_status(st, map_errno(errno));
+            if (st) *st = map_errno(errno);   // ou set_status(...)
             return got;
         }
-        // EOF is not an error
+        if (feof(f->fp)) {
+            if (st) *st = OSAL_FILE_EOF;
+            return got;
+        }
     }
 
-    set_status(st, OSAL_FILE_OK);
+    if (st) *st = OSAL_FILE_OK;
     return got;
 }
 
 static size_t posix_write(
-	osal_file_t *f,
-	const void *buf,
-	size_t n,
-	osal_file_status_t *st )
+    osal_file_t *f,
+    const void *buf,
+    size_t n,
+    osal_file_status_t *st)
 {
     if (st) *st = OSAL_FILE_ERR;
     if (!f || !f->fp || (!buf && n)) return 0;
+
+    if (n == 0) { if (st) *st = OSAL_FILE_OK; return 0; }
 
     errno = 0;
     size_t put = fwrite(buf, 1, n, f->fp);
 
     if (put < n) {
-        set_status(st, map_errno(errno));
+        if (ferror(f->fp)) {
+            clearerr(f->fp);
+            if (st) *st = map_errno(errno);
+            return put;
+        }
+
+        if (st) *st = OSAL_FILE_IO;
         return put;
     }
 
-    set_status(st, OSAL_FILE_OK);
+    if (st) *st = OSAL_FILE_OK;
     return put;
 }
+
 
 static osal_file_status_t posix_flush(osal_file_t *f)
 {
     if (!f || !f->fp) return OSAL_FILE_ERR;
+
     errno = 0;
-    if (fflush(f->fp) != 0) return map_errno(errno);
+    if (fflush(f->fp) != 0) {
+        if (ferror(f->fp)) {
+            clearerr(f->fp);
+            return map_errno(errno);   // IO / PERM / etc.
+        }
+        return OSAL_FILE_IO; // fallback générique
+    }
+
     return OSAL_FILE_OK;
 }
 
-static osal_file_status_t posix_close(osal_file_t *f) {
-    if (!f) return OSAL_FILE_OK; // idempotent close
+static osal_file_status_t posix_close(osal_file_t *f)
+{
+    if (!f) return OSAL_FILE_OK;
+
+    if (!f->mem || !f->mem->free) {
+        lexleo_panic("osal_file: invalid allocator in close");
+        return OSAL_FILE_ERR;
+    }
 
     osal_file_status_t st = OSAL_FILE_OK;
 
     if (f->fp) {
         errno = 0;
-        if (fclose(f->fp) != 0) st = map_errno(errno);
+        if (fclose(f->fp) != 0) {
+            st = map_errno(errno);
+            if (st == OSAL_FILE_OK) st = OSAL_FILE_IO;
+        }
         f->fp = NULL;
     }
-
-    if (!f->mem || !f->mem->free) {
-		// log
-		lexleo_panic("osal_file: invalid allocator in close");
-		return OSAL_FILE_ERR;
-	}
 
     f->mem->free(f);
     return st;
