@@ -1,4 +1,12 @@
-// src/foundation/stream/port/src/stream.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file stream.c
+ * @ingroup stream_internal_group
+ * @brief Private implementation of the `stream` port.
+ */
 
 #include "stream/borrowers/stream.h"
 #include "stream/lifecycle/stream_lifecycle.h"

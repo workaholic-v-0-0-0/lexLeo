@@ -149,7 +149,9 @@ At runtime:
     - `mod_factory_t`, or
     - `mod_<functionality>_creator_t`.
 
-# Input validation policy
+# Other concerns (to be moved in other docs pages)
+
+## Input validation policy
 
 - Each function validates the immediate arguments required by its own contract.
 - It does not validate nested arguments that it only forwards.
@@ -158,3 +160,15 @@ At runtime:
 - `_ops_t` are only created via the relative `_default_ops()`
 - a `_vtbl_t` is treated as well-formed.
 - fields of `_vtbl_t` are checked when creation via the relative port constructor
+
+## Error handling policy
+
+- Public contract violations that are expected and recoverable must return an error status and be documented in the specifications, not in the "Preconditions" section.
+- `LEXLEO_ASSERT` is used for internal assumptions that a function relies on, that are guaranteed by the contractual invariants, and whose violation indicates a bug rather than a public contract error.
+- `lexleo_panic` is reserved for fatal states where continuing execution would be inconsistent, unsafe, or meaningless.
+
+### Practical rule
+
+- expected public contract violation -> error status
+- relied-upon internal invariant violation -> `LEXLEO_ASSERT`
+- fatal unrecoverable state -> `lexleo_panic`

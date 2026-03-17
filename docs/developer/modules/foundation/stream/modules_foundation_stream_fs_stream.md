@@ -65,11 +65,8 @@ typically including:
 This adapter is part of the surrounding `stream` family and targets the
 `stream` port.
 
-See:
-- @ref modules_foundation_stream "stream"
-- @ref stream_family_group "stream family"
-
-# Specifications and tests
+# See also
 
 - @ref specifications_fs_stream "fs_stream specifications"
-- @ref fs_stream_tests_group "fs_stream tests"
+- @ref testing_foundation_stream_family_page "stream family tests page"
+- @ref fs_stream_tests_group "fs_stream tests group"

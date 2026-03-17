@@ -9,8 +9,8 @@
  * - port lifecycle (`stream_create()`, `stream_destroy()`)
  * - borrower API forwarding and validation (`stream_read()`, `stream_write()`, `stream_flush()`)
  *
- * See @ref testing_foundation_stream_unit "Stream port unit test specification"
- * for the editorial contract reference.
+ * See @ref testing_foundation_stream_unit "stream unit tests page"
+ * for the detailed test documentation.
  *
  * Test doubles:
  * - `fake_memory` (allocator fault injection + leak checks)

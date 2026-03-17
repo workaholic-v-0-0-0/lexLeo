@@ -1,0 +1,11 @@
+/** @defgroup logger_cr_api logger CR API
+ *  @ingroup logger_api
+ *
+ *  @brief Composition Root (CR) API for the `logger` port.
+ *
+ *  @details
+ *  This API is intended to be used by the Composition Root only.
+ *
+ *  Typical contents:
+ *  - environment helpers declared in `logger_cr_api.h`
+ */

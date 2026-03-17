@@ -1,0 +1,10 @@
+/**
+ * @defgroup logger_internal_group logger private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the logger port.
+ *
+ * @details
+ * This group gathers non-public implementation files and internal runtime
+ * structures used by the `logger` port.
+ */

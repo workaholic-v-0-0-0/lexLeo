@@ -1,0 +1,20 @@
+/**
+ * @defgroup logger_unit_tests logger unit tests
+ * @ingroup logger_tests_group
+ *
+ * @brief Unit tests for the logger port.
+ *
+ * This test suite validates:
+ * - `logger_default_env()`
+ * - `logger_create()` / `logger_destroy()`
+ * - `logger_log()`
+ *
+ * See @ref testing_foundation_logger_unit "logger unit tests page"
+ * for the detailed test documentation.
+ *
+ * Test doubles:
+ * - dummy `osal_mem_ops_t`
+ * - `fake_memory`
+ * - `fake_logger_backend_t`
+ * - `fake_logger_vtbl`
+ */

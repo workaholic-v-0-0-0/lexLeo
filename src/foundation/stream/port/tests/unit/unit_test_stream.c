@@ -703,7 +703,9 @@ static const struct CMUnitTest stream_lifecycle_tests[] = {
  *   `fake_stream_vtbl` and `fake_stream_backend`.
  *
  * Doubles:
- * - fake_stream_backend_t, fake_stream_vtbl
+ * - fake_stream_backend_t
+ * - fake_stream_vtbl
+ * - fake_memory
  *
  * See also:
  * - @ref testing_foundation_stream_unit_stream_read "stream_read() unit tests section"

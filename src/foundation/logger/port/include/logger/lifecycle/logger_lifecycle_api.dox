@@ -1,0 +1,11 @@
+/** @defgroup logger_lifecycle_api logger lifecycle API
+ *  @ingroup logger_api
+ *
+ *  @brief Lifecycle API for `logger_t` handles.
+ *
+ *  @details
+ *  This API exposes destruction services for the `logger` port.
+ *
+ *  Typical contents:
+ *  - destruction services declared in `logger_lifecycle.h`
+ */

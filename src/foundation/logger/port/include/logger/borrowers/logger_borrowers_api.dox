@@ -1,0 +1,13 @@
+/** @defgroup logger_borrowers_api logger borrowers API
+ *  @ingroup logger_api
+ *
+ *  @brief Borrower-facing runtime API for the `logger` port.
+ *
+ *  @details
+ *  This API exposes the runtime operations available to modules that borrow
+ *  an injected @ref logger_t instance.
+ *
+ *  Typical contents:
+ *  - logging services declared in `logger.h`
+ *  - borrower-visible handle and status types declared in `logger_types.h`
+ */

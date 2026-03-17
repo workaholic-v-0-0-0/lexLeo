@@ -1,3 +1,26 @@
-/** @defgroup logger_family_group Logger family
+/** @defgroup logger_family_group logger family
  *  @ingroup foundation_group
+ *
+ *  @brief Logger port and its adapters.
+ *
+ *  @details
+ *  This family groups the `logger` port and the concrete adapter modules that
+ *  implement it.
+ */
+
+/** @defgroup logger_family_tests_group logger family tests
+ *  @ingroup foundation_tests_group
+ *
+ *  @brief Tests for the `logger` port and its adapters.
+ *
+ *  @details
+ *  This group gathers the unit and integration tests that verify the
+ *  behavioral contracts of the `logger` module and its adapter modules.
+ *
+ *  It currently includes:
+ *  - unit tests for the generic `logger` port
+ *
+ *  See also:
+ *  - @ref testing_foundation_logger_unit "logger unit tests page"
+ *  - @ref specifications_logger "logger specifications"
  */

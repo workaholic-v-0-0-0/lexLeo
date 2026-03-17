@@ -1,0 +1,13 @@
+/** @defgroup logger_adapters_api logger adapters API
+ *  @ingroup logger_api
+ *
+ *  @brief Adapter-facing API for the `logger` port.
+ *
+ *  @details
+ *  This API exposes the public contracts used by modules that implement
+ *  concrete adapters for the `logger` port.
+ *
+ *  Typical contents:
+ *  - backend dispatch contracts declared in `logger_adapters_api.h`
+ *  - adapter-facing creation helpers declared in `logger_adapters_api.h`
+ */

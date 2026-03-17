@@ -70,10 +70,8 @@ The Composition Root can register adapters and create streams by key through:
 Concrete adapters for this port are documented in the surrounding
 `stream` family.
 
-See:
-- @ref stream_family_group "stream family"
-
-# Specifications and tests
+# See also
 
 - @ref specifications_stream "stream specifications"
-- @ref stream_tests_group "stream tests"
+- @ref testing_foundation_stream_family_page "stream family tests page"
+- @ref stream_tests_group "stream tests group"

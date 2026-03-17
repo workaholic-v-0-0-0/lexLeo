@@ -53,5 +53,5 @@ For `n > 0`:
 - `stream_write()` does not call the borrower-facing `read`, `flush`, or
   `close` callbacks.
 - This function performs no backend operation when `n == 0`.
-- This function requires a stream handle whose borrower-facing virtual table has
+- This function requires a stream handle whose adapter-facing virtual table has
   been validated at creation time by `stream_create()`.

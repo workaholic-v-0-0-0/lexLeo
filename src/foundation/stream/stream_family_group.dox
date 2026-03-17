@@ -1,4 +1,4 @@
-/** @defgroup stream_family_group Stream family
+/** @defgroup stream_family_group stream family
  *  @ingroup foundation_group
  *
  *  @brief The `stream` port and its adapters.
@@ -12,7 +12,7 @@
  *  Composition Root registration support.
  */
 
-/** @defgroup stream_family_tests_group Stream family tests
+/** @defgroup stream_family_tests_group stream family tests
  *  @ingroup foundation_tests_group
  *
  *  @brief Tests for the `stream` port and its adapters.

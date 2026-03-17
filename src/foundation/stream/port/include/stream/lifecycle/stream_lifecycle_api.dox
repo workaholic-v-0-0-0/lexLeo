@@ -4,7 +4,7 @@
  *  @brief Lifecycle API for `stream_t` handles.
  *
  *  @details
- *  This API exposes creation and destruction services for the `stream` port.
+ *  This API exposes destruction services for the `stream` port.
  *  It defines the public lifecycle boundary between stream allocation,
  *  initialization, and teardown.
  *

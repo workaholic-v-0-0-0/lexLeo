@@ -2,11 +2,13 @@
 
 # Signature
 
-    stream_status_t stream_create(
-        stream_t **out,
-        const stream_vtbl_t *vtbl,
-        void *backend,
-        const stream_env_t *env);
+```c
+stream_status_t stream_create(
+    stream_t **out,
+    const stream_vtbl_t *vtbl,
+    void *backend,
+    const stream_env_t *env);
+```
 
 # Purpose
 

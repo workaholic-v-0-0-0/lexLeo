@@ -35,5 +35,5 @@ When `s != NULL` and `s->backend != NULL`:
 
 - `stream_flush()` does not call the borrower-facing `read`, `write`, or
   `close` callbacks.
-- This function requires a stream handle whose borrower-facing virtual table has
+- This function requires a stream handle whose adapter-facing virtual table has
   been validated at creation time by `stream_create()`.
