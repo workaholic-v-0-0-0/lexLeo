@@ -287,9 +287,7 @@ stream_status_t fs_stream_create_desc(
 }
 
 fs_stream_cfg_t fs_stream_default_cfg(void) {
-	return
-		(fs_stream_cfg_t)
-			{ /* to be completed when evoluating */ };
+	return (fs_stream_cfg_t) { .reserved = 0 };
 }
 
 fs_stream_env_t fs_stream_default_env(

@@ -1,0 +1,20 @@
+/**
+ * @defgroup logger_default_cr_api logger_default CR API
+ * @ingroup logger_default_api
+ *
+ * @brief Composition Root (CR) API for the `logger_default` adapter.
+ *
+ * @details
+ * This API is intended to be used by the Composition Root only.
+ * It wires the `logger_default` adapter into the `logger` port.
+ *
+ * Design notes:
+ * - The adapter can be created directly through
+ *   @ref logger_default_create_logger.
+ * - Runtime dependencies are injected via @ref logger_default_env_t.
+ * - Construction-time configuration is provided via
+ *   @ref logger_default_cfg_t.
+ *
+ * @note This API is part of the CR surface. Runtime modules should not
+ *       include it directly.
+ */

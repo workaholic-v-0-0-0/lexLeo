@@ -587,10 +587,10 @@ static const struct CMUnitTest create_fs_stream_tests[] = {
 	FS_STREAM_CREATE_STREAM_CASES(FS_STREAM_MAKE_CREATE_STREAM_TEST)
 };
 
-/** @endcond */
-
 #undef FS_STREAM_CREATE_STREAM_CASES
 #undef FS_STREAM_MAKE_CREATE_STREAM_TEST
+
+/** @endcond */
 
 /**
  * @brief Scenarios for `fs_stream_create_desc()`.

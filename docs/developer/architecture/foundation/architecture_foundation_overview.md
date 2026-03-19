@@ -149,6 +149,8 @@ At runtime:
     - `mod_factory_t`, or
     - `mod_<functionality>_creator_t`.
 
+---
+
 # Other concerns (to be moved in other docs pages)
 
 ## Input validation policy

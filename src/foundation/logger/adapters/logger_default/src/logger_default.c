@@ -6,15 +6,27 @@
  * logger_default.c
  */
 
-#include "internal/logger_ctx.h" // has to change
-#include "wiring/logger_default_ctx.h"
-#include "wiring/logger_default.h"
-#include "internal/logger_default_state.h"
-#include "internal/logger_default_backend.h"
-#include "mem/osal_mem_ops.h"
+#include "internal/logger_default_handle.h"
 #include "stream/borrowers/stream.h"
-// #include "fs_stream.h" // commented only so that it can build
-#include "policy/lexleo_assert.h"
+#include "logger/adapters/logger_adapters_api.h"
+#include "logger_default/cr/logger_default_cr_api.h"
+//#include "policy/lexleo_assert.h"
+
+logger_default_cfg_t logger_default_default_cfg(void) {
+	return (logger_default_cfg_t) { .append_newline = true };
+}
+
+logger_default_env_t logger_default_default_env(
+	stream_t *stream,
+	const osal_mem_ops_t *adapter_mem,
+	const logger_env_t *port_env)
+{
+	return (logger_default_env_t){
+		.stream = stream,
+		.adapter_mem = adapter_mem,
+		.port_env = *port_env
+	};
+}
 
 static logger_status_t logger_default_log(void *backend, const char *message) {
 	return LOGGER_STATUS_OK; // placeholder
@@ -29,13 +41,11 @@ static const logger_vtbl_t DEFAULT_VTBL = {
 	.destroy = logger_default_destroy,
 };
 
-logger_default_ctx_t logger_default_default_ctx(
-	const osal_mem_ops_t *mem_ops )
-{
-	logger_default_ctx_t ctx;
-	ctx.deps.mem = mem_ops ? mem_ops : osal_mem_default_ops();
-	return ctx;
-}
+logger_default_cfg_t test;
+
+
+// draft legacy
+/*
 
 static logger_status_t create_backend(
 	logger_default_t **out,
@@ -65,3 +75,5 @@ logger_status_t logger_default_create_logger(
 {
 	return LOGGER_STATUS_OK; // placeholder
 }
+
+*/

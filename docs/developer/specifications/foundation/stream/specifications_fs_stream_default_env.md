@@ -2,10 +2,12 @@
 
 # Signature
 
+```c
     fs_stream_env_t fs_stream_default_env(
         const osal_file_env_t *file_env,
         const osal_file_ops_t *file_ops,
         const stream_env_t *port_env);
+```
 
 # Purpose
 
