@@ -96,3 +96,4 @@ endif ()
 
 add_subdirectory(osal_mem)
 add_subdirectory(osal_file)
+add_subdirectory(osal_time)

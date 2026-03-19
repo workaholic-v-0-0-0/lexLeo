@@ -140,11 +140,12 @@ static stream_status_t create_backend(
 			|| *args->path == '\0'
 			|| args->flags == 0
     		|| !cfg
-    		|| !env
-			|| !env->file_env.mem
-    		|| !env->file_ops ) {
+    		|| !env ) {
         return STREAM_STATUS_INVALID;
     }
+
+	LEXLEO_ASSERT(env->file_ops != NULL);
+	LEXLEO_ASSERT(env->file_env.mem != NULL);
 
     fs_stream_t *backend =
         (fs_stream_t *)env->file_env.mem->calloc(1, sizeof(*backend));
@@ -287,9 +288,7 @@ stream_status_t fs_stream_create_desc(
 }
 
 fs_stream_cfg_t fs_stream_default_cfg(void) {
-	return
-		(fs_stream_cfg_t)
-			{ /* to be completed when evoluating */ };
+	return (fs_stream_cfg_t) { .reserved = 0 };
 }
 
 fs_stream_env_t fs_stream_default_env(

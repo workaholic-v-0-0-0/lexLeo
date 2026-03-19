@@ -1,0 +1,12 @@
+/**
+ * @defgroup logger_default_unit_tests logger_default unit tests
+ * @ingroup logger_default_tests_group
+ *
+ * @brief Unit tests for the `logger_default` adapter.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `logger_default_default_cfg()`
+ * - `logger_default_default_env()`
+ * - `logger_default_create_logger()`
+ */

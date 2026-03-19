@@ -64,6 +64,7 @@ and **Tests**.
 
 ## 2. write or update the hand-written specifications
 - docs/developer/specifications/...
+  Note: specification must help to derive tests from it. 
 
 ## 3. for each TDD cycle:
 - update tests/...

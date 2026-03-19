@@ -15,10 +15,10 @@ adapter-specific creation arguments.
 
 # Preconditions
 
-- `f` must designate a valid factory instance previously created by
+- `f` must point to a valid factory instance previously created by
   `stream_create_factory()`.
-- `key` must designate a registered adapter key in `f`.
-- `args` must designate a valid argument object for the adapter selected by
+- `key` must point to a registered adapter key in `f`.
+- `args` must point to a valid argument object for the adapter selected by
   `key`.
 
 # Invalid arguments

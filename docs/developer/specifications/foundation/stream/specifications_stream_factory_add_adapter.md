@@ -13,7 +13,7 @@ instance.
 
 # Preconditions
 
-- `fact` must designate a valid factory instance previously created by
+- `fact` must point to a valid factory instance previously created by
   `stream_create_factory()`.
 
 # Invalid arguments

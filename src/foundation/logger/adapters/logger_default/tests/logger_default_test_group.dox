@@ -1,0 +1,6 @@
+/**
+ * @defgroup logger_default_tests_group logger_default tests
+ * @ingroup logger_family_tests_group
+ *
+ * @brief Tests for the logger_default adapter.
+ */

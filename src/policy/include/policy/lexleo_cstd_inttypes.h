@@ -1,0 +1,7 @@
+
+#ifndef LEXLEO_LEXLEO_CSTD_INTTYPES_H
+#define LEXLEO_LEXLEO_CSTD_INTTYPES_H
+
+#include <inttypes.h>
+
+#endif //LEXLEO_LEXLEO_CSTD_INTTYPES_H

@@ -149,26 +149,24 @@ At runtime:
     - `mod_factory_t`, or
     - `mod_<functionality>_creator_t`.
 
-# Other concerns (to be moved in other docs pages)
+---
 
-## Input validation policy
+# Validation and error-handling policy
 
-- Each function validates the immediate arguments required by its own contract.
-- It does not validate nested arguments that it only forwards.
-- Forwarded nested arguments are validated by the function that uses them.
-- A non-NULL pointer to an `_ops_t` is treated as well-formed.
-- `_ops_t` are only created via the relative `_default_ops()`
-- a `_vtbl_t` is treated as well-formed.
-- fields of `_vtbl_t` are checked when creation via the relative port constructor
+- A function MUST NOT deeply validate nested arguments that it only forwards to
+  another API-level contract.
+- Nested arguments that are directly consumed by the function MAY be validated
+  as required by that function.
 
-## Error handling policy
+- If an `_ops_t *` is non-NULL, it MUST be treated as well-formed.
+- If a `_vtbl_t *` is non-NULL, it MUST be treated as well-formed.
+- Required `_ops_t` and `_vtbl_t` callable fields MUST be validated at the
+  canonical boundary where such tables are accepted for use.
 
-- Public contract violations that are expected and recoverable must return an error status and be documented in the specifications, not in the "Preconditions" section.
-- `LEXLEO_ASSERT` is used for internal assumptions that a function relies on, that are guaranteed by the contractual invariants, and whose violation indicates a bug rather than a public contract error.
-- `lexleo_panic` is reserved for fatal states where continuing execution would be inconsistent, unsafe, or meaningless.
-
-### Practical rule
-
-- expected public contract violation -> error status
-- relied-upon internal invariant violation -> `LEXLEO_ASSERT`
-- fatal unrecoverable state -> `lexleo_panic`
+- Conditions documented as **Invalid arguments** MUST be checked and MUST
+  return an error status when violated.
+- Conditions documented as **Preconditions** MAY be enforced with `LEXLEO_ASSERT`.
+- In a given specification, the same point MUST NOT be documented as both an
+  **Invalid argument** and a **Precondition**.
+- A violated `LEXLEO_ASSERT` indicates a bug and MUST NOT be treated as a
+  recoverable error returned through the function status.

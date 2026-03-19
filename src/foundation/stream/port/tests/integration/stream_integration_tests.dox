@@ -11,7 +11,7 @@
  * - stream factory core integration tests
  * - adapter-specific integration tests for factory-based stream creation
  *
- * Main specifications:
+ * See also:
  * - @ref testing_foundation_stream_factory_integration
  * - @ref testing_foundation_stream_factory_fs_stream_integration
  */
