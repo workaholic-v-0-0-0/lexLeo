@@ -1,0 +1,5 @@
+@page specifications_logger_default logger_default specifications
+
+- @subpage specifications_logger_default_default_cfg
+- @subpage specifications_logger_default_default_env
+- @subpage specifications_logger_default_create_logger

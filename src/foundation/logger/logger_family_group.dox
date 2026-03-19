@@ -15,10 +15,7 @@
  *
  *  @details
  *  This group gathers the unit and integration tests that verify the
- *  behavioral contracts of the `logger` module and its adapter modules.
- *
- *  It currently includes:
- *  - unit tests for the generic `logger` port
+ *  behavioral contracts of the `logger` port and its adapter modules.
  *
  *  See also:
  *  - @ref testing_foundation_logger_unit "logger unit tests page"

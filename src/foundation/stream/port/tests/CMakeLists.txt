@@ -102,3 +102,5 @@ if(VALGRIND_EXECUTABLE)
         PROPERTIES LABELS "memory"
     )
 endif()
+
+add_subdirectory(support)

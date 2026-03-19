@@ -2,10 +2,12 @@
 
 # Signature
 
+```c
     fs_stream_env_t fs_stream_default_env(
         const osal_file_env_t *file_env,
         const osal_file_ops_t *file_ops,
         const stream_env_t *port_env);
+```
 
 # Purpose
 
@@ -13,9 +15,9 @@ Build a default environment for the `fs_stream` adapter.
 
 # Preconditions
 
-- `file_env` must designate a valid OSAL file environment object.
-- `file_ops` must designate a valid OSAL file operations table.
-- `port_env` must designate a valid `stream` port environment object.
+- `file_env` must point to a valid OSAL file environment object.
+- `file_ops` must point to a valid OSAL file operations table.
+- `port_env` must point to a valid `stream` port environment object.
 
 # Invalid arguments
 

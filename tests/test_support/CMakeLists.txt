@@ -1,3 +1,4 @@
 add_subdirectory(lexleo_cmocka_support)
 add_subdirectory(fake_memory)
 add_subdirectory(fake_file)
+add_subdirectory(fake_stream)

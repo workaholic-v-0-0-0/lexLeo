@@ -14,11 +14,8 @@ Create a file-backed stream instance.
 
 # Preconditions
 
-- `args` must designate a valid `fs_stream_args_t`.
-- `cfg` must designate a valid `fs_stream_cfg_t`.
-- `env` must designate a valid `fs_stream_env_t`.
-- `env` must provide the injected dependencies required to open and manage the
-  underlying OSAL file.
+- If `cfg != NULL`, `cfg` must point to a valid `fs_stream_cfg_t`.
+- If `env != NULL`, `env` must point to a valid `fs_stream_env_t`.
 
 # Invalid arguments
 
@@ -26,18 +23,15 @@ Create a file-backed stream instance.
 - `args` must not be `NULL`.
 - `cfg` must not be `NULL`.
 - `env` must not be `NULL`.
-- `args->path` must not be `NULL`.
-- `args->path` must not be empty.
-- `args->flags` must not be zero.
+- If `args != NULL`, `args->path` must not be `NULL`.
+- If `args != NULL`, `args->path` must not be empty.
+- If `args != NULL`, `args->flags` must not be zero.
 
 # Success
 
 - Returns `STREAM_STATUS_OK`.
-- Allocates and initializes a public `stream_t`.
 - Opens the underlying OSAL file according to `args`.
 - Stores a valid newly created stream handle in `*out`.
-- The produced stream handle is ready for normal runtime use.
-- The produced stream handle must later be destroyed via `stream_destroy()`.
 
 # Failure
 
@@ -46,10 +40,9 @@ Create a file-backed stream instance.
 - Returns `STREAM_STATUS_IO_ERROR` if the underlying OSAL file operation fails.
 - Leaves `*out` unchanged if `out` is not `NULL`.
 
-# Notes
+# Ownership
 
-- The underlying OSAL file is opened through the file operations injected in
-  `env`.
-- On success, ownership of the newly allocated stream handle is transferred to
-  the caller.
-- On failure, no stream ownership is transferred to the caller.
+- On success, ownership of the newly created stream handle is transferred to the
+  caller.
+- The produced stream handle must later be destroyed via `stream_destroy()`.
+- On failure, no stream ownership is transferred.

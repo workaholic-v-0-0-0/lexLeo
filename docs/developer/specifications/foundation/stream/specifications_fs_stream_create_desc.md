@@ -15,9 +15,9 @@ Build an adapter descriptor for registering `fs_stream` in a factory.
 
 # Preconditions
 
-- `cfg` must designate a valid `fs_stream_cfg_t`.
-- `env` must designate a valid `fs_stream_env_t`.
-- `mem` must designate the allocator that will later be used to destroy the
+- `cfg` must point to a valid `fs_stream_cfg_t`.
+- `env` must point to a valid `fs_stream_env_t`.
+- `mem` must point to the allocator that will later be used to destroy the
   descriptor-owned user data through `ud_dtor`.
 
 # Invalid arguments

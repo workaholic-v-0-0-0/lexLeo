@@ -6,22 +6,70 @@
  * logger_default.c
  */
 
-#include "internal/logger_ctx.h" // has to change
-#include "wiring/logger_default_ctx.h"
-#include "wiring/logger_default.h"
-#include "internal/logger_default_state.h"
-#include "internal/logger_default_backend.h"
-#include "mem/osal_mem_ops.h"
+#include "internal/logger_default_handle.h"
 #include "stream/borrowers/stream.h"
-// #include "fs_stream.h" // commented only so that it can build
+#include "logger/adapters/logger_adapters_api.h"
+#include "logger_default/cr/logger_default_cr_api.h"
 #include "policy/lexleo_assert.h"
+#include "policy/lexleo_cstring.h"
 
-static logger_status_t logger_default_log(void *backend, const char *message) {
-	return LOGGER_STATUS_OK; // placeholder
+logger_default_cfg_t logger_default_default_cfg(void) {
+	return (logger_default_cfg_t) { .append_newline = true };
+}
+
+logger_default_env_t logger_default_default_env(
+	stream_t *stream,
+	const osal_mem_ops_t *adapter_mem,
+	const logger_env_t *port_env)
+{
+	return (logger_default_env_t){
+		.stream = stream,
+		.adapter_mem = adapter_mem,
+		.port_env = *port_env
+	};
+}
+
+static logger_status_t logger_default_log(void *backend, const char *message)
+{
+	if (!message)
+		return LOGGER_STATUS_INVALID;
+
+	LEXLEO_ASSERT(backend);
+
+	logger_default_t *logger_default = (logger_default_t *)backend;
+
+	stream_status_t st = STREAM_STATUS_OK;
+	size_t len = strlen(message);
+
+	size_t n =
+		stream_write(
+			logger_default->stream,
+			message,
+			len,
+			&st
+		);
+	if (st != STREAM_STATUS_OK || n != len) {
+		return LOGGER_STATUS_IO_ERROR;
+	}
+
+	if (logger_default->append_newline) {
+		n = stream_write(logger_default->stream, "\n", 1, &st);
+
+		if (st != STREAM_STATUS_OK || n != 1) {
+			return LOGGER_STATUS_IO_ERROR;
+		}
+	}
+
+	return LOGGER_STATUS_OK;
 }
 
 static void logger_default_destroy(void *backend) {
-	// placeholder
+	if (!backend) return;
+
+	logger_default_t *logger_default = (logger_default_t *)backend;
+	LEXLEO_ASSERT(logger_default->mem && logger_default->mem->free);
+
+	logger_default->mem->free(logger_default);
 }
 
 static const logger_vtbl_t DEFAULT_VTBL = {
@@ -29,39 +77,40 @@ static const logger_vtbl_t DEFAULT_VTBL = {
 	.destroy = logger_default_destroy,
 };
 
-logger_default_ctx_t logger_default_default_ctx(
-	const osal_mem_ops_t *mem_ops )
-{
-	logger_default_ctx_t ctx;
-	ctx.deps.mem = mem_ops ? mem_ops : osal_mem_default_ops();
-	return ctx;
-}
-
-static logger_status_t create_backend(
-	logger_default_t **out,
-	const logger_default_ctx_t *ctx )
-{
-	if (out) *out = NULL;
-	if (
-			   !out
-			|| !ctx
-			|| !ctx->deps.mem
-			|| !ctx->deps.mem->calloc
-			|| !ctx->deps.mem->free )
-		return LOGGER_STATUS_INVALID;
-
-	logger_default_t *backend = ctx->deps.mem->calloc(1, sizeof(*backend));
-	if (!backend)
-		return LOGGER_STATUS_OOM;
-	backend->mem = ctx->deps.mem;
-	// bbb todo
-
-	return LOGGER_STATUS_OK; // placeholder
-}
-
 logger_status_t logger_default_create_logger(
 	logger_t **out,
-	const logger_default_ctx_t *ctx )
+	const logger_default_cfg_t *cfg,
+	const logger_default_env_t *env)
 {
-	return LOGGER_STATUS_OK; // placeholder
+	if (!out || !cfg || !env)
+		return LOGGER_STATUS_INVALID;
+
+	LEXLEO_ASSERT(
+		   env->adapter_mem
+		&& env->adapter_mem->malloc
+		&& env->adapter_mem->free
+		&& env->stream
+	);
+
+	logger_default_t *backend = env->adapter_mem->malloc(sizeof(*backend));
+	if (!backend)
+		return LOGGER_STATUS_OOM;
+
+	backend->stream = env->stream;
+	backend->append_newline = cfg->append_newline;
+	backend->mem = env->adapter_mem;
+
+	logger_t *tmp = NULL;
+
+	logger_status_t st =
+		logger_create(&tmp, &DEFAULT_VTBL, (void *)backend, &env->port_env);
+
+	if (st != LOGGER_STATUS_OK) {
+		env->adapter_mem->free(backend);
+		return st;
+	}
+
+	*out = tmp;
+
+	return LOGGER_STATUS_OK;
 }

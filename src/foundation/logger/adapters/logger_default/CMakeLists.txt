@@ -2,20 +2,23 @@ add_library(
     logger_default
     STATIC
         "${CMAKE_CURRENT_SOURCE_DIR}/src/logger_default.c"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/src/wiring/???"
 )
+
 target_include_directories(
     logger_default
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
+
 target_link_libraries(
     logger_default
     PRIVATE
         logger
-        logger_wiring_headers
         stream
-        #fs_stream # commented only so that it can build
-        osal_mem_legacy
+        osal_mem
         lexleo_assert
 )
+
+add_subdirectory(tests)

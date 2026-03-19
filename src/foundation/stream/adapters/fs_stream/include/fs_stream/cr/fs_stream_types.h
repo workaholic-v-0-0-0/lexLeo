@@ -23,7 +23,7 @@
 /**
  * @struct fs_stream_cfg_t
  * @ingroup fs_stream_cr_api
- * @brief Public configuration type for the `fs_stream` adapter.
+ * @brief Configuration type for the `fs_stream` adapter.
  *
  * @details
  * This structure carries the CR-provided configuration values used when

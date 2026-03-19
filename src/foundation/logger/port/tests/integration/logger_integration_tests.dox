@@ -1,0 +1,19 @@
+/**
+ * @defgroup logger_integration_tests logger integration tests
+ * @ingroup logger_tests_group
+ *
+ * @brief Integration tests for the `logger` port with concrete adapters.
+ *
+ * @details
+ * This test suite validates the behavior of the public `logger` API when it is
+ * wired with concrete adapter implementations.
+ *
+ * See also:
+ * - @ref testing_foundation_logger_integration "logger integration tests page"
+ * - @ref specifications_logger "logger specifications"
+ * - @ref specifications_logger_default "logger_default specifications"
+ *
+ * Test doubles:
+ * - fake stream providers used to observe emitted log output
+ * - fake memory providers used when allocation control is required
+ */

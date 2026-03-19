@@ -12,8 +12,8 @@ Emit the message `message` through the `logger` port.
 
 # Preconditions
 
-- If `l != NULL`, `l` must be a valid `logger_t` handle created by
-  `logger_create()`.
+- If `l != NULL`, `l` must point to a valid `logger_t` handle created by
+  `logger_create()`. 
 
 # Invalid arguments
 
