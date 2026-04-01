@@ -1,0 +1,14 @@
+/**
+ * @defgroup dynamic_buffer_stream_api dynamic_buffer_stream API
+ * @ingroup stream_family_group
+ *
+ * @brief Dynamic-buffer-backed adapter for the `stream` port.
+ *
+ * The `dynamic_buffer_stream` adapter implements the `stream` port on top of
+ * an in-memory dynamic buffer managed by the adapter itself.
+ * It is intended to be wired by the Composition Root through a stream factory
+ * descriptor.
+ *
+ * Sub-APIs:
+ * - @ref dynamic_buffer_stream_cr_api
+ */

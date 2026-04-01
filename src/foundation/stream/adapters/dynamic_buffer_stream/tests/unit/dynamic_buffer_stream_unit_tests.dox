@@ -1,0 +1,24 @@
+/**
+ * @defgroup dynamic_buffer_stream_unit_tests dynamic_buffer_stream unit tests
+ * @ingroup dynamic_buffer_stream_tests_group
+ *
+ * @brief Unit tests for the `dynamic_buffer_stream` adapter.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `dynamic_buffer_stream_default_cfg()`
+ * - `dynamic_buffer_stream_default_env()`
+ * - `dynamic_buffer_stream_create_stream()`
+ * - `dynamic_buffer_stream_create_desc()`
+ * - descriptor constructor usage through `stream_adapter_desc_t::ctor`
+ *
+ * The tests in this group also verify the behavior of the adapter private
+ * callbacks:
+ * - `dynamic_buffer_stream_write()`
+ * - `dynamic_buffer_stream_read()`
+ * - `dynamic_buffer_stream_flush()`
+ * - `dynamic_buffer_stream_close()`
+ *
+ * These private callbacks are exercised through the public `stream` API and
+ * lifecycle entry points rather than being called directly.
+ */

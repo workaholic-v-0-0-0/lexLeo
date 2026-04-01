@@ -1,0 +1,25 @@
+/**
+ * @defgroup dynamic_buffer_stream_cr_api dynamic_buffer_stream CR API
+ * @ingroup dynamic_buffer_stream_api
+ *
+ * @brief Composition Root (CR) API for the `dynamic_buffer_stream` adapter.
+ *
+ * @details
+ * This API is intended to be used by the Composition Root only.
+ * It wires the `dynamic_buffer_stream` adapter (dynamic-buffer-backed stream)
+ * into the `stream` port factory via a @ref stream_adapter_desc_t.
+ *
+ * Design notes:
+ * - The adapter can be created directly through
+ *   @ref dynamic_buffer_stream_create_stream.
+ * - The adapter can also be registered into the `stream` port factory through
+ *   a descriptor built by @ref dynamic_buffer_stream_create_desc.
+ * - Runtime dependencies are injected via @ref dynamic_buffer_stream_env_t.
+ * - Adapter configuration is provided via @ref dynamic_buffer_stream_cfg_t.
+ * - Memory ownership rules are enforced through the factory memory ops:
+ *   @ref dynamic_buffer_stream_create_desc requires the factory's
+ *   @ref osal_mem_ops_t.
+ *
+ * @note This API is part of the CR surface. Runtime modules should not
+ *       include it directly.
+ */

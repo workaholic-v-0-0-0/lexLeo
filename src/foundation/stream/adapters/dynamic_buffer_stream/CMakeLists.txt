@@ -21,18 +21,10 @@ target_link_libraries(
     dynamic_buffer_stream
     PUBLIC
         stream
-    PRIVATE
         osal_mem
+        lexleo_policy_headers
+    PRIVATE
         lexleo_assert
 )
 
-add_library(dynamic_buffer_stream_wiring_headers INTERFACE)
-target_link_libraries(
-    dynamic_buffer_stream_wiring_headers
-    INTERFACE
-        dynamic_buffer_stream
-        stream_wiring_headers
-        osal_mem_cr_headers
-)
-
-# add_subdirectory(tests)
+add_subdirectory(tests)

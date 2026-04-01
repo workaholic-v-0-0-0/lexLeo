@@ -127,4 +127,3 @@
 
 - explain Mechanism of a non-port module for providing creators in
   docs/developer/architecture/module_taxonomy.md
-

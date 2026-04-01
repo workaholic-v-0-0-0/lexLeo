@@ -1,0 +1,10 @@
+@page specifications_dynamic_buffer_stream dynamic_buffer_stream specifications
+
+- @subpage specifications_dynamic_buffer_stream_default_cfg
+- @subpage specifications_dynamic_buffer_stream_default_env
+- @subpage specifications_dynamic_buffer_stream_create_stream
+- @subpage specifications_dynamic_buffer_stream_create_desc
+- @subpage specifications_dynamic_buffer_stream_read
+- @subpage specifications_dynamic_buffer_stream_write
+- @subpage specifications_dynamic_buffer_stream_flush
+- @subpage specifications_dynamic_buffer_stream_close

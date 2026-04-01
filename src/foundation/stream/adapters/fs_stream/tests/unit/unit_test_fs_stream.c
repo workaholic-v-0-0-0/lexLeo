@@ -583,7 +583,7 @@ X(CASE_FS_OPEN_FAIL_NOT_FOUND)
 #define FS_STREAM_MAKE_CREATE_STREAM_TEST(case_sym) \
 LEXLEO_MAKE_TEST(fs_stream_create_stream, case_sym)
 
-static const struct CMUnitTest create_fs_stream_tests[] = {
+static const struct CMUnitTest fs_stream_stream_create_stream_tests[] = {
 	FS_STREAM_CREATE_STREAM_CASES(FS_STREAM_MAKE_CREATE_STREAM_TEST)
 };
 
@@ -605,7 +605,6 @@ static const struct CMUnitTest create_fs_stream_tests[] = {
  * Invalid arguments:
  * - `out`, `key`, `cfg`, `env`, `mem` must not be NULL.
  * - `key` must not be an empty string.
- * - `env->file_env.mem` and `env->file_ops` must not be NULL.
  *
  * Success:
  * - Returns STREAM_STATUS_OK.
@@ -686,24 +685,6 @@ typedef enum {
 	 * - resets `*out` to an empty descriptor
 	 */
 	FS_STREAM_CREATE_DESC_SCENARIO_MEM_NULL,
-
-	/**
-	 * WHEN `env != NULL` but `env->file_env.mem == NULL`
-	 * AND `out != NULL`
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - resets `*out` to an empty descriptor
-	 */
-	FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_ENV_MEM_NULL,
-
-	/**
-	 * WHEN `env != NULL` but `env->file_ops == NULL`
-	 * AND `out != NULL`
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - resets `*out` to an empty descriptor
-	 */
-	FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_OPS_NULL,
 
 	/**
 	 * WHEN allocation required by `fs_stream_create_desc()` fails
@@ -857,8 +838,6 @@ static void test_fs_stream_create_desc(void **state)
 	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_CFG_NULL) cfg_arg = NULL;
 	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_ENV_NULL) env_arg = NULL;
 	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_MEM_NULL) mem_arg = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_ENV_MEM_NULL) fx->env.file_env.mem = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_OPS_NULL) fx->env.file_ops = NULL;
 
     if (tc->desc_expect == DESC_EXPECT_EMPTY && out_arg != NULL) {
         fx->out.key = (stream_key_t)(uintptr_t)0xDEADC0DEu;
@@ -962,24 +941,6 @@ static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_MEM_NU
 	.desc_expect = DESC_EXPECT_EMPTY
 };
 
-static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_ENV_FILE_ENV_MEM_NULL = {
-	.name = "fs_stream_create_desc_env_file_env_mem_null",
-	.scenario = FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_ENV_MEM_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.desc_expect = DESC_EXPECT_EMPTY
-};
-
-static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_ENV_FILE_OPS_NULL = {
-	.name = "fs_stream_create_desc_env_file_ops_null",
-	.scenario = FS_STREAM_CREATE_DESC_SCENARIO_ENV_FILE_OPS_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.desc_expect = DESC_EXPECT_EMPTY
-};
-
 static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_OOM_1 = {
 	.name = "fs_stream_create_desc_oom_1",
 	.scenario = FS_STREAM_CREATE_DESC_SCENARIO_OOM,
@@ -1001,8 +962,6 @@ X(CASE_FS_STREAM_CREATE_DESC_KEY_EMPTY) \
 X(CASE_FS_STREAM_CREATE_DESC_CFG_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_ENV_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_MEM_NULL) \
-X(CASE_FS_STREAM_CREATE_DESC_ENV_FILE_ENV_MEM_NULL) \
-X(CASE_FS_STREAM_CREATE_DESC_ENV_FILE_OPS_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_OOM_1)
 
 #define FS_STREAM_MAKE_CREATE_DESC_TEST(case_sym) \
@@ -1454,7 +1413,7 @@ int main(void) {
 
 	int failed = 0;
 	failed += cmocka_run_group_tests(fs_stream_tests, NULL, NULL);
-	failed += cmocka_run_group_tests(create_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_stream_create_stream_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(create_desc_fs_stream_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(desc_ctor_fs_stream_tests, NULL, NULL);
 	return failed;

@@ -2,12 +2,14 @@
 
 # Signature
 
-    stream_status_t fs_stream_create_desc(
-        stream_adapter_desc_t *out,
-        stream_key_t key,
-        const fs_stream_cfg_t *cfg,
-        const fs_stream_env_t *env,
-        const osal_mem_ops_t *mem);
+```c
+stream_status_t fs_stream_create_desc(
+    stream_adapter_desc_t *out,
+    stream_key_t key,
+    const fs_stream_cfg_t *cfg,
+    const fs_stream_env_t *env,
+    const osal_mem_ops_t *mem);
+```
 
 # Purpose
 
@@ -15,10 +17,10 @@ Build an adapter descriptor for registering `fs_stream` in a factory.
 
 # Preconditions
 
-- `cfg` must point to a valid `fs_stream_cfg_t`.
-- `env` must point to a valid `fs_stream_env_t`.
-- `mem` must point to the allocator that will later be used to destroy the
-  descriptor-owned user data through `ud_dtor`.
+- If `cfg != NULL`, `cfg` must point to a valid `fs_stream_cfg_t`.
+- If `env != NULL`, `env` must point to a valid `fs_stream_env_t`.
+- If `mem != NULL`, `mem` must point to a valid allocator suitable for later
+  destruction of descriptor-owned user data through `ud_dtor()`.
 
 # Invalid arguments
 
@@ -28,8 +30,6 @@ Build an adapter descriptor for registering `fs_stream` in a factory.
 - `cfg` must not be `NULL`.
 - `env` must not be `NULL`.
 - `mem` must not be `NULL`.
-- `env->file_env.mem` must not be `NULL`.
-- `env->file_ops` must not be `NULL`.
 
 # Success
 
@@ -46,6 +46,15 @@ Build an adapter descriptor for registering `fs_stream` in a factory.
 - Returns `STREAM_STATUS_OOM` if allocation of descriptor-owned user data
   fails.
 - If `out` is not `NULL`, resets `*out` to an empty descriptor.
+
+# Ownership
+
+- On success, ownership of the descriptor-owned user data is transferred to the
+  produced descriptor.
+- The caller remains responsible for the storage designated by `out`.
+- The produced descriptor-owned user data must later be released through
+  `out->ud_dtor()`.
+- On failure, no descriptor-owned user data ownership is transferred.
 
 # Notes
 

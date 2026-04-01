@@ -1,0 +1,7 @@
+/**
+ * @defgroup dynamic_buffer_stream_internal_group dynamic_buffer_stream private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the `dynamic_buffer_stream` adapter.
+ *
+ */

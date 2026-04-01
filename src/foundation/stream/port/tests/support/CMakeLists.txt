@@ -1,1 +1,2 @@
 add_subdirectory(fake_provider)
+add_subdirectory(white_box_tests_access)
