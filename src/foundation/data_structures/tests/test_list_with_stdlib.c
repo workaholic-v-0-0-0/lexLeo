@@ -8,8 +8,6 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "logger.h"
-
 #include "list.h"
 
 

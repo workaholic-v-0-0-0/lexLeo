@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include "internal/data_structure_memory_allocator.h"
-#include "logger.h"
 
 #ifdef UNIT_TEST
 #include "internal/list_test_utils.h"

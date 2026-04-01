@@ -20,7 +20,6 @@
 #include <cmocka.h>
 #include <string.h>
 
-#include "logger.h"
 #include "memory_allocator.h"
 
 #include "list.h"

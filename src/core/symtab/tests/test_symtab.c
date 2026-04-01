@@ -11,7 +11,6 @@
 
 #include "memory_allocator.h"
 #include "string_utils.h"
-#include "logger.h"
 #include "list.h"
 #include "ast.h"
 
