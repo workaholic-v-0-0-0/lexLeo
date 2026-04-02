@@ -9,4 +9,8 @@
  * - `logger_default_default_cfg()`
  * - `logger_default_default_env()`
  * - `logger_default_create_logger()`
+ * - behavior implemented by the following private adapter callbacks,
+ *   exercised through the public `logger` API and lifecycle entry points:
+ *   - `logger_default_log()`
+ *   - `logger_default_destroy()`
  */

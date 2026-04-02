@@ -200,7 +200,7 @@ static logger_status_t logger_default_write_timestamp(
  * `message == NULL`.
  *
  * @retval LOGGER_STATUS_IO_ERROR
- * Timestamp, message, or newline write failed.
+ * A required stream write failed or was partial.
  */
 static logger_status_t logger_default_log(void *backend, const char *message)
 {

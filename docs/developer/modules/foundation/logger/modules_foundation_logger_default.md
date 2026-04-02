@@ -85,5 +85,4 @@ See:
 
 - @ref specifications_logger_default "logger_default specifications"
 - @ref testing_foundation_logger_default_unit "logger_default unit tests"
-- @ref testing_foundation_logger_integration_logger_default "logger / logger_default integration tests"
 - @ref logger_default_tests_group "logger_default tests group"

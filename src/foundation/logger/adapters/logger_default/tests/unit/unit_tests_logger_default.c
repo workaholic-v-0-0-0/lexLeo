@@ -14,6 +14,10 @@
  * Covered surfaces:
  * - CR helpers: `logger_default_default_cfg()`, `logger_default_default_env()`
  * - direct creation: `logger_default_create_logger()`
+ * - behavior implemented by the following private adapter callbacks,
+ *   exercised through the public `logger` API and lifecycle entry points:
+ *   - `logger_default_log()`
+ *   - `logger_default_destroy()`
  *
  * See also:
  * - @ref testing_foundation_logger_default_unit "logger_default unit tests page"
@@ -23,6 +27,7 @@
 #include "logger_default/cr/logger_default_cr_api.h"
 #include "logger/cr/logger_cr_api.h"
 #include "logger/lifecycle/logger_lifecycle.h"
+#include "logger/borrowers/logger.h"
 #include "stream/borrowers/stream_types.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 #include "osal/time/test/osal_time_fake_provider.h"
@@ -417,6 +422,336 @@ static const struct CMUnitTest logger_default_create_logger_tests[] = {
 
 /** @endcond */
 
+/**
+ * @brief Scenarios for `logger_default_log()`.
+ *
+ * static logger_status_t logger_default_log(void *backend, const char *message);
+ *
+ * This private callback is exercised through the public `logger_log()` API
+ * on loggers created by `logger_default_create_logger()`.
+ *
+ * Doubles:
+ * - fake_stream
+ * - fake_time
+ * - fake_memory
+ *
+ * Isolation:
+ * - the callback is not called directly
+ * - behavior is exercised through the public `logger` API
+ *
+ * See also:
+ * - @ref testing_foundation_logger_default_unit_log "logger_default_log() unit tests section"
+ * - @ref specifications_logger_default_log "logger_default_log() specifications"
+ * - @ref specifications_logger_log "logger_log() specifications"
+ *
+ * The scenarios below define the test oracle for `logger_default_log()`.
+ */
+typedef enum {
+	LOGGER_DEFAULT_LOG_SCENARIO_OK_NO_NEWLINE = 0,
+	LOGGER_DEFAULT_LOG_SCENARIO_MESSAGE_NULL,
+	LOGGER_DEFAULT_LOG_SCENARIO_OK_APPEND_NEWLINE,
+	LOGGER_DEFAULT_LOG_SCENARIO_STREAM_WRITE_FAIL,
+	LOGGER_DEFAULT_LOG_SCENARIO_TIME_OPS_FAIL,
+} logger_default_log_scenario_t;
+
+/** @cond INTERNAL */
+
+typedef struct {
+	const char *name;
+
+	// arrange
+	logger_default_log_scenario_t scenario;
+	const char *message;
+	stream_status_t write_ret;
+	osal_time_status_t time_ops_status;
+
+	// assert
+	logger_status_t expected_ret;
+	bool write_call;
+	size_t expected_written_len;
+	const char *expected_written_message;
+} test_logger_default_log_case_t;
+
+typedef struct {
+	logger_t *logger;
+
+	logger_default_env_t env;
+	logger_default_cfg_t cfg;
+
+	stream_fake_t *fake_stream_adapter;
+	stream_t *fake_stream;
+
+	const test_logger_default_log_case_t *tc;
+} test_logger_default_log_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+static int setup_logger_default_log(void **state)
+{
+	const test_logger_default_log_case_t *tc = *state;
+
+	test_logger_default_log_fixture_t *fx = malloc(sizeof(*fx));
+	if (!fx) return -1;
+	memset(fx, 0, sizeof(*fx));
+
+	fake_memory_reset();
+	fake_time_reset();
+
+	fake_time_set_now_status(OSAL_TIME_STATUS_OK);
+	fake_time_set_now_out((osal_time_t){ .epoch_seconds = 0 });
+
+	assert_int_equal(
+		stream_fake_create(&fx->fake_stream_adapter, &fx->fake_stream, osal_mem_test_fake_ops()),
+		STREAM_STATUS_OK
+	);
+
+	stream_fake_reset(fx->fake_stream_adapter);
+
+	fx->cfg.append_newline =
+		(tc->scenario == LOGGER_DEFAULT_LOG_SCENARIO_OK_APPEND_NEWLINE);
+
+	fx->env.stream = fx->fake_stream;
+	fx->env.time_ops = osal_time_test_fake_ops();
+	fx->env.adapter_mem = osal_mem_test_fake_ops();
+	fx->env.port_env.mem = osal_mem_test_fake_ops();
+
+	assert_int_equal(
+		logger_default_create_logger(&fx->logger, &fx->cfg, &fx->env),
+		LOGGER_STATUS_OK
+	);
+
+	fx->tc = tc;
+	*state = fx;
+
+	return 0;
+}
+
+static int teardown_logger_default_log(void **state)
+{
+	test_logger_default_log_fixture_t *fx = *state;
+
+	logger_destroy(&fx->logger);
+	stream_fake_destroy(&fx->fake_stream_adapter, &fx->fake_stream);
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+
+	free(fx);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+static void test_logger_default_log(void **state)
+{
+	test_logger_default_log_fixture_t *fx = *state;
+
+	logger_status_t ret = (logger_status_t)-1;
+
+	if (fx->tc->scenario == LOGGER_DEFAULT_LOG_SCENARIO_STREAM_WRITE_FAIL) {
+		stream_fake_fail_write_since(
+			fx->fake_stream_adapter,
+			1,
+			fx->tc->write_ret
+		);
+	}
+
+	if (fx->tc->scenario == LOGGER_DEFAULT_LOG_SCENARIO_TIME_OPS_FAIL) {
+		fake_time_set_now_status(fx->tc->time_ops_status);
+	}
+
+	ret = logger_log(fx->logger, fx->tc->message);
+
+	assert_int_equal(ret, fx->tc->expected_ret);
+
+	assert_true(
+		fx->tc->write_call ==
+		(stream_fake_counters(fx->fake_stream_adapter)->write_calls > 0)
+	);
+
+	if (fx->tc->expected_written_message) {
+		assert_int_equal(
+			fx->tc->expected_written_len,
+			stream_fake_written_len(fx->fake_stream_adapter)
+		);
+
+		assert_memory_equal(
+			stream_fake_written_data(fx->fake_stream_adapter),
+			fx->tc->expected_written_message,
+			fx->tc->expected_written_len
+		);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_MESSAGE_NULL = {
+	.name = "logger_default_log_message_null",
+	.scenario = LOGGER_DEFAULT_LOG_SCENARIO_MESSAGE_NULL,
+	.message = NULL,
+	.expected_ret = LOGGER_STATUS_INVALID,
+	.write_call = false,
+};
+
+static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_OK_NO_NEWLINE = {
+	.name = "logger_default_log_ok_no_newline",
+	.scenario = LOGGER_DEFAULT_LOG_SCENARIO_OK_NO_NEWLINE,
+	.message = "abc",
+	.write_ret = STREAM_STATUS_OK,
+	.time_ops_status = OSAL_TIME_STATUS_OK,
+	.expected_ret = LOGGER_STATUS_OK,
+	.write_call = true,
+	.expected_written_len = strlen("[1970-01-01 00:00:00 UTC+0] abc"),
+	.expected_written_message = "[1970-01-01 00:00:00 UTC+0] abc"
+};
+
+static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_OK_APPEND_NEWLINE = {
+	.name = "logger_default_log_ok_append_newline",
+	.scenario = LOGGER_DEFAULT_LOG_SCENARIO_OK_APPEND_NEWLINE,
+	.message = "abc",
+	.write_ret = STREAM_STATUS_OK,
+	.time_ops_status = OSAL_TIME_STATUS_OK,
+	.expected_ret = LOGGER_STATUS_OK,
+	.write_call = true,
+	.expected_written_len = strlen("[1970-01-01 00:00:00 UTC+0] abc\n"),
+	.expected_written_message = "[1970-01-01 00:00:00 UTC+0] abc\n"
+};
+
+static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_WRITE_FAIL = {
+	.name = "logger_default_log_write_fail",
+	.scenario = LOGGER_DEFAULT_LOG_SCENARIO_STREAM_WRITE_FAIL,
+	.message = "abc",
+	.write_ret = STREAM_STATUS_IO_ERROR,
+	.expected_ret = LOGGER_STATUS_IO_ERROR,
+	.write_call = true,
+};
+
+static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_TIME_FAIL = {
+	.name = "logger_default_log_time_fail",
+	.scenario = LOGGER_DEFAULT_LOG_SCENARIO_TIME_OPS_FAIL,
+	.message = "abc",
+	.time_ops_status = OSAL_TIME_STATUS_ERROR,
+	.expected_ret = LOGGER_STATUS_OK,
+	.write_call = true,
+	.expected_written_len = strlen("[timestamp error] abc"),
+	.expected_written_message = "[timestamp error] abc"
+};
+
+//-----------------------------------------------------------------------------
+// REGISTRY
+//-----------------------------------------------------------------------------
+
+#define LOGGER_DEFAULT_LOG_CASES(X) \
+X(CASE_LOGGER_DEFAULT_LOG_MESSAGE_NULL) \
+X(CASE_LOGGER_DEFAULT_LOG_OK_NO_NEWLINE) \
+X(CASE_LOGGER_DEFAULT_LOG_OK_APPEND_NEWLINE) \
+X(CASE_LOGGER_DEFAULT_LOG_WRITE_FAIL) \
+X(CASE_LOGGER_DEFAULT_LOG_TIME_FAIL)
+
+#define LOGGER_DEFAULT_MAKE_LOG_TEST(case_sym) \
+LEXLEO_MAKE_TEST(logger_default_log, case_sym)
+
+static const struct CMUnitTest logger_default_log_tests[] = {
+	LOGGER_DEFAULT_LOG_CASES(LOGGER_DEFAULT_MAKE_LOG_TEST)
+};
+
+#undef LOGGER_DEFAULT_LOG_CASES
+#undef LOGGER_DEFAULT_MAKE_LOG_TEST
+
+/** @endcond */
+
+/**
+ * @brief Test `logger_default_destroy()`.
+ *
+ * static void logger_default_destroy(void *backend);
+ *
+ * This private callback is exercised through the public `logger_destroy()`
+ * lifecycle entry point on a logger created by `logger_default_create_logger()`.
+ *
+ * Success:
+ * - backend-owned resources are released during `logger_destroy()`
+ * - the public logger handle is destroyed and set to `NULL`
+ *
+ * Failure:
+ * - None.
+ *
+ * Doubles:
+ * - fake_stream
+ * - fake_time
+ * - fake_memory
+ *
+ * See also:
+ * - @ref testing_foundation_logger_default_unit_destroy "logger_default_destroy() unit tests section"
+ * - @ref specifications_logger_default_destroy "logger_default_destroy() specifications"
+ */
+static void test_logger_default_destroy(void **state)
+{
+	(void)state;
+
+	fake_memory_reset();
+	fake_time_reset();
+
+	logger_t *logger = NULL;
+	stream_fake_t *fake_stream_adapter = NULL;
+	stream_t *fake_stream = NULL;
+
+	const logger_default_cfg_t cfg = {
+		.append_newline = true
+	};
+
+	const logger_default_env_t env = {
+		.stream = NULL, /* set below after stream creation */
+		.time_ops = NULL, /* set below */
+		.adapter_mem = NULL, /* set below */
+		.port_env = {
+			.mem = NULL /* set below */
+		}
+	};
+
+	logger_default_env_t env_local = env;
+
+	assert_int_equal(
+		stream_fake_create(
+			&fake_stream_adapter,
+			&fake_stream,
+			osal_mem_test_fake_ops()),
+		STREAM_STATUS_OK
+	);
+
+	stream_fake_reset(fake_stream_adapter);
+
+	env_local.stream = fake_stream;
+	env_local.time_ops = osal_time_test_fake_ops();
+	env_local.adapter_mem = osal_mem_test_fake_ops();
+	env_local.port_env.mem = osal_mem_test_fake_ops();
+
+	assert_int_equal(
+		logger_default_create_logger(&logger, &cfg, &env_local),
+		LOGGER_STATUS_OK
+	);
+	assert_non_null(logger);
+
+	/*
+	 * Exercise the private destroy callback through the public lifecycle API.
+	 */
+	logger_destroy(&logger);
+
+	assert_null(logger);
+
+	stream_fake_destroy(&fake_stream_adapter, &fake_stream);
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+}
+
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
@@ -426,12 +761,14 @@ static const struct CMUnitTest logger_default_create_logger_tests[] = {
 int main(void) {
 	static const struct CMUnitTest logger_default_non_parametric_tests[] = {
 		cmocka_unit_test(test_logger_default_default_cfg),
-		cmocka_unit_test(test_logger_default_default_env)
+		cmocka_unit_test(test_logger_default_default_env),
+		cmocka_unit_test(test_logger_default_destroy),
 	};
 
 	int failed = 0;
 	failed += cmocka_run_group_tests(logger_default_non_parametric_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(logger_default_create_logger_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(logger_default_log_tests, NULL, NULL);
 
 	return failed;
 }
