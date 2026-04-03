@@ -1,0 +1,18 @@
+/**
+ * @defgroup stdio_stream_api stdio_stream API
+ * @ingroup stream_family_group
+ *
+ * @brief Standard-stream-backed adapter for the `stream` port.
+ *
+ * The `stdio_stream` adapter implements the `stream` port on top of the C
+ * standard I/O streams:
+ * - `stdin`
+ * - `stdout`
+ * - `stderr`
+ *
+ * It is intended to expose these process-standard streams through the generic
+ * `stream` abstraction.
+ *
+ * Sub-APIs:
+ * - @ref stdio_stream_cr_api
+ */

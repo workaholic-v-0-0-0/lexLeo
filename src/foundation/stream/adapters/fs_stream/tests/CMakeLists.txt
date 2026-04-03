@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
-#
-# File:
-# src/foundation/stream/adapters/fs_stream/tests/
-# CMakeLists.txt
 
 add_executable(
     unit_test_fs_stream

@@ -1,0 +1,26 @@
+/**
+ * @defgroup stdio_stream_cr_api stdio_stream CR API
+ * @ingroup stdio_stream_api
+ *
+ * @brief Composition Root (CR) API for the `stdio_stream` adapter.
+ *
+ * @details
+ * This API is intended to be used by the Composition Root only.
+ * It wires the `stdio_stream` adapter into the `stream` port factory via a
+ * @ref stream_adapter_desc_t.
+ *
+ * Design notes:
+ * - The adapter can be created directly through
+ *   @ref stdio_stream_create_stream.
+ * - The adapter can also be registered into the `stream` port factory through
+ *   a descriptor built by @ref stdio_stream_create_desc.
+ * - Runtime dependencies are injected via @ref stdio_stream_env_t.
+ * - The adapter is intended to expose the process standard I/O streams
+ *   (`stdin`, `stdout`, and `stderr`) through the `stream` port.
+ * - Memory ownership rules are enforced through the factory memory ops:
+ *   @ref stdio_stream_create_desc requires the factory's
+ *   @ref osal_mem_ops_t.
+ *
+ * @note This API is part of the CR surface. Runtime modules should not
+ *       include it directly.
+ */

@@ -255,6 +255,7 @@ typedef struct {
 
 	// injection
 	dynamic_buffer_stream_env_t env;
+
 	dynamic_buffer_stream_cfg_t cfg;
 
 	const test_dynamic_buffer_stream_create_stream_case_t *tc;
@@ -869,6 +870,7 @@ static const struct CMUnitTest create_desc_dynamic_buffer_stream_tests[] = {
  * on streams created by `dynamic_buffer_stream_create_stream()`.
  *
  * Invalid arguments:
+ * - `backend == NULL`
  * - `buf == NULL && n > 0`
  *
  * Success:

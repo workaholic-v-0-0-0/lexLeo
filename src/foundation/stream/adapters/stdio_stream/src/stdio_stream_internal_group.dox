@@ -1,0 +1,7 @@
+/**
+ * @defgroup stdio_stream_internal_group stdio_stream private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the stdio_stream adapter.
+ *
+ */

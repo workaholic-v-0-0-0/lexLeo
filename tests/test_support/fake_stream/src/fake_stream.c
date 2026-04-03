@@ -233,6 +233,7 @@ stream_status_t fake_stream_create(
 	if (out_fake) {
 		*out_fake = NULL;
 	}
+
 	if (out_stream) {
 		*out_stream = NULL;
 	}
