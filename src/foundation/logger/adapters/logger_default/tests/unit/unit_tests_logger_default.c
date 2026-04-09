@@ -25,23 +25,23 @@
  */
 
 #include "logger_default/cr/logger_default_cr_api.h"
-#include "logger/cr/logger_cr_api.h"
-#include "logger/lifecycle/logger_lifecycle.h"
+
 #include "logger/borrowers/logger.h"
+#include "logger/lifecycle/logger_lifecycle.h"
+#include "logger/cr/logger_cr_api.h"
+
 #include "stream/borrowers/stream_types.h"
-#include "osal/mem/test/osal_mem_fake_provider.h"
-#include "osal/time/test/osal_time_fake_provider.h"
 #include "stream/test/stream_fake_provider.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "osal/mem/osal_mem.h"
+#include "osal/mem/test/osal_mem_fake_provider.h"
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "osal/time/test/osal_time_fake_provider.h"
+
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+
+#include "lexleo_cmocka.h"
 
 /**
  * @brief Test `logger_default_default_cfg()`.
@@ -237,7 +237,7 @@ static int setup_logger_default_create_logger(void **state)
 
 	test_logger_default_create_logger_fixture_t *fx = malloc(sizeof(*fx));
 	if (!fx) return -1;
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 
 	fake_memory_reset();
 	fake_time_reset();
@@ -494,7 +494,7 @@ static int setup_logger_default_log(void **state)
 
 	test_logger_default_log_fixture_t *fx = malloc(sizeof(*fx));
 	if (!fx) return -1;
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 
 	fake_memory_reset();
 	fake_time_reset();
@@ -608,7 +608,7 @@ static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_OK_NO_NEWLIN
 	.time_ops_status = OSAL_TIME_STATUS_OK,
 	.expected_ret = LOGGER_STATUS_OK,
 	.write_call = true,
-	.expected_written_len = strlen("[1970-01-01 00:00:00 UTC+0] abc"),
+	.expected_written_len = sizeof("[1970-01-01 00:00:00 UTC+0] abc") - 1,
 	.expected_written_message = "[1970-01-01 00:00:00 UTC+0] abc"
 };
 
@@ -620,7 +620,7 @@ static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_OK_APPEND_NE
 	.time_ops_status = OSAL_TIME_STATUS_OK,
 	.expected_ret = LOGGER_STATUS_OK,
 	.write_call = true,
-	.expected_written_len = strlen("[1970-01-01 00:00:00 UTC+0] abc\n"),
+	.expected_written_len = sizeof("[1970-01-01 00:00:00 UTC+0] abc\n") - 1,
 	.expected_written_message = "[1970-01-01 00:00:00 UTC+0] abc\n"
 };
 
@@ -640,7 +640,7 @@ static const test_logger_default_log_case_t CASE_LOGGER_DEFAULT_LOG_TIME_FAIL = 
 	.time_ops_status = OSAL_TIME_STATUS_ERROR,
 	.expected_ret = LOGGER_STATUS_OK,
 	.write_call = true,
-	.expected_written_len = strlen("[timestamp error] abc"),
+	.expected_written_len = sizeof("[timestamp error] abc") - 1,
 	.expected_written_message = "[timestamp error] abc"
 };
 

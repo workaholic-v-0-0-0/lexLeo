@@ -1,8 +1,16 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 #ifndef LEXLEO_FAKE_TIME_H
 #define LEXLEO_FAKE_TIME_H
 
 #include "osal/time/osal_time_types.h"
+
 #include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 osal_time_status_t fake_time_now(osal_time_t *out);
 
@@ -12,5 +20,9 @@ void fake_time_set_now_status(osal_time_status_t status);
 void fake_time_set_now_out(osal_time_t out);
 
 size_t fake_time_get_call_count(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_FAKE_TIME_H

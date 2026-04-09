@@ -16,16 +16,20 @@
  * - direct construction of a `logger_default`-backed `logger_t`.
  */
 
-#include "internal/logger_default_handle.h"
-#include "internal/logger_default_utc_timestamp.h"
-#include "stream/borrowers/stream.h"
 #include "logger/adapters/logger_adapters_api.h"
 #include "logger_default/cr/logger_default_cr_api.h"
+
+#include "stream/borrowers/stream.h"
+
 #include "osal/time/osal_time.h"
+#include "osal/mem/osal_mem.h"
+
 #include "policy/lexleo_assert.h"
-#include "policy/lexleo_cstring.h"
-#include "policy/lexleo_cstd_io.h"
 #include "policy/lexleo_cstd_inttypes.h"
+#include "policy/lexleo_cstd_io.h"
+
+#include "internal/logger_default_handle.h"
+#include "internal/logger_default_utc_timestamp.h"
 
 /**
  * @brief Return the default configuration for the `logger_default` adapter.
@@ -223,7 +227,7 @@ static logger_status_t logger_default_log(void *backend, const char *message)
 	}
 
 	stream_status_t st = STREAM_STATUS_OK;
-	size_t len = strlen(message);
+	size_t len = osal_strlen(message);
 
 	size_t n =
 		stream_write(

@@ -26,22 +26,20 @@
  * - @ref specifications_stream "stream specifications"
  */
 
-#include "stream/cr/stream_cr_api.h"
-#include "stream/adapters/stream_adapters_api.h"
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
+
+#include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/adapters/stream_adapters_api.h"
+#include "stream/cr/stream_cr_api.h"
+
+#include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lexleo_cmocka.h"
 
 /** @cond INTERNAL */
 
@@ -485,7 +483,7 @@ static int setup_stream_lifecycle(void **state)
 		(test_stream_lifecycle_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -496,7 +494,7 @@ static int setup_stream_lifecycle(void **state)
 	// DI
 	fx->env.mem = osal_mem_test_fake_ops();
 
-	memset(&fx->backend, 0, sizeof(fx->backend));
+	osal_memset(&fx->backend, 0, sizeof(fx->backend));
     fx->backend.close_ret = STREAM_STATUS_OK;
 
 	*state = fx;
@@ -864,7 +862,7 @@ static int setup_stream_read(void **state) {
 	const test_stream_read_case_t *tc = (const test_stream_read_case_t *) *state;
 	test_stream_read_fixture_t *fx = (test_stream_read_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1284,7 +1282,7 @@ static int setup_stream_write(void **state) {
 	const test_stream_write_case_t *tc = (const test_stream_write_case_t *) *state;
 	test_stream_write_fixture_t *fx = (test_stream_write_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1637,7 +1635,7 @@ static int setup_stream_flush(void **state)
     test_stream_flush_fixture_t *fx = (test_stream_flush_fixture_t *)malloc(sizeof(*fx));
     if (!fx) return -1;
 
-    memset(fx, 0, sizeof(*fx));
+    osal_memset(fx, 0, sizeof(*fx));
     fx->tc = tc;
 
     fake_memory_reset();

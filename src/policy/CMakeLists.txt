@@ -1,11 +1,13 @@
-# src/policy/CMakeLists.txt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
 
 cmake_minimum_required(VERSION 3.16)
 
 add_library(lexleo_policy_headers INTERFACE)
-target_include_directories(lexleo_policy_headers
+target_include_directories(
+    lexleo_policy_headers
     INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_library(lexleo_assert INTERFACE)
@@ -23,5 +25,7 @@ add_library(
 target_link_libraries(
     lexleo_panic
     PUBLIC
+        osal_stdio
+        osal_mem
         lexleo_policy_headers
 )

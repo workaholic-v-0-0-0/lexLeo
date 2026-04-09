@@ -17,7 +17,11 @@
 
 #include "stream/borrowers/stream_types.h"
 
-#include <stddef.h>
+#include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Read bytes from a stream.
@@ -87,5 +91,9 @@ size_t stream_write(stream_t *s, const void *buf, size_t n, stream_status_t *st)
  * port.
  */
 stream_status_t stream_flush(stream_t *s);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_H

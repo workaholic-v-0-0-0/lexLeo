@@ -17,6 +17,10 @@
 
 #include "osal/mem/osal_mem_ops.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Runtime environment for the `logger` port.
  *
@@ -37,5 +41,9 @@ typedef struct logger_env_t {
 	 */
 	const osal_mem_ops_t *mem;
 } logger_env_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_LOGGER_ENV_H

@@ -20,21 +20,19 @@
  * - @ref specifications_logger "logger specifications"
  */
 
-#include "logger/cr/logger_cr_api.h"
-#include "logger/adapters/logger_adapters_api.h"
-#include "logger/lifecycle/logger_lifecycle.h"
 #include "logger/borrowers/logger.h"
+
+#include "logger/lifecycle/logger_lifecycle.h"
+#include "logger/adapters/logger_adapters_api.h"
+#include "logger/cr/logger_cr_api.h"
+
+#include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include "lexleo_cmocka.h"
 
 /** @cond INTERNAL */
 
@@ -337,7 +335,7 @@ static int setup_logger_lifecycle(void **state)
 		(test_logger_lifecycle_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -670,7 +668,7 @@ static int setup_logger_log(void **state)
 		(test_logger_log_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 
 	fake_memory_reset();
 	fake_logger_backend_reset(&fx->backend);

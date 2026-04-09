@@ -16,9 +16,15 @@
 #define LEXLEO_FS_STREAM_TYPES_H
 
 #include "stream/adapters/stream_env.h"
+
 #include "osal/file/osal_file_ops.h"
 #include "osal/file/osal_file_env.h"
+
 #include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @struct fs_stream_cfg_t
@@ -98,5 +104,9 @@ typedef struct fs_stream_args_t {
 	 */
 	bool autoclose;
 } fs_stream_args_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_FS_STREAM_TYPES_H

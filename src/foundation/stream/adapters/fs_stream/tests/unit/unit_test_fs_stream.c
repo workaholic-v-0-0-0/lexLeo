@@ -33,21 +33,19 @@
 
 #include "fs_stream/cr/fs_stream_cr_api.h"
 
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
+
 #include "osal/file/test/osal_file_fake_provider.h"
+
+#include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lexleo_cmocka.h"
 
 /**
  * @brief Test `fs_stream_default_cfg()`.
@@ -339,7 +337,7 @@ static int setup_fs_stream_create_stream(void **state)
 		(test_fs_stream_create_stream_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_file_reset();
@@ -348,7 +346,7 @@ static int setup_fs_stream_create_stream(void **state)
 		fake_memory_fail_only_on_call(tc->fail_call_idx);
 	}
 
-	memset(fx->backing, 0, sizeof(fx->backing));
+	osal_memset(fx->backing, 0, sizeof(fx->backing));
 	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
 	fake_file_set_pos(0);
 	fake_file_fail_disable();
@@ -769,7 +767,7 @@ static int setup_fs_stream_create_desc(void **state)
 		(test_fs_stream_create_desc_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1167,13 +1165,13 @@ static int setup_fs_stream_desc_ctor(void **state)
 		(test_fs_stream_desc_ctor_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_file_reset();
 	fake_memory_reset();
 
-	memset(fx->backing, 0, sizeof(fx->backing));
+	osal_memset(fx->backing, 0, sizeof(fx->backing));
 	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
 	fake_file_set_pos(0);
 	fake_file_fail_disable();

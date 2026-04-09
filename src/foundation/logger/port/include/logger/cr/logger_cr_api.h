@@ -20,6 +20,10 @@
 
 #include "logger/adapters/logger_env.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Build a default `logger_env_t` from injected memory operations.
  *
@@ -34,5 +38,9 @@
  * It only packages the provided dependency into a public `logger_env_t`.
  */
 logger_env_t logger_default_env(const osal_mem_ops_t *mem_ops);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_LOGGER_CR_API_H

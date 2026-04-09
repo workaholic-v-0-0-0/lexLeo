@@ -17,6 +17,7 @@
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_HANDLE_H
 
 #include "internal/dynamic_buffer_stream_state.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
 /**

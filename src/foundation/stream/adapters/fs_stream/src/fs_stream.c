@@ -12,7 +12,11 @@
 
 #include "internal/fs_stream_handle.h"
 #include "internal/fs_stream_ctor_ud.h"
+
 #include "fs_stream/cr/fs_stream_cr_api.h"
+
+#include "osal/mem/osal_mem.h"
+
 #include "policy/lexleo_assert.h"
 
 static stream_status_t map_osal_status(osal_file_status_t osal_st) {
@@ -279,8 +283,8 @@ stream_status_t fs_stream_create_desc(
 		return STREAM_STATUS_OOM;
 
 	tmp.ud = ud;
-	mem->memcpy(&ud->cfg, cfg, sizeof(*cfg));
-	mem->memcpy(&ud->env, env, sizeof(*env));
+	osal_memcpy(&ud->cfg, cfg, sizeof(*cfg));
+	osal_memcpy(&ud->env, env, sizeof(*env));
 	tmp.ud_dtor = fs_stream_destroy_ud_ctor;
 
 	*out = tmp;

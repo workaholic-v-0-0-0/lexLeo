@@ -15,7 +15,6 @@ target_link_libraries(
         osal_file_fake_provider
         lexleo_policy_headers
         lexleo_cmocka_support
-        cmocka
 )
 
 add_test(

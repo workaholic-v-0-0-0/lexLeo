@@ -15,9 +15,14 @@
 #ifndef LEXLEO_STREAM_INSTALL_H
 #define LEXLEO_STREAM_INSTALL_H
 
-#include "stream/adapters/stream_key_type.h"
 #include "stream/borrowers/stream_types.h"
+#include "stream/adapters/stream_key_type.h"
+
 #include "osal/mem/osal_mem_ops.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Destructor for adapter-owned constructor user data.
@@ -108,5 +113,9 @@ typedef struct stream_adapter_desc_t {
 	 */
 	ud_dtor_fn_t ud_dtor;
 } stream_adapter_desc_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_INSTALL_H

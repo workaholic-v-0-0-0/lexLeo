@@ -1,19 +1,17 @@
 // src/foundation/osal/osal_file/src/win32/osal_file_win32.c
 
-#include "osal/file/internal/osal_file_env.h"
-#include "osal/file/osal_file_ops.h"
 #include "osal/file/osal_file_types.h"
+#include "osal/file/osal_file_env.h"
+#include "osal/file/osal_file_ops.h"
+
 #include "osal/mem/osal_mem_ops.h"
+
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_io.h"
+#include "policy/lexleo_cstd_errno.h"
+#include "policy/lexleo_cstd_wchar.h"
+#include "policy/lexleo_win32_base.h"
 #include "policy/lexleo_panic.h"
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <errno.h>
-#include <wchar.h>
 
 struct osal_file_t {
     FILE *fp;

@@ -1,4 +1,6 @@
-// tools/update_docs_on_droplet.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

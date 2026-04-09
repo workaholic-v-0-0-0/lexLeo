@@ -17,6 +17,10 @@
 
 #include "stream/borrowers/stream_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Destroy a stream handle.
  *
@@ -28,5 +32,9 @@
  * Otherwise, it releases the stream object and sets `*s` to `NULL`.
  */
 void stream_destroy(stream_t **s);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_LIFECYCLE_H

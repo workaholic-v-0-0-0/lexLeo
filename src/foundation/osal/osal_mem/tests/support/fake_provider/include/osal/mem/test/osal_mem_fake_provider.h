@@ -3,12 +3,18 @@
 #ifndef LEXLEO_OSAL_MEM_FAKE_PROVIDER_H
 #define LEXLEO_OSAL_MEM_FAKE_PROVIDER_H
 
-#include <stddef.h>
-#include <stdbool.h>
-
 #include "osal/mem/osal_mem_ops.h"
+
 #include "lexleo/test/fake_memory.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const osal_mem_ops_t *osal_mem_test_fake_ops(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_OSAL_MEM_FAKE_PROVIDER_H

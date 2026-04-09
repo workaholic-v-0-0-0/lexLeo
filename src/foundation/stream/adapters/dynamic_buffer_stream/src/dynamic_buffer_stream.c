@@ -11,12 +11,16 @@
  * @details In-memory dynamic-buffer-backed stream adapter.
  */
 
-#include "internal/dynamic_buffer_stream_handle.h"
 #include "internal/dynamic_buffer_stream_state.h"
+#include "internal/dynamic_buffer_stream_handle.h"
 #include "internal/dynamic_buffer_stream_ctor_ud.h"
+
 #include "dynamic_buffer_stream/cr/dynamic_buffer_stream_cr_api.h"
-#include "policy/lexleo_assert.h"
+
 #include "osal/mem/osal_mem_ops.h"
+#include "osal/mem/osal_mem.h"
+
+#include "policy/lexleo_assert.h"
 
 static size_t dynamic_buffer_stream_read(
 	void *backend,
@@ -41,7 +45,7 @@ static size_t dynamic_buffer_stream_read(
 
 	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)backend;
 
-	LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy);
+	LEXLEO_ASSERT(dbs->mem);
 
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
 	LEXLEO_ASSERT(dbuf->read_pos <= dbuf->len);
@@ -56,7 +60,7 @@ static size_t dynamic_buffer_stream_read(
 	size_t avail = dbuf->len - dbuf->read_pos;
 	size_t ret = (avail < n) ? avail : n;
 
-	dbs->mem->memcpy(buf, dbuf->buf + dbuf->read_pos, ret);
+	osal_memcpy(buf, dbuf->buf + dbuf->read_pos, ret);
 	dbuf->read_pos += ret;
 
 	return ret;
@@ -119,7 +123,7 @@ static size_t dynamic_buffer_stream_write(
 	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)backend;
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
 
-	LEXLEO_ASSERT(dbs->mem && dbs->mem->memcpy && dbuf->cap > 0);
+	LEXLEO_ASSERT(dbs->mem && dbuf->cap > 0);
 
 	if (n > SIZE_MAX - dbuf->len) {
 		if (st) {
@@ -158,7 +162,7 @@ static size_t dynamic_buffer_stream_write(
 		return (size_t)0;
 	}
 
-	dbs->mem->memcpy(dbuf->buf + dbuf->len, buf, n);
+	osal_memcpy(dbuf->buf + dbuf->len, buf, n);
 	dbuf->len += n;
 
 	return n;
@@ -213,8 +217,7 @@ static stream_status_t dynamic_buffer_stream_create_backend(
 		|| !env->mem
 		|| !env->mem->calloc
 		|| !env->mem->realloc
-		|| !env->mem->free
-		|| !env->mem->memcpy) {
+		|| !env->mem->free) {
 		return STREAM_STATUS_INVALID;
 	}
 
@@ -328,8 +331,7 @@ stream_status_t dynamic_buffer_stream_create_desc(
 		|| !env
 		|| !mem
 		|| !mem->calloc
-		|| !mem->free
-		|| !mem->memcpy) {
+		|| !mem->free) {
 		return STREAM_STATUS_INVALID;
 	}
 
@@ -343,8 +345,8 @@ stream_status_t dynamic_buffer_stream_create_desc(
 	}
 
 	tmp.ud = ud;
-	mem->memcpy(&ud->cfg, cfg, sizeof(*cfg));
-	mem->memcpy(&ud->env, env, sizeof(*env));
+	osal_memcpy(&ud->cfg, cfg, sizeof(*cfg));
+	osal_memcpy(&ud->env, env, sizeof(*env));
 	tmp.ud_dtor = dynamic_buffer_stream_destroy_ud_ctor;
 
 	*out = tmp;

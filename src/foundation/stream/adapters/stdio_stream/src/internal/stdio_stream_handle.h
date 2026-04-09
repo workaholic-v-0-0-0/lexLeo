@@ -17,8 +17,9 @@
 #ifndef LEXLEO_STDIO_STREAM_HANDLE_H
 #define LEXLEO_STDIO_STREAM_HANDLE_H
 
-#include "osal/mem/osal_mem_ops.h"
 #include "osal/stdio/osal_stdio_ops.h"
+
+#include "osal/mem/osal_mem_ops.h"
 
 /**
  * @brief Private backend handle for the `stdio_stream` adapter.

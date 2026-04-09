@@ -17,6 +17,10 @@
 
 #include "stream/borrowers/stream_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Owner-facing creator object for buffer-backed streams.
  *
@@ -53,5 +57,9 @@ typedef struct stream_buffer_creator_t {
 	 */
 	void *ud;
 } stream_buffer_creator_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_BUFFER_CREATOR_H

@@ -28,6 +28,10 @@
 #include "logger/borrowers/logger_types.h"
 #include "logger/adapters/logger_env.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @struct logger_vtbl_t
  * @brief Adapter dispatch table bound to a `logger_t` instance.
@@ -92,5 +96,9 @@ logger_status_t logger_create(
 	const logger_vtbl_t *vtbl,
 	void *backend,
 	const logger_env_t *env );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_LOGGER_ADAPTERS_API_H

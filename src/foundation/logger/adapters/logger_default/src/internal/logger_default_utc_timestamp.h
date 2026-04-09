@@ -15,8 +15,9 @@
 #ifndef LEXLEO_LOGGER_DEFAULT_UTC_TIMESTAMP_H
 #define LEXLEO_LOGGER_DEFAULT_UTC_TIMESTAMP_H
 
-#include "policy/lexleo_cstd_types.h"
 #include "osal/time/osal_time_types.h"
+
+#include "policy/lexleo_cstd_types.h"
 
 /**
  * @brief Private UTC timestamp representation used by `logger_default`.

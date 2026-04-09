@@ -1,4 +1,6 @@
-// src/include/policy/lexleo_cstd_types.h
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #ifndef LEXLEO_LEXLEO_CSTD_TYPES_H
 #define LEXLEO_LEXLEO_CSTD_TYPES_H

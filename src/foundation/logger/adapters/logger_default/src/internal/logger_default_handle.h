@@ -16,8 +16,10 @@
 #define LEXLEO_LOGGER_DEFAULT_HANDLE_H
 
 #include "stream/borrowers/stream_types.h"
+
 #include "osal/time/osal_time_ops.h"
 #include "osal/mem/osal_mem_ops.h"
+
 #include "policy/lexleo_cstd_types.h"
 
 /**

@@ -1,12 +1,15 @@
-/* tests/test_support/fake_stream/src/fake_stream.c */
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #include "lexleo/test/fake_stream.h"
 
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
-#include "policy/lexleo_assert.h"
+#include "stream/lifecycle/stream_lifecycle.h"
 
-#include <string.h>
+#include "osal/mem/osal_mem.h"
+
+#include "policy/lexleo_assert.h"
 
 struct fake_stream_t {
 	uint8_t written_buf[FAKE_STREAM_BUFFER_CAP];
@@ -34,8 +37,8 @@ void fake_stream_reset(fake_stream_t *fs)
 		return;
 	}
 
-	memset(&fs->counters, 0, sizeof(fs->counters));
-	memset(fs->written_buf, 0, sizeof(fs->written_buf));
+	osal_memset(&fs->counters, 0, sizeof(fs->counters));
+	osal_memset(fs->written_buf, 0, sizeof(fs->written_buf));
 	fs->written_len = 0u;
 
 	fs->write_result_n = 0u;
@@ -123,7 +126,7 @@ static size_t fake_stream_write(
 	}
 
 	if (written > 0u) {
-		memcpy(fs->written_buf + fs->written_len, buf, written);
+		osal_memcpy(fs->written_buf + fs->written_len, buf, written);
 		fs->written_len += written;
 	}
 

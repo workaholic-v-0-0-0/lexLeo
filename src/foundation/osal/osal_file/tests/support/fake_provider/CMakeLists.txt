@@ -19,4 +19,5 @@ target_link_libraries(
         fake_file
         osal_mem
         osal_file
+        lexleo_policy_headers
 )

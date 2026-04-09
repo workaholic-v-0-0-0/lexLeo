@@ -1,7 +1,9 @@
+// osal_stdio.c
 
+#include "internal/osal_stdio_internal.h"
 
 #include "osal/stdio/osal_stdio_ops.h"
-#include "internal/osal_stdio_internal.h"
+
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_assert.h"
 

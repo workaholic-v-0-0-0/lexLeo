@@ -1,4 +1,5 @@
-# tests/test_support/fake_stream/CMakeLists.txt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
 
 add_library(
     fake_stream

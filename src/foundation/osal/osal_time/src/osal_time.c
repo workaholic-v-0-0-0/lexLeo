@@ -2,7 +2,7 @@
 
 #include "osal/time/osal_time_ops.h"
 
-#include <time.h>
+#include "policy/lexleo_cstd_time.h"
 
 osal_time_status_t osal_time_now_impl(osal_time_t *out)
 {

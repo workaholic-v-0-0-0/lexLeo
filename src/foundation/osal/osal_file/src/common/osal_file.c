@@ -1,12 +1,14 @@
 // src/foundation/osal/src/common/osal_file.c
 
-#include "osal/file/osal_file.h"
-#include "osal/file/osal_file_ops.h"
-#include "osal/mem/osal_mem_ops.h"
-#include "osal/file/osal_file_env.h"
 #include "internal/osal_file_internal.h"
 
-#include <stddef.h>
+#include "osal/file/osal_file.h"
+#include "osal/file/osal_file_env.h"
+#include "osal/file/osal_file_ops.h"
+
+#include "osal/mem/osal_mem_ops.h"
+
+#include "policy/lexleo_cstd_types.h"
 
 const osal_file_ops_t *osal_file_default_ops(void) {
 #if defined(_WIN32) || defined(_WIN64)

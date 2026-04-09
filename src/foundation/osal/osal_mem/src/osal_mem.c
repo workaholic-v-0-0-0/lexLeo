@@ -1,12 +1,9 @@
-// src/foundation/osal/osal_file/src/osal_mem.c
+// src/foundation/osal/osal_mem/src/osal_mem.c
 
 #include "osal/mem/osal_mem.h"
-#include "osal/mem/internal/osal_mem_ctx.h"
 
-#include <stdlib.h>
-#include <string.h>
-
-#include "osal/mem/osal_mem_ops.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstring.h"
 
 void *osal_malloc(size_t size) { return malloc(size); }
 void *osal_calloc(size_t nmemb, size_t size) { return calloc(nmemb, size); }
@@ -23,4 +20,27 @@ char *osal_strdup(const char *s)
 
 	memcpy(p, s, n);
 	return p;
+}
+
+void *osal_memcpy(void *dest, const void *src, size_t n)
+{
+	return memcpy(dest, src, n);
+}
+
+void *osal_memset(void *s, int c, size_t n)
+{
+	return memset(s, c, n);
+}
+
+size_t osal_strlen(const char *s)
+{
+	return strlen(s);
+}
+
+int osal_strcmp(const char *s1, const char *s2) {
+	return strcmp(s1, s2);
+}
+
+void *osal_memmove(void *dest, const void *src, size_t n) {
+	return memmove(dest, src, n);
 }

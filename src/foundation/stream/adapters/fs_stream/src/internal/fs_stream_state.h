@@ -15,7 +15,7 @@
 #ifndef LEXLEO_FS_STREAM_STATE_H
 #define LEXLEO_FS_STREAM_STATE_H
 
-#include <stdbool.h>
+#include "policy/lexleo_cstd_types.h"
 
 typedef struct osal_file_t osal_file_t;
 

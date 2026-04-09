@@ -35,23 +35,21 @@
  * - @ref specifications_stream "stream specifications"
  */
 
-#include "stream/cr/stream_factory_cr_api.h"
 #include "fs_stream/cr/fs_stream_cr_api.h"
 
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/cr/stream_factory_cr_api.h"
+
 #include "osal/file/test/osal_file_fake_provider.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "osal/mem/osal_mem.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
+
+#include "lexleo_cmocka.h"
 
 /**
  * @brief Scenarios for `stream_factory_create_stream()` / `fs_stream` integration.
@@ -301,12 +299,12 @@ static int setup_stream_fact_create_fs(void **state)
 		(test_stream_fact_create_fs_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_file_reset();
 
-	memset(fx->backing, 0, sizeof(fx->backing));
+	osal_memset(fx->backing, 0, sizeof(fx->backing));
 	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
 	fake_file_set_pos(0);
 	fake_file_fail_disable();

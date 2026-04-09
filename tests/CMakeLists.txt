@@ -1,4 +1,5 @@
-# tests/CMakeLists.txt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
 
 #------------------------------------------------------------------------------
 # CHECK LIBRARY CONFIGURATION

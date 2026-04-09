@@ -16,10 +16,17 @@
 #define LEXLEO_LOGGER_DEFAULT_TYPES_H
 
 #include "logger/adapters/logger_env.h"
+
 #include "stream/borrowers/stream_types.h"
+
 #include "osal/time/osal_time_ops.h"
 #include "osal/mem/osal_mem_ops.h"
+
 #include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @struct logger_default_cfg_t
@@ -86,5 +93,9 @@ typedef struct logger_default_env_t {
 	 */
 	logger_env_t port_env;
 } logger_default_env_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_LOGGER_DEFAULT_TYPES_H

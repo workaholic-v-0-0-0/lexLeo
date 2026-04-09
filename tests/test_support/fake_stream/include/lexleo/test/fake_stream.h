@@ -1,4 +1,6 @@
-/* tests/test_support/fake_stream/include/lexleo/test/fake_stream.h */
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #ifndef LEXLEO_FAKE_STREAM_H
 #define LEXLEO_FAKE_STREAM_H
@@ -7,9 +9,7 @@
 #include "stream/adapters/stream_env.h"
 #include "stream/adapters/stream_adapters_api.h"
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "policy/lexleo_cstd_types.h"
 
 #ifdef __cplusplus
 extern "C" {

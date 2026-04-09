@@ -19,6 +19,10 @@
 #include "logger_default/cr/logger_default_types.h"
 #include "logger/borrowers/logger_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Return a default configuration for the `logger_default` adapter.
  *
@@ -99,5 +103,9 @@ logger_status_t logger_default_create_logger(
 	logger_t **out,
 	const logger_default_cfg_t *cfg,
 	const logger_default_env_t *env);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_LOGGER_DEFAULT_CR_API_H

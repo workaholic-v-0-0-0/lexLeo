@@ -21,6 +21,10 @@
 #include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_env.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Return the default borrower-facing ops table for the `stream` port.
  *
@@ -52,5 +56,9 @@ const stream_ops_t *stream_default_ops(void);
  * It only packages the provided dependency into a public `stream_env_t`.
  */
 stream_env_t stream_default_env(const osal_mem_ops_t *mem_ops);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_STREAM_CR_API_API_H

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
+
 add_library(
     fake_stdio
     STATIC
@@ -16,5 +19,6 @@ target_link_libraries(
         osal_stdio_api
         lexleo_policy_headers
     PRIVATE
-        cmocka
+        osal_mem
+        lexleo_cmocka_support
 )

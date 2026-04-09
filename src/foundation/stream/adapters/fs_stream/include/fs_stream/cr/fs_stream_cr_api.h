@@ -20,11 +20,17 @@
 #define LEXLEO_FS_STREAM_CR_API_H
 
 #include "fs_stream/cr/fs_stream_types.h"
-#include "stream/adapters/stream_adapters_api.h"
-#include "stream/adapters/stream_install.h"
+
 #include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_key_type.h"
+#include "stream/adapters/stream_install.h"
+#include "stream/adapters/stream_adapters_api.h"
+
 #include "osal/mem/osal_mem_ops.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Return a default configuration for the `fs_stream` adapter.
@@ -168,5 +174,9 @@ stream_status_t fs_stream_create_desc(
 	const fs_stream_cfg_t *cfg,
 	const fs_stream_env_t *env,
 	const osal_mem_ops_t *mem);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_FS_STREAM_CR_API_H

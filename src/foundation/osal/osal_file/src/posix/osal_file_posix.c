@@ -1,14 +1,15 @@
 // src/foundation/osal/osal_file/src/posix/osal_file_posix.c
 
 #include "osal/file/osal_file_env.h"
-#include "osal/file/osal_file_types.h"
 #include "osal/file/osal_file_ops.h"
-#include "osal/mem/osal_mem_ops.h"
-#include "policy/lexleo_panic.h"
+#include "osal/file/osal_file_types.h"
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include "osal/mem/osal_mem_ops.h"
+
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_io.h"
+#include "policy/lexleo_cstd_errno.h"
+#include "policy/lexleo_panic.h"
 
 struct osal_file_t {
     FILE *fp;

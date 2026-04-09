@@ -17,9 +17,10 @@
 
 #include "stream/adapters/stream_key_type.h"
 #include "stream/adapters/stream_install.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
-#include <stddef.h>
+#include "policy/lexleo_cstd_types.h"
 
 /**
  * @brief Private registered adapter entry.

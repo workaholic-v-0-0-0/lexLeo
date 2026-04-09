@@ -3,10 +3,9 @@
 #ifndef LEXLEO_OSAL_FILE_OPS_H
 #define LEXLEO_OSAL_FILE_OPS_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "osal/file/osal_file_types.h"
 
-#include "osal_file_types.h"
+#include "policy/lexleo_cstd_types.h"
 
 #ifdef __cplusplus
 extern "C" {

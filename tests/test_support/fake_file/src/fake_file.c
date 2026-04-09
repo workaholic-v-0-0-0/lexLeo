@@ -2,8 +2,9 @@
 
 #include "lexleo/test/fake_file.h"
 
+#include "osal/mem/osal_mem.h"
+
 #include "policy/lexleo_assert.h"
-#include <string.h>
 
 typedef struct fake_file_handle_t {
     uint8_t *buf;
@@ -39,8 +40,8 @@ void fake_file_reset(void) {
     g_backing_len = 0;
     g_next_pos = 0;
 
-    memset(&g_fail, 0, sizeof(g_fail));
-    memset(&g_ctrs, 0, sizeof(g_ctrs));
+    osal_memset(&g_fail, 0, sizeof(g_fail));
+    osal_memset(&g_ctrs, 0, sizeof(g_ctrs));
 }
 
 void fake_file_set_backing(uint8_t *backing_buf, size_t cap, size_t initial_len) {
@@ -151,7 +152,7 @@ size_t fake_file_read(
     size_t avail = h->len - h->pos;
     size_t r = (n < avail) ? n : avail;
 
-    memcpy(buf, h->buf + h->pos, r);
+    osal_memcpy(buf, h->buf + h->pos, r);
     h->pos += r;
 
     return r;
@@ -187,7 +188,7 @@ size_t fake_file_write(
     size_t space = h->cap - h->pos;
     size_t w = (n < space) ? n : space;
 
-    memcpy(h->buf + h->pos, buf, w);
+    osal_memcpy(h->buf + h->pos, buf, w);
     h->pos += w;
     if (h->pos > h->len) h->len = h->pos;
 

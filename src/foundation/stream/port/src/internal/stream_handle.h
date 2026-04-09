@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
-* Copyright (C) 2026 Sylvain Labopin
+ * Copyright (C) 2026 Sylvain Labopin
  */
 
 /**
@@ -16,6 +16,7 @@
 #define LEXLEO_STREAM_HANDLE_H
 
 #include "stream/adapters/stream_adapters_api.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
 /**

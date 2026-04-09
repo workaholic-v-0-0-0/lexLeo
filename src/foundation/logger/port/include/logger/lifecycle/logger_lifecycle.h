@@ -15,6 +15,12 @@
 #ifndef LEXLEO_LOGGER_LIFECYCLE_H
 #define LEXLEO_LOGGER_LIFECYCLE_H
 
+#include "logger/borrowers/logger_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Destroy a logger handle.
  *
@@ -26,5 +32,9 @@
  * Otherwise, it releases the logger object and sets `*l` to `NULL`.
  */
 void logger_destroy(logger_t **l);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_LOGGER_LIFECYCLE_H

@@ -13,6 +13,7 @@
  */
 
 #include "internal/logger_default_utc_timestamp.h"
+
 #include "osal/time/osal_time_types.h"
 
 /**

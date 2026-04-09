@@ -16,9 +16,14 @@
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_TYPES_H
 
 #include "stream/adapters/stream_env.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
 #include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @struct dynamic_buffer_stream_cfg_t
@@ -69,5 +74,9 @@ typedef struct dynamic_buffer_stream_env_t {
 	 */
 	stream_env_t port_env;
 } dynamic_buffer_stream_env_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_DYNAMIC_BUFFER_STREAM_TYPES_H

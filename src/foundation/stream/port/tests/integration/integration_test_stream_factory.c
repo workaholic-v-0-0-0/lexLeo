@@ -34,16 +34,13 @@
 
 #include "stream/cr/stream_factory_cr_api.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "osal/mem/osal_mem.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
+
+#include "lexleo_cmocka.h"
 
 /** @cond INTERNAL */
 
@@ -321,7 +318,7 @@ static int setup_stream_fact_lifecycle(void **state)
 		(test_stream_fact_lifecycle_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fx->stream_factory_cfg.fact_cap = 8;
@@ -706,7 +703,7 @@ static int setup_stream_fact_add_adapter(void **state)
 		(test_stream_fact_add_adapter_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	// DI

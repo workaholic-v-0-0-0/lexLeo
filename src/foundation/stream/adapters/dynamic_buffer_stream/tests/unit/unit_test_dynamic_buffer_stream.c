@@ -45,24 +45,21 @@
 
 #include "dynamic_buffer_stream/cr/dynamic_buffer_stream_cr_api.h"
 
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
+
+#include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
 // for white-box tests
 #include "internal/dynamic_buffer_stream_handle.h"
 #include "internal/stream_handle.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lexleo_cmocka.h"
 
 /**
  * @brief Test `dynamic_buffer_stream_default_cfg()`.
@@ -278,7 +275,7 @@ static int setup_dynamic_buffer_stream_create_stream(void **state)
 		(test_dynamic_buffer_stream_create_stream_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -639,7 +636,7 @@ static int setup_dynamic_buffer_stream_create_desc(void **state)
 		(test_dynamic_buffer_stream_create_desc_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1058,7 +1055,7 @@ static int setup_dynamic_buffer_stream_write(void **state)
 		(test_dynamic_buffer_stream_write_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1156,7 +1153,7 @@ static void test_dynamic_buffer_stream_write(void **state)
 	assert_true(tc->prefill_len <= tc->initial_cap);
 	if (tc->prefill_len > 0) {
 		assert_non_null(dbuf->buf);
-		memcpy(dbuf->buf, fx->payload, tc->prefill_len);
+		osal_memcpy(dbuf->buf, fx->payload, tc->prefill_len);
 	}
 	dbuf->len = tc->prefill_len;
 	dbuf->read_pos = tc->prefill_read_pos;
@@ -1185,7 +1182,7 @@ static void test_dynamic_buffer_stream_write(void **state)
 	const size_t snap_n =
 		(dbuf->len < sizeof(before_bytes)) ? dbuf->len : sizeof(before_bytes);
 	if (snap_n > 0 && dbuf->buf) {
-		memcpy(before_bytes, dbuf->buf, snap_n);
+		osal_memcpy(before_bytes, dbuf->buf, snap_n);
 	}
 
 	const void *buf_snapshot = dbuf->buf;
@@ -1557,7 +1554,7 @@ static int setup_dynamic_buffer_stream_read(void **state)
 		(test_dynamic_buffer_stream_read_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1651,7 +1648,7 @@ static void test_dynamic_buffer_stream_read(void **state)
 	assert_true(tc->prefill_len <= dbuf->cap);
 	if (tc->prefill_len > 0) {
 		assert_non_null(dbuf->buf);
-		memcpy(dbuf->buf, fx->payload, tc->prefill_len);
+		osal_memcpy(dbuf->buf, fx->payload, tc->prefill_len);
 	}
 	dbuf->len = tc->prefill_len;
 	dbuf->read_pos = tc->prefill_read_pos;
@@ -1679,11 +1676,11 @@ static void test_dynamic_buffer_stream_read(void **state)
 	const size_t snap_n =
 		(dbuf->len < sizeof(before_bytes)) ? dbuf->len : sizeof(before_bytes);
 	if (snap_n > 0 && dbuf->buf) {
-		memcpy(before_bytes, dbuf->buf, snap_n);
+		osal_memcpy(before_bytes, dbuf->buf, snap_n);
 	}
 
 	uint8_t read_buf_snapshot[64];
-	memcpy(read_buf_snapshot, fx->read_buf, sizeof(read_buf_snapshot));
+	osal_memcpy(read_buf_snapshot, fx->read_buf, sizeof(read_buf_snapshot));
 
 	const void *buf_snapshot = dbuf->buf;
 	const size_t len_snapshot = dbuf->len;
@@ -1898,12 +1895,12 @@ static void test_dynamic_buffer_stream_flush(void **state)
 	assert_non_null(dbuf);
 	assert_non_null(dbuf->buf);
 
-	memcpy(dbuf->buf, "hello", 5);
+	osal_memcpy(dbuf->buf, "hello", 5);
 	dbuf->len = 5u;
 	dbuf->read_pos = 2u;
 
 	char before_bytes[5];
-	memcpy(before_bytes, dbuf->buf, 5);
+	osal_memcpy(before_bytes, dbuf->buf, 5);
 
 	const void *buf_snapshot = dbuf->buf;
 	const size_t len_snapshot = dbuf->len;
@@ -1981,7 +1978,7 @@ static void test_dynamic_buffer_stream_close(void **state)
 	/*
 	 * Seed backend state so destruction exercises a non-trivial backend.
 	 */
-	memcpy(dbuf->buf, "hello", 5);
+	osal_memcpy(dbuf->buf, "hello", 5);
 	dbuf->len = 5u;
 	dbuf->read_pos = 2u;
 

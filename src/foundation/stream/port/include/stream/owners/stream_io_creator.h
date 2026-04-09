@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
-* Copyright (C) 2026 Sylvain Labopin
+ * Copyright (C) 2026 Sylvain Labopin
  */
 
 /**
@@ -16,6 +16,10 @@
 #define LEXLEO_STREAM_IO_CREATOR_H
 
 #include "stream/borrowers/stream_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Kind of standard I/O stream requested from a `stream_io_creator_t`.
@@ -74,5 +78,9 @@ typedef struct stream_io_creator_t {
 	 */
 	void *ud;
 } stream_io_creator_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_IO_CREATOR_H

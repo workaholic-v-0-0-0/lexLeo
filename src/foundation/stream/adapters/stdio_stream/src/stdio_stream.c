@@ -13,10 +13,15 @@
  * generic `stream` port.
  */
 
-#include "stdio_stream/cr/stdio_stream_cr_api.h"
 #include "internal/stdio_stream_handle.h"
 #include "internal/stdio_stream_ctor_ud.h"
+
+#include "stdio_stream/cr/stdio_stream_cr_api.h"
+
 #include "stream/adapters/stream_env.h"
+
+#include "osal/mem/osal_mem.h"
+
 #include "policy/lexleo_assert.h"
 
 stdio_stream_cfg_t stdio_stream_default_cfg(void) {
@@ -261,7 +266,7 @@ stream_status_t stdio_stream_create_desc(
 		return STREAM_STATUS_INVALID;
 	}
 
-	LEXLEO_ASSERT(mem->calloc && mem->free && mem->memcpy);
+	LEXLEO_ASSERT(mem->calloc && mem->free);
 
 	tmp.key = key;
 	tmp.ctor = stdio_stream_ctor;
@@ -273,8 +278,8 @@ stream_status_t stdio_stream_create_desc(
 	}
 
 	tmp.ud = ud;
-	mem->memcpy(&ud->cfg, cfg, sizeof(*cfg));
-	mem->memcpy(&ud->env, env, sizeof(*env));
+	osal_memcpy(&ud->cfg, cfg, sizeof(*cfg));
+	osal_memcpy(&ud->env, env, sizeof(*env));
 	tmp.ud_dtor = stdio_stream_destroy_ud_ctor;
 
 	*out = tmp;

@@ -15,7 +15,11 @@
 #ifndef LEXLEO_STREAM_TYPES_H
 #define LEXLEO_STREAM_TYPES_H
 
-#include <stddef.h>
+#include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Opaque public stream handle type.
@@ -121,5 +125,9 @@ typedef struct stream_ops_t {
 	 */
 	stream_status_t (*flush)(stream_t *s);
 } stream_ops_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_TYPES_H

@@ -3,6 +3,8 @@
 #ifndef LEXLEO_OSAL_FILE_INTERNAL_H
 #define LEXLEO_OSAL_FILE_INTERNAL_H
 
+#include "osal/file/osal_file_ops.h"
+
 #if defined(_WIN32) || defined(_WIN64)
 const osal_file_ops_t *osal_file_win32_ops(void);
 #else

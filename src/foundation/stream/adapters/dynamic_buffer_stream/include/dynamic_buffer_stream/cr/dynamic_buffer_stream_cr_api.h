@@ -16,10 +16,15 @@
 #define LEXLEO_DYNAMIC_BUFFER_STREAM_CR_API_H
 
 #include "dynamic_buffer_stream/cr/dynamic_buffer_stream_types.h"
-#include "stream/adapters/stream_adapters_api.h"
-#include "stream/adapters/stream_install.h"
-#include "stream/adapters/stream_key_type.h"
+
 #include "stream/borrowers/stream_types.h"
+#include "stream/adapters/stream_key_type.h"
+#include "stream/adapters/stream_install.h"
+#include "stream/adapters/stream_adapters_api.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Return the default configuration for the `dynamic_buffer_stream`
@@ -109,5 +114,9 @@ stream_status_t dynamic_buffer_stream_ctor(
 	const void *ud,
 	const void *args,
 	stream_t **out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_DYNAMIC_BUFFER_STREAM_CR_API_H

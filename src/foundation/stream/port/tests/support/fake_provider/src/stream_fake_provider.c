@@ -2,13 +2,30 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file stream_fake_provider.c
+ * @ingroup stream_tests_group
+ * @brief Test-support implementation of the `stream` fake provider.
+ *
+ * @details
+ * This file implements a lightweight adapter over `fake_stream` used by
+ * `stream` tests.
+ *
+ * It provides:
+ * - creation and destruction of a fake-backed public `stream_t`,
+ * - runtime control over fake write and flush outcomes,
+ * - access to counters and captured written data for assertions.
+ */
+
 #include "internal/stream_fake_provider_internal.h"
 
 #include "stream/test/stream_fake_provider.h"
 
 #include "stream/adapters/stream_env.h"
-#include "policy/lexleo_assert.h"
+
 #include "osal/mem/test/osal_mem_fake_provider.h"
+
+#include "policy/lexleo_assert.h"
 
 struct stream_fake_t {
 	fake_stream_t *impl;

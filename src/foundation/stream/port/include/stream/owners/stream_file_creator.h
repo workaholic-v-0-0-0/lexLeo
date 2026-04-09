@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
-* Copyright (C) 2026 Sylvain Labopin
+ * Copyright (C) 2026 Sylvain Labopin
  */
 
 /**
@@ -17,8 +17,11 @@
 
 #include "stream/borrowers/stream_types.h"
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Owner-facing creator object for file-backed streams.
@@ -71,5 +74,9 @@ typedef struct stream_file_creator_t {
 	 */
 	void *ud;
 } stream_file_creator_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_FILE_CREATOR_H

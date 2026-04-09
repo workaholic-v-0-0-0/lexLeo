@@ -13,4 +13,10 @@ target_include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
+target_link_libraries(
+    osal_mem
+    PRIVATE
+        lexleo_policy_headers
+)
+
 add_subdirectory(tests)

@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
-#
-# File:
-# src/foundation/stream/adapters/fs_stream/
-# CMakeLists.txt
 
 add_library(
     fs_stream

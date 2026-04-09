@@ -1,17 +1,13 @@
-// tests/test_support/fake_memory/src/fake_memory.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #include "lexleo/test/fake_memory.h"
 
-#include "osal.h"
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
+#include "osal/mem/osal_mem_align.h"
+#include "osal/mem/osal_mem.h"
 
-#include <stdio.h>
-static void log_alloc(const char *what, size_t idx) {
-  fprintf(stderr, "FAKE_ALLOC #%zu: %s\n", idx, what);
-}
+#include "policy/lexleo_cstd_types.h"
 
 #ifndef TEST_ARENA_SIZE
   #define TEST_ARENA_SIZE (64u * 1048576u)
@@ -88,8 +84,8 @@ void fake_memory_reset(void) {
   g_in_use = 0;
   g_invalid_free_count = 0;
   g_double_free_count = 0;
-  memset(g_arena, 0, sizeof(g_arena));
-  memset(g_fail_points, 0, sizeof(g_fail_points));
+  osal_memset(g_arena, 0, sizeof(g_arena));
+  osal_memset(g_fail_points, 0, sizeof(g_fail_points));
   g_fail_points_len = 0;
 }
 
@@ -137,19 +133,11 @@ static void *raw_alloc(size_t size) {
 // -----------------------------------------------------------------------------
 
 void *fake_malloc(size_t size) {
-  /*
-  size_t idx = ++g_alloc_count;
-  log_alloc("malloc", idx);
-  */
   if (should_fail_now(++g_alloc_count)) return NULL;
   return raw_alloc(size);
 }
 
 void *fake_calloc(size_t nmemb, size_t size) {
-  /*
-  size_t idx = ++g_alloc_count;
-  log_alloc("malloc", idx);
-  */
   if (should_fail_now(++g_alloc_count)) return NULL;
 
   // overflow guard
@@ -159,7 +147,7 @@ void *fake_calloc(size_t nmemb, size_t size) {
   void *p = raw_alloc(total);
   if (!p) return NULL;
 
-  memset(p, 0, total);
+  osal_memset(p, 0, total);
   return p;
 }
 
@@ -186,26 +174,18 @@ void fake_free(void *ptr) {
 }
 
 char *fake_strdup(const char *s) {
-  /*
-  size_t idx = ++g_alloc_count;
-  log_alloc("malloc", idx);
-  */
   if (should_fail_now(++g_alloc_count)) return NULL;
   if (!s) return NULL;
 
-  const size_t n = strlen(s) + 1;
+  const size_t n = osal_strlen(s) + 1;
   char *p = (char *)raw_alloc(n);
   if (!p) return NULL;
 
-  memcpy(p, s, n);
+  osal_memcpy(p, s, n);
   return p;
 }
 
 void *fake_realloc(void *ptr, size_t size) {
-  /*
-  size_t idx = ++g_alloc_count;
-  log_alloc("malloc", idx);
-  */
   if (should_fail_now(++g_alloc_count)) return NULL;
 
   // realloc(NULL, size) => malloc(size)
@@ -238,11 +218,8 @@ void *fake_realloc(void *ptr, size_t size) {
   }
 
   const size_t ncopy = (old_req < size) ? old_req : size;
-  memcpy(newp, ptr, ncopy);
+  osal_memcpy(newp, ptr, ncopy);
 
   fake_free(ptr);
   return newp;
 }
-
-void *fake_memcpy(void *dst, const void *src, size_t n) { return memcpy(dst, src, n); }
-void *fake_memset(void *dst, int c, size_t n) { return memset(dst, c, n); }

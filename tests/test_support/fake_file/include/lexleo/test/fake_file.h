@@ -7,9 +7,7 @@
 #include "osal/file/osal_file_env.h"
 #include "osal/file/osal_file_types.h"
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "policy/lexleo_cstd_types.h"
 
 #ifdef __cplusplus
 extern "C" {

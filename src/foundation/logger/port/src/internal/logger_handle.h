@@ -16,6 +16,7 @@
 #define LEXLEO_LOGGER_HANDLE_H
 
 #include "logger/adapters/logger_adapters_api.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
 /**

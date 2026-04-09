@@ -1,10 +1,14 @@
-// tests/test_support/fake_memory/include/lexleo/test/fake_memory.h
-
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 #ifndef LEXLEO_FAKE_MEMORY_H
 #define LEXLEO_FAKE_MEMORY_H
 
-#include <stddef.h>
-#include <stdbool.h>
+#include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void fake_memory_reset(void);
 
@@ -24,5 +28,10 @@ void *fake_realloc(void *ptr, size_t size);
 char *fake_strdup(const char *s);
 void *fake_memcpy(void *dst, const void *src, size_t n);
 void *fake_memset(void *dst, int c, size_t n);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif //LEXLEO_FAKE_MEMORY_H

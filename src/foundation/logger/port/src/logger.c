@@ -8,13 +8,15 @@
  * @brief Private implementation of the `logger` port.
  */
 
-#include "logger/adapters/logger_adapters_api.h"
-#include "logger/borrowers/logger.h"
-#include "logger/borrowers/logger_types.h"
-#include "logger/cr/logger_cr_api.h"
-#include "logger/lifecycle/logger_lifecycle.h"
 #include "internal/logger_handle.h"
+
+#include "logger/borrowers/logger.h"
+#include "logger/lifecycle/logger_lifecycle.h"
+#include "logger/adapters/logger_adapters_api.h"
+#include "logger/cr/logger_cr_api.h"
+
 #include "osal/mem/osal_mem_ops.h"
+
 #include "policy/lexleo_assert.h"
 
 logger_env_t logger_default_env(const osal_mem_ops_t *mem_ops)

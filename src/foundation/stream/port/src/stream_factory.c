@@ -1,9 +1,26 @@
-// src/foundation/stream/src/stream_factory.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
-#include "stream/cr/stream_factory_cr_api.h"
+/**
+ * @file stream_factory.c
+ * @ingroup stream_internal_group
+ * @brief Private implementation of the `stream` factory services.
+ *
+ * @details
+ * This file implements:
+ * - registry lookup helpers,
+ * - factory creation and destruction,
+ * - adapter registration,
+ * - stream creation through registered adapters.
+ */
+
 #include "internal/stream_factory_handle.h"
 
-#include "policy/lexleo_cstring.h"
+#include "stream/cr/stream_factory_cr_api.h"
+
+#include "osal/mem/osal_mem.h"
+
 #include "policy/lexleo_cstd_types.h"
 
 static const stream_branch_t *stream_registry_find(
@@ -14,7 +31,7 @@ static const stream_branch_t *stream_registry_find(
 
 	for (size_t i = 0; i < reg->count; i++) {
 		const stream_branch_t *e = &reg->entries[i];
-		if (e->key && strcmp(e->key, key) == 0) return e;
+		if (e->key && osal_strcmp(e->key, key) == 0) return e;
 	}
 	return NULL;
 }
@@ -116,7 +133,7 @@ stream_status_t stream_factory_add_adapter(
     for (size_t i = 0; i < reg->count; ++i) {
         if (
 				   reg->entries[i].key
-				&& strcmp(reg->entries[i].key, desc->key) == 0 ) {
+				&& osal_strcmp(reg->entries[i].key, desc->key) == 0 ) {
  		   	return STREAM_STATUS_ALREADY_EXISTS; // duplicate key
 		}
     }

@@ -2,8 +2,8 @@
 
 #include "osal/mem/osal_mem_ops.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstring.h"
 
 static void *libc_malloc(size_t s) { return malloc(s); }
 static void  libc_free(void *p)    { free(p); }
@@ -20,14 +20,6 @@ static char *libc_strdup(const char *s)
 	return p;
 }
 
-static void *libc_memcpy(void *dest, const void *src, size_t n) {
-	return memcpy(dest, src, n);
-}
-
-static void *libc_memset(void *s, int c, size_t n) {
-	return memset(s, c, n);
-}
-
 const osal_mem_ops_t *osal_mem_default_ops(void)
 {
 	static const osal_mem_ops_t OPS = {
@@ -36,8 +28,6 @@ const osal_mem_ops_t *osal_mem_default_ops(void)
 		.calloc  = libc_calloc,
 		.realloc = libc_realloc,
 		.strdup  = libc_strdup,
-		.memcpy  = libc_memcpy,
-		.memset  = libc_memset,
 	};
 	return &OPS;
 }

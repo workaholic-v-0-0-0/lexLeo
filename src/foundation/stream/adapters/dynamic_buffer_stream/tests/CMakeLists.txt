@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
-#
-# File:
-# src/foundation/stream/adapters/dynamic_buffer_stream/tests/
-# CMakeLists.txt
 
 add_executable(
     unit_test_dynamic_buffer_stream
@@ -19,7 +15,6 @@ target_link_libraries(
         stream_white_box_tests_access
         osal_mem_fake_provider
         lexleo_cmocka_support
-        cmocka
 )
 
 set(DYNAMIC_BUFFER_STREAM_WHITE_BOX_INTERNAL_HEADERS_DIR

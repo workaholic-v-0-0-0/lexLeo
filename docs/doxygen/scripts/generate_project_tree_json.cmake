@@ -10,6 +10,9 @@ set(
         ".idea"
         ".git"
         "Testing"
+        "legacy"
+        "draft"
+        "docs/developer/architecture/diagrams"
 )
 
 function(json_escape INPUT OUTPUT)

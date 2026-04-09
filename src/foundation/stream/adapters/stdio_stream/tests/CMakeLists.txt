@@ -18,7 +18,6 @@ target_link_libraries(
         osal_stdio_fake_provider
         osal_mem_fake_provider
         lexleo_cmocka_support
-        cmocka
 )
 
 add_test(

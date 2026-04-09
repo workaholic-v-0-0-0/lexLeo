@@ -17,6 +17,10 @@
 
 #include "osal/mem/osal_mem_ops.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Runtime environment for the `stream` port.
  *
@@ -38,5 +42,9 @@ typedef struct stream_env_t {
 	 */
 	const osal_mem_ops_t *mem;
 } stream_env_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_ENV_H

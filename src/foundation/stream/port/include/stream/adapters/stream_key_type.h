@@ -15,6 +15,10 @@
 #ifndef LEXLEO_STREAM_KEY_TYPE_H
 #define LEXLEO_STREAM_KEY_TYPE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Public identifier type for a registered stream adapter.
  *
@@ -27,5 +31,9 @@
  * - in factory-side APIs to resolve a previously registered adapter.
  */
 typedef const char *stream_key_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_KEY_TYPE_H

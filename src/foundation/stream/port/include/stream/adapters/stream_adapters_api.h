@@ -29,7 +29,11 @@
 #include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_env.h"
 
-#include <stddef.h>
+#include "policy/lexleo_cstd_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Backend read operation for a stream adapter.
@@ -175,5 +179,9 @@ stream_status_t stream_create(
 	const stream_vtbl_t *vtbl,
 	void *backend,
 	const stream_env_t *env);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STREAM_ADAPTERS_API_H

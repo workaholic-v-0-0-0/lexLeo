@@ -1,4 +1,6 @@
-// src/include/policy/lexleo_assert.h
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #ifndef LEXLEO_ASSERT_H
 #define LEXLEO_ASSERT_H

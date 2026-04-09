@@ -16,8 +16,14 @@
 #define LEXLEO_STDIO_STREAM_TYPES_H
 
 #include "stream/adapters/stream_env.h"
-#include "osal/mem/osal_mem_ops.h"
+
 #include "osal/stdio/osal_stdio_ops.h"
+
+#include "osal/mem/osal_mem_ops.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @struct stdio_stream_cfg_t
@@ -132,5 +138,9 @@ typedef struct stdio_stream_args_t {
 	 */
 	stdio_stream_kind_t kind;
 } stdio_stream_args_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_STDIO_STREAM_TYPES_H

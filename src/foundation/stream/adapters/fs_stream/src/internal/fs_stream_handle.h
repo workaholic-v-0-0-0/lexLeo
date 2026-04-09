@@ -16,6 +16,7 @@
 #define LEXLEO_FS_STREAM_HANDLE_H
 
 #include "internal/fs_stream_state.h"
+
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/file/osal_file_ops.h"
 

@@ -17,4 +17,5 @@ target_link_libraries(
     PUBLIC
         fake_memory
         osal_mem
+        lexleo_policy_headers
 )

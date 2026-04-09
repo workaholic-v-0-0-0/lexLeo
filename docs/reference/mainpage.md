@@ -2,6 +2,8 @@ LexLeo is a modular C project for building a language interpreter using test-dri
 
 **Status:** Early development
 
+**Note:** Legacy code has been isolated under `legacy/` as archived reference material. It is no longer maintained or guaranteed to build. The active codebase lives under `src/`.
+
 | Section                                 | Description                                           |
 |-----------------------------------------|-------------------------------------------------------|
 | @subpage developer_page "Documentation" | Hand-written documentation.                           |

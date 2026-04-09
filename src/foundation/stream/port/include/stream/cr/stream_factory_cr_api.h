@@ -22,14 +22,18 @@
 #ifndef LEXLEO_STREAM_FACTORY_CR_API_H
 #define LEXLEO_STREAM_FACTORY_CR_API_H
 
-#include "stream/adapters/stream_install.h"
 #include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_key_type.h"
+#include "stream/adapters/stream_install.h"
 #include "stream/cr/stream_cr_api.h"
+
 #include "osal/mem/osal_mem_ops.h"
 
-#include <stddef.h>
+#include "policy/lexleo_cstd_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Opaque stream factory type.
@@ -149,5 +153,9 @@ stream_status_t stream_factory_create_stream(
  * A well-formed default `stream_factory_cfg_t`.
  */
 stream_factory_cfg_t stream_default_factory_cfg(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_STREAM_FACTORY_CR_API_H

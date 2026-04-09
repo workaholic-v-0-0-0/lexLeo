@@ -13,13 +13,14 @@ target_include_directories(
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
     PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/common/internal/osal_file_internal.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/common/internal"
 )
 
 target_link_libraries(
     osal_file
     PRIVATE
         osal_mem
+        lexleo_policy_headers
         lexleo_panic
 )
 

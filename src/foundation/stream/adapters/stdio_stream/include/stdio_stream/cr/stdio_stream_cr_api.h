@@ -21,12 +21,19 @@
 #define LEXLEO_STDIO_STREAM_CR_API_H
 
 #include "stdio_stream/cr/stdio_stream_types.h"
-#include "stream/adapters/stream_adapters_api.h"
-#include "stream/adapters/stream_install.h"
+
 #include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_key_type.h"
+#include "stream/adapters/stream_install.h"
+#include "stream/adapters/stream_adapters_api.h"
+
 #include "osal/stdio/osal_stdio_ops.h"
+
 #include "osal/mem/osal_mem_ops.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Return a default configuration for the `stdio_stream` adapter.
@@ -162,5 +169,9 @@ stream_status_t stdio_stream_ctor(
 	const void *ud,
 	const void *args,
 	stream_t **out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LEXLEO_STDIO_STREAM_CR_API_H

@@ -41,9 +41,12 @@
 
 #include "stdio_stream/cr/stdio_stream_cr_api.h"
 
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/borrowers/stream.h"
+#include "stream/lifecycle/stream_lifecycle.h"
+
 #include "osal/stdio/test/osal_stdio_fake_provider.h"
+
+#include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
 // for white-box tests
@@ -51,16 +54,11 @@
 #include "internal/stream_handle.h"
 #include "internal/stdio_stream_ctor_ud.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#include "lexleo_cmocka_xmacro_helpers.h"
+#include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_cstd_lib.h"
+#include "policy/lexleo_cstd_jmp.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lexleo_cmocka.h"
 
 /**
  * @brief Test `stdio_stream_default_cfg()`.
@@ -306,7 +304,7 @@ static int setup_stdio_stream_create_stream(void **state)
 		(test_stdio_stream_create_stream_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -714,7 +712,7 @@ static int setup_stdio_stream_create_desc(void **state)
 		(test_stdio_stream_create_desc_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1076,7 +1074,7 @@ static int setup_stdio_stream_ctor(void **state)
 		(test_stdio_stream_ctor_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_memory_reset();
@@ -1528,7 +1526,7 @@ static int setup_stdio_stream_write(void **state)
 		(test_stdio_stream_write_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_stdio_reset();
@@ -1615,7 +1613,7 @@ static void test_stdio_stream_write(void **state)
 
 	if (tc->expect_backing_invariance) {
 		fx->buffered_backing_snapshot_len = fake_stdio_buffered_len(stdio);
-		memcpy(
+		osal_memcpy(
 			fx->buffered_backing_snapshot,
 			fake_stdio_buffered_backing(stdio),
 			FAKE_STDIO_BUF_SIZE
@@ -2058,7 +2056,7 @@ static int setup_stdio_stream_read(void **state)
 		(test_stdio_stream_read_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_stdio_reset();
@@ -2157,7 +2155,7 @@ static void test_stdio_stream_read(void **state)
 
 
 	fx->buffered_backing_snapshot_len = fake_stdio_buffered_len(stdio);
-	memcpy(
+	osal_memcpy(
 		fx->buffered_backing_snapshot,
 		fake_stdio_buffered_backing(stdio),
 		FAKE_STDIO_BUF_SIZE
@@ -2564,7 +2562,7 @@ static int setup_stdio_stream_flush(void **state)
 		(test_stdio_stream_flush_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_stdio_reset();
@@ -2646,14 +2644,14 @@ static void test_stdio_stream_flush(void **state)
 	stream_status_t status = STREAM_STATUS_OK;
 
 	fx->buffered_backing_snapshot_len = fake_stdio_buffered_len(stdio);
-	memcpy(
+	osal_memcpy(
 		fx->buffered_backing_snapshot,
 		fake_stdio_buffered_backing(stdio),
 		FAKE_STDIO_BUF_SIZE
 	);
 
 	fx->sink_backing_snapshot_len = fake_stdio_sink_len(stdio);
-	memcpy(
+	osal_memcpy(
 		fx->sink_backing_snapshot,
 		fake_stdio_sink_backing(stdio),
 		FAKE_STDIO_BUF_SIZE
@@ -2943,7 +2941,7 @@ static int setup_stdio_stream_close(void **state)
 		(test_stdio_stream_close_fixture_t *)malloc(sizeof(*fx));
 	if (!fx) return -1;
 
-	memset(fx, 0, sizeof(*fx));
+	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_stdio_reset();

@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
-#
-# File:
-# src/foundation/logger/adapters/logger_default/tests/
-# CMakeLists.txt
 
 add_executable(
     unit_test_logger_default
@@ -21,7 +17,6 @@ target_link_libraries(
         osal_mem_fake_provider
         lexleo_policy_headers
         lexleo_cmocka_support
-        cmocka
 )
 
 add_test(

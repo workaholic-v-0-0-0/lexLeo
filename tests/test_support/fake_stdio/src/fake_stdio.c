@@ -1,10 +1,12 @@
-// fake_stdio.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
 #include "lexleo/test/fake_stdio.h"
-#include "policy/lexleo_cstring.h"
 
-#include <setjmp.h>
-#include <cmocka.h>
+#include "osal/mem/osal_mem.h"
+
+#include "lexleo_cmocka.h"
 
 typedef struct fake_stdio_stream_t {
 	/* spy */
@@ -71,8 +73,8 @@ static void fake_stdio_stream_reset(fake_stdio_stream_t *fake_stdio)
 	fake_stdio->write_call_count = 0;
 	fake_stdio->flush_call_count = 0;
 
-	memset(fake_stdio->buffered_backing, 0, FAKE_STDIO_BUF_SIZE);
-	memset(fake_stdio->sink_backing, 0, FAKE_STDIO_BUF_SIZE);
+	osal_memset(fake_stdio->buffered_backing, 0, FAKE_STDIO_BUF_SIZE);
+	osal_memset(fake_stdio->sink_backing, 0, FAKE_STDIO_BUF_SIZE);
 
 	fake_stdio->buffered_len = 0;
 	fake_stdio->sink_len = 0;
@@ -98,10 +100,10 @@ void fake_stdio_set_buffered_backing(
 	assert_true(len <= FAKE_STDIO_BUF_SIZE);
 
 	if (len > 0) {
-		memcpy(fake->buffered_backing, backing, len);
+		osal_memcpy(fake->buffered_backing, backing, len);
 	}
 	if (len < FAKE_STDIO_BUF_SIZE) {
-		memset(fake->buffered_backing + len, 0, FAKE_STDIO_BUF_SIZE - len);
+		osal_memset(fake->buffered_backing + len, 0, FAKE_STDIO_BUF_SIZE - len);
 	}
 
 	fake->buffered_len = len;
@@ -120,10 +122,10 @@ void fake_stdio_set_sink_backing(
 	assert_true(len <= FAKE_STDIO_BUF_SIZE);
 
 	if (len > 0) {
-		memcpy(fake->sink_backing, backing, len);
+		osal_memcpy(fake->sink_backing, backing, len);
 	}
 	if (len < FAKE_STDIO_BUF_SIZE) {
-		memset(fake->sink_backing + len, 0, FAKE_STDIO_BUF_SIZE - len);
+		osal_memset(fake->sink_backing + len, 0, FAKE_STDIO_BUF_SIZE - len);
 	}
 
 	fake->sink_len = len;
@@ -243,7 +245,7 @@ size_t fake_stdio_read(
 	readable_bytes = readable_nmemb * size;
 
 	if (readable_bytes > 0) {
-		memcpy(ptr, fake->buffered_backing + fake->read_pos, readable_bytes);
+		osal_memcpy(ptr, fake->buffered_backing + fake->read_pos, readable_bytes);
 		fake->read_pos += readable_bytes;
 	}
 
@@ -283,7 +285,7 @@ size_t fake_stdio_write(
 	writable_bytes = writable_nmemb * size;
 
 	if (writable_bytes > 0) {
-		memcpy(fake->buffered_backing + fake->buffered_len, ptr, writable_bytes);
+		osal_memcpy(fake->buffered_backing + fake->buffered_len, ptr, writable_bytes);
 		fake->buffered_len += writable_bytes;
 	}
 
@@ -317,7 +319,7 @@ int fake_stdio_flush(OSAL_STDIO *stdio)
 		: available_sink_bytes;
 
 	if (flushable_bytes > 0) {
-		memcpy(
+		osal_memcpy(
 			fake->sink_backing + fake->sink_len,
 			fake->buffered_backing,
 			flushable_bytes);
@@ -325,19 +327,19 @@ int fake_stdio_flush(OSAL_STDIO *stdio)
 	}
 
 	if (flushable_bytes < fake->buffered_len) {
-		memmove(
+		osal_memmove(
 			fake->buffered_backing,
 			fake->buffered_backing + flushable_bytes,
 			fake->buffered_len - flushable_bytes);
 	}
 
 	if (fake->buffered_len > flushable_bytes) {
-		memset(
+		osal_memset(
 			fake->buffered_backing + (fake->buffered_len - flushable_bytes),
 			0,
 			flushable_bytes);
 	} else {
-		memset(fake->buffered_backing, 0, FAKE_STDIO_BUF_SIZE);
+		osal_memset(fake->buffered_backing, 0, FAKE_STDIO_BUF_SIZE);
 	}
 
 	fake->buffered_len -= flushable_bytes;

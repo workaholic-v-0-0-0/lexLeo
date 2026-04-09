@@ -17,6 +17,10 @@
 
 #include "logger_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Emit a log message through a logger.
  *
@@ -34,5 +38,9 @@
  * `logger` port.
  */
 logger_status_t logger_log(logger_t *l, const char *message);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LEXLEO_LOGGER_H

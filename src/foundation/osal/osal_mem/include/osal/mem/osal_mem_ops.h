@@ -7,16 +7,14 @@
 extern "C" {
 #endif
 
-#include "osal/mem/osal_mem_types.h"
+#include "policy/lexleo_cstd_types.h"
 
 typedef struct osal_mem_ops_t {
-	osal_malloc_fn_t malloc;
-	osal_free_fn_t free;
-	osal_calloc_fn_t calloc;
-	osal_realloc_fn_t realloc;
-	osal_strdup_fn_t strdup;
-	osal_memcpy_fn_t memcpy;
-	osal_memset_fn_t memset;
+	void *(*malloc) (size_t size);
+	void (*free) (void *ptr);
+	void *(*calloc) (size_t nmemb, size_t size);
+	void *(*realloc) (void *ptr, size_t size);
+	char *(*strdup) (const char *s);
 } osal_mem_ops_t;
 
 const osal_mem_ops_t *osal_mem_default_ops(void);
