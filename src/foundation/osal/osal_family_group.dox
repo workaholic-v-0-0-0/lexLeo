@@ -1,0 +1,19 @@
+/** @defgroup osal_family_group osal family
+ *  @ingroup foundation_group
+ *
+ *  @brief OS abstraction modules.
+ *
+ *  @details
+ *  This family gathers the modules that provide low-level operating-system
+ *  abstraction services.
+ *
+ *  These modules expose portable primitives for interacting with system-level
+ *  resources and services, while keeping higher-level port adaptation concerns
+ *  outside of OSAL itself.
+ *
+ *  It currently includes:
+ *  - memory utilities and allocator operations
+ *  - file-related abstractions
+ *  - standard I/O abstractions
+ *  - time-related abstractions
+ */

@@ -1,0 +1,3 @@
+# lexleo.conf
+# If empty or omitted, the platform default is used.
+log_path=

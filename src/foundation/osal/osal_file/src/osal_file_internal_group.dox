@@ -1,0 +1,7 @@
+/**
+ * @defgroup osal_file_internal_group osal_file private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the `osal_file` module.
+ *
+ */

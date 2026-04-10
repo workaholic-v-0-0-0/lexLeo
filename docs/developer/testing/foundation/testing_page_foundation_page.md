@@ -2,5 +2,6 @@
 
 | Topic                                                                | Description                                  |
 |----------------------------------------------------------------------|----------------------------------------------|
+| @subpage testing_foundation_osal_family_page "OSAL tests"            | Tests of OS Abstraction Layer.               |
 | @subpage testing_foundation_stream_family_page "stream family tests" | Tests of stream port module and its adapters |
 | @subpage testing_foundation_logger_family_page "logger family tests" | Tests of logger port module and its adapters |

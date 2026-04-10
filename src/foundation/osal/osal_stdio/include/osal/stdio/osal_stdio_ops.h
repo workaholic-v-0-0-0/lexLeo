@@ -10,8 +10,11 @@ extern "C" {
 typedef struct OSAL_STDIO OSAL_STDIO;
 
 typedef struct osal_stdio_ops_t {
+
 	OSAL_STDIO *(*stdin)(void);
+
 	OSAL_STDIO *(*stdout)(void);
+
 	OSAL_STDIO *(*stderr)(void);
 
 	size_t (*read)(
@@ -27,9 +30,13 @@ typedef struct osal_stdio_ops_t {
 		OSAL_STDIO *stdio);
 
 	int (*flush)(OSAL_STDIO *stdio);
+
 	int (*error)(OSAL_STDIO *stdio);
+
 	int (*eof)(OSAL_STDIO *stdio);
+
 	void (*clearerr)(OSAL_STDIO *stdio);
+
 } osal_stdio_ops_t;
 
 const osal_stdio_ops_t *osal_stdio_default_ops(void);
