@@ -972,6 +972,8 @@ static const struct CMUnitTest create_desc_fs_stream_tests[] = {
 #undef FS_STREAM_CREATE_DESC_CASES
 #undef FS_STREAM_MAKE_CREATE_DESC_TEST
 
+/** @endcond */
+
 /**
  * @brief Scenarios for `fs_stream_create_desc()` descriptor constructor usage.
  *

@@ -1,0 +1,18 @@
+/**
+ * @defgroup osal_file_unit_tests osal_file unit tests
+ * @ingroup osal_file_tests_group
+ *
+ * @brief Unit tests for the `osal_file` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_file_default_ops()`
+ * - `osal_file_ops_t::open()`
+ * - `osal_file_ops_t::read()`
+ * - `osal_file_ops_t::write()`
+ * - `osal_file_ops_t::flush()`
+ * - `osal_file_ops_t::close()`
+ *
+ * The `osal_file_ops_t` operations are exercised through the default
+ * operations table returned by `osal_file_default_ops()`.
+ */

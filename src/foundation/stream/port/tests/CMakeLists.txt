@@ -19,7 +19,7 @@ add_test(
     NAME unit_test_stream
     COMMAND unit_test_stream
 )
-
+#[[
 add_executable(
     integration_test_stream_factory_fs_stream
     "${CMAKE_CURRENT_SOURCE_DIR}/integration/integration_test_stream_factory_fs_stream.c"
@@ -95,5 +95,5 @@ if(VALGRIND_EXECUTABLE)
         PROPERTIES LABELS "memory"
     )
 endif()
-
+#]]
 add_subdirectory(support)

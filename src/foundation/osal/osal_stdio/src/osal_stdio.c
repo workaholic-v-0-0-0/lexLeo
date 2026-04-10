@@ -6,6 +6,8 @@
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_assert.h"
+#include "policy/lexleo_cstd_io.h"
+//#include "policy/lexleo_cstd_arg.h"
 
 static struct OSAL_STDIO g_stdin  = { .fp = NULL };
 static struct OSAL_STDIO g_stdout = { .fp = NULL };
@@ -87,4 +89,20 @@ const osal_stdio_ops_t *osal_stdio_default_ops(void)
 		.clearerr = osal_stdio_clearerr,
 	};
 	return &OPS;
+}
+
+int osal_snprintf(
+	char *buf,
+	size_t size,
+	const char *fmt,
+	...)
+{
+	int ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = vsnprintf(buf, size, fmt, ap);
+	va_end(ap);
+
+	return ret;
 }

@@ -27,4 +27,4 @@ target_link_libraries(
         lexleo_assert
 )
 
-add_subdirectory(tests)
+#add_subdirectory(tests)

@@ -1,0 +1,13 @@
+/**
+ * @defgroup osal_file_api osal_file API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL file abstraction.
+ *
+ * @details
+ * The `osal_file` module provides portable low-level file primitives through
+ * the OS abstraction layer.
+ *
+ * It is responsible for file-level operations only, and is not intended to
+ * act as a runtime `stream` adapter.
+ */
