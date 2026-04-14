@@ -24,3 +24,28 @@ target_include_directories(
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
+
+set(
+    OSAL_PROCESS_SOURCES
+    "$<$<PLATFORM_ID:Windows>:${OSAL_TOOLS_SOURCE_DIR}/osal_process_win32.c>"
+    "$<$<PLATFORM_ID:Darwin>:${OSAL_TOOLS_SOURCE_DIR}/osal_process_posix.c>"
+    "$<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD,SunOS>:${OSAL_TOOLS_SOURCE_DIR}/osal_process_posix.c>"
+)
+
+add_library(
+    osal_process
+    STATIC
+        ${OSAL_PROCESS_SOURCES}
+)
+
+target_include_directories(
+    osal_process
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+
+target_link_libraries(
+    osal_process
+    PRIVATE
+        osal_stdio
+)

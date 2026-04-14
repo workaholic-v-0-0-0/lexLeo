@@ -2,14 +2,9 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
-#include "osal.h"
+#include "tools/osal/osal_tools.h"
 
-#define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
+#include "policy/lexleo_win32_base.h"
 
 void osal_open_in_web_browser(const char *filepath) {
 	ShellExecuteA(

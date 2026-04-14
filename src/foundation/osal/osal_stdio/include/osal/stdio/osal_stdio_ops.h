@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-typedef struct OSAL_STDIO OSAL_STDIO;
+#include "osal/stdio/osal_stdio_types.h"
 
 typedef struct osal_stdio_ops_t {
 

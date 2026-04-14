@@ -3,11 +3,12 @@
 #include "internal/osal_stdio_internal.h"
 
 #include "osal/stdio/osal_stdio_ops.h"
+#include "osal/stdio/osal_stdio.h"
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_assert.h"
 #include "policy/lexleo_cstd_io.h"
-//#include "policy/lexleo_cstd_arg.h"
+#include "policy/lexleo_cstd_arg.h"
 
 static struct OSAL_STDIO g_stdin  = { .fp = NULL };
 static struct OSAL_STDIO g_stdout = { .fp = NULL };
@@ -19,13 +20,13 @@ static OSAL_STDIO *osal_stdio_stdin(void)
 	return &g_stdin;
 }
 
-static OSAL_STDIO *osal_stdio_stdout(void)
+OSAL_STDIO *osal_stdio_stdout(void)
 {
 	if (!g_stdout.fp) g_stdout.fp = stdout;
 	return &g_stdout;
 }
 
-static OSAL_STDIO *osal_stdio_stderr(void)
+OSAL_STDIO *osal_stdio_stderr(void)
 {
 	if (!g_stderr.fp) g_stderr.fp = stderr;
 	return &g_stderr;
@@ -41,7 +42,7 @@ static size_t osal_stdio_read(
 	return fread(ptr, size, nmemb, stdio->fp);
 }
 
-static size_t osal_stdio_write(
+size_t osal_stdio_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -51,7 +52,7 @@ static size_t osal_stdio_write(
 	return fwrite(ptr, size, nmemb, stdio->fp);
 }
 
-static int osal_stdio_flush(OSAL_STDIO *stdio)
+int osal_stdio_flush(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return fflush(stdio->fp);

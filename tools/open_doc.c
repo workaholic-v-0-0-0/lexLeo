@@ -9,4 +9,3 @@ int main(int argc, char **argv) {
     osal_open_in_web_browser(argv[1]);
     return 0;
 }
-

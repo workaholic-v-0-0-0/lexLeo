@@ -2,17 +2,17 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
-#ifndef LEXLEO_OSAL_TOOLS_H
-#define LEXLEO_OSAL_TOOLS_H
+#ifndef LEXLEO_OSAL_PROCESS_H
+#define LEXLEO_OSAL_PROCESS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void osal_open_in_web_browser(const char *filepath);
+int osal_spawn(const char *program, char *const argv[]);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //LEXLEO_OSAL_TOOLS_H
+#endif // LEXLEO_OSAL_PROCESS_H

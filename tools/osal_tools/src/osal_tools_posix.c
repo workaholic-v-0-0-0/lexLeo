@@ -3,7 +3,9 @@
  */
 
 #include "tools/osal/osal_tools.h"
-#include <stdio.h>
+
+#include "policy/lexleo_cstd_io.h"
+#include "policy/lexleo_cstd_lib.h"
 
 void osal_open_in_web_browser(const char *filepath) {
 	int ret = system("command -v firefox > /dev/null 2>&1");
