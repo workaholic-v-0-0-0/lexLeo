@@ -13,6 +13,7 @@ CMakeFiles/
 CMakeCache.txt
 Testing/
 site/
+releases/
 Doxyfile
 doc_to_fetch_links_tmp/
 /parser.tab.c
@@ -22,6 +23,7 @@ doc_to_fetch_links_tmp/
 
 # IDE artifacts
 .idea/
+.vs/
 
 # backup artifacts
 *~

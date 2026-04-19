@@ -47,6 +47,19 @@ cd lexLeo
 
 ---
 
+## Installation
+
+LexLeo is intended to be distributed through native platform packages.
+
+- Linux: `.deb`
+- macOS: planned
+- Windows: planned
+
+📘 Installation guide:
+https://caltuli.online/lexleo/user_guide.html#installation
+
+---
+
 ## Build
 
 ### Requirements
@@ -82,39 +95,43 @@ cd lexLeo
    cmake --build build
    ```
 
-### For Development/Testing Builds (Tests enabled)
+### For Development/Testing Builds and Packaging (Tests enabled)
 
-By default, BUILD_TESTING is ON, but you can specify it explicitly for clarity.
+By default, `BUILD_TESTING` is `ON`, but it can be specified explicitly for clarity.
 
 #### For Linux:
 
-   ```bash
-  rm -r build
-  cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-  cmake --build build
-  cmake --build build --target check
-  cmake --build build --target check_memory
-   ```
+    rm -r build
+    cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+    cmake --build build
+    cmake --build build --target check
+    cmake --build build --target check_memory
+    cmake --build build --target package
+
+This generates the Debian package in `build/dist/`.
 
 #### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
 
-   ```bash
-  rm -r build
-  cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-  cmake --build build --config Debug
-  cmake --build build --target check
-  cmake --build build --target check_memory
-   ```
+    rmdir /s /q build
+    cmake -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
+    cmake --build build --config Debug
+    cmake --build build --config Debug --target check
+    cmake --build build --config Debug --target check_memory
+    cmake --build build --config Debug --target package
 
-#### For MacOS (using the default “Unix Makefiles” generator):
+This generates the Windows installer in `build\dist\`.
 
-   ```bash
+Note: NSIS must be installed on the Windows build machine to generate the installer.
+
+#### For MacOS (using the default Unix Makefiles generator):
+
     rm -r build
     cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
     cmake --build build
     cmake --build build --target check
     cmake --build build --target check_memory
-   ```
+
+Packaging support for macOS is planned but not finalized yet.
 
 ## Run
 

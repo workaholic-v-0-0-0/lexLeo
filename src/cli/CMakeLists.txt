@@ -32,15 +32,30 @@ target_link_libraries(
     PRIVATE
         osal_stdio
         osal_mem
+        osal_file
+        osal_str
+        osal_env
+        lexleo_policy_headers
 )
 
 add_executable(
-    lexLeo
+    lexleo
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
 )
 
 target_link_libraries(
-    lexLeo
+    lexleo
     PRIVATE
         lexleo_cli
+)
+
+install(
+    TARGETS lexleo
+    RUNTIME DESTINATION bin
+)
+
+set_target_properties(
+    lexleo
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )

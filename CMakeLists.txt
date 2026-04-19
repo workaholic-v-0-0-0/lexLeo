@@ -14,12 +14,12 @@ else ()
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
 endif ()
 
-include(CTest)
 if (BUILD_TESTING)
+    include(CTest)
     add_subdirectory(tests)
 endif ()
 
 add_subdirectory(src)
-
 add_subdirectory(tools)
 add_subdirectory(docs)
+add_subdirectory(packaging)

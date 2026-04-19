@@ -11,11 +11,11 @@ extern "C" {
 
 typedef struct osal_stdio_ops_t {
 
-	OSAL_STDIO *(*stdin)(void);
+	OSAL_STDIO *(*get_stdin)(void);
 
-	OSAL_STDIO *(*stdout)(void);
+	OSAL_STDIO *(*get_stdout)(void);
 
-	OSAL_STDIO *(*stderr)(void);
+	OSAL_STDIO *(*get_stderr)(void);
 
 	size_t (*read)(
 		void *ptr,
@@ -35,7 +35,7 @@ typedef struct osal_stdio_ops_t {
 
 	int (*eof)(OSAL_STDIO *stdio);
 
-	void (*clearerr)(OSAL_STDIO *stdio);
+	void (*clear_error)(OSAL_STDIO *stdio);
 
 } osal_stdio_ops_t;
 

@@ -58,10 +58,10 @@ static size_t stdio_stream_read(
 	LEXLEO_ASSERT(
 		   s->stdio
 		&& s->stdio_ops
-		&& s->stdio_ops->stdin
+		&& s->stdio_ops->get_stdin
 	);
 
-	if (s->stdio != s->stdio_ops->stdin()) {
+	if (s->stdio != s->stdio_ops->get_stdin()) {
 		if (st) *st = STREAM_STATUS_IO_ERROR;
 		return 0;
 	}
@@ -92,10 +92,10 @@ static size_t stdio_stream_write(
 	LEXLEO_ASSERT(
 		   s->stdio
 		&& s->stdio_ops
-		&& s->stdio_ops->stdin
+		&& s->stdio_ops->get_stdin
 	);
 
-	if (s->stdio == s->stdio_ops->stdin()) {
+	if (s->stdio == s->stdio_ops->get_stdin()) {
 		if (st) *st = STREAM_STATUS_IO_ERROR;
 		return 0;
 	}
@@ -120,10 +120,10 @@ static stream_status_t stdio_stream_flush(void *backend)
 	LEXLEO_ASSERT(
 		   s->stdio
 		&& s->stdio_ops
-		&& s->stdio_ops->stdin
+		&& s->stdio_ops->get_stdin
 	);
 
-	if (s->stdio == s->stdio_ops->stdin())
+	if (s->stdio == s->stdio_ops->get_stdin())
 		return STREAM_STATUS_IO_ERROR;
 
 	LEXLEO_ASSERT(s->stdio_ops->flush);
@@ -183,20 +183,20 @@ stream_status_t stdio_stream_create_stream(
 
 	LEXLEO_ASSERT(
 		   stdio_ops
-		&& stdio_ops->stdin
-		&& stdio_ops->stdout
-		&& stdio_ops->stderr
+		&& stdio_ops->get_stdin
+		&& stdio_ops->get_stdout
+		&& stdio_ops->get_stderr
 	);
 
 	switch (args->kind) {
 		case STDIO_STREAM_KIND_STDIN:
-			stdio_stream->stdio = stdio_ops->stdin();
+			stdio_stream->stdio = stdio_ops->get_stdin();
 			break;
 		case STDIO_STREAM_KIND_STDOUT:
-			stdio_stream->stdio = stdio_ops->stdout();
+			stdio_stream->stdio = stdio_ops->get_stdout();
 			break;
 		case STDIO_STREAM_KIND_STDERR:
-			stdio_stream->stdio = stdio_ops->stderr();
+			stdio_stream->stdio = stdio_ops->get_stderr();
 			break;
 		default:
 			LEXLEO_ASSERT(stdio_stream->mem_ops &&  stdio_stream->mem_ops->free);

@@ -79,15 +79,15 @@ static void osal_stdio_clearerr(OSAL_STDIO *stdio)
 const osal_stdio_ops_t *osal_stdio_default_ops(void)
 {
 	static const osal_stdio_ops_t OPS = {
-		.stdin = osal_stdio_stdin,
-		.stdout = osal_stdio_stdout,
-		.stderr = osal_stdio_stderr,
+		.get_stdin = osal_stdio_stdin,
+		.get_stdout = osal_stdio_stdout,
+		.get_stderr = osal_stdio_stderr,
 		.read = osal_stdio_read,
 		.write = osal_stdio_write,
 		.flush = osal_stdio_flush,
 		.error = osal_stdio_error,
 		.eof = osal_stdio_eof,
-		.clearerr = osal_stdio_clearerr,
+		.clear_error = osal_stdio_clearerr,
 	};
 	return &OPS;
 }

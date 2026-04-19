@@ -187,7 +187,7 @@ static osal_file_status_t osal_file_map_errno(int errnum)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_open(
+osal_file_status_t osal_file_open(
 	OSAL_FILE **out,
 	const char *pathname,
 	const char *mode,
@@ -256,7 +256,7 @@ static osal_file_status_t osal_file_open(
  * @return
  * The number of elements successfully read.
  */
-static size_t osal_file_read(
+size_t osal_file_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -309,7 +309,7 @@ static size_t osal_file_read(
  * @return
  * The number of elements successfully written.
  */
-static size_t osal_file_write(
+size_t osal_file_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -350,7 +350,7 @@ static size_t osal_file_write(
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
+osal_file_status_t osal_file_flush(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;
@@ -376,7 +376,7 @@ static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_close(OSAL_FILE *stream)
+osal_file_status_t osal_file_close(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;

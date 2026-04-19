@@ -11,7 +11,7 @@
 
 void lexleo_panic(const char *msg) {
 	const osal_stdio_ops_t *stdio_ops = osal_stdio_default_ops();
-	OSAL_STDIO *err = stdio_ops->stderr();
+	OSAL_STDIO *err = stdio_ops->get_stderr();
 	const char *text = msg ? msg : "(no message)";
 	(void)stdio_ops->write("LexLeo panic: ", 1, 15,  err);
 	(void)stdio_ops->write(text, 1, osal_strlen(text),  err);
