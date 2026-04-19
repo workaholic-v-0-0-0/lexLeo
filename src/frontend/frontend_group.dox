@@ -1,0 +1,18 @@
+/** @defgroup frontend_group Frontend modules
+ *  @ingroup api_reference
+ *
+ *  @brief User-facing entry-point modules.
+ *
+ *  @details
+ *  This group gathers the modules that expose LexLeo through user-facing
+ *  frontends.
+ *
+ *  It currently includes:
+ *  - the `lexleo` command-line interface module.
+ */
+
+/** @defgroup frontend_internal_group Frontend internals
+ *  @ingroup internal_reference
+ *
+ *  @brief Private implementation details of frontend modules.
+ */

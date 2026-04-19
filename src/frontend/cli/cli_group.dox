@@ -1,0 +1,9 @@
+/** @defgroup cli_group cli
+ *  @ingroup frontend_group
+ *
+ *  @brief Command-line interface module.
+ *
+ *  @details
+ *  This group gathers the `lexleo` command-line interface implementation and
+ *  its supporting source files.
+ */

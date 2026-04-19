@@ -31,4 +31,6 @@ target_link_libraries(
         osal_mem_cr_headers
 )
 
-add_subdirectory(tests)
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()

@@ -25,6 +25,12 @@ target_include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
+target_link_libraries(
+    osal_tools
+    PRIVATE
+        lexleo_policy_headers
+)
+
 set(
     OSAL_PROCESS_SOURCES
     "$<$<PLATFORM_ID:Windows>:${OSAL_TOOLS_SOURCE_DIR}/osal_process_win32.c>"

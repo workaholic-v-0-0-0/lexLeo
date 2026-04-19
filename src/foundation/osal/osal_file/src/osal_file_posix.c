@@ -30,7 +30,9 @@
 #include "policy/lexleo_cstd_lib.h"
 #include "policy/lexleo_cstd_io.h"
 #include "policy/lexleo_cstd_errno.h"
+#include "policy/lexleo_cstd_limits.h"
 #include "policy/lexleo_assert.h"
+#include "policy/lexleo_posix_sys_stat.h"
 
 /**
  * @brief Map a platform `errno` value to an `osal_file_status_t`.
@@ -187,7 +189,7 @@ static osal_file_status_t osal_file_map_errno(int errnum)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_open(
+osal_file_status_t osal_file_open(
 	OSAL_FILE **out,
 	const char *pathname,
 	const char *mode,
@@ -256,7 +258,7 @@ static osal_file_status_t osal_file_open(
  * @return
  * The number of elements successfully read.
  */
-static size_t osal_file_read(
+size_t osal_file_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -309,7 +311,7 @@ static size_t osal_file_read(
  * @return
  * The number of elements successfully written.
  */
-static size_t osal_file_write(
+size_t osal_file_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -350,7 +352,7 @@ static size_t osal_file_write(
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
+osal_file_status_t osal_file_flush(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;
@@ -376,7 +378,7 @@ static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-static osal_file_status_t osal_file_close(OSAL_FILE *stream)
+osal_file_status_t osal_file_close(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;
@@ -408,4 +410,49 @@ const osal_file_ops_t *osal_file_default_ops(void)
 		.flush = osal_file_flush,
 	};
 	return &osal_file_ops;
+}
+
+char *osal_file_gets(
+	char *out,
+	size_t out_size,
+	OSAL_FILE *stream,
+	osal_file_status_t *st
+)
+{
+	char *ret;
+
+	if (
+		!out
+		|| out_size == 0
+		|| out_size > (size_t)INT_MAX
+		|| !stream
+		|| !stream->fp
+		|| !st
+	) {
+		if (st)
+			*st = OSAL_FILE_STATUS_INVALID;
+		return NULL;
+	}
+
+	*st = OSAL_FILE_STATUS_OK;
+
+	ret = fgets(out, (int)out_size, stream->fp);
+	if (ret)
+		return out;
+
+	if (ferror(stream->fp))
+		*st = osal_file_map_errno(errno);
+
+	return NULL;
+}
+
+osal_file_status_t osal_file_mkdir(const char *pathname)
+{
+	if (!pathname || pathname[0] == '\0')
+		return OSAL_FILE_STATUS_INVALID;
+
+	if (mkdir(pathname, 0755) == 0)
+		return OSAL_FILE_STATUS_OK;
+
+	return osal_file_map_errno(errno);
 }

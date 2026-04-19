@@ -1,0 +1,6 @@
+/** @defgroup cli_internal_group cli private
+ *  @ingroup frontend_internal_group
+ *
+ *  @brief Private implementation details of the command-line interface module.
+ *
+ */

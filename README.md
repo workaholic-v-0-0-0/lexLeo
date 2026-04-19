@@ -30,11 +30,12 @@ over feature breadth.
 LexLeo emphasizes:
 
 - modular architecture with explicit boundaries,
-- dependency injection (CR vs runtime separation),
+- dependency injection,
+- composition-root separation,
 - handle-based state management,
-- test-driven development (TDD),
+- test-driven development on the primary development platform,
 - memory abstraction through an OSAL layer,
-- automated documentation with Doxygen.
+- automated documentation with Doxygen on supported platforms.
 
 ---
 
@@ -47,126 +48,197 @@ cd lexLeo
 
 ---
 
+## Installation
+
+LexLeo is intended to be distributed through native platform packages.
+
+Current packaging targets:
+
+- Linux: Debian package (`.deb`)
+- Windows: NSIS installer
+- macOS: productbuild installer (`.pkg`)
+
+📘 Installation guide:  
+https://caltuli.online/lexleo/user_guide.html#installation
+
+---
+
 ## Build
 
 ### Requirements
 
-- C compiler (GCC, Clang, MSVC)
+- C compiler:
+    - GCC or Clang on Linux/macOS
+    - MSVC on Windows
 - CMake ≥ 3.x
-- Flex and Bison (for parser generation)
+- Flex and Bison for parser generation
+- NSIS on Windows, only if generating the Windows installer
 
 ---
 
-## Build the project with CMake
+## Production Builds
 
-### For Production Builds (Tests disabled)
+Production builds disable tests.
 
-#### For Linux:
+### Linux
 
-   ```bash
-   cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-   cmake --build build
-   ```
+```bash
+cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build build
+```
 
-#### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
+### Windows
 
-   ```bash
-   cmake -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=OFF
-   cmake --build build --config Release
-   ```
+With the Visual Studio 2022 generator:
 
-#### For MacOS (using the default “Unix Makefiles” generator):
+```bat
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=OFF
+cmake --build build --config Release
+```
 
-   ```bash
-   cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-   cmake --build build
-   ```
+### macOS
 
-### For Development/Testing Builds (Tests enabled)
+Using the default Unix Makefiles generator:
 
-By default, BUILD_TESTING is ON, but you can specify it explicitly for clarity.
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build build
+```
 
-#### For Linux:
+---
 
-   ```bash
-  rm -r build
-  cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-  cmake --build build
-  cmake --build build --target check
-  cmake --build build --target check_memory
-   ```
+## Development Builds
 
-#### For Windows (with x64 architecture and the Visual Studio 2022 17 generator):
+The main development workflow is currently maintained on Linux.
 
-   ```bash
-  rm -r build
-  cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-  cmake --build build --config Debug
-  cmake --build build --target check
-  cmake --build build --target check_memory
-   ```
+### Linux development build
 
-#### For MacOS (using the default “Unix Makefiles” generator):
+```bash
+rm -rf build
+cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+cmake --build build
+cmake --build build --target check
+cmake --build build --target check_memory
+```
 
-   ```bash
-    rm -r build
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-    cmake --build build
-    cmake --build build --target check
-    cmake --build build --target check_memory
-   ```
+### Documentation generation
+
+Doxygen documentation generation is currently maintained on Linux.
+
+```bash
+cmake --build build --target docs
+```
+
+Windows documentation generation is not currently maintained.
+
+macOS documentation generation may work depending on the local toolchain, but
+is not currently treated as a guaranteed supported workflow.
+
+---
+
+## Packaging
+
+### Linux package
+
+```bash
+rm -rf build
+cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build build
+cmake --build build --target package
+```
+
+This generates the Debian package in:
+
+```txt
+build/dist/
+```
+
+### Windows installer
+
+```bat
+rmdir /s /q build
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=OFF
+cmake --build build --config Release
+cmake --build build --config Release --target package
+```
+
+This generates the Windows installer in:
+
+```txt
+build\dist\
+```
+
+NSIS must be installed on the Windows build machine to generate the installer.
+
+Tests and Doxygen documentation generation are not currently maintained as part
+of the Windows workflow.
+
+### macOS installer
+
+```bash
+rm -rf build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build build
+cmake --build build --target package
+```
+
+This generates the macOS package in:
+
+```txt
+build/dist/
+```
+
+The macOS package installs LexLeo under:
+
+```txt
+/usr/local
+```
+
+Tests and Doxygen documentation generation on macOS may require additional
+toolchain setup and are not currently treated as guaranteed workflows.
+
+---
 
 ## Run
 
-After building, the CLI executable is located inside the `build/` directory.
+After building, the CLI executable is named:
+
+```txt
+lexleo
+```
+
 The exact path depends on the platform and CMake generator used.
 
-### Quick run
+### Linux / macOS
 
-- Linux / macOS:
-
-```bash
-./build/lexLeo_cli
-```
-
-- Windows (Visual Studio generator):
-```bash
-.\build\Release\lexLeo_cli.exe
-```
-
-### Platform-specific details
-
-#### Linux (Unix Makefiles generator)
-
-When using the Unix Makefiles generator, the executable is created
-directly inside the `build/` directory:
-
-./build/lexLeo_cli
-
-#### macOS (default generator)
-
-As on Linux, the executable is generated directly inside the `build/` directory:
+With Unix Makefiles:
 
 ```bash
-./build/lexLeo_cli
+./build/bin/lexleo
 ```
 
-#### Windows (Visual Studio 2022 generator)
+### Windows
 
-Visual Studio generators place binaries inside configuration
-subdirectories (e.g., `Release/` or `Debug/`).
+With the Visual Studio generator:
 
-Release build:
+```bat
+.\build\bin\Release\lexleo.exe
+```
+
+After installation through a native package, LexLeo can usually be launched with:
+
 ```bash
-.\build\Release\lexLeo_cli.exe
+lexleo
 ```
+
+---
 
 ## Licensing
 
 LexLeo is licensed under the GNU General Public License v3.0 or later.
 
-## Third-party components:
+## Third-party components
 
-- Flex (BSD-like license with exception)
-- Bison (GPL with special exception)
-- Standard C library (glibc / musl, LGPL)
+- Flex: BSD-like license with exception
+- Bison: GPL with special exception
+- Standard C library: platform-dependent license

@@ -4,4 +4,4 @@
 add_subdirectory(policy)
 add_subdirectory(foundation)
 add_subdirectory(core)
-add_subdirectory(cli)
+add_subdirectory(frontend)

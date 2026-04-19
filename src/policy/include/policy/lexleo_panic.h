@@ -9,8 +9,8 @@
 extern "C" {
 #endif
 
-void lexleo_panic(const char *msg) __attribute__((noreturn));
-void lexleo_panic_oom(void) __attribute__((noreturn));
+void lexleo_panic(const char *msg);
+void lexleo_panic_oom(void);
 
 #ifdef __cplusplus
 }

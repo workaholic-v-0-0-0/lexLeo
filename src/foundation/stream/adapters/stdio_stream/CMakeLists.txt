@@ -25,4 +25,6 @@ target_link_libraries(
         lexleo_assert
 )
 
-add_subdirectory(tests)
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()
