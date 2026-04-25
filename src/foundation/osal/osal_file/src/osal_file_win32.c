@@ -624,8 +624,7 @@ osal_file_status_t osal_file_mkdir(const char *pathname)
 		return OSAL_FILE_STATUS_INVALID;
 
 	const osal_mem_ops_t *mem_ops = osal_mem_default_ops();
-	if (!mem_ops || !mem_ops->malloc || !mem_ops->free)
-		return OSAL_FILE_STATUS_OOM;
+	LEXLEO_ASSERT(mem_ops && mem_ops->malloc && mem_ops->free);
 
 	wchar_t *wpath = NULL;
 	osal_file_status_t st = osal_utf8_to_utf16_dup(&wpath, pathname, mem_ops);

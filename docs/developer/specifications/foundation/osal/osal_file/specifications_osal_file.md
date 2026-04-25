@@ -6,3 +6,4 @@
 - @subpage specifications_osal_file_write
 - @subpage specifications_osal_file_read
 - @subpage specifications_osal_file_flush
+- @subpage specifications_osal_file_gets

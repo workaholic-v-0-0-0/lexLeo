@@ -15,12 +15,14 @@
  * - `osal_file_ops_t::write()`,
  * - `osal_file_ops_t::flush()`,
  * - `osal_file_ops_t::close()`.
+ * - `osal_file_gets()`.
  *
  * The `osal_file_ops_t` operations are exercised through the default
  * operations table returned by `osal_file_default_ops()`.
  */
 
 #include "osal/file/osal_file_ops.h"
+#include "osal/file/osal_file.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
@@ -2037,6 +2039,585 @@ static const struct CMUnitTest osal_file_close_tests[] = {
 
 /** @endcond */
 
+/**
+ * @brief Scenarios for `osal_file_gets()`.
+ *
+ * No doubles.
+ *
+ * See contract:
+ * - @ref specifications_osal_file_gets
+ */
+typedef enum {
+	/**
+	 * WHEN `osal_file_gets()` is called with `out == NULL`
+	 * EXPECT:
+	 * - ret == NULL
+	 * - *st == `OSAL_FILE_STATUS_INVALID`
+	 */
+	OSAL_FILE_GETS_SCENARIO_OUT_NULL = 0,
+
+	/**
+	 * WHEN `osal_file_gets()` is called with `stream == NULL`
+	 * EXPECT:
+	 * - ret == NULL
+	 * - *st == `OSAL_FILE_STATUS_INVALID`
+	 */
+	OSAL_FILE_GETS_SCENARIO_STREAM_NULL,
+
+	/**
+	 * WHEN `osal_file_gets()` is called with `st == NULL`
+	 * EXPECT:
+	 * - ret == NULL
+	 */
+	OSAL_FILE_GETS_SCENARIO_ST_NULL,
+
+	/**
+	 * WHEN `osal_file_gets()` is called on a valid readable
+	 *      stream with no data to read
+	 * EXPECT:
+	 * - ret == NULL
+	 * - *st == `OSAL_FILE_STATUS_OK`
+	 */
+	OSAL_FILE_GETS_SCENARIO_OK_EMPTY_FILE,
+
+	/**
+	 * WHEN `osal_file_gets()` is called on a valid readable
+	 *      stream with a string but no newline
+	 * EXPECT:
+	 * - ret == out
+	 * - *st == `OSAL_FILE_STATUS_OK`
+	 * - the read string is copied at out
+	 */
+	OSAL_FILE_GETS_SCENARIO_OK_ONCE_NO_NEWLINE,
+
+	/**
+	 * WHEN `osal_file_gets()` is called on a valid readable
+	 *      stream with a string ending with `\n`
+	 * EXPECT:
+	 * - ret == out
+	 * - *st == `OSAL_FILE_STATUS_OK`
+	 * - the read string is copied at out
+	 */
+	OSAL_FILE_GETS_SCENARIO_OK_ONCE_NEWLINE,
+
+	/**
+	 * WHEN `osal_file_gets()` is called twice on a valid readable
+	 *      stream containing "abc\n123\nABC"
+	 * EXPECT:
+	 * - first_ret == first_out
+	 * - *first_st == `OSAL_FILE_STATUS_OK`
+	 * - the read string is copied at first_out
+	 * - second_ret == second_out
+	 * - *second_st == `OSAL_FILE_STATUS_OK`
+	 * - the read string is copied at second_out
+	 */
+	OSAL_FILE_GETS_SCENARIO_OK_TWICE,
+} osal_file_gets_scenario_t;
+
+/** @cond INTERNAL */
+
+/**
+ * @brief One parametric test case for `osal_file_gets()`.
+ */
+typedef struct {
+	const char *name;
+
+	// arrange
+	osal_file_gets_scenario_t scenario;
+	char file_content[16];
+	size_t file_content_len;
+	size_t first_out_size;
+	bool do_second_gets;
+	size_t second_out_size;
+
+	// assert
+	bool first_expected_ret_is_null;
+	const char *first_expected_out;
+	osal_file_status_t first_expected_st;
+	bool second_expected_ret_is_null;
+	const char *second_expected_out;
+	osal_file_status_t second_expected_st;
+} test_osal_file_gets_case_t;
+
+/**
+ * @brief Runtime fixture for `osal_file_gets()` tests.
+ */
+typedef struct {
+	// runtime resources
+	OSAL_FILE *readable_osal_file;
+	OSAL_FILE *writable_osal_file;
+
+	osal_file_status_t first_st_storage;
+	osal_file_status_t second_st_storage;
+	char first_gets_content[16];
+	char second_gets_content[16];
+
+	// injection
+	const osal_mem_ops_t *mem_ops;
+
+	const test_osal_file_gets_case_t *tc;
+} test_osal_file_gets_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief Allocate and initialize the runtime fixture for `osal_file_gets()` tests.
+ */
+static int setup_osal_file_gets(void **state)
+{
+	const test_osal_file_gets_case_t *tc =
+		(const test_osal_file_gets_case_t *)(*state);
+
+	test_osal_file_gets_fixture_t *fx =
+		(test_osal_file_gets_fixture_t *)osal_malloc(sizeof(*fx));
+	if (!fx) return -1;
+
+	osal_memset(fx, 0, sizeof(*fx));
+	fx->tc = tc;
+
+	// DI
+	fake_memory_reset();
+	fx->mem_ops = osal_mem_test_fake_ops();
+
+	// prepare tmp file
+	assert_int_equal(
+		osal_file_open(
+			&fx->writable_osal_file,
+			"osal_file_gets_tmp_file.txt",
+			"wb",
+			fx->mem_ops
+		),
+		OSAL_FILE_STATUS_OK
+	);
+	osal_file_status_t st;
+	assert_int_equal(
+		osal_file_write(
+			tc->file_content,
+			1,
+			tc->file_content_len,
+			fx->writable_osal_file,
+			&st
+		),
+		(size_t)tc->file_content_len
+	);
+	assert_int_equal(st, OSAL_FILE_STATUS_OK);
+	assert_int_equal(
+		osal_file_close(
+			fx->writable_osal_file
+		),
+		OSAL_FILE_STATUS_OK
+	);
+	fx->writable_osal_file = NULL;
+	assert_int_equal(
+		osal_file_open(
+			&fx->readable_osal_file,
+			"osal_file_gets_tmp_file.txt",
+			"rb",
+			fx->mem_ops
+		),
+		OSAL_FILE_STATUS_OK
+	);
+
+	*state = fx;
+	return 0;
+}
+
+/**
+ * @brief Release the `osal_file_gets()` test fixture and verify memory invariants.
+ */
+static int teardown_osal_file_gets(void **state)
+{
+	test_osal_file_gets_fixture_t *fx =
+		(test_osal_file_gets_fixture_t *)(*state);
+
+	if (fx->readable_osal_file) {
+		assert_true(
+			osal_file_close(fx->readable_osal_file) == OSAL_FILE_STATUS_OK
+		);
+		fx->readable_osal_file = NULL;
+	}
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+
+	osal_free(fx);
+	*state = NULL;
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief Execute one parametric test scenario for `osal_file_gets()`.
+ */
+static void test_osal_file_gets(void **state)
+{
+	test_osal_file_gets_fixture_t *fx =
+		(test_osal_file_gets_fixture_t *)(*state);
+	const test_osal_file_gets_case_t *tc =
+		(const test_osal_file_gets_case_t *)fx->tc;
+
+	// ARRANGE (first gets call)
+	char *ret = (char *)(uintptr_t)0xDEADC0DEu;
+	void *out_arg = fx->first_gets_content;
+	size_t out_size_arg = tc->first_out_size;
+	OSAL_FILE *stream_arg = fx->readable_osal_file;
+	osal_file_status_t *st_arg = &fx->first_st_storage;
+
+	// invalid args
+	if (tc->scenario == OSAL_FILE_GETS_SCENARIO_OUT_NULL) {
+		out_arg = NULL;
+	}
+	if (tc->scenario == OSAL_FILE_GETS_SCENARIO_STREAM_NULL) {
+		stream_arg = NULL;
+	}
+	if (tc->scenario == OSAL_FILE_GETS_SCENARIO_ST_NULL) {
+		st_arg = NULL;
+	}
+
+	// ACT (first gets call)
+	ret = osal_file_gets(out_arg, out_size_arg, stream_arg, st_arg);
+
+	// ASSERT (first gets call)
+	if (st_arg) {
+		assert_int_equal(*st_arg, tc->first_expected_st);
+	}
+	if (!tc->first_expected_ret_is_null) {
+		assert_ptr_equal(
+			ret,
+			fx->first_gets_content
+		);
+		assert_string_equal(
+			fx->first_gets_content,
+			tc->first_expected_out
+		);
+	}
+
+	if (!tc->do_second_gets) {
+		return;
+	}
+
+	// ARRANGE (second gets call)
+	ret = (char *)(uintptr_t)0xDEADC0DEu;
+	out_arg = fx->second_gets_content;
+	out_size_arg = tc->second_out_size;
+	stream_arg = fx->readable_osal_file;
+	st_arg = &fx->second_st_storage;
+
+	// ACT (second gets call)
+	ret = osal_file_gets(out_arg, out_size_arg, stream_arg, st_arg);
+
+	// ASSERT (second gets call)
+	if (st_arg) {
+		assert_int_equal(*st_arg, tc->second_expected_st);
+	}
+	if (!tc->second_expected_ret_is_null) {
+		assert_ptr_equal(
+			ret,
+			fx->second_gets_content
+		);
+		assert_string_equal(
+			fx->second_gets_content,
+			tc->second_expected_out
+		);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_OUT_NULL = {
+	.name = "osal_file_gets_out_null",
+	.scenario = OSAL_FILE_GETS_SCENARIO_OUT_NULL,
+	.file_content = "abc\n123\nABC",
+	.file_content_len = 11,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = true,
+	.first_expected_st = OSAL_FILE_STATUS_INVALID,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_STREAM_NULL = {
+	.name = "osal_file_gets_stream_null",
+	.scenario = OSAL_FILE_GETS_SCENARIO_STREAM_NULL,
+	.file_content = "abc\n123\nABC",
+	.file_content_len = 11,
+	.first_out_size = 5,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = true,
+	.first_expected_st = OSAL_FILE_STATUS_INVALID,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_ST_NULL = {
+	.name = "osal_file_gets_st_null",
+	.scenario = OSAL_FILE_GETS_SCENARIO_ST_NULL,
+	.file_content = "abc\n123\nABC",
+	.file_content_len = 11,
+	.first_out_size = 5,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = true,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_OK_EMPTY_FILE = {
+	.name = "osal_file_gets_ok_empty_file",
+	.scenario = OSAL_FILE_GETS_SCENARIO_OK_EMPTY_FILE,
+	.file_content = "",
+	.file_content_len = 0,
+	.first_out_size = 5,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = true,
+	.first_expected_st = OSAL_FILE_STATUS_OK,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_OK_ONCE_NO_NEWLINE = {
+	.name = "osal_file_gets_ok_once_no_newline",
+	.scenario = OSAL_FILE_GETS_SCENARIO_OK_ONCE_NO_NEWLINE,
+	.file_content = "abc",
+	.file_content_len = 3,
+	.first_out_size = 4,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = false,
+	.first_expected_out = "abc",
+	.first_expected_st = OSAL_FILE_STATUS_OK,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_OK_ONCE_NEWLINE = {
+	.name = "osal_file_gets_ok_once_newline",
+	.scenario = OSAL_FILE_GETS_SCENARIO_OK_ONCE_NEWLINE,
+	.file_content = "abc\n123\nABC",
+	.file_content_len = 11,
+	.first_out_size = 5,
+	.do_second_gets = false,
+
+	.first_expected_ret_is_null = false,
+	.first_expected_out = "abc\n",
+	.first_expected_st = OSAL_FILE_STATUS_OK,
+};
+
+static const test_osal_file_gets_case_t CASE_OSAL_FILE_GETS_OK_TWICE = {
+	.name = "osal_file_gets_ok_twice",
+	.scenario = OSAL_FILE_GETS_SCENARIO_OK_TWICE,
+	.file_content = "abc\n123\nABC",
+	.file_content_len = 11,
+	.first_out_size = 5,
+	.do_second_gets = true,
+	.second_out_size = 5,
+
+	.first_expected_ret_is_null = false,
+	.first_expected_out = "abc\n",
+	.first_expected_st = OSAL_FILE_STATUS_OK,
+	.second_expected_ret_is_null = false,
+	.second_expected_out = "123\n",
+	.second_expected_st = OSAL_FILE_STATUS_OK,
+};
+
+//-----------------------------------------------------------------------------
+// CASES REGISTRY
+//-----------------------------------------------------------------------------
+
+#define OSAL_FILE_GETS_CASES(X) \
+X(CASE_OSAL_FILE_GETS_OUT_NULL) \
+X(CASE_OSAL_FILE_GETS_STREAM_NULL) \
+X(CASE_OSAL_FILE_GETS_ST_NULL) \
+X(CASE_OSAL_FILE_GETS_OK_EMPTY_FILE) \
+X(CASE_OSAL_FILE_GETS_OK_ONCE_NO_NEWLINE) \
+X(CASE_OSAL_FILE_GETS_OK_ONCE_NEWLINE) \
+X(CASE_OSAL_FILE_GETS_OK_TWICE)
+
+#define OSAL_FILE_MAKE_GETS_TEST(case_sym) \
+LEXLEO_MAKE_TEST(osal_file_gets, case_sym)
+
+static const struct CMUnitTest osal_file_gets_tests[] = {
+	OSAL_FILE_GETS_CASES(OSAL_FILE_MAKE_GETS_TEST)
+};
+
+#undef OSAL_FILE_GETS_CASES
+#undef OSAL_FILE_MAKE_GETS_TEST
+
+/** @endcond */
+
+/**
+ * @brief Scenarios for `osal_file_mkdir()`.
+ *
+ * No doubles.
+ *
+ * See contract:
+ * - @ref specifications_osal_file_mkdir
+ */
+typedef enum {
+	/**
+	 * WHEN `osal_file_mkdir()` is called with `pathname == NULL`
+	 * EXPECT:
+	 * - ret == `OSAL_FILE_STATUS_INVALID`
+	 */
+	OSAL_FILE_MKDIR_SCENARIO_PATHNAME_NULL = 0,
+
+	/**
+	 * WHEN `osal_file_mkdir()` is called with `pathname == ""`
+	 * EXPECT:
+	 * - ret == `OSAL_FILE_STATUS_INVALID`
+	 */
+	OSAL_FILE_MKDIR_SCENARIO_PATHNAME_EMPTY,
+
+	/**
+	 * WHEN `osal_file_mkdir()` is called with valid arguments.
+	 * EXPECT:
+	 * - ret == `OSAL_FILE_STATUS_OK`
+	 */
+	OSAL_FILE_MKDIR_SCENARIO_OK
+} osal_file_mkdir_scenario_t;
+
+/** @cond INTERNAL */
+
+/**
+ * @brief One parametric test case for `osal_file_mkdir()`.
+ */
+typedef struct {
+	const char *name;
+
+	// arrange
+	osal_file_mkdir_scenario_t scenario;
+	const char *pathname;
+
+	// assert
+	osal_file_status_t expected_ret;
+} test_osal_file_mkdir_case_t;
+
+/**
+ * @brief Runtime fixture for `osal_file_mkdir()` tests.
+ */
+typedef struct {
+	const test_osal_file_mkdir_case_t *tc;
+} test_osal_file_mkdir_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief Allocate and initialize the runtime fixture for `osal_file_mkdir()` tests.
+ */
+static int setup_osal_file_mkdir(void **state) {
+	const test_osal_file_mkdir_case_t *tc =
+		(const test_osal_file_mkdir_case_t *)(*state);
+
+	test_osal_file_mkdir_fixture_t *fx =
+		(test_osal_file_mkdir_fixture_t *)osal_malloc(sizeof(*fx));
+	if (!fx) return -1;
+
+	osal_memset(fx, 0, sizeof(*fx));
+	fx->tc = tc;
+
+	*state = fx;
+
+	return 0;
+}
+
+/**
+ * @brief Release the `osal_file_mkdir()` test fixture and verify memory invariants.
+ */
+static int teardown_osal_file_mkdir(void **state)
+{
+	test_osal_file_mkdir_fixture_t *fx =
+		(test_osal_file_mkdir_fixture_t *)(*state);
+
+	osal_free(fx);
+	*state = NULL;
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief Execute one parametric test scenario for `osal_file_mkdir()`.
+ */
+static void test_osal_file_mkdir(void **state)
+{
+	test_osal_file_mkdir_fixture_t *fx =
+		(test_osal_file_mkdir_fixture_t *)(*state);
+	const test_osal_file_mkdir_case_t *tc =
+		(const test_osal_file_mkdir_case_t *)fx->tc;
+
+	// ARRANGE
+	osal_file_status_t ret = (osal_file_status_t)-1; // poison
+	const char *pathname_arg = tc->pathname;
+
+	// invalid args
+	if (tc->scenario == OSAL_FILE_MKDIR_SCENARIO_PATHNAME_NULL) {
+		pathname_arg = NULL;
+	}
+	if (tc->scenario == OSAL_FILE_MKDIR_SCENARIO_PATHNAME_EMPTY) {
+		pathname_arg = "";
+	}
+
+	// ACT
+	ret = osal_file_mkdir(pathname_arg);
+
+	// ASSERT
+	assert_int_equal(ret, tc->expected_ret);
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_osal_file_mkdir_case_t CASE_OSAL_FILE_MKDIR_PATHNAME_NULL = {
+	.name = "osal_file_mkdir_pathname_null",
+	.scenario = OSAL_FILE_MKDIR_SCENARIO_PATHNAME_NULL,
+	.pathname = NULL,
+
+	.expected_ret = OSAL_FILE_STATUS_INVALID
+};
+
+static const test_osal_file_mkdir_case_t CASE_OSAL_FILE_MKDIR_PATHNAME_EMPTY = {
+	.name = "osal_file_mkdir_pathname_empty",
+	.scenario = OSAL_FILE_MKDIR_SCENARIO_PATHNAME_EMPTY,
+	.pathname = "",
+
+	.expected_ret = OSAL_FILE_STATUS_INVALID
+};
+
+static const test_osal_file_mkdir_case_t CASE_OSAL_FILE_MKDIR_OK = {
+	.name = "osal_file_mkdir_ok",
+	.scenario = OSAL_FILE_MKDIR_SCENARIO_OK,
+	.pathname = "valid_path",
+
+	.expected_ret = OSAL_FILE_STATUS_OK
+};
+
+//-----------------------------------------------------------------------------
+// CASES REGISTRY
+//-----------------------------------------------------------------------------
+
+#define OSAL_FILE_MKDIR_CASES(X) \
+X(CASE_OSAL_FILE_MKDIR_PATHNAME_NULL) \
+X(CASE_OSAL_FILE_MKDIR_PATHNAME_EMPTY) \
+X(CASE_OSAL_FILE_MKDIR_OK)
+
+#define OSAL_FILE_MAKE_MKDIR_TEST(case_sym) \
+LEXLEO_MAKE_TEST(osal_file_mkdir, case_sym)
+
+static const struct CMUnitTest osal_file_mkdir_tests[] = {
+	OSAL_FILE_MKDIR_CASES(OSAL_FILE_MAKE_MKDIR_TEST)
+};
+
+#undef OSAL_FILE_MKDIR_CASES
+#undef OSAL_FILE_MAKE_MKDIR_TEST
+
+/** @endcond */
+
 /** @cond INTERNAL */
 
 //-----------------------------------------------------------------------------
@@ -2055,6 +2636,8 @@ int main(void) {
 	failed += cmocka_run_group_tests(osal_file_write_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_flush_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_close_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(osal_file_gets_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(osal_file_mkdir_tests, NULL, NULL);
 
 	return failed;
 }

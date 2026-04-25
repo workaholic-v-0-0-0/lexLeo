@@ -1,3 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file osal_file.h
+ * @ingroup osal_file_api
+ * @brief Public low-level file operations API for the `osal_file` module.
+ */
+
 #ifndef LEXLEO_OSAL_FILE_H
 #define LEXLEO_OSAL_FILE_H
 
@@ -35,7 +45,7 @@ osal_file_status_t osal_file_flush(OSAL_FILE* stream);
 
 osal_file_status_t osal_file_close(OSAL_FILE* stream);
 
-char* osal_file_gets(
+char *osal_file_gets(
 	char* out,
 	size_t out_size,
 	OSAL_FILE* stream,

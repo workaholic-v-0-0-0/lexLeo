@@ -17,3 +17,13 @@
  *  - standard I/O abstractions
  *  - time-related abstractions
  */
+
+/** @defgroup osal_family_tests_group osal family tests
+ *  @ingroup foundation_tests_group
+ *
+ *  @brief Tests for the OSAL modules.
+ *
+ *  @details
+ *  This group gathers the unit and integration tests that verify the
+ *  behavioral contracts of the OSAL modules.
+ */

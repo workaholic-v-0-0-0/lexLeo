@@ -7,6 +7,7 @@ It covers:
 - `osal_file_ops_t::read()`
 - `osal_file_ops_t::flush()`
 - `osal_file_ops_t::close()`
+- `osal_file_gets()`
 
 ---
 
@@ -265,3 +266,39 @@ osal_file_status_t (*close)(OSAL_FILE *stream);
 - The current suite validates the observable status contract of `close()`;
   it does not attempt to prove backend-specific close failure mappings beyond
   that public result.
+
+---
+
+@anchor testing_foundation_osal_file_unit_gets
+# osal_file_gets() unit tests
+
+See @ref specifications_osal_file_gets "osal_file_gets specifications"
+
+## Functions under test
+
+~~~c
+char *osal_file_gets(
+    char *out,
+    size_t out_size,
+    OSAL_FILE *stream,
+    osal_file_status_t *st);
+~~~
+
+## Test doubles
+
+- fake memory provider via `osal_mem_test_fake_ops()`
+- `fake_memory`
+
+## Tested scenarios
+
+| WHEN                                                                                     | EXPECT                                                      |
+|------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `osal_file_gets()` is called with `out == NULL`                                          | returns `NULL`;<br>sets `*st` to `OSAL_FILE_STATUS_INVALID` |
+| `osal_file_gets()` is called with `stream == NULL`                                       | returns `NULL`;<br>sets `*st` to `OSAL_FILE_STATUS_INVALID` |
+| `osal_file_gets()` is called with `st == NULL`                                           | returns `NULL`;<br>sets `*st` to `OSAL_FILE_STATUS_INVALID` |
+| `osal_file_gets()` is called on a valid readable stream with no data to read             | returns `NULL`;<br>sets `*st` to `OSAL_FILE_STATUS_OK`      |
+| `osal_file_gets()` is called on a valid readable stream with a string but no newline     | returns `out`;<br>sets `*st` to `OSAL_FILE_STATUS_OK`;<br>the read string is copied at out       |
+| `osal_file_gets()` is called on a valid readable stream with a string ending with `\n`   | returns `out`;<br>sets `*st` to `OSAL_FILE_STATUS_OK`;<br>the read string is copied at out       |
+| `osal_file_gets()` is called twice on a valid readable stream containing "abc\n123\nABC" | returns `out`;<br>sets `*st` to `OSAL_FILE_STATUS_OK`;<br>the read string is copied at out       |
+
+---
