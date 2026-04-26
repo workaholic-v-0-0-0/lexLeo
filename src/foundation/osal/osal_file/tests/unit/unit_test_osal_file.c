@@ -16,6 +16,7 @@
  * - `osal_file_ops_t::flush()`,
  * - `osal_file_ops_t::close()`.
  * - `osal_file_gets()`.
+ * - `osal_file_mkdir()`.
  *
  * The `osal_file_ops_t` operations are exercised through the default
  * operations table returned by `osal_file_default_ops()`.

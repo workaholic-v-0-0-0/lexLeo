@@ -302,3 +302,28 @@ char *osal_file_gets(
 | `osal_file_gets()` is called twice on a valid readable stream containing "abc\n123\nABC" | returns `out`;<br>sets `*st` to `OSAL_FILE_STATUS_OK`;<br>the read string is copied at out       |
 
 ---
+
+@anchor testing_foundation_osal_file_unit_mkdir
+# osal_file_mkdir() unit tests
+
+See @ref specifications_osal_file_mkdir "osal_file_mkdir specifications"
+
+## Functions under test
+
+~~~c
+osal_file_status_t osal_file_mkdir(const char *pathname);
+~~~
+
+## Test doubles
+
+- None
+
+## Tested scenarios
+
+| WHEN                                                                                    | EXPECT                                                      |
+|-----------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `osal_file_mkdir()` is called with `pathname == NULL` | returns `OSAL_FILE_STATUS_INVALID` |
+| `osal_file_mkdir()` is called with `pathname == ""` | returns `OSAL_FILE_STATUS_INVALID` |
+| `osal_file_mkdir()` is called with valid arguments. | returns `OSAL_FILE_STATUS_OK` |
+
+---
