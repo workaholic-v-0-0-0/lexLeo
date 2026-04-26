@@ -21,6 +21,7 @@
 
 #include "osal/time/osal_time_ops.h"
 #include "osal/mem/osal_mem_ops.h"
+#include "osal/str/osal_str_ops.h"
 
 #include "policy/lexleo_cstd_types.h"
 
@@ -83,6 +84,17 @@ typedef struct logger_default_env_t {
 	 * backend object owned by the `logger_default` adapter.
 	 */
 	const osal_mem_ops_t *adapter_mem;
+
+	/**
+	 * @brief Borrowed string operations used by the adapter backend.
+	 *
+	 * @details
+	 * These operations are used for injectable string services required by the
+	 * adapter implementation.
+	 * The operations table remains owned by the caller and is not modified by
+	 * the `logger_default` adapter.
+	 */
+	const osal_str_ops_t *str_ops;
 
 	/**
 	 * @brief Borrowed `logger` port environment.

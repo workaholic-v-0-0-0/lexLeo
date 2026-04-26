@@ -15,5 +15,5 @@
 #include "cli.h"
 
 int main() {
-    return cli_run();
+	return cli_main();
 }

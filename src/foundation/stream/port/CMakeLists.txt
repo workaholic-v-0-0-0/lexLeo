@@ -18,18 +18,22 @@ target_include_directories(
 
 target_link_libraries(
     stream
+    PUBLIC
+        osal_str
     PRIVATE
         osal_mem
         lexleo_assert
 )
-
+ #[[
 add_library(stream_cr_headers INTERFACE)
 target_link_libraries(
     stream_cr_headers
     INTERFACE
         stream
         osal_mem_cr_headers
+        osal_str_cr_headers
 )
+#]]
 
 if (BUILD_TESTING)
     add_subdirectory(tests)

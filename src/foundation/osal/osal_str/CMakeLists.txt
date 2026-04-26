@@ -13,5 +13,6 @@ target_include_directories(
 target_link_libraries(
 	osal_str
 	PRIVATE
+		osal_mem
 		lexleo_policy_headers
 )

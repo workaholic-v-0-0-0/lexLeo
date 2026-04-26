@@ -24,9 +24,9 @@ add_library(
 target_include_directories(
     lexleo_cli
     PUBLIC
-        "include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
     PRIVATE
-        "src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_link_libraries(
@@ -36,6 +36,7 @@ target_link_libraries(
         osal_mem
         osal_file
         osal_str
+        osal_time
         osal_env
         lexleo_policy_headers
 )

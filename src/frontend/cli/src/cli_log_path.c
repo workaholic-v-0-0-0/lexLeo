@@ -19,14 +19,19 @@
  */
 
 #include "internal/cli_log_path.h"
+#include "internal/cli_env.h"
 
+#include "osal/file/osal_file_ops.h"
+#include "osal/str/osal_str_ops.h"
 #include "osal/str/osal_str.h"
-#include "osal/file/osal_file.h"
 #include "osal/stdio/osal_stdio.h"
+#include "osal/mem/osal_mem_ops.h"
 #include "osal/mem/osal_mem.h"
 
-static bool cli_trim_in_place(char* s)
-{
+static bool cli_trim_in_place(
+	char* s,
+	const cli_env_t *env
+) {
 	char *begin;
 	char *end;
 
@@ -36,7 +41,12 @@ static bool cli_trim_in_place(char* s)
 	begin = s;
 	while (*begin && osal_isspace((unsigned char)*begin)) begin++;
 
-	if (begin != s) osal_memmove(s, begin, osal_strlen(begin) + 1);
+	if (begin != s) {
+		osal_memmove(
+			s,
+			begin,
+			osal_strlen(begin) + 1);
+	}
 
 	if (*s == '\0')
 		return true;
@@ -50,8 +60,12 @@ static bool cli_trim_in_place(char* s)
 	return true;
 }
 
-static bool cli_copy_string(char* out, size_t out_size, const char* src)
-{
+static bool cli_copy_string(
+	char *out,
+	size_t out_size,
+	const char *src,
+	const cli_env_t *env
+) {
 	int ret;
 
 	if (!out || out_size == 0 || !src)
@@ -67,19 +81,19 @@ static bool cli_copy_string(char* out, size_t out_size, const char* src)
 static bool cli_try_read_log_path_from_config(
 	char* out,
 	size_t out_size,
-	const char *config_path)
-{
+	const char *config_path,
+	const cli_env_t *env
+) {
 	if (!out || out_size == 0 || !config_path)
 		return false;
 
 	OSAL_FILE *cfg_file = NULL;
-	const osal_mem_ops_t *mem_ops = osal_mem_default_ops();
 	osal_file_status_t st =
-		osal_file_open(
+		env->file_ops->open(
 			&cfg_file,
 			config_path,
 			"rb",
-			mem_ops
+			env->mem_ops
 		);
 
 	if (st != OSAL_FILE_STATUS_OK)
@@ -87,13 +101,13 @@ static bool cli_try_read_log_path_from_config(
 
 	char line[255] = { 0 };
 	bool in_logger_section = false;
-	while (osal_file_gets(line, sizeof(line), cfg_file, &st)) {
+	while (env->file_ops->gets(line, sizeof(line), cfg_file, &st)) {
 		if (st != OSAL_FILE_STATUS_OK) {
-			(void)osal_file_close(cfg_file);
+			(void)env->file_ops->close(cfg_file);
 			return false;
 		}
 
-		if (!cli_trim_in_place(line))
+		if (!cli_trim_in_place(line, env))
 			continue;
 
 		if (line[0] == '\0' || line[0] == ';' || line[0] == '#')
@@ -115,8 +129,8 @@ static bool cli_try_read_log_path_from_config(
 		char* key = line;
 		char* val = eq + 1;
 
-		if (!cli_trim_in_place(key) || !cli_trim_in_place(val)) {
-			(void)osal_file_close(cfg_file);
+		if (!cli_trim_in_place(key, env) || !cli_trim_in_place(val, env)) {
+			(void)env->file_ops->close(cfg_file);
 			return false;
 		}
 
@@ -124,7 +138,7 @@ static bool cli_try_read_log_path_from_config(
 			continue;
 
 		if (val[0] == '\0') {
-			(void)osal_file_close(cfg_file);
+			(void)env->file_ops->close(cfg_file);
 			return false;
 		}
 
@@ -136,29 +150,32 @@ static bool cli_try_read_log_path_from_config(
 			}
 		}
 
-		(void)osal_file_close(cfg_file);
-		return cli_copy_string(out, out_size, val);
+		(void)env->file_ops->close(cfg_file);
+		return cli_copy_string(out, out_size, val, env);
 	}
 
-	(void)osal_file_close(cfg_file);
+	(void)env->file_ops->close(cfg_file);
 	return false;
 }
 
 /* cli_resolve_log_path() tries to read log_path from the application
    configuration, and falls back to the platform-default path only
    when no valid configured path is provided. */
-bool cli_resolve_log_path(char *out, size_t out_size)
-{
+bool cli_resolve_log_path(
+	char *out,
+	size_t out_size,
+	const cli_env_t *env
+) {
 	if (!out || out_size == 0)
 		return false;
 
 	out[0] = '\0';
 	const char *config_path = cli_platform_default_config_path();
 
-	if (!cli_try_read_log_path_from_config(out, out_size, config_path)) {
+	if (!cli_try_read_log_path_from_config(out, out_size, config_path, env)) {
 		if (!cli_platform_resolve_default_log_path(out, out_size))
 			return false;
 	}
 
-	return cli_platform_ensure_log_parent_dir_exists(out);
+	return cli_platform_ensure_log_parent_dir_exists(out, env);
 }

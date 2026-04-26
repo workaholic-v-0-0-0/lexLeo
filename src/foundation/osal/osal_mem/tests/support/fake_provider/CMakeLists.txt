@@ -1,4 +1,5 @@
-# src/foundation/osal/osal_mem/tests/support/fake_provider/CMakeLists.txt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
 
 add_library(
     osal_mem_fake_provider
@@ -17,5 +18,4 @@ target_link_libraries(
     PUBLIC
         fake_memory
         osal_mem
-        lexleo_policy_headers
 )

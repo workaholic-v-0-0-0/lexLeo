@@ -6,8 +6,8 @@
 #include "policy/lexleo_cstd_lib.h"
 
 #include "osal/stdio/osal_stdio_ops.h"
-
 #include "osal/mem/osal_mem.h"
+#include "osal/str/osal_str.h"
 
 void lexleo_panic(const char *msg) {
 	const osal_stdio_ops_t *stdio_ops = osal_stdio_default_ops();

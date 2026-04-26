@@ -16,17 +16,21 @@
  */
 
 #include "internal/cli_log_path.h"
+#include "internal/cli_env.h"
 
 #include "osal/stdio/osal_stdio.h"
 #include "osal/str/osal_str.h"
-#include "osal/file/osal_file.h"
+#include "osal/file/osal_file_ops.h"
 #include "osal/env/osal_env.h"
 
 #include "policy/lexleo_cstd_lib.h"
 
 #define CLI_DEFAULT_CONFIG_PATH "/etc/lexleo/lexleo.conf"
 
-bool cli_platform_ensure_log_parent_dir_exists(const char *log_path)
+bool cli_platform_ensure_log_parent_dir_exists(
+	const char *log_path,
+	const cli_env_t *env
+	)
 {
 	char dir[1024];
 	char *p;
@@ -54,7 +58,7 @@ bool cli_platform_ensure_log_parent_dir_exists(const char *log_path)
 			continue;
 
 		*p = '\0';
-		st = osal_file_mkdir(dir);
+		st = env->file_ops->mkdir(dir);
 		if (st != OSAL_FILE_STATUS_OK && st != OSAL_FILE_STATUS_EXISTS) {
 			*p = '/';
 			return false;
@@ -63,7 +67,7 @@ bool cli_platform_ensure_log_parent_dir_exists(const char *log_path)
 		*p = '/';
 	}
 
-	st = osal_file_mkdir(dir);
+	st = env->file_ops->mkdir(dir);
 	if (st != OSAL_FILE_STATUS_OK && st != OSAL_FILE_STATUS_EXISTS)
 		return false;
 

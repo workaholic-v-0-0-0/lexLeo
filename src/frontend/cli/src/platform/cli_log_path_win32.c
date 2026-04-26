@@ -16,6 +16,7 @@
  */
 
 #include "internal/cli_log_path.h"
+#include "internal/cli_env.h"
 
 #include "osal/stdio/osal_stdio.h"
 #include "osal/str/osal_str.h"
@@ -24,7 +25,7 @@
 
 #define CLI_DEFAULT_CONFIG_PATH "C:\\Program Files\\LexLeo\\config\\lexleo.ini"
 
-bool cli_platform_ensure_log_parent_dir_exists(const char *log_path)
+bool cli_platform_ensure_log_parent_dir_exists(const char *log_path, const cli_env_t *env)
 {
     char dir[1024];
     char *p;

@@ -23,6 +23,7 @@ target_link_libraries(
         stream
         osal_time
         osal_mem
+        osal_str
     PRIVATE
         lexleo_assert
 )

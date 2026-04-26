@@ -26,6 +26,7 @@
 
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/mem/osal_mem.h"
+#include "osal/str/osal_str.h"
 
 #include "policy/lexleo_cstd_lib.h"
 #include "policy/lexleo_cstd_io.h"
@@ -167,29 +168,7 @@ static osal_file_status_t osal_file_map_errno(int errnum)
 	}
 }
 
-/**
- * @brief Open a file resource through the POSIX / C stdio backend.
- *
- * @details
- * This private callback implements the public
- * `osal_file_ops_t::open` contract for the active POSIX-like backend.
- *
- * @param[out] out
- * Receives the acquired `OSAL_FILE` handle on success.
- *
- * @param pathname
- * Pathname of the file resource to open.
- *
- * @param mode
- * Portable file access mode string.
- *
- * @param mem_ops
- * Memory operations table used to allocate the OSAL file wrapper.
- *
- * @return
- * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
- */
-osal_file_status_t osal_file_open(
+static osal_file_status_t osal_file_open(
 	OSAL_FILE **out,
 	const char *pathname,
 	const char *mode,
@@ -200,11 +179,15 @@ osal_file_status_t osal_file_open(
 		|| !pathname
 		|| pathname[0] == '\0'
 		|| !mode
-		|| (
-			   osal_strcmp(mode, "rb") != 0
-			&& osal_strcmp(mode, "wb") != 0
-			&& osal_strcmp(mode, "ab") != 0)
 		|| !mem_ops
+	) {
+		return OSAL_FILE_STATUS_INVALID;
+	}
+
+	if (
+		   osal_strcmp(mode, "rb") != 0
+		&& osal_strcmp(mode, "wb") != 0
+		&& osal_strcmp(mode, "ab") != 0
 	) {
 		return OSAL_FILE_STATUS_INVALID;
 	}
@@ -258,7 +241,7 @@ osal_file_status_t osal_file_open(
  * @return
  * The number of elements successfully read.
  */
-size_t osal_file_read(
+static size_t osal_file_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -311,7 +294,7 @@ size_t osal_file_read(
  * @return
  * The number of elements successfully written.
  */
-size_t osal_file_write(
+static size_t osal_file_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -352,7 +335,7 @@ size_t osal_file_write(
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-osal_file_status_t osal_file_flush(OSAL_FILE *stream)
+static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;
@@ -378,7 +361,7 @@ osal_file_status_t osal_file_flush(OSAL_FILE *stream)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-osal_file_status_t osal_file_close(OSAL_FILE *stream)
+static osal_file_status_t osal_file_close(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp) {
 		return OSAL_FILE_STATUS_INVALID;
@@ -394,25 +377,7 @@ osal_file_status_t osal_file_close(OSAL_FILE *stream)
 	return OSAL_FILE_STATUS_OK;
 }
 
-/**
- * @brief Return the default POSIX / C stdio OSAL file operations table.
- *
- * @return
- * A pointer to the default `osal_file_ops_t` table for this backend.
- */
-const osal_file_ops_t *osal_file_default_ops(void)
-{
-	static const osal_file_ops_t osal_file_ops = {
-		.open = osal_file_open,
-		.read = osal_file_read,
-		.write = osal_file_write,
-		.close = osal_file_close,
-		.flush = osal_file_flush,
-	};
-	return &osal_file_ops;
-}
-
-char *osal_file_gets(
+static char *osal_file_gets(
 	char *out,
 	size_t out_size,
 	OSAL_FILE *stream,
@@ -446,7 +411,7 @@ char *osal_file_gets(
 	return NULL;
 }
 
-osal_file_status_t osal_file_mkdir(const char *pathname)
+static osal_file_status_t osal_file_mkdir(const char *pathname)
 {
 	if (!pathname || pathname[0] == '\0')
 		return OSAL_FILE_STATUS_INVALID;
@@ -455,4 +420,25 @@ osal_file_status_t osal_file_mkdir(const char *pathname)
 		return OSAL_FILE_STATUS_OK;
 
 	return osal_file_map_errno(errno);
+}
+
+
+/**
+ * @brief Return the default POSIX / C stdio OSAL file operations table.
+ *
+ * @return
+ * A pointer to the default `osal_file_ops_t` table for this backend.
+ */
+const osal_file_ops_t *osal_file_default_ops(void)
+{
+	static const osal_file_ops_t osal_file_ops = {
+		.open = osal_file_open,
+		.read = osal_file_read,
+		.write = osal_file_write,
+		.close = osal_file_close,
+		.flush = osal_file_flush,
+		.gets = osal_file_gets,
+		.mkdir = osal_file_mkdir
+	};
+	return &osal_file_ops;
 }

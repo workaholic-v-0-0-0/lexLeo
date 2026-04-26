@@ -7,6 +7,8 @@
 #include "osal/mem/osal_mem_align.h"
 #include "osal/mem/osal_mem.h"
 
+#include "osal/str/osal_str.h"
+
 #include "policy/lexleo_cstd_types.h"
 
 #ifndef TEST_ARENA_SIZE
@@ -173,27 +175,13 @@ void fake_free(void *ptr) {
   }
 }
 
-char *fake_strdup(const char *s) {
-  if (should_fail_now(++g_alloc_count)) return NULL;
-  if (!s) return NULL;
-
-  const size_t n = osal_strlen(s) + 1;
-  char *p = (char *)raw_alloc(n);
-  if (!p) return NULL;
-
-  osal_memcpy(p, s, n);
-  return p;
-}
-
 void *fake_realloc(void *ptr, size_t size) {
   if (should_fail_now(++g_alloc_count)) return NULL;
 
-  // realloc(NULL, size) => malloc(size)
   if (!ptr) {
     return raw_alloc(size);
   }
 
-  // realloc(ptr, 0) => free(ptr) and return NULL
   if (size == 0) {
     fake_free(ptr);
     return NULL;

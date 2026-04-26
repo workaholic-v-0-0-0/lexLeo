@@ -1,0 +1,16 @@
+/**
+ * @defgroup osal_mem_api osal_mem API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL memory abstraction.
+ *
+ * @details
+ * The `osal_mem` module provides portable low-level memory primitives through
+ * the Operating System Abstraction Layer.
+ *
+ * It is responsible for allocation, deallocation, raw memory operations,
+ * alignment helpers, and injectable memory services.
+ *
+ * It is not intended to act as a high-level allocator, arena system, garbage
+ * collector, string utility module, or ownership-management framework.
+ */

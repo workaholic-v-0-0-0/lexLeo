@@ -23,5 +23,7 @@ target_link_libraries(
     update_docs_on_droplet_executable
     PRIVATE
         osal_process
+        osal_str
         osal_stdio
+        lexleo_policy_headers
 )

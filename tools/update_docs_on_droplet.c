@@ -2,6 +2,7 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+#include "osal/str/osal_str.h"
 #include "osal/stdio/osal_stdio.h"
 
 #include "tools/osal/osal_process.h"

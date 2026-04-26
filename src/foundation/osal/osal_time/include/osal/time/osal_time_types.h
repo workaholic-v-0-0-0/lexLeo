@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+typedef struct osal_time_ops_t osal_time_ops_t;
+
 typedef struct {
     int64_t epoch_seconds;
 } osal_time_t;

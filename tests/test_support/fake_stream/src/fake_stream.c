@@ -8,6 +8,7 @@
 #include "stream/lifecycle/stream_lifecycle.h"
 
 #include "osal/mem/osal_mem.h"
+#include "osal/mem/osal_mem_ops.h"
 
 #include "policy/lexleo_assert.h"
 

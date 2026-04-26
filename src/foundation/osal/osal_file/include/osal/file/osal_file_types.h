@@ -30,6 +30,8 @@
  */
 typedef struct OSAL_FILE OSAL_FILE;
 
+typedef struct osal_file_ops_t osal_file_ops_t;
+
 /**
  * @brief Portable status codes for low-level OSAL file operations.
  */

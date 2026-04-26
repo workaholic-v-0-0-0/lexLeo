@@ -15,7 +15,8 @@
 #ifndef LEXLEO_STREAM_ENV_H
 #define LEXLEO_STREAM_ENV_H
 
-#include "osal/mem/osal_mem_ops.h"
+#include "osal/mem/osal_mem_types.h"
+#include "osal/str/osal_str_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +42,15 @@ typedef struct stream_env_t {
 	 * destroy public `stream_t`-related runtime objects.
 	 */
 	const osal_mem_ops_t *mem;
+
+	/**
+	 * @brief String operations used by the `stream` port.
+	 *
+	 * @details
+	 * This dependency provides injectable string services required by stream
+	 * implementations or stream-related factory code.
+	 */
+	const osal_str_ops_t *str_ops;
 } stream_env_t;
 
 #ifdef __cplusplus

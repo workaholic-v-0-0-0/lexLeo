@@ -15,6 +15,6 @@
 #ifndef LEXLEO_CLI_H
 #define LEXLEO_CLI_H
 
-int cli_run();
+int cli_main(void);
 
 #endif //LEXLEO_CLI_H

@@ -28,6 +28,7 @@
 
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/mem/osal_mem.h"
+#include "osal/str/osal_str.h"
 
 #include "policy/lexleo_cstd_lib.h"
 #include "policy/lexleo_cstd_errno.h"
@@ -349,7 +350,7 @@ static osal_file_status_t osal_utf8_to_utf16_dup(
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-osal_file_status_t osal_file_open(
+static osal_file_status_t osal_file_open(
 	OSAL_FILE **out,
 	const char *pathname,
 	const char *mode,
@@ -434,7 +435,7 @@ osal_file_status_t osal_file_open(
  * @return
  * The number of elements successfully read.
  */
-size_t osal_file_read(
+static size_t osal_file_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -487,7 +488,7 @@ size_t osal_file_read(
  * @return
  * The number of elements successfully written.
  */
-size_t osal_file_write(
+static size_t osal_file_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -528,7 +529,7 @@ size_t osal_file_write(
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-osal_file_status_t osal_file_flush(OSAL_FILE *stream)
+static osal_file_status_t osal_file_flush(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp)
 		return OSAL_FILE_STATUS_INVALID;
@@ -552,7 +553,7 @@ osal_file_status_t osal_file_flush(OSAL_FILE *stream)
  * @return
  * `OSAL_FILE_STATUS_OK` on success, or an error status on failure.
  */
-osal_file_status_t osal_file_close(OSAL_FILE *stream)
+static osal_file_status_t osal_file_close(OSAL_FILE *stream)
 {
 	if (!stream || !stream->fp)
 		return OSAL_FILE_STATUS_INVALID;

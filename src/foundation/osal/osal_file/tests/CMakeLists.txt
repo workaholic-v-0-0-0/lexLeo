@@ -12,6 +12,7 @@ target_link_libraries(
         osal_file
         osal_mem
         osal_mem_fake_provider
+        osal_str
         lexleo_policy_headers
         lexleo_cmocka_support
 )

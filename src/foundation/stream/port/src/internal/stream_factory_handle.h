@@ -19,6 +19,7 @@
 #include "stream/adapters/stream_install.h"
 
 #include "osal/mem/osal_mem_ops.h"
+#include "osal/str/osal_str_ops.h"
 
 #include "policy/lexleo_cstd_types.h"
 
@@ -70,7 +71,8 @@ typedef struct stream_registry_t {
  *
  * It stores:
  * - the internal adapter registry,
- * - the memory operations used for teardown.
+ * - the memory operations used for teardown,
+ * - the string operations used for registry key lookup.
  */
 struct stream_factory_t {
 	/** Internal adapter registry. */
@@ -78,6 +80,9 @@ struct stream_factory_t {
 
 	/** Memory operations used to destroy the factory handle. */
 	const osal_mem_ops_t *mem;
+
+	/** String operations used to compare registry keys. */
+	const osal_str_ops_t *str_ops;
 };
 
 #endif // LEXLEO_STREAM_FACTORY_HANDLE_H

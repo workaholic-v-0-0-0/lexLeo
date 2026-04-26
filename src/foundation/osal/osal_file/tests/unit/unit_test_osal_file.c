@@ -15,7 +15,7 @@
  * - `osal_file_ops_t::write()`,
  * - `osal_file_ops_t::flush()`,
  * - `osal_file_ops_t::close()`.
- * - `osal_file_gets()`.
+ * - `osal_file_ops_t::gets()`.
  * - `osal_file_mkdir()`.
  *
  * The `osal_file_ops_t` operations are exercised through the default
@@ -23,7 +23,6 @@
  */
 
 #include "osal/file/osal_file_ops.h"
-#include "osal/file/osal_file.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
@@ -187,6 +186,7 @@ typedef struct {
  * - a snapshot of the pre-call output handle value,
  * - the default OSAL file operations table,
  * - the injected memory operations table,
+ * - the injected string operations table,
  * - the input pathname and mode,
  * - a pointer to the active parametric test case.
  */
@@ -312,7 +312,13 @@ static void test_osal_file_open(void **state)
 	fx->snapshot = fx->out;
 
 	// ACT
-	ret = fx->file_ops->open(out_arg, pathname_arg, mode_arg, mem_ops_arg);
+	ret =
+		fx->file_ops->open(
+			out_arg,
+			pathname_arg,
+			mode_arg,
+			mem_ops_arg
+		);
 
 	// ASSERT
 	assert_int_equal(ret, tc->expected_ret);
@@ -622,7 +628,8 @@ typedef struct {
  * - the writable stream used to prepare the initial file content,
  * - the status storage used by the first and second tested calls,
  * - the read buffers used to capture data returned by the tested calls,
- * - the injected memory operations,
+ * - the injected memory operations table,
+ * - the injected string operations table,
  * - the default OSAL file operations table used by the test,
  * - a pointer to the active parametric test case.
  */
@@ -1222,7 +1229,8 @@ typedef struct {
  * - the writable stream used by the tested `write()` calls,
  * - the verification stream used to read back the final file content,
  * - the status storage used by the first and second tested calls,
- * - the injected memory operations,
+ * - the injected memory operations table,
+ * - the injected string operations table,
  * - the default OSAL file operations table used by the test,
  * - a pointer to the active parametric test case.
  */
@@ -1680,6 +1688,7 @@ typedef struct {
  * Holds:
  * - the writable stream used by the tested `flush()` call,
  * - the injected memory operations,
+ * - the injected string operations,
  * - the default OSAL file operations table used by the test,
  * - a pointer to the active parametric test case.
  */
@@ -1889,7 +1898,8 @@ typedef struct {
  *
  * Holds:
  * - the stream used by the tested `close()` call,
- * - the injected memory operations,
+ * - the injected memory operations table,
+ * - the injected string operations table,
  * - the default OSAL file operations table used by the test,
  * - a pointer to the active parametric test case.
  */
@@ -2041,7 +2051,7 @@ static const struct CMUnitTest osal_file_close_tests[] = {
 /** @endcond */
 
 /**
- * @brief Scenarios for `osal_file_gets()`.
+ * @brief Scenarios for `osal_file_ops_t::gets()`.
  *
  * No doubles.
  *
@@ -2050,7 +2060,7 @@ static const struct CMUnitTest osal_file_close_tests[] = {
  */
 typedef enum {
 	/**
-	 * WHEN `osal_file_gets()` is called with `out == NULL`
+	 * WHEN `osal_file_ops_t::gets()` is called with `out == NULL`
 	 * EXPECT:
 	 * - ret == NULL
 	 * - *st == `OSAL_FILE_STATUS_INVALID`
@@ -2058,7 +2068,7 @@ typedef enum {
 	OSAL_FILE_GETS_SCENARIO_OUT_NULL = 0,
 
 	/**
-	 * WHEN `osal_file_gets()` is called with `stream == NULL`
+	 * WHEN `osal_file_ops_t::gets()` is called with `stream == NULL`
 	 * EXPECT:
 	 * - ret == NULL
 	 * - *st == `OSAL_FILE_STATUS_INVALID`
@@ -2066,14 +2076,14 @@ typedef enum {
 	OSAL_FILE_GETS_SCENARIO_STREAM_NULL,
 
 	/**
-	 * WHEN `osal_file_gets()` is called with `st == NULL`
+	 * WHEN `osal_file_ops_t::gets()` is called with `st == NULL`
 	 * EXPECT:
 	 * - ret == NULL
 	 */
 	OSAL_FILE_GETS_SCENARIO_ST_NULL,
 
 	/**
-	 * WHEN `osal_file_gets()` is called on a valid readable
+	 * WHEN `osal_file_ops_t::gets()` is called on a valid readable
 	 *      stream with no data to read
 	 * EXPECT:
 	 * - ret == NULL
@@ -2082,7 +2092,7 @@ typedef enum {
 	OSAL_FILE_GETS_SCENARIO_OK_EMPTY_FILE,
 
 	/**
-	 * WHEN `osal_file_gets()` is called on a valid readable
+	 * WHEN `osal_file_ops_t::gets()` is called on a valid readable
 	 *      stream with a string but no newline
 	 * EXPECT:
 	 * - ret == out
@@ -2092,7 +2102,7 @@ typedef enum {
 	OSAL_FILE_GETS_SCENARIO_OK_ONCE_NO_NEWLINE,
 
 	/**
-	 * WHEN `osal_file_gets()` is called on a valid readable
+	 * WHEN `osal_file_ops_t::gets()` is called on a valid readable
 	 *      stream with a string ending with `\n`
 	 * EXPECT:
 	 * - ret == out
@@ -2102,7 +2112,7 @@ typedef enum {
 	OSAL_FILE_GETS_SCENARIO_OK_ONCE_NEWLINE,
 
 	/**
-	 * WHEN `osal_file_gets()` is called twice on a valid readable
+	 * WHEN `osal_file_ops_t::gets()` is called twice on a valid readable
 	 *      stream containing "abc\n123\nABC"
 	 * EXPECT:
 	 * - first_ret == first_out
@@ -2118,7 +2128,7 @@ typedef enum {
 /** @cond INTERNAL */
 
 /**
- * @brief One parametric test case for `osal_file_gets()`.
+ * @brief One parametric test case for `osal_file_ops_t::gets()`.
  */
 typedef struct {
 	const char *name;
@@ -2141,7 +2151,7 @@ typedef struct {
 } test_osal_file_gets_case_t;
 
 /**
- * @brief Runtime fixture for `osal_file_gets()` tests.
+ * @brief Runtime fixture for `osal_file_ops_t::gets()` tests.
  */
 typedef struct {
 	// runtime resources
@@ -2154,6 +2164,7 @@ typedef struct {
 	char second_gets_content[16];
 
 	// injection
+	const osal_file_ops_t *file_ops;
 	const osal_mem_ops_t *mem_ops;
 
 	const test_osal_file_gets_case_t *tc;
@@ -2164,7 +2175,7 @@ typedef struct {
 //-----------------------------------------------------------------------------
 
 /**
- * @brief Allocate and initialize the runtime fixture for `osal_file_gets()` tests.
+ * @brief Allocate and initialize the runtime fixture for `osal_file_ops_t::gets()` tests.
  */
 static int setup_osal_file_gets(void **state)
 {
@@ -2181,10 +2192,11 @@ static int setup_osal_file_gets(void **state)
 	// DI
 	fake_memory_reset();
 	fx->mem_ops = osal_mem_test_fake_ops();
+	fx->file_ops = osal_file_default_ops();
 
 	// prepare tmp file
 	assert_int_equal(
-		osal_file_open(
+		fx->file_ops->open(
 			&fx->writable_osal_file,
 			"osal_file_gets_tmp_file.txt",
 			"wb",
@@ -2194,7 +2206,7 @@ static int setup_osal_file_gets(void **state)
 	);
 	osal_file_status_t st;
 	assert_int_equal(
-		osal_file_write(
+		fx->file_ops->write(
 			tc->file_content,
 			1,
 			tc->file_content_len,
@@ -2205,14 +2217,14 @@ static int setup_osal_file_gets(void **state)
 	);
 	assert_int_equal(st, OSAL_FILE_STATUS_OK);
 	assert_int_equal(
-		osal_file_close(
+		fx->file_ops->close(
 			fx->writable_osal_file
 		),
 		OSAL_FILE_STATUS_OK
 	);
 	fx->writable_osal_file = NULL;
 	assert_int_equal(
-		osal_file_open(
+		fx->file_ops->open(
 			&fx->readable_osal_file,
 			"osal_file_gets_tmp_file.txt",
 			"rb",
@@ -2226,7 +2238,7 @@ static int setup_osal_file_gets(void **state)
 }
 
 /**
- * @brief Release the `osal_file_gets()` test fixture and verify memory invariants.
+ * @brief Release the `osal_file_ops_t::gets()` test fixture and verify memory invariants.
  */
 static int teardown_osal_file_gets(void **state)
 {
@@ -2235,7 +2247,7 @@ static int teardown_osal_file_gets(void **state)
 
 	if (fx->readable_osal_file) {
 		assert_true(
-			osal_file_close(fx->readable_osal_file) == OSAL_FILE_STATUS_OK
+			fx->file_ops->close(fx->readable_osal_file) == OSAL_FILE_STATUS_OK
 		);
 		fx->readable_osal_file = NULL;
 	}
@@ -2254,7 +2266,7 @@ static int teardown_osal_file_gets(void **state)
 //-----------------------------------------------------------------------------
 
 /**
- * @brief Execute one parametric test scenario for `osal_file_gets()`.
+ * @brief Execute one parametric test scenario for `osal_file_ops_t::gets()`.
  */
 static void test_osal_file_gets(void **state)
 {
@@ -2282,7 +2294,7 @@ static void test_osal_file_gets(void **state)
 	}
 
 	// ACT (first gets call)
-	ret = osal_file_gets(out_arg, out_size_arg, stream_arg, st_arg);
+	ret = fx->file_ops->gets(out_arg, out_size_arg, stream_arg, st_arg);
 
 	// ASSERT (first gets call)
 	if (st_arg) {
@@ -2311,7 +2323,7 @@ static void test_osal_file_gets(void **state)
 	st_arg = &fx->second_st_storage;
 
 	// ACT (second gets call)
-	ret = osal_file_gets(out_arg, out_size_arg, stream_arg, st_arg);
+	ret = fx->file_ops->gets(out_arg, out_size_arg, stream_arg, st_arg);
 
 	// ASSERT (second gets call)
 	if (st_arg) {
@@ -2448,7 +2460,7 @@ static const struct CMUnitTest osal_file_gets_tests[] = {
 /** @endcond */
 
 /**
- * @brief Scenarios for `osal_file_mkdir()`.
+ * @brief Scenarios for `osal_file_ops_t::mkdir()`.
  *
  * No doubles.
  *
@@ -2457,21 +2469,21 @@ static const struct CMUnitTest osal_file_gets_tests[] = {
  */
 typedef enum {
 	/**
-	 * WHEN `osal_file_mkdir()` is called with `pathname == NULL`
+	 * WHEN `osal_file_ops_t::mkdir()` is called with `pathname == NULL`
 	 * EXPECT:
 	 * - ret == `OSAL_FILE_STATUS_INVALID`
 	 */
 	OSAL_FILE_MKDIR_SCENARIO_PATHNAME_NULL = 0,
 
 	/**
-	 * WHEN `osal_file_mkdir()` is called with `pathname == ""`
+	 * WHEN `osal_file_ops_t::mkdir()` is called with `pathname == ""`
 	 * EXPECT:
 	 * - ret == `OSAL_FILE_STATUS_INVALID`
 	 */
 	OSAL_FILE_MKDIR_SCENARIO_PATHNAME_EMPTY,
 
 	/**
-	 * WHEN `osal_file_mkdir()` is called with valid arguments.
+	 * WHEN `osal_file_ops_t::mkdir()` is called with valid arguments.
 	 * EXPECT:
 	 * - ret == `OSAL_FILE_STATUS_OK`
 	 */
@@ -2481,7 +2493,7 @@ typedef enum {
 /** @cond INTERNAL */
 
 /**
- * @brief One parametric test case for `osal_file_mkdir()`.
+ * @brief One parametric test case for `osal_file_ops_t::mkdir()`.
  */
 typedef struct {
 	const char *name;
@@ -2495,9 +2507,10 @@ typedef struct {
 } test_osal_file_mkdir_case_t;
 
 /**
- * @brief Runtime fixture for `osal_file_mkdir()` tests.
+ * @brief Runtime fixture for `osal_file_ops_t::mkdir()` tests.
  */
 typedef struct {
+	const osal_file_ops_t *file_ops;
 	const test_osal_file_mkdir_case_t *tc;
 } test_osal_file_mkdir_fixture_t;
 
@@ -2506,7 +2519,7 @@ typedef struct {
 //-----------------------------------------------------------------------------
 
 /**
- * @brief Allocate and initialize the runtime fixture for `osal_file_mkdir()` tests.
+ * @brief Allocate and initialize the runtime fixture for `osal_file_ops_t::mkdir()` tests.
  */
 static int setup_osal_file_mkdir(void **state) {
 	const test_osal_file_mkdir_case_t *tc =
@@ -2519,13 +2532,16 @@ static int setup_osal_file_mkdir(void **state) {
 	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
+	// DI
+	fx->file_ops = osal_file_default_ops();
+
 	*state = fx;
 
 	return 0;
 }
 
 /**
- * @brief Release the `osal_file_mkdir()` test fixture and verify memory invariants.
+ * @brief Release the `osal_file_ops_t::mkdir()` test fixture and verify memory invariants.
  */
 static int teardown_osal_file_mkdir(void **state)
 {
@@ -2542,7 +2558,7 @@ static int teardown_osal_file_mkdir(void **state)
 //-----------------------------------------------------------------------------
 
 /**
- * @brief Execute one parametric test scenario for `osal_file_mkdir()`.
+ * @brief Execute one parametric test scenario for `osal_file_ops_t::mkdir()`.
  */
 static void test_osal_file_mkdir(void **state)
 {
@@ -2564,7 +2580,7 @@ static void test_osal_file_mkdir(void **state)
 	}
 
 	// ACT
-	ret = osal_file_mkdir(pathname_arg);
+	ret = fx->file_ops->mkdir(pathname_arg);
 
 	// ASSERT
 	assert_int_equal(ret, tc->expected_ret);

@@ -14,7 +14,7 @@ static struct OSAL_STDIO g_stdin  = { .fp = NULL };
 static struct OSAL_STDIO g_stdout = { .fp = NULL };
 static struct OSAL_STDIO g_stderr = { .fp = NULL };
 
-static OSAL_STDIO *osal_stdio_stdin(void)
+OSAL_STDIO *osal_stdio_stdin(void)
 {
 	if (!g_stdin.fp) g_stdin.fp = stdin;
 	return &g_stdin;
@@ -32,7 +32,7 @@ OSAL_STDIO *osal_stdio_stderr(void)
 	return &g_stderr;
 }
 
-static size_t osal_stdio_read(
+size_t osal_stdio_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -58,19 +58,19 @@ int osal_stdio_flush(OSAL_STDIO *stdio)
 	return fflush(stdio->fp);
 }
 
-static int osal_stdio_error(OSAL_STDIO *stdio)
+int osal_stdio_error(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return ferror(stdio->fp);
 }
 
-static int osal_stdio_eof(OSAL_STDIO *stdio)
+int osal_stdio_eof(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return feof(stdio->fp);
 }
 
-static void osal_stdio_clearerr(OSAL_STDIO *stdio)
+void osal_stdio_clearerr(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	clearerr(stdio->fp);
@@ -90,20 +90,4 @@ const osal_stdio_ops_t *osal_stdio_default_ops(void)
 		.clear_error = osal_stdio_clearerr,
 	};
 	return &OPS;
-}
-
-int osal_snprintf(
-	char *buf,
-	size_t size,
-	const char *fmt,
-	...)
-{
-	int ret;
-	va_list ap;
-
-	va_start(ap, fmt);
-	ret = vsnprintf(buf, size, fmt, ap);
-	va_end(ap);
-
-	return ret;
 }

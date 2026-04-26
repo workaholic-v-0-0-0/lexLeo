@@ -53,5 +53,6 @@ target_include_directories(
 target_link_libraries(
     osal_process
     PRIVATE
-        osal_stdio
+        osal_str
+        lexleo_policy_headers
 )

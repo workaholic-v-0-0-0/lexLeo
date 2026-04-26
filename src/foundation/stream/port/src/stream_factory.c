@@ -19,19 +19,32 @@
 
 #include "stream/cr/stream_factory_cr_api.h"
 
-#include "osal/mem/osal_mem.h"
+#include "osal/mem/osal_mem_ops.h"
+#include "osal/str/osal_str.h"
 
 #include "policy/lexleo_cstd_types.h"
+#include "policy/lexleo_assert.h"
 
 static const stream_branch_t *stream_registry_find(
 	const stream_registry_t *reg,
-	stream_key_t key)
-{
-	if (!reg || !reg->entries || !reg->count || !key) return NULL;
+	stream_key_t key,
+	const osal_str_ops_t *str_ops
+) {
+	if (
+		   !reg
+		|| !reg->entries
+		|| !reg->count
+		|| !key
+		|| !str_ops
+	) {
+		return NULL;
+	}
 
 	for (size_t i = 0; i < reg->count; i++) {
 		const stream_branch_t *e = &reg->entries[i];
-		if (e->key && osal_strcmp(e->key, key) == 0) return e;
+		if (e->key && osal_strcmp(e->key, key) == 0) {
+			return e;
+		}
 	}
 	return NULL;
 }
@@ -40,12 +53,15 @@ static stream_status_t stream_registry_create(
 	const stream_registry_t *reg,
 	stream_key_t key,
 	const void *args,
-	stream_t **out_stream)
-{
-	if (!out_stream) return STREAM_STATUS_INVALID;
+	stream_t **out_stream,
+	const osal_str_ops_t *str_ops
+) {
+	if (!out_stream || !str_ops) {
+		return STREAM_STATUS_INVALID;
+	}
 	*out_stream = NULL;
 
-	const stream_branch_t *e = stream_registry_find(reg, key);
+	const stream_branch_t *e = stream_registry_find(reg, key, str_ops);
 	if (!e || !e->ctor) return STREAM_STATUS_NO_BACKEND;
 
 	return e->ctor(e->ud, args, out_stream);
@@ -61,14 +77,23 @@ stream_status_t stream_create_factory(
             || !cfg
             || !env
             || !env->mem
-            || !env->mem->calloc
-            || !env->mem->free )
-        return STREAM_STATUS_INVALID;
+            || !env->str_ops
+    ) {
+    	return STREAM_STATUS_INVALID;
+    }
+
+	LEXLEO_ASSERT(
+		   env->mem->calloc
+		&& env->mem->free
+	);
 
     stream_factory_t *f = env->mem->calloc(1, sizeof(*f));
-    if (!f) return STREAM_STATUS_OOM;
+    if (!f) {
+	    return STREAM_STATUS_OOM;
+    }
 
     f->mem = env->mem;
+	f->str_ops = env->str_ops;
     f->reg.entries = NULL;
     f->reg.count = 0;
     f->reg.cap = 0;
@@ -112,6 +137,7 @@ stream_status_t stream_factory_add_adapter(
 {
     if (
 			   !fact
+			|| !fact->str_ops
 			|| !desc
 			|| !desc->key
 			|| *desc->key == '\0'
@@ -132,8 +158,9 @@ stream_status_t stream_factory_add_adapter(
     // Enforce uniqueness
     for (size_t i = 0; i < reg->count; ++i) {
         if (
-				   reg->entries[i].key
-				&& osal_strcmp(reg->entries[i].key, desc->key) == 0 ) {
+			   reg->entries[i].key
+			&& osal_strcmp(reg->entries[i].key, desc->key) == 0
+		) {
  		   	return STREAM_STATUS_ALREADY_EXISTS; // duplicate key
 		}
     }
@@ -157,11 +184,21 @@ stream_status_t stream_factory_create_stream(
     if (!out || !f || !args || !key || *key == '\0')
     	return STREAM_STATUS_INVALID;
 
-	if (!stream_registry_find(&f->reg, key))
+	LEXLEO_ASSERT(f->str_ops);
+
+	if (!stream_registry_find(&f->reg, key, f->str_ops)) {
 		return STREAM_STATUS_NOT_FOUND;
+	}
 
 	stream_t *tmp = NULL;
-    stream_status_t st = stream_registry_create(&f->reg, key, args, &tmp);
+    stream_status_t st =
+    	stream_registry_create(
+    		&f->reg,
+    		key,
+    		args,
+    		&tmp,
+    		f->str_ops
+    	);
 
 	if (st == STREAM_STATUS_OK) *out = tmp;
 

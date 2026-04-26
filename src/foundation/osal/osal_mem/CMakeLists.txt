@@ -1,10 +1,10 @@
-# src/foundation/osal/osal_mem/CMakeLists.txt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
 
 add_library(
     osal_mem
     STATIC
         "${CMAKE_CURRENT_SOURCE_DIR}/src/osal_mem.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/osal_mem_ops.c"
 )
 
 target_include_directories(
@@ -15,7 +15,7 @@ target_include_directories(
 
 target_link_libraries(
     osal_mem
-    PRIVATE
+    PUBLIC
         lexleo_policy_headers
 )
 

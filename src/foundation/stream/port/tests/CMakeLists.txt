@@ -11,6 +11,7 @@ target_link_libraries(
     PRIVATE
         stream
         osal_mem_fake_provider
+        osal_str
         lexleo_policy_headers
         lexleo_cmocka_support
 )

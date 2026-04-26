@@ -30,6 +30,7 @@ target_link_libraries(
         osal_mem
         lexleo_policy_headers
     PRIVATE
+        osal_str
         lexleo_assert
 )
 

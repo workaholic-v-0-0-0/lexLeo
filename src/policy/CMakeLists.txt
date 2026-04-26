@@ -24,8 +24,9 @@ add_library(
 )
 target_link_libraries(
     lexleo_panic
-    PUBLIC
+    PRIVATE
         osal_stdio
         osal_mem
+        osal_str
         lexleo_policy_headers
 )

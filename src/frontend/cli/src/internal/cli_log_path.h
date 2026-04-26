@@ -16,11 +16,13 @@
 #ifndef LEXLEO_CLI_LOG_PATH_H
 #define LEXLEO_CLI_LOG_PATH_H
 
+#include "internal/cli_env.h"
+
 #include "policy/lexleo_cstd_types.h"
 
-bool cli_platform_ensure_log_parent_dir_exists(const char *log_path);
+bool cli_platform_ensure_log_parent_dir_exists(const char *log_path, const cli_env_t *env);
 const char *cli_platform_default_config_path(void);
 bool cli_platform_resolve_default_log_path(char* out, size_t out_size);
-bool cli_resolve_log_path(char *out, size_t out_size);
+bool cli_resolve_log_path(char *out, size_t out_size, const cli_env_t *env);
 
 #endif // LEXLEO_CLI_LOG_PATH_H

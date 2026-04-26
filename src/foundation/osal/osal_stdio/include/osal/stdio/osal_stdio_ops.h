@@ -9,7 +9,7 @@ extern "C" {
 
 #include "osal/stdio/osal_stdio_types.h"
 
-typedef struct osal_stdio_ops_t {
+struct osal_stdio_ops_t {
 
 	OSAL_STDIO *(*get_stdin)(void);
 
@@ -37,7 +37,7 @@ typedef struct osal_stdio_ops_t {
 
 	void (*clear_error)(OSAL_STDIO *stdio);
 
-} osal_stdio_ops_t;
+};
 
 const osal_stdio_ops_t *osal_stdio_default_ops(void);
 

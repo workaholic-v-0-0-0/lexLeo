@@ -33,7 +33,8 @@
 
 #include "osal/file/osal_file_types.h"
 
-#include "osal/mem/osal_mem_ops.h"
+#include "osal/mem/osal_mem_types.h"
+#include "osal/str/osal_str_types.h"
 
 #include "policy/lexleo_cstd_types.h"
 
@@ -51,7 +52,7 @@ extern "C" {
  * These operations are intentionally file-oriented. They do not define a
  * higher-level byte-stream port contract.
  */
-typedef struct osal_file_ops {
+struct osal_file_ops_t {
 
 	/**
 	 * @brief Open a file resource.
@@ -166,7 +167,14 @@ typedef struct osal_file_ops {
 	 */
 	osal_file_status_t (*close)(OSAL_FILE *stream);
 
-} osal_file_ops_t;
+	char *(*gets)(
+		char* out,
+		size_t out_size,
+		OSAL_FILE* stream,
+		osal_file_status_t* st);
+
+	osal_file_status_t (*mkdir)(const char *pathname);
+};
 
 /**
  * @brief Return the default OSAL file operations for the active platform.

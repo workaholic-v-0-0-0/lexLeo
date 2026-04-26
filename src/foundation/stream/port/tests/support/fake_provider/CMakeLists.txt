@@ -17,10 +17,11 @@ target_include_directories(
 
 target_link_libraries(
     stream_fake_provider
-    PRIVATE
-        fake_stream
-        osal_mem_fake_provider
     PUBLIC
         stream
         lexleo_policy_headers
+    PRIVATE
+        fake_stream
+        osal_str
+        osal_mem_fake_provider
 )

@@ -1,0 +1,17 @@
+/**
+ * @defgroup osal_mem_unit_tests osal_mem unit tests
+ * @ingroup osal_mem_tests_group
+ *
+ * @brief Unit tests for the `osal_mem` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_mem_default_ops()`
+ * - `osal_malloc()`
+ * - `osal_calloc()`
+ * - `osal_realloc()`
+ * - `osal_free()`
+ * - `osal_memcpy()`
+ * - `osal_memset()`
+ * - `osal_memmove()`
+ */
