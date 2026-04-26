@@ -13,4 +13,5 @@ target_link_libraries(
     lexleo_cmocka_support
     INTERFACE
         cmocka
+        lexleo_policy_headers
 )

@@ -1,0 +1,10 @@
+/**
+ * @defgroup osal_env_unit_tests osal_env unit tests
+ * @ingroup osal_env_tests_group
+ *
+ * @brief Unit tests for the `osal_env` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_getenv()`
+ */

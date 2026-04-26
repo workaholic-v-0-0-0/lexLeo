@@ -5,7 +5,7 @@
 /**
  * @file unit_test_osal_file.c
  * @ingroup osal_file_unit_tests
- * @brief Unit tests for the public `osal_file` operations table.
+ * @brief Unit tests for the public `osal_file` module.
  *
  * @details
  * This file contains unit tests for:

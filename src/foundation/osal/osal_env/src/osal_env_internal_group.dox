@@ -1,0 +1,6 @@
+/**
+ * @defgroup osal_env_internal_group osal_env private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the `osal_env` module.
+ */

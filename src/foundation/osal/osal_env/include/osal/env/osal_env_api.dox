@@ -1,0 +1,14 @@
+/**
+ * @defgroup osal_env_api osal_env API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL environment abstraction.
+ *
+ * @details
+ * The `osal_env` module provides portable low-level environment access
+ * primitives through the Operating System Abstraction Layer.
+ *
+ * It is responsible for environment-related queries only and is not intended
+ * to act as a configuration system, persistence layer, or high-level runtime
+ * service.
+ */

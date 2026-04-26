@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
+
 add_library(
 	osal_env
 	STATIC
@@ -15,3 +18,7 @@ target_link_libraries(
 	PRIVATE
 		lexleo_policy_headers
 )
+
+if (BUILD_TESTING)
+	add_subdirectory(tests)
+endif ()
