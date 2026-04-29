@@ -1,0 +1,14 @@
+/**
+ * @defgroup osal_stdio_api osal_stdio API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL standard I/O abstraction.
+ *
+ * @details
+ * The `osal_stdio` module provides portable low-level standard I/O primitives
+ * through the Operating System Abstraction Layer.
+ *
+ * It is responsible for standard stream access, stream reads and writes,
+ * flushing, error-state queries, end-of-file queries, and injectable standard
+ * I/O services.
+ */

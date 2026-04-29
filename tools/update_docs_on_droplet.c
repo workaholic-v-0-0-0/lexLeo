@@ -3,25 +3,35 @@
  */
 
 #include "osal/str/osal_str.h"
-#include "osal/stdio/osal_stdio.h"
+#include "osal/stdio/osal_stdio_ops.h"
 
 #include "tools/osal/osal_process.h"
+
+#include "policy/lexleo_assert.h"
 
 int main(int argc, char **argv)
 {
     char local_path[1024];
     int ret;
+    const osal_stdio_ops_t *stdio_ops = osal_stdio_default_ops();
+
+    LEXLEO_ASSERT(
+           stdio_ops
+        && stdio_ops->write
+        && stdio_ops->flush
+        && stdio_ops->get_stderr
+    );
 
     if (argc != 2) {
         static const char usage[] =
             "Usage: update_docs_on_droplet <build_directory>\n";
-        (void)osal_stdio_write(
+        (void)stdio_ops->write(
             usage,
             1,
             sizeof(usage) - 1,
-            osal_stdio_stderr()
+            stdio_ops->get_stderr()
         );
-        (void)osal_stdio_flush(osal_stdio_stderr());
+        (void)stdio_ops->flush(stdio_ops->get_stderr());
         return 1;
     }
 
@@ -34,13 +44,13 @@ int main(int argc, char **argv)
     if (ret < 0 || (size_t)ret >= sizeof(local_path)) {
         static const char msg[] =
             "Failed to build local documentation path.\n";
-        (void)osal_stdio_write(
+        (void)stdio_ops->write(
             msg,
             1,
             sizeof(msg) - 1,
-            osal_stdio_stderr()
+            stdio_ops->get_stderr()
         );
-        (void)osal_stdio_flush(osal_stdio_stderr());
+        (void)stdio_ops->flush(stdio_ops->get_stderr());
         return 1;
     }
 

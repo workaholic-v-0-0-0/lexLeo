@@ -1,0 +1,13 @@
+/**
+ * @defgroup osal_stdio_unit_tests osal_stdio unit tests
+ * @ingroup osal_stdio_tests_group
+ *
+ * @brief Unit tests for the `osal_stdio` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_stdio_default_ops()`
+ * - `osal_stdio_ops_t::get_stdin()`
+ * - `osal_stdio_ops_t::get_stdout()`
+ * - `osal_stdio_ops_t::get_stderr()`
+ */

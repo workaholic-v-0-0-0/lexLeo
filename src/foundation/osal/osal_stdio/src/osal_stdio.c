@@ -1,9 +1,20 @@
-// osal_stdio.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file osal_stdio.c
+ * @ingroup osal_stdio_internal_group
+ * @brief Default implementation of the `osal_stdio` module.
+ *
+ * @details
+ * This file implements the default standard I/O backend and exposes it through
+ * the injectable `osal_stdio_ops_t` operations table.
+ */
 
 #include "internal/osal_stdio_internal.h"
 
 #include "osal/stdio/osal_stdio_ops.h"
-#include "osal/stdio/osal_stdio.h"
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_assert.h"
@@ -14,25 +25,25 @@ static struct OSAL_STDIO g_stdin  = { .fp = NULL };
 static struct OSAL_STDIO g_stdout = { .fp = NULL };
 static struct OSAL_STDIO g_stderr = { .fp = NULL };
 
-OSAL_STDIO *osal_stdio_stdin(void)
+static OSAL_STDIO *osal_stdio_stdin(void)
 {
 	if (!g_stdin.fp) g_stdin.fp = stdin;
 	return &g_stdin;
 }
 
-OSAL_STDIO *osal_stdio_stdout(void)
+static OSAL_STDIO *osal_stdio_stdout(void)
 {
 	if (!g_stdout.fp) g_stdout.fp = stdout;
 	return &g_stdout;
 }
 
-OSAL_STDIO *osal_stdio_stderr(void)
+static OSAL_STDIO *osal_stdio_stderr(void)
 {
 	if (!g_stderr.fp) g_stderr.fp = stderr;
 	return &g_stderr;
 }
 
-size_t osal_stdio_read(
+static size_t osal_stdio_read(
 	void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -42,7 +53,7 @@ size_t osal_stdio_read(
 	return fread(ptr, size, nmemb, stdio->fp);
 }
 
-size_t osal_stdio_write(
+static size_t osal_stdio_write(
 	const void *ptr,
 	size_t size,
 	size_t nmemb,
@@ -52,28 +63,22 @@ size_t osal_stdio_write(
 	return fwrite(ptr, size, nmemb, stdio->fp);
 }
 
-int osal_stdio_flush(OSAL_STDIO *stdio)
+static int osal_stdio_flush(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return fflush(stdio->fp);
 }
 
-int osal_stdio_error(OSAL_STDIO *stdio)
+static int osal_stdio_error(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return ferror(stdio->fp);
 }
 
-int osal_stdio_eof(OSAL_STDIO *stdio)
+static int osal_stdio_eof(OSAL_STDIO *stdio)
 {
 	LEXLEO_ASSERT(stdio);
 	return feof(stdio->fp);
-}
-
-void osal_stdio_clearerr(OSAL_STDIO *stdio)
-{
-	LEXLEO_ASSERT(stdio);
-	clearerr(stdio->fp);
 }
 
 const osal_stdio_ops_t *osal_stdio_default_ops(void)
@@ -87,7 +92,6 @@ const osal_stdio_ops_t *osal_stdio_default_ops(void)
 		.flush = osal_stdio_flush,
 		.error = osal_stdio_error,
 		.eof = osal_stdio_eof,
-		.clear_error = osal_stdio_clearerr,
 	};
 	return &OPS;
 }

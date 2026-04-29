@@ -34,7 +34,6 @@ size_t fake_stdio_write(
 int fake_stdio_flush(OSAL_STDIO *stdio);
 int fake_stdio_error(OSAL_STDIO *stdio);
 int fake_stdio_eof(OSAL_STDIO *stdio);
-void fake_stdio_clearerr(OSAL_STDIO *stdio);
 
 // CFG
 

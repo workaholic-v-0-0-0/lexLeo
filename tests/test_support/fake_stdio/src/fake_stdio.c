@@ -368,8 +368,3 @@ int fake_stdio_eof(OSAL_STDIO *stdio)
 	fake = osal_stdio_stream_to_fake_stdio(stdio);
 	return fake->read_pos >= fake->buffered_len;
 }
-
-void fake_stdio_clearerr(OSAL_STDIO *stdio)
-{
-	(void)stdio;
-}

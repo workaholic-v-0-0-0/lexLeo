@@ -24,7 +24,6 @@
 #include "osal/file/osal_file_ops.h"
 #include "osal/str/osal_str_ops.h"
 #include "osal/str/osal_str.h"
-#include "osal/stdio/osal_stdio.h"
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/mem/osal_mem.h"
 

@@ -18,7 +18,6 @@
 #include "internal/cli_log_path.h"
 #include "internal/cli_env.h"
 
-#include "osal/stdio/osal_stdio.h"
 #include "osal/str/osal_str.h"
 #include "osal/file/osal_file_ops.h"
 #include "osal/env/osal_env.h"

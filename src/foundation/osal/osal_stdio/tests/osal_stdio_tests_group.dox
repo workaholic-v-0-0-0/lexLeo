@@ -1,0 +1,6 @@
+/**
+ * @defgroup osal_stdio_tests_group osal_stdio tests
+ * @ingroup osal_family_tests_group
+ *
+ * @brief Tests for the `osal_stdio` module.
+ */
