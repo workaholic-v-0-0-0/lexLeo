@@ -1,3 +1,24 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file osal_str.h
+ * @ingroup osal_str_api
+ * @brief Public string primitives of the `osal_str` module.
+ *
+ * @details
+ * This header declares portable low-level string services provided by
+ * the Operating System Abstraction Layer.
+ *
+ * Current public services:
+ * - string length
+ * - string comparison
+ * - character search
+ * - whitespace classification
+ * - bounded string formatting
+ */
+
 #ifndef LEXLEO_OSAL_STR_H
 #define LEXLEO_OSAL_STR_H
 

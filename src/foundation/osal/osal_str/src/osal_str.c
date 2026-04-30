@@ -1,3 +1,17 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file osal_str.c
+ * @ingroup osal_str_internal_group
+ * @brief Private implementation of the `osal_str` module.
+ *
+ * @details
+ * This file implements the public OSAL string helpers and the default
+ * injectable string operations table.
+ */
+
 #include "osal/str/osal_str.h"
 #include "osal/str/osal_str_ops.h"
 
@@ -14,16 +28,18 @@ static char *osal_strdup(
 	const char *s,
 	const osal_mem_ops_t *mem_ops
 ) {
-	if (!s || !mem_ops) return NULL;
-
-	size_t n = strlen(s) + 1;
+	if (!s || !mem_ops) {
+		return NULL;
+	}
 
 	LEXLEO_ASSERT(mem_ops->malloc);
+
+	size_t n = strlen(s) + 1;
 
 	char *p = mem_ops->malloc(n);
 	if (!p) return NULL;
 
-	memcpy(p, s, n);
+	osal_memcpy(p, s, n);
 	return p;
 }
 
@@ -68,7 +84,7 @@ int osal_snprintf(
 	va_list args;
 	int ret;
 
-	if (!format) {
+	if (!format || (size > 0 && !str)) {
 		return -1;
 	}
 

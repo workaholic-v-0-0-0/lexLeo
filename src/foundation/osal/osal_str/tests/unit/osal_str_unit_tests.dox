@@ -1,0 +1,17 @@
+/**
+ * @defgroup osal_str_unit_tests osal_str unit tests
+ * @ingroup osal_str_tests_group
+ *
+ * @brief Unit tests for the `osal_str` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_str_default_ops()`
+ * - `osal_str_ops_t::strdup()`
+ * - `osal_snprintf()`
+ * - `osal_strlen()`
+ * - `osal_strcmp()`
+ * - `osal_strchr()`
+ * - `osal_strrchr()`
+ * - `osal_isspace()`
+ */

@@ -1,0 +1,11 @@
+/**
+ * @defgroup osal_str_api osal_str API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL string abstraction.
+ *
+ * @details
+ * The `osal_str` module provides portable string utility wrappers,
+ * bounded formatting helpers, character classification helpers, and
+ * injectable string operations that require allocator consistency.
+ */
