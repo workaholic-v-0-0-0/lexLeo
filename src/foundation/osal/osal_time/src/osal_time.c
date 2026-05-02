@@ -1,4 +1,16 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
+/**
+ * @file osal_time.c
+ * @ingroup osal_time_internal_group
+ * @brief Private implementation of the `osal_time` module.
+ *
+ * @details
+ * This file implements the default OSAL time operations and their
+ * underlying platform-backed behavior.
+ */
 
 #include "osal/time/osal_time_ops.h"
 

@@ -1,0 +1,11 @@
+/**
+ * @defgroup osal_time_unit_tests osal_time unit tests
+ * @ingroup osal_time_tests_group
+ *
+ * @brief Unit tests for the `osal_time` module.
+ *
+ * @details
+ * The tests in this group verify the contracts of:
+ * - `osal_time_default_ops()`
+ * - `osal_time_ops_t::now()`
+ */

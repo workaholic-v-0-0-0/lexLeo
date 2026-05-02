@@ -1,0 +1,6 @@
+/**
+ * @defgroup osal_time_tests_group osal_time tests
+ * @ingroup osal_family_tests_group
+ *
+ * @brief Tests for the `osal_time` module.
+ */

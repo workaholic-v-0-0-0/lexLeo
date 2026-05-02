@@ -27,3 +27,10 @@
  *  - test doubles (fake_memory, fake_file, etc.)
  *  - behavioral validation of modules
  */
+
+/** @defgroup test_support_reference Test support
+ *  Reusable testing utilities and test doubles.
+ *
+ *  This group contains shared helpers used by test suites, such as fake
+ *  backends, CMocka helpers, and reusable test providers.
+ */

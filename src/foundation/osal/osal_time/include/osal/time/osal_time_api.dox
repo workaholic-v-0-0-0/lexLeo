@@ -1,0 +1,10 @@
+/**
+ * @defgroup osal_time_api osal_time API
+ * @ingroup osal_family_group
+ *
+ * @brief Low-level OSAL timing abstraction.
+ *
+ * @details
+ * The `osal_time` module provides portable wall-clock
+ * time access through injectable time operations.
+ */
