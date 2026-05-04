@@ -2,6 +2,19 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file fake_stdio.h
+ * @ingroup test_support_fake_stdio
+ * @brief Fake stdio backend for unit tests.
+ *
+ * @details
+ * This header declares fake standard streams and stdio-like operations for
+ * tests.
+ *
+ * Tests can configure stream contents, inspect buffered and flushed data,
+ * reset fake state, and observe read, write, and flush call counts.
+ */
+
 #ifndef LEXLEO_FAKE_STDIO_H
 #define LEXLEO_FAKE_STDIO_H
 
@@ -64,4 +77,4 @@ size_t fake_stdio_read_pos(OSAL_STDIO *stdio);
 }
 #endif
 
-#endif //LEXLEO_FAKE_STDIO_H
+#endif /* LEXLEO_FAKE_STDIO_H */

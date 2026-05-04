@@ -1,0 +1,13 @@
+/**
+ * @defgroup test_support_fake_stdio fake_stdio
+ * @ingroup test_support_reference
+ *
+ * @brief Fake stdio backend for unit tests.
+ *
+ * @details
+ * Provides a deterministic test double for stdio-dependent code. Tests can
+ * configure stream contents, observe read/write/flush calls, inspect buffered
+ * and flushed data, and inject fake standard streams instead of real runtime
+ * stdio dependencies.
+ */
+

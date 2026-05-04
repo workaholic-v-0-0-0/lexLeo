@@ -2,6 +2,16 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file fake_stdio.c
+ * @ingroup test_support_fake_stdio
+ * @brief Fake stdio backend implementation for unit tests.
+ *
+ * @details
+ * This file implements the fake standard streams, their in-memory state, and
+ * the configuration and observation entry points declared in `fake_stdio.h`.
+ */
+
 #include "lexleo/test/fake_stdio.h"
 
 #include "osal/mem/osal_mem.h"
