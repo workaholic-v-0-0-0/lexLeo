@@ -79,6 +79,7 @@ set(
         "${CMAKE_SOURCE_DIR}/docs/reference/reference.dox"
         "${CMAKE_SOURCE_DIR}/docs/user/user_guide.md"
         "${CMAKE_SOURCE_DIR}/src"
+        "${CMAKE_SOURCE_DIR}/tests/test_support"
         "${STATIC_DOC_PAGES_DIR}"
         "${DYNAMIC_DOC_PAGES_DIR}"
 )

@@ -1,0 +1,10 @@
+/**
+ * @defgroup test_support_fake_time fake_time
+ * @ingroup test_support_reference
+ *
+ * @brief Fake time backend for unit tests.
+ *
+ * @details
+ * Provides a deterministic test double for time-dependent code. Tests can
+ * configure the returned time, force status results, and observe call counts.
+ */

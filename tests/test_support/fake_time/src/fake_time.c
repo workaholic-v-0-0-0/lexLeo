@@ -2,6 +2,16 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file fake_time.c
+ * @ingroup test_support_fake_time
+ * @brief Fake time backend implementation for unit tests.
+ *
+ * @details
+ * This file implements the fake time state and the test-control entry points
+ * declared in `fake_time.h`.
+ */
+
 #include "lexleo/test/fake_time.h"
 
 typedef struct {
@@ -15,7 +25,8 @@ typedef struct {
 
 static fake_time_t g_fake_time;
 
-void fake_time_reset(void) {
+void fake_time_reset(void)
+{
 	g_fake_time.now_status = OSAL_TIME_STATUS_OK;
 	g_fake_time.now_out.epoch_seconds = 0;
 	g_fake_time.now_call_count = 0;

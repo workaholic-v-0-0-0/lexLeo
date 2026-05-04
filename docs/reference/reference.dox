@@ -29,8 +29,9 @@
  */
 
 /** @defgroup test_support_reference Test support
- *  Reusable testing utilities and test doubles.
+ *  @brief Shared helpers and test doubles for unit tests.
  *
- *  This group contains shared helpers used by test suites, such as fake
- *  backends, CMocka helpers, and reusable test providers.
+ *  This group contains CMocka macro helpers and reusable doubles for project
+ *  modules. These doubles make it possible to unit-test code by injecting test
+ *  dependencies instead of using the real runtime dependencies.
  */

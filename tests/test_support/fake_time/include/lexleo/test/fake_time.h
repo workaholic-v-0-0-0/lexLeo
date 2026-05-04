@@ -1,6 +1,20 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Sylvain Labopin
  */
+
+/**
+ * @file fake_time.h
+ * @ingroup test_support_fake_time
+ * @brief Fake time backend for unit tests.
+ *
+ * @details
+ * This header declares a test double for time-dependent code.
+ *
+ * Tests can configure the returned time value, force the status returned by
+ * `fake_time_now()`, reset the fake state, and observe how many times the fake
+ * time source was called.
+ */
+
 #ifndef LEXLEO_FAKE_TIME_H
 #define LEXLEO_FAKE_TIME_H
 
@@ -25,4 +39,4 @@ size_t fake_time_get_call_count(void);
 }
 #endif
 
-#endif //LEXLEO_FAKE_TIME_H
+#endif /* LEXLEO_FAKE_TIME_H */
