@@ -212,8 +212,10 @@ static logger_status_t logger_default_write_timestamp(
  * @retval LOGGER_STATUS_IO_ERROR
  * A required stream write failed or was partial.
  */
-static logger_status_t logger_default_log(void *backend, const char *message)
-{
+static logger_status_t logger_default_log(
+	void *backend,
+	const char *message
+) {
 	if (!message) {
 		return LOGGER_STATUS_INVALID;
 	}
@@ -236,11 +238,6 @@ static logger_status_t logger_default_log(void *backend, const char *message)
 	}
 
 	stream_status_t st = STREAM_STATUS_OK;
-
-	LEXLEO_ASSERT(
-		   logger_default->str_ops
-		&& osal_strlen
-	);
 
 	size_t len = osal_strlen(message);
 

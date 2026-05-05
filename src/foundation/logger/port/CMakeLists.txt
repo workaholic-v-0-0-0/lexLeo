@@ -21,16 +21,7 @@ target_link_libraries(
     osal_mem
     lexleo_assert
 )
-#[[
-add_library(logger_cr_headers INTERFACE)
 
-target_link_libraries(
-    logger_cr_headers
-    INTERFACE
-    logger
-    osal_mem_cr_headers
-)
-#]]
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()

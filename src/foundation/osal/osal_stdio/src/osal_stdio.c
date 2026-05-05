@@ -91,7 +91,7 @@ const osal_stdio_ops_t *osal_stdio_default_ops(void)
 		.write = osal_stdio_write,
 		.flush = osal_stdio_flush,
 		.error = osal_stdio_error,
-		.eof = osal_stdio_eof,
+		.eof = osal_stdio_eof
 	};
 	return &OPS;
 }

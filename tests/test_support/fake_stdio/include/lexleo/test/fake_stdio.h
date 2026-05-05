@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+// FAKE API
+
 OSAL_STDIO *fake_stdio_stdin(void);
 OSAL_STDIO *fake_stdio_stdout(void);
 OSAL_STDIO *fake_stdio_stderr(void);

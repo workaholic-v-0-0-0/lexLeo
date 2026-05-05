@@ -18,7 +18,6 @@
 #include "stream/adapters/stream_env.h"
 
 #include "osal/file/osal_file_ops.h"
-#include "osal/file/osal_file_env.h"
 
 #include "policy/lexleo_cstd_types.h"
 

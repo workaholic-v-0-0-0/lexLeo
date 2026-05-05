@@ -1,0 +1,12 @@
+/**
+ * @defgroup test_support_fake_file fake_file
+ * @ingroup test_support_reference
+ *
+ * @brief Fake file backend for unit tests.
+ *
+ * @details
+ * Provides a deterministic test double for file-dependent code. Tests can
+ * configure fake open and mkdir results, prepare fake file handles, control
+ * read/write/flush/close/gets behavior, inspect buffered and sink data, and
+ * observe file operation calls.
+ */

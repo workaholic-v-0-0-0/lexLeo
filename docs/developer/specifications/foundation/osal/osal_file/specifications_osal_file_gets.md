@@ -28,6 +28,7 @@ A terminating null byte ('\0') is stored after the last character in the buffer.
 
 # Invalid arguments
 
+- `out_size` must be greater than `0`.
 - `out` must not be `NULL`.
 - `stream` must not be `NULL`.
 - `st` must not be `NULL`.

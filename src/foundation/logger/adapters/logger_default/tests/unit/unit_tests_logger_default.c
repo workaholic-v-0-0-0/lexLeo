@@ -36,6 +36,8 @@
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
+#include "osal/str/osal_str_ops.h"
+
 #include "osal/time/test/osal_time_fake_provider.h"
 
 #include "policy/lexleo_cstd_types.h"
@@ -107,6 +109,9 @@ static void test_logger_default_default_env(void **state) {
 	const osal_mem_ops_t *dummy_adapter_mem_p =
 		(const osal_mem_ops_t *)(uintptr_t)0x5678u;
 
+	const osal_str_ops_t *dummy_str_ops_p =
+	(const osal_str_ops_t *)(uintptr_t)0x6789u;
+
 	const logger_env_t dummy_port_env = {0};
 	const logger_env_t *dummy_port_env_p = &dummy_port_env;
 
@@ -115,11 +120,13 @@ static void test_logger_default_default_env(void **state) {
 			dummy_stream_p,
 			dummy_time_ops,
 			dummy_adapter_mem_p,
+			dummy_str_ops_p,
 			dummy_port_env_p);
 
 	assert_ptr_equal(ret.stream, dummy_stream_p);
 	assert_ptr_equal(ret.time_ops, dummy_time_ops);
 	assert_ptr_equal(ret.adapter_mem, dummy_adapter_mem_p);
+	assert_ptr_equal(ret.str_ops, dummy_str_ops_p);
 	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
 }
 

@@ -18,5 +18,6 @@ target_link_libraries(
     PRIVATE
         osal_file
         osal_mem
+        osal_str
         lexleo_assert
 )
