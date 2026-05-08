@@ -75,8 +75,7 @@ typedef struct logger_vtbl_t {
  *
  * @param[in] backend
  * Adapter-owned backend instance to bind to the logger.
- * May be NULL only if the resulting semantics are explicitly supported by the
- * caller, though normal adapters are expected to provide a valid backend.
+ * Must not be NULL.
  *
  * @param[in] env
  * Logger environment carrying injected runtime dependencies.

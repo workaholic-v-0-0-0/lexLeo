@@ -54,9 +54,6 @@ logger_default_cfg_t logger_default_default_cfg(void);
  * @param[in] adapter_mem
  * Borrowed memory operations used for adapter-backend allocation.
  *
- * @param[in] str_ops
- * Borrowed string operations used by the adapter backend.
- *
  * @param[in] port_env
  * Borrowed `logger` port environment.
  *
@@ -67,7 +64,6 @@ logger_default_env_t logger_default_default_env(
 	stream_t *stream,
 	const osal_time_ops_t *time_ops,
 	const osal_mem_ops_t *adapter_mem,
-	const osal_str_ops_t *str_ops,
 	const logger_env_t *port_env);
 
 /**

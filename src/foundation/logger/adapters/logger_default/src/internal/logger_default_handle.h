@@ -29,7 +29,6 @@
  * This structure stores:
  * - the target stream used by the adapter,
  * - the time operations used to obtain timestamps,
- * - the string operations used by the backend,
  * - the adapter runtime behavior flags,
  * - the memory operations used for backend destruction.
  */
@@ -39,9 +38,6 @@ typedef struct logger_default_t {
 
 	/** Time operations used to obtain timestamps for emitted log records. */
 	const osal_time_ops_t *time_ops;
-
-	/** String operations used by the backend implementation. */
-	const osal_str_ops_t *str_ops;
 
 	/** Whether the backend appends a trailing newline to emitted messages. */
 	bool append_newline;

@@ -1,7 +1,5 @@
 @page testing_foundation_logger_unit logger unit tests
 
-@page testing_foundation_logger_unit logger unit tests
-
 It covers:
 - `logger_default_env()`
 - `logger_create()` / `logger_destroy()`
@@ -99,6 +97,7 @@ void logger_destroy(logger_t **l);
 | `logger_create(out, vtbl, backend, env)` is called with valid arguments | returns `LOGGER_STATUS_OK`;<br>stores a non-`NULL` logger handle in `*out`;<br>the produced handle is eligible for destruction by `logger_destroy()` |
 | `out == NULL` | returns `LOGGER_STATUS_INVALID`;<br>no logger handle is produced |
 | `vtbl == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
+| `vtbl != NULL` but `vtbl->log == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `vtbl != NULL` but `vtbl->destroy == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `backend == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `env == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
