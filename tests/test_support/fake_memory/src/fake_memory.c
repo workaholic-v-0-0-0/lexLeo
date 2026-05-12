@@ -2,6 +2,20 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file fake_memory.c
+ * @ingroup test_support_fake_memory
+ * @brief Fake memory backend implementation for unit tests.
+ *
+ * @details
+ * This file implements fake memory operations and helper functions for
+ * configuring and observing fake memory behavior in tests.
+ *
+ * The fake backend uses a fixed arena, supports allocation failure injection at
+ * configured call indices, tracks currently allocated payload bytes, and records
+ * invalid free and double free attempts.
+ */
+
 #include "lexleo/test/fake_memory.h"
 
 #include "osal/mem/osal_mem_align.h"
@@ -18,8 +32,12 @@
 OSAL_ALIGNED_MAX static uint8_t g_arena[TEST_ARENA_SIZE];
 
 static size_t g_off;
-static size_t g_alloc_count; // counts *API-level* allocation calls (malloc/calloc/realloc/strdup)
-static size_t g_in_use; // bytes currently allocated (aligned payload)
+
+/* counts *API-level* allocation calls (malloc/calloc/realloc/strdup) */
+static size_t g_alloc_count;
+
+/* bytes currently allocated (aligned payload) */
+static size_t g_in_use;
 
 #define FAKE_MAGIC_ALLOC 0xC0DEFACEu
 #define FAKE_MAGIC_FREE  0xDEADFA11u
@@ -32,10 +50,10 @@ static size_t g_fail_points[MAX_FAILS];
 static size_t g_fail_points_len;
 
 typedef struct {
-  uint32_t magic;
-  uint32_t _pad;
-  size_t   size_aligned;
-  size_t   size_requested;
+	uint32_t magic;
+	uint32_t _pad;
+	size_t   size_aligned;
+	size_t   size_requested;
 } fake_hdr;
 
 // -----------------------------------------------------------------------------
@@ -43,37 +61,37 @@ typedef struct {
 // -----------------------------------------------------------------------------
 
 static bool should_fail_now(size_t cur) {
-  for (size_t i = 0; i < g_fail_points_len; ++i) {
-    if (g_fail_points[i] == cur) {
-      // remove by swap-with-last
-      g_fail_points[i] = g_fail_points[--g_fail_points_len];
-      return true;
-    }
-  }
-  return false;
+	for (size_t i = 0; i < g_fail_points_len; ++i) {
+		if (g_fail_points[i] == cur) {
+			/* Remove matched failure point by swap-with-last. */
+			g_fail_points[i] = g_fail_points[--g_fail_points_len];
+			return true;
+		}
+	}
+	return false;
 }
 
 void fake_memory_fail_on_calls(size_t n, const size_t *idxs) {
-  if (n > MAX_FAILS) n = MAX_FAILS;
-  for (size_t i = 0; i < n; ++i) g_fail_points[i] = idxs[i];
-  g_fail_points_len = n;
-  g_alloc_count = 0;
+	if (n > MAX_FAILS) n = MAX_FAILS;
+	for (size_t i = 0; i < n; ++i) g_fail_points[i] = idxs[i];
+	g_fail_points_len = n;
+	g_alloc_count = 0;
 }
 
 void fake_memory_fail_only_on_call(size_t n) {
-  fake_memory_fail_on_calls(1, &n);
+	fake_memory_fail_on_calls(1, &n);
 }
 
 void fake_memory_fail_on_all_call(void) {
-  g_fail_points_len = MAX_FAILS;
-  for (size_t i = 0; i < MAX_FAILS; ++i) g_fail_points[i] = i + 1; // 1..MAX_FAILS
-  g_alloc_count = 0;
+	g_fail_points_len = MAX_FAILS;
+	for (size_t i = 0; i < MAX_FAILS; ++i) g_fail_points[i] = i + 1;
+	g_alloc_count = 0;
 }
 
 void fake_memory_fail_since(size_t n) {
-  g_fail_points_len = MAX_FAILS;
-  for (size_t i = 0; i < MAX_FAILS; ++i) g_fail_points[i] = n + i;
-  g_alloc_count = 0;
+	g_fail_points_len = MAX_FAILS;
+	for (size_t i = 0; i < MAX_FAILS; ++i) g_fail_points[i] = n + i;
+	g_alloc_count = 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -81,26 +99,26 @@ void fake_memory_fail_since(size_t n) {
 // -----------------------------------------------------------------------------
 
 void fake_memory_reset(void) {
-  g_off = 0;
-  g_alloc_count = 0;
-  g_in_use = 0;
-  g_invalid_free_count = 0;
-  g_double_free_count = 0;
-  osal_memset(g_arena, 0, sizeof(g_arena));
-  osal_memset(g_fail_points, 0, sizeof(g_fail_points));
-  g_fail_points_len = 0;
+	g_off = 0;
+	g_alloc_count = 0;
+	g_in_use = 0;
+	g_invalid_free_count = 0;
+	g_double_free_count = 0;
+	osal_memset(g_arena, 0, sizeof(g_arena));
+	osal_memset(g_fail_points, 0, sizeof(g_fail_points));
+	g_fail_points_len = 0;
 }
 
 bool fake_memory_no_leak(void) {
-  return g_in_use == 0;
+	return g_in_use == 0;
 }
 
 bool fake_memory_no_invalid_free(void) {
-  return g_invalid_free_count == 0;
+	return g_invalid_free_count == 0;
 }
 
 bool fake_memory_no_double_free(void) {
-  return g_double_free_count == 0;
+	return g_double_free_count == 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -108,24 +126,24 @@ bool fake_memory_no_double_free(void) {
 // -----------------------------------------------------------------------------
 
 static void *raw_alloc(size_t size) {
-  if (size == 0) size = 1; // simplify
+	if (size == 0) size = 1; /* Treat zero-size allocations as one byte. */
 
-  const size_t a = OSAL_ALIGNOF_MAX;
-  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
-  const size_t payload  = OSAL_ALIGN_UP(size, a);
+	const size_t a = OSAL_ALIGNOF_MAX;
+	const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+	const size_t payload  = OSAL_ALIGN_UP(size, a);
 
-  if (hdr_size + payload > (TEST_ARENA_SIZE - g_off)) return NULL;
+	if (hdr_size + payload > (TEST_ARENA_SIZE - g_off)) return NULL;
 
-  fake_hdr *h = (fake_hdr *)(g_arena + g_off);
-  h->magic = FAKE_MAGIC_ALLOC;
-  h->_pad = 0;
-  h->size_aligned = payload;
-  h->size_requested = size;
+	fake_hdr *h = (fake_hdr *)(g_arena + g_off);
+	h->magic = FAKE_MAGIC_ALLOC;
+	h->_pad = 0;
+	h->size_aligned = payload;
+	h->size_requested = size;
 
-  g_off += hdr_size + payload;
-  g_in_use += payload;
+	g_off += hdr_size + payload;
+	g_in_use += payload;
 
-  return (void *)((uint8_t *)h + hdr_size);
+	return (void *)((uint8_t *)h + hdr_size);
 }
 
 // -----------------------------------------------------------------------------
@@ -135,79 +153,78 @@ static void *raw_alloc(size_t size) {
 // -----------------------------------------------------------------------------
 
 void *fake_malloc(size_t size) {
-  if (should_fail_now(++g_alloc_count)) return NULL;
-  return raw_alloc(size);
+	if (should_fail_now(++g_alloc_count)) return NULL;
+	return raw_alloc(size);
 }
 
 void *fake_calloc(size_t nmemb, size_t size) {
-  if (should_fail_now(++g_alloc_count)) return NULL;
+	if (should_fail_now(++g_alloc_count)) return NULL;
 
-  // overflow guard
-  if (nmemb != 0 && size > (SIZE_MAX / nmemb)) return NULL;
+	if (nmemb != 0 && size > (SIZE_MAX / nmemb)) return NULL;
 
-  const size_t total = nmemb * size;
-  void *p = raw_alloc(total);
-  if (!p) return NULL;
+	const size_t total = nmemb * size;
+	void *p = raw_alloc(total);
+	if (!p) return NULL;
 
-  osal_memset(p, 0, total);
-  return p;
+	osal_memset(p, 0, total);
+	return p;
 }
 
 void fake_free(void *ptr) {
-  if (!ptr) return;
+	if (!ptr) return;
 
-  const size_t a = OSAL_ALIGNOF_MAX;
-  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
-  fake_hdr *h = (fake_hdr *)((uint8_t *)ptr - hdr_size);
+	const size_t a = OSAL_ALIGNOF_MAX;
+	const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+	fake_hdr *h = (fake_hdr *)((uint8_t *)ptr - hdr_size);
 
-  switch (h->magic) {
-    case FAKE_MAGIC_ALLOC:
-      h->magic = FAKE_MAGIC_FREE;
-      if (g_in_use >= h->size_aligned) g_in_use -= h->size_aligned;
-      else g_in_use = 0; // avoid underflow
-      break;
-    case FAKE_MAGIC_FREE:
-      g_double_free_count++;
-      break;
-    default:
-      g_invalid_free_count++;
-      break;
-  }
+	switch (h->magic) {
+	case FAKE_MAGIC_ALLOC:
+		h->magic = FAKE_MAGIC_FREE;
+		if (g_in_use >= h->size_aligned) g_in_use -= h->size_aligned;
+		else g_in_use = 0; /* Defensive guard against underflow. */
+		break;
+	case FAKE_MAGIC_FREE:
+		g_double_free_count++;
+		break;
+	default:
+		g_invalid_free_count++;
+		break;
+	}
 }
 
 void *fake_realloc(void *ptr, size_t size) {
-  if (should_fail_now(++g_alloc_count)) return NULL;
+	if (should_fail_now(++g_alloc_count)) return NULL;
 
-  if (!ptr) {
-    return raw_alloc(size);
-  }
+	if (!ptr) {
+		return raw_alloc(size);
+	}
 
-  if (size == 0) {
-    fake_free(ptr);
-    return NULL;
-  }
+	if (size == 0) {
+		fake_free(ptr);
+		return NULL;
+	}
 
-  const size_t a = OSAL_ALIGNOF_MAX;
-  const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
-  fake_hdr *oldh = (fake_hdr *)((uint8_t *)ptr - hdr_size);
+	const size_t a = OSAL_ALIGNOF_MAX;
+	const size_t hdr_size = OSAL_ALIGN_UP(sizeof(fake_hdr), a);
+	fake_hdr *oldh = (fake_hdr *)((uint8_t *)ptr - hdr_size);
 
-  if (oldh->magic != FAKE_MAGIC_ALLOC) {
-    // signal invalid pointer (glibc would be UB; in tests we want a detectable failure)
-    g_invalid_free_count++;
-    return NULL;
-  }
+	if (oldh->magic != FAKE_MAGIC_ALLOC) {
+		// signal invalid pointer (glibc would be UB; in tests we want a detectable failure)
+		g_invalid_free_count++;
+		return NULL;
+	}
 
-  const size_t old_req = oldh->size_requested;
+	const size_t old_req = oldh->size_requested;
 
-  void *newp = raw_alloc(size);
-  if (!newp) {
-    // fail atomically: keep old block intact
-    return NULL;
-  }
+	void *newp = raw_alloc(size);
+	if (!newp) {
+		// fail atomically: keep old block intact
+		return NULL;
+	}
 
-  const size_t ncopy = (old_req < size) ? old_req : size;
-  osal_memcpy(newp, ptr, ncopy);
+	const size_t ncopy = (old_req < size) ? old_req : size;
+	osal_memcpy(newp, ptr, ncopy);
 
-  fake_free(ptr);
-  return newp;
+	fake_free(ptr);
+	return newp;
 }

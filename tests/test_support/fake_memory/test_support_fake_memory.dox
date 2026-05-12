@@ -1,0 +1,12 @@
+/**
+ * @defgroup test_support_fake_memory fake_memory
+ * @ingroup test_support_reference
+ *
+ * @brief Fake memory backend for unit tests.
+ *
+ * @details
+ * Provides a deterministic test double for allocation-dependent code. Tests can
+ * allocate memory from a fixed arena, inject allocation failures at configured
+ * call indices, reset fake state, and detect leaks, invalid frees, and double
+ * frees.
+ */

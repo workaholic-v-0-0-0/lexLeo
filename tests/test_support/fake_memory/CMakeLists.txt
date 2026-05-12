@@ -20,5 +20,3 @@ target_link_libraries(
         osal_str
         lexleo_policy_headers
 )
-
-target_compile_features(fake_memory PUBLIC c_std_11)

@@ -1,4 +1,20 @@
-// tests/test_support/fake_file/src/fake_file.c
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
+
+/**
+ * @file fake_file.c
+ * @ingroup test_support_fake_file
+ * @brief Fake file backend implementation for unit tests.
+ *
+ * @details
+ * This file implements fake OSAL file operations and helper functions for
+ * configuring and observing fake file behavior in tests.
+ *
+ * The fake backend supports configurable `open()` and `mkdir()` results,
+ * prepared fake file handles, controllable read/write/flush/close/gets
+ * statuses, buffered and sink data inspection, and file operation call spies.
+ */
 
 #include "lexleo/test/fake_file.h"
 
