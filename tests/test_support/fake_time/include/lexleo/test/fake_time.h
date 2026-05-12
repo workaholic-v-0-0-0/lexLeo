@@ -26,12 +26,17 @@
 extern "C" {
 #endif
 
+// FAKE API
+
 osal_time_status_t fake_time_now(osal_time_t *out);
 
-void fake_time_reset(void);
+// CFG
 
+void fake_time_reset(void);
 void fake_time_set_now_status(osal_time_status_t status);
 void fake_time_set_now_out(osal_time_t out);
+
+// SPY
 
 size_t fake_time_get_call_count(void);
 

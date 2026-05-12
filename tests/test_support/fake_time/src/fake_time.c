@@ -15,6 +15,13 @@
 #include "lexleo/test/fake_time.h"
 
 typedef struct {
+	/* state */
+
+	/*
+	 * No separate runtime state.
+	 * fake_time behavior is currently fully driven by configured values.
+	 */
+
 	/* cfg */
 	osal_time_status_t now_status;
 	osal_time_t now_out;
@@ -47,7 +54,9 @@ size_t fake_time_get_call_count(void) {
 osal_time_status_t fake_time_now(osal_time_t *out) {
 	g_fake_time.now_call_count++;
 	if (out == NULL) return OSAL_TIME_STATUS_INVALID;
-	if (g_fake_time.now_status != OSAL_TIME_STATUS_OK) return g_fake_time.now_status;
+	if (g_fake_time.now_status != OSAL_TIME_STATUS_OK) {
+		return g_fake_time.now_status;
+	}
 	*out = g_fake_time.now_out;
 	return g_fake_time.now_status;
 }

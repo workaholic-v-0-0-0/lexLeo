@@ -24,6 +24,14 @@ typedef struct fake_stdio_stream_t {
 	size_t write_call_count;
 	size_t flush_call_count;
 
+	/* cfg */
+
+	/*
+	 * No separate operation-result configuration.
+	 * fake_stdio behavior is currently configured through
+	 * its in-memory state.
+	 */
+
 	/* state */
 	uint8_t buffered_backing[FAKE_STDIO_BUF_SIZE];
 	uint8_t sink_backing[FAKE_STDIO_BUF_SIZE];

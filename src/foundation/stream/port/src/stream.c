@@ -12,6 +12,9 @@
 
 #include "stream/borrowers/stream.h"
 #include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/owners/stream_buffer_creator.h"
+#include "stream/owners/stream_file_creator.h"
+#include "stream/owners/stream_io_creator.h"
 #include "stream/adapters/stream_adapters_api.h"
 
 #include "policy/lexleo_assert.h"
@@ -131,4 +134,55 @@ const stream_ops_t *stream_default_ops(void) {
 
 stream_env_t stream_default_env(const osal_mem_ops_t *mem_ops) {
 	return (stream_env_t) { .mem = mem_ops };
+}
+
+stream_status_t stream_buffer_creator_create(
+	const stream_buffer_creator_t *creator,
+	stream_t **out)
+{
+	if (!creator || !out) {
+		return STREAM_STATUS_INVALID;
+	}
+
+	LEXLEO_ASSERT(creator->create);
+
+	return creator->create(creator->ud, out);
+}
+
+stream_status_t stream_file_creator_create(
+	const stream_file_creator_t *creator,
+	const char *path,
+	uint32_t flags,
+	bool autoclose,
+	stream_t **out)
+{
+	if (!creator || !out) {
+		return STREAM_STATUS_INVALID;
+	}
+
+	LEXLEO_ASSERT(creator->create);
+
+	return creator->create(
+		creator->ud,
+		path,
+		flags,
+		autoclose,
+		out);
+}
+
+stream_status_t stream_io_creator_create(
+	const stream_io_creator_t *creator,
+	stream_io_kind_t kind,
+	stream_t **out)
+{
+	if (!creator || !out) {
+		return STREAM_STATUS_INVALID;
+	}
+
+	LEXLEO_ASSERT(creator->create);
+
+	return creator->create(
+		creator->ud,
+		kind,
+		out);
 }

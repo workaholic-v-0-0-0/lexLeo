@@ -11,15 +11,17 @@ add_library(
 target_include_directories(
     stream
     PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
     PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_link_libraries(
     stream
     PUBLIC
         osal_str
+        osal_mem
+        lexleo_policy_headers
     PRIVATE
         osal_mem
         lexleo_assert

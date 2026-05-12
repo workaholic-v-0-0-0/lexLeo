@@ -2,6 +2,12 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file lexleo_cmocka_xmacro_helpers.h
+ * @ingroup test_support_cmocka
+ * @brief X-macro helpers for defining parametric CMocka tests.
+ */
+
 #ifndef LEXLEO_CMOCKA_XMACRO_HELPERS_H
 #define LEXLEO_CMOCKA_XMACRO_HELPERS_H
 

@@ -75,6 +75,35 @@ typedef struct stream_file_creator_t {
 	void *ud;
 } stream_file_creator_t;
 
+/**
+ * @brief Create a file-backed stream through a creator object.
+ *
+ * @param[in] creator
+ * Creator object to use.
+ *
+ * @param[in] path
+ * File path used to open or create the target stream backend.
+ *
+ * @param[in] flags
+ * File opening flags forwarded to the underlying file-oriented adapter.
+ *
+ * @param[in] autoclose
+ * Whether the created stream should close the underlying file resource
+ * automatically when the stream is destroyed.
+ *
+ * @param[out] out
+ * Receives the created stream handle.
+ *
+ * @return
+ * A `stream_status_t` describing the creation result.
+ */
+stream_status_t stream_file_creator_create(
+	const stream_file_creator_t *creator,
+	const char *path,
+	uint32_t flags,
+	bool autoclose,
+	stream_t **out);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,0 +1,15 @@
+/**
+ * @defgroup test_support_cmocka lexleo_cmocka_support
+ * @ingroup test_support_reference
+ *
+ * @brief Shared CMocka helpers for unit tests.
+ *
+ * @details
+ * Provides common CMocka includes and X-macro helpers used to define
+ * parametric test cases consistently across the project.
+ *
+ * Typical contents include:
+ * - the project-level CMocka include wrapper,
+ * - X-macro helpers for test case registration,
+ * - shared naming conventions for test/setup/teardown functions.
+ */

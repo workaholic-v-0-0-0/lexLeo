@@ -79,6 +79,26 @@ typedef struct stream_io_creator_t {
 	void *ud;
 } stream_io_creator_t;
 
+/**
+ * @brief Create a standard I/O-oriented stream through a creator object.
+ *
+ * @param[in] creator
+ * Creator object to use.
+ *
+ * @param[in] kind
+ * Requested standard I/O kind.
+ *
+ * @param[out] out
+ * Receives the created stream handle.
+ *
+ * @return
+ * A `stream_status_t` describing the creation result.
+ */
+stream_status_t stream_io_creator_create(
+	const stream_io_creator_t *creator,
+	stream_io_kind_t kind,
+	stream_t **out);
+
 #ifdef __cplusplus
 }
 #endif

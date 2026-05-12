@@ -5,6 +5,7 @@
  * - @ref api_reference "API"
  * - @ref internal_reference "Internal"
  * - @ref tests_reference "Tests"
+ * - @ref test_support_reference "Test support"
  */
 
 /** @defgroup api_reference API

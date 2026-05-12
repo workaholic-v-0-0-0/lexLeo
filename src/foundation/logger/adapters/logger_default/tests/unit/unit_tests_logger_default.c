@@ -11,14 +11,6 @@
  * This file implements unit-level validation of the `logger_default` adapter
  * contracts.
  *
- * Covered surfaces:
- * - CR helpers: `logger_default_default_cfg()`, `logger_default_default_env()`
- * - direct creation: `logger_default_create_logger()`
- * - behavior implemented by the following private adapter callbacks,
- *   exercised through the public `logger` API and lifecycle entry points:
- *   - `logger_default_log()`
- *   - `logger_default_destroy()`
- *
  * See also:
  * - @ref testing_foundation_logger_default_unit "logger_default unit tests page"
  * - @ref specifications_logger_default "logger_default specifications"

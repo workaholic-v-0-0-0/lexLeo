@@ -2,6 +2,12 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file lexleo_cmocka.h
+ * @ingroup test_support_cmocka
+ * @brief Project-level CMocka include wrapper.
+ */
+
 #ifndef LEXLEO_TEST_LEXLEO_CMOCKA_H
 #define LEXLEO_TEST_LEXLEO_CMOCKA_H
 

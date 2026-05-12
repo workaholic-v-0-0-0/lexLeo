@@ -2,107 +2,129 @@
  * Copyright (C) 2026 Sylvain Labopin
  */
 
+/**
+ * @file fake_stream.h
+ * @ingroup test_support_fake_stream
+ * @brief Fake stream backend for unit tests.
+ *
+ * @details
+ * This header declares fake stream operations and helper functions used by
+ * unit tests.
+ */
+
 #ifndef LEXLEO_FAKE_STREAM_H
 #define LEXLEO_FAKE_STREAM_H
 
-#include "stream/borrowers/stream_types.h"
 #include "stream/adapters/stream_env.h"
-#include "stream/adapters/stream_adapters_api.h"
+#include "stream/borrowers/stream_types.h"
+#include "stream/owners/stream_buffer_creator.h"
+#include "stream/owners/stream_file_creator.h"
+#include "stream/owners/stream_io_creator.h"
 
 #include "policy/lexleo_cstd_types.h"
+
+#define FAKE_STREAM_BUF_SIZE 1024
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifndef FAKE_STREAM_BUFFER_CAP
-#define FAKE_STREAM_BUFFER_CAP 4096u
-#endif
+/* FAKE API */
 
-typedef struct fake_stream_t fake_stream_t;
-
-typedef struct fake_stream_counters_t {
-	size_t read_calls;
-	size_t write_calls;
-	size_t flush_calls;
-	size_t close_calls;
-} fake_stream_counters_t;
-
-/**
- * @brief Create one fake backend and its associated public `stream_t`.
- *
- * @param[out] out_fake
- * Receives the fake backend handle used by tests for configuration and
- * observation.
- *
- * @param[out] out_stream
- * Receives the associated public `stream_t` handle to inject into the code
- * under test.
- *
- * @param[in] env
- * Stream environment used to allocate runtime objects.
- *
- * @retval STREAM_STATUS_OK
- * Creation succeeded.
- *
- * @retval STREAM_STATUS_INVALID
- * Invalid arguments.
- *
- * @retval STREAM_STATUS_OOM
- * Allocation failed.
- *
- * @note
- * The returned pair must be destroyed with @ref fake_stream_destroy.
- */
-stream_status_t fake_stream_create(
-	fake_stream_t **out_fake,
-	stream_t **out_stream,
-	const stream_env_t *env);
-
-/**
- * @brief Destroy one fake/backend pair.
- *
- * @param[in,out] fake
- * Address of the fake handle. Set to `NULL` on return.
- *
- * @param[in,out] stream
- * Address of the associated public stream handle. Set to `NULL` on return.
- *
- * @details
- * This function delegates destruction of the associated public stream to the
- * real `stream_destroy()` lifecycle entry point. Destroying the public stream
- * also destroys the fake backend.
- */
-void fake_stream_destroy(
-	fake_stream_t **fake,
-	stream_t **stream);
-
-/**
- * @brief Reset observable state and configured runtime behavior of one fake.
- */
-void fake_stream_reset(fake_stream_t *fs);
-
-void fake_stream_set_write_result(
-	fake_stream_t *fs,
+size_t fake_stream_read(
+	void *backend,
+	void *buf,
 	size_t n,
-	stream_status_t status);
+	stream_status_t *st);
 
-void fake_stream_set_flush_result(
-	fake_stream_t *fs,
-	stream_status_t status);
+size_t fake_stream_write(
+	void *backend,
+	const void *buf,
+	size_t n,
+	stream_status_t *st);
 
-void fake_stream_fail_write_since(
-	fake_stream_t *fs,
-	size_t call_idx,
-	stream_status_t status);
+stream_status_t fake_stream_flush(void *backend);
 
-const fake_stream_counters_t *fake_stream_counters(const fake_stream_t *fs);
+stream_status_t fake_stream_close(void *backend);
 
-size_t fake_stream_written_len(const fake_stream_t *fs);
-const uint8_t *fake_stream_written_data(const fake_stream_t *fs);
+const stream_buffer_creator_t *fake_stream_buffer_creator(void);
+const stream_file_creator_t *fake_stream_file_creator(void);
+const stream_io_creator_t *fake_stream_io_creator(void);
+
+/* CFG */
+
+void fake_stream_reset(const stream_env_t *env);
+void fake_stream_prepare_next_backend(void *backend);
+
+void *fake_stream_create_fake_backend(void);
+void fake_stream_backend_reset(void *fake);
+void fake_stream_set_buffered_backing(
+	void *backend,
+	const uint8_t *data,
+	size_t len);
+void fake_stream_set_sink_backing(
+	void *backend,
+	const uint8_t *data,
+	size_t len);
+void fake_stream_set_pos(void *backend, size_t pos);
+
+void fake_stream_set_noop_read(void *backend, bool noop_read);
+void fake_stream_set_read_status(void *backend, stream_status_t st);
+
+void fake_stream_set_noop_write(void *backend, bool noop_write);
+void fake_stream_set_write_status(void *backend, stream_status_t st);
+
+void fake_stream_set_noop_flush(void *backend, bool noop_flush);
+void fake_stream_set_flush_status(void *backend, stream_status_t st);
+
+void fake_stream_set_close_status(void *backend, stream_status_t st);
+
+/* SPY */
+
+size_t fake_stream_buffer_create_call_count(void);
+const void *fake_stream_last_buffer_create_ud(void);
+stream_t **fake_stream_last_buffer_create_out(void);
+
+size_t fake_stream_file_create_call_count(void);
+const void *fake_stream_last_file_create_ud(void);
+const char *fake_stream_last_file_create_path(void);
+uint32_t fake_stream_last_file_create_flags(void);
+bool fake_stream_last_file_create_autoclose(void);
+stream_t **fake_stream_last_file_create_out(void);
+
+size_t fake_stream_io_create_call_count(void);
+const void *fake_stream_last_io_create_ud(void);
+stream_io_kind_t fake_stream_last_io_create_kind(void);
+stream_t **fake_stream_last_io_create_out(void);
+
+bool fake_stream_is_open(void *fake);
+
+size_t fake_stream_read_call_count(void *fake);
+void *fake_stream_last_read_backend(void *fake);
+void *fake_stream_last_read_buf(void *fake);
+size_t fake_stream_last_read_n(void *fake);
+stream_status_t *fake_stream_last_read_st(void *fake);
+
+size_t fake_stream_write_call_count(void *fake);
+void *fake_stream_last_write_backend(void *fake);
+const void *fake_stream_last_write_buf(void *fake);
+size_t fake_stream_last_write_n(void *fake);
+stream_status_t *fake_stream_last_write_st(void *fake);
+
+size_t fake_stream_flush_call_count(void *fake);
+void *fake_stream_last_flush_backend(void *fake);
+
+size_t fake_stream_close_call_count(void *fake);
+void *fake_stream_last_close_backend(void *fake);
+
+const uint8_t *fake_stream_buffered_backing(void *fake);
+const uint8_t *fake_stream_sink_backing(void *fake);
+size_t fake_stream_buffered_len(void *fake);
+size_t fake_stream_sink_len(void *fake);
+size_t fake_stream_pos(void *fake);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LEXLEO_FAKE_STREAM_H
+#endif /* LEXLEO_FAKE_STREAM_H */

@@ -58,6 +58,22 @@ typedef struct stream_buffer_creator_t {
 	void *ud;
 } stream_buffer_creator_t;
 
+/**
+ * @brief Create a buffer-backed stream through a creator object.
+ *
+ * @param[in] creator
+ * Creator object to use.
+ *
+ * @param[out] out
+ * Receives the created stream handle.
+ *
+ * @return
+ * A `stream_status_t` describing the creation result.
+ */
+stream_status_t stream_buffer_creator_create(
+	const stream_buffer_creator_t *creator,
+	stream_t **out);
+
 #ifdef __cplusplus
 }
 #endif

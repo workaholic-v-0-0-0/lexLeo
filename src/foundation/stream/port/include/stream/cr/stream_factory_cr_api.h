@@ -113,7 +113,7 @@ void stream_destroy_factory(stream_factory_t **fact);
  */
 stream_status_t stream_factory_add_adapter(
 	stream_factory_t *fact,
-	const stream_adapter_desc_t *desc );
+	const stream_adapter_desc_t *desc);
 
 /**
  * @brief Create a stream from a registered adapter key.

@@ -94,6 +94,7 @@ typedef struct fake_file_ctrl
 
 	size_t mkdir_call_count;
 	const char *last_mkdir_pathname;
+
 } fake_file_ctrl;
 
 static fake_file_ctrl g_fake_file_ctrl;

@@ -1,0 +1,12 @@
+/**
+ * @defgroup test_support_fake_stream fake_stream
+ * @ingroup test_support_reference
+ *
+ * @brief Fake stream backend for unit tests.
+ *
+ * @details
+ * Provides a deterministic test double for stream-dependent code. Tests can
+ * create fake stream handles, configure write and flush results, inject write
+ * failures, observe read/write/flush/close call counts, and inspect data written
+ * through the fake stream.
+ */

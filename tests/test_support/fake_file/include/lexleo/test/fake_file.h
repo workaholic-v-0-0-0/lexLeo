@@ -79,12 +79,12 @@ void fake_file_set_sink_backing(
 	OSAL_FILE *fake,
 	const uint8_t *data,
 	size_t len);
+void fake_file_set_pos(OSAL_FILE *fake, size_t n);
 void fake_file_set_read_status(OSAL_FILE *fake, osal_file_status_t st);
 void fake_file_set_write_status(OSAL_FILE *fake, osal_file_status_t st);
 void fake_file_set_flush_status(OSAL_FILE *fake, osal_file_status_t st);
 void fake_file_set_close_status(OSAL_FILE *fake, osal_file_status_t st);
 void fake_file_set_gets_status(OSAL_FILE *fake, osal_file_status_t st);
-void fake_file_set_pos(OSAL_FILE *fake, size_t n);
 
 // SPY
 

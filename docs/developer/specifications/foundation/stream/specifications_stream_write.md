@@ -2,7 +2,7 @@
 
 # Signature
 
-    size_t stream_write(stream_t *s, const void *buf, size_t n, stream_status_t *st);
+size_t stream_write(stream_t *s, const void *buf, size_t n, stream_status_t *st);
 
 # Purpose
 
