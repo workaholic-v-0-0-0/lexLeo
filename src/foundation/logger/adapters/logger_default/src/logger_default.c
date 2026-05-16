@@ -255,6 +255,11 @@ static logger_status_t logger_default_log(
 		}
 	}
 
+	stream_status_t flush_st = stream_flush(logger_default->stream);
+	if (flush_st != STREAM_STATUS_OK) {
+		return LOGGER_STATUS_IO_ERROR;
+	}
+
 	return LOGGER_STATUS_OK;
 }
 

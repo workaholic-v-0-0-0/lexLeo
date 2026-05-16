@@ -106,7 +106,7 @@ typedef struct fake_stream_ctrl
 	stream_t **last_io_create_out;
 } fake_stream_ctrl;
 
-static fake_stream_ctrl g_fake_stream_ctrl;
+static fake_stream_ctrl g_fake_stream_ctrl = {0};
 
 static fake_stream_backend_t *fake_stream_backend_real_to_fake(
 	void *backend
@@ -120,7 +120,7 @@ static void *fake_stream_backend_fake_to_real(
 	return (void *)fake;
 }
 
-size_t fake_stream_read(
+static size_t fake_stream_read(
 	void *backend,
 	void *buf,
 	size_t n,
@@ -171,7 +171,7 @@ size_t fake_stream_read(
 	return read_len;
 }
 
-size_t fake_stream_write(
+static size_t fake_stream_write(
 	void *backend,
 	const void *buf,
 	size_t n,
@@ -222,7 +222,7 @@ size_t fake_stream_write(
 	return n;
 }
 
-stream_status_t fake_stream_flush(void *backend)
+static stream_status_t fake_stream_flush(void *backend)
 {
 	LEXLEO_ASSERT(backend);
 	fake_stream_backend_t *fake_backend = fake_stream_backend_real_to_fake(backend);
@@ -255,7 +255,7 @@ stream_status_t fake_stream_flush(void *backend)
 	return STREAM_STATUS_OK;
 }
 
-stream_status_t fake_stream_close(void *backend
+static stream_status_t fake_stream_close(void *backend
 ) {
 	LEXLEO_ASSERT(backend);
 	fake_stream_backend_t *fake_backend = fake_stream_backend_real_to_fake(backend);
@@ -457,6 +457,17 @@ void *fake_stream_create_fake_backend(void)
 
 	fake_stream_backend_init(ret);
 	return fake_stream_backend_fake_to_real(ret);
+}
+
+void fake_stream_destroy_fake_backend(void *fake_backend)
+{
+	LEXLEO_ASSERT(fake_backend);
+	fake_stream_backend_t *fake_backend_casted =
+		fake_stream_backend_real_to_fake(fake_backend);
+	LEXLEO_ASSERT(
+		   fake_backend_casted->mem_ops
+		&& fake_backend_casted->mem_ops->free);
+	fake_backend_casted->mem_ops->free(fake_backend);
 }
 
 void fake_stream_backend_reset(void *fake) {
@@ -733,9 +744,3 @@ size_t fake_stream_pos(void *fake) {
 	fake_stream_backend_t *fake_backend = fake_stream_backend_real_to_fake(fake);
 	return fake_backend->pos;
 }
-
-// and then one can do:
-// const stream_buffer_creator_t *stream_buffer_creator = fake_stream_buffer_creator();
-// stream_buffer_creator_create(
-//	stream_buffer_creator,
-//	out);

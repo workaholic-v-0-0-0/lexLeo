@@ -42,15 +42,6 @@ typedef struct stream_env_t {
 	 * destroy public `stream_t`-related runtime objects.
 	 */
 	const osal_mem_ops_t *mem;
-
-	/**
-	 * @brief String operations used by the `stream` port.
-	 *
-	 * @details
-	 * This dependency provides injectable string services required by stream
-	 * implementations or stream-related factory code.
-	 */
-	const osal_str_ops_t *str_ops;
 } stream_env_t;
 
 #ifdef __cplusplus

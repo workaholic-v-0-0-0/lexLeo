@@ -80,9 +80,6 @@ struct stream_factory_t {
 
 	/** Memory operations used to destroy the factory handle. */
 	const osal_mem_ops_t *mem;
-
-	/** String operations used to compare registry keys. */
-	const osal_str_ops_t *str_ops;
 };
 
 #endif // LEXLEO_STREAM_FACTORY_HANDLE_H

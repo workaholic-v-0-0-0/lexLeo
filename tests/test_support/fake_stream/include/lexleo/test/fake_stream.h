@@ -31,22 +31,6 @@ extern "C" {
 
 /* FAKE API */
 
-size_t fake_stream_read(
-	void *backend,
-	void *buf,
-	size_t n,
-	stream_status_t *st);
-
-size_t fake_stream_write(
-	void *backend,
-	const void *buf,
-	size_t n,
-	stream_status_t *st);
-
-stream_status_t fake_stream_flush(void *backend);
-
-stream_status_t fake_stream_close(void *backend);
-
 const stream_buffer_creator_t *fake_stream_buffer_creator(void);
 const stream_file_creator_t *fake_stream_file_creator(void);
 const stream_io_creator_t *fake_stream_io_creator(void);
@@ -57,6 +41,7 @@ void fake_stream_reset(const stream_env_t *env);
 void fake_stream_prepare_next_backend(void *backend);
 
 void *fake_stream_create_fake_backend(void);
+void fake_stream_destroy_fake_backend(void *fake);
 void fake_stream_backend_reset(void *fake);
 void fake_stream_set_buffered_backing(
 	void *backend,

@@ -211,8 +211,8 @@ on a logger previously created by `logger_default_create_logger()`.
 
 | WHEN | EXPECT |
 |---|---|
-| a `logger_default`-backed logger is created with `append_newline == false`, the injected time service returns epoch time `0`, and `logger_log(logger, "abc")` is called | returns `LOGGER_STATUS_OK`;<br>writes `"[1970-01-01 00:00:00 UTC+0] abc"` to the target stream |
-| a `logger_default`-backed logger is created with `append_newline == true`, the injected time service returns epoch time `0`, and `logger_log(logger, "abc")` is called | returns `LOGGER_STATUS_OK`;<br>writes `"[1970-01-01 00:00:00 UTC+0] abc\n"` to the target stream |
+| a `logger_default`-backed logger is created with `append_newline == false`, the injected time service returns epoch time `0`, and `logger_log(logger, "abc")` is called | returns `LOGGER_STATUS_OK`;<br>writes `"[1970-01-01 00:00:00 UTC+0] abc"` to the target stream;<br>flushes the target stream |
+| a `logger_default`-backed logger is created with `append_newline == true`, the injected time service returns epoch time `0`, and `logger_log(logger, "abc")` is called | returns `LOGGER_STATUS_OK`;<br>writes `"[1970-01-01 00:00:00 UTC+0] abc\n"` to the target stream;<br>flushes the target stream |
 | a `logger_default`-backed logger is created, the injected time service returns epoch time `0`, and `logger_log(logger, NULL)` is called | returns `LOGGER_STATUS_INVALID` |
 | the underlying stream write operation returns `STREAM_STATUS_IO_ERROR` during `logger_log(logger, "abc")` | returns `LOGGER_STATUS_IO_ERROR` |
 | the injected time service returns `OSAL_TIME_STATUS_ERROR` during `logger_log(logger, "abc")` | returns `LOGGER_STATUS_OK`;<br>writes `"[timestamp error] abc"` to the target stream |

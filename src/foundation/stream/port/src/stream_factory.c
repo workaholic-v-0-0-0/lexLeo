@@ -27,15 +27,13 @@
 
 static const stream_branch_t *stream_registry_find(
 	const stream_registry_t *reg,
-	stream_key_t key,
-	const osal_str_ops_t *str_ops
+	stream_key_t key
 ) {
 	if (
 		   !reg
 		|| !reg->entries
 		|| !reg->count
 		|| !key
-		|| !str_ops
 	) {
 		return NULL;
 	}
@@ -53,15 +51,14 @@ static stream_status_t stream_registry_create(
 	const stream_registry_t *reg,
 	stream_key_t key,
 	const void *args,
-	stream_t **out_stream,
-	const osal_str_ops_t *str_ops
+	stream_t **out_stream
 ) {
-	if (!out_stream || !str_ops) {
+	if (!out_stream) {
 		return STREAM_STATUS_INVALID;
 	}
 	*out_stream = NULL;
 
-	const stream_branch_t *e = stream_registry_find(reg, key, str_ops);
+	const stream_branch_t *e = stream_registry_find(reg, key);
 	if (!e || !e->ctor) return STREAM_STATUS_NO_BACKEND;
 
 	return e->ctor(e->ud, args, out_stream);
@@ -77,7 +74,6 @@ stream_status_t stream_create_factory(
             || !cfg
             || !env
             || !env->mem
-            || !env->str_ops
     ) {
     	return STREAM_STATUS_INVALID;
     }
@@ -93,7 +89,6 @@ stream_status_t stream_create_factory(
     }
 
     f->mem = env->mem;
-	f->str_ops = env->str_ops;
     f->reg.entries = NULL;
     f->reg.count = 0;
     f->reg.cap = 0;
@@ -137,7 +132,6 @@ stream_status_t stream_factory_add_adapter(
 {
     if (
 			   !fact
-			|| !fact->str_ops
 			|| !desc
 			|| !desc->key
 			|| *desc->key == '\0'
@@ -184,9 +178,7 @@ stream_status_t stream_factory_create_stream(
     if (!out || !f || !args || !key || *key == '\0')
     	return STREAM_STATUS_INVALID;
 
-	LEXLEO_ASSERT(f->str_ops);
-
-	if (!stream_registry_find(&f->reg, key, f->str_ops)) {
+	if (!stream_registry_find(&f->reg, key)) {
 		return STREAM_STATUS_NOT_FOUND;
 	}
 
@@ -196,8 +188,7 @@ stream_status_t stream_factory_create_stream(
     		&f->reg,
     		key,
     		args,
-    		&tmp,
-    		f->str_ops
+    		&tmp
     	);
 
 	if (st == STREAM_STATUS_OK) *out = tmp;
