@@ -48,6 +48,8 @@ static bool cli_cr_init(cli_env_t *out)
 	out->file_ops = osal_file_default_ops();
 	out->str_ops = osal_str_default_ops();
 	out->time_ops = osal_time_default_ops();
+
+	return true;
 }
 
 /* Minimal packaging bootstrap:

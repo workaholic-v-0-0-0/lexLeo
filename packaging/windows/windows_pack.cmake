@@ -36,6 +36,22 @@ set(CPACK_NSIS_PACKAGE_NAME "LexLeo")
 set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
 set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
 set(CPACK_NSIS_MODIFY_PATH ON)
+set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
+"SetShellVarContext current
+Delete \\\"$INSTDIR\\\\bin\\\\*.*\\\"
+Delete \\\"$INSTDIR\\\\config\\\\*.*\\\"
+Delete \\\"$INSTDIR\\\\doc\\\\*.*\\\"
+
+RMDir /r \\\"$INSTDIR\\\\bin\\\"
+RMDir /r \\\"$INSTDIR\\\\config\\\"
+RMDir /r \\\"$INSTDIR\\\\doc\\\"
+RMDir /r \\\"$INSTDIR\\\"
+
+RMDir /r \\\"$LOCALAPPDATA\\\\LexLeo\\\"
+
+DeleteRegKey HKLM \\\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\LexLeo\\\"
+DeleteRegKey HKCU \\\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\LexLeo\\\""
+)
 set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS SetShellVarContext\ current\nCreateDirectory\ \\\"$LOCALAPPDATA\\\\LexLeo\\\\logs\\\")
 set(CPACK_PACKAGE_EXECUTABLES "lexleo" "LexLeo")
 set(CPACK_CREATE_DESKTOP_LINKS "lexleo")
