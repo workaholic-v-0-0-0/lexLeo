@@ -5,7 +5,7 @@
 /**
  * @file osal_time_fake_provider.h
  * @ingroup osal_time_tests_group
- * @brief Fake time provider for `osal_time` unit tests.
+ * @brief Fake time provider for tests requiring `osal_time` dependencies.
  *
  * @details
  * This header declares a test-only fake provider for OSAL time operations.

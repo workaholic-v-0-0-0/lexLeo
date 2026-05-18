@@ -11,21 +11,6 @@
  * This file implements the unit-level validation of the `fs_stream` adapter
  * contracts.
  *
- * Covered surfaces:
- * - CR helpers: `fs_stream_default_cfg()`, `fs_stream_default_env()`
- * - direct creation: `fs_stream_create_stream()`
- * - CR descriptor helper: `fs_stream_create_desc()`
- * - descriptor constructor usage through `stream_adapter_desc_t::ctor`
- * - file-backed runtime behavior through the public `stream` API
- *
- * Test strategy:
- * - direct validation of default CR helper return values
- * - parametric scenario-based testing
- * - explicit validation of argument checking and output-handle preservation
- * - allocator fault injection through `fake_memory`
- * - backend file fault injection through `fake_file`
- * - public `stream` borrower API checks on successfully created streams
- *
  * See also:
  * - @ref testing_foundation_fs_stream_unit "fs_stream unit tests page"
  * - @ref specifications_fs_stream "fs_stream specifications"
@@ -35,123 +20,76 @@
 
 #include "stream/borrowers/stream.h"
 #include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/cr/stream_cr_api.h"
 
 #include "osal/file/test/osal_file_fake_provider.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
-#include "policy/lexleo_cstd_types.h"
-#include "policy/lexleo_cstd_lib.h"
-#include "policy/lexleo_cstd_jmp.h"
+// for white-box tests
+#include "internal/stream_handle.h"
 
 #include "lexleo_cmocka.h"
 
 /**
  * @brief Test `fs_stream_default_cfg()`.
  *
- * fs_stream_cfg_t fs_stream_default_cfg(void);
- *
- * Success:
- * - Returns a value-initialized `fs_stream_cfg_t`.
- * - `ret.reserved == 0`.
- *
- * Failure:
- * - None.
- *
- * See also:
- * - @ref testing_foundation_fs_stream_unit_default_cfg "fs_stream_default_cfg() unit tests section"
+ * See contract:
  * - @ref specifications_fs_stream_default_cfg "fs_stream_default_cfg() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_default_cfg "fs_stream_default_cfg() unit tests section"
  */
 static void test_fs_stream_default_cfg(void **state)
 {
 	(void)state;
-
 	fs_stream_cfg_t ret = fs_stream_default_cfg();
-
 	assert_int_equal(ret.reserved, 0);
 }
 
 /**
  * @brief Test `fs_stream_default_env()`.
  *
- * fs_stream_env_t fs_stream_default_env(
- *     const osal_file_env_t *file_env,
- *     const osal_file_ops_t *file_ops,
- *     const stream_env_t *port_env );
- *
- * Success:
- * - `ret.file_env == *file_env`.
- * - `ret.file_ops == file_ops`.
- * - `ret.port_env == *port_env`.
- *
- * Failure:
- * - None.
- *
  * Doubles:
- * - dummy `osal_file_env_t`
  * - dummy `osal_file_ops_t *`
+ * - dummy `osal_mem_ops_t *`
  * - dummy `stream_env_t`
  *
- * See also:
- * - @ref testing_foundation_fs_stream_unit_default_env "fs_stream_default_env() unit tests section"
+ * See contract:
  * - @ref specifications_fs_stream_default_env "fs_stream_default_env() specifications".
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_default_env "fs_stream_default_env() unit tests section"
  */
 static void test_fs_stream_default_env(void **state) {
 	(void)state;
 
-	const osal_file_env_t dummy_file_env = {0};
-	const osal_file_env_t *dummy_file_env_p = &dummy_file_env;
-
 	const osal_file_ops_t *dummy_file_ops_p = (const osal_file_ops_t *)(uintptr_t)0x1234u;
-
+	const osal_mem_ops_t *dummy_mem_ops_p = (const osal_mem_ops_t *)(uintptr_t)0x2345u;
 	const stream_env_t dummy_port_env = {0};
 	const stream_env_t *dummy_port_env_p = &dummy_port_env;
 
 	fs_stream_env_t ret =
-		fs_stream_default_env(dummy_file_env_p, dummy_file_ops_p, dummy_port_env_p);
+		fs_stream_default_env(dummy_file_ops_p, dummy_mem_ops_p, dummy_port_env_p);
 
-	assert_memory_equal(&ret.file_env, dummy_file_env_p, sizeof(ret.file_env));
 	assert_ptr_equal(ret.file_ops, dummy_file_ops_p);
+	assert_ptr_equal(ret.adapter_mem_ops, dummy_mem_ops_p);
 	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
 }
 
 /**
  * @brief Scenarios for `fs_stream_create_stream()`.
  *
- * stream_status_t fs_stream_create_stream(
- *     stream_t **out,
- *     const fs_stream_args_t *args,
- *     const fs_stream_cfg_t *cfg,
- *     const fs_stream_env_t *env );
- *
- * Invalid arguments:
- * - `out`, `args`, `cfg`, `env` must not be NULL.
- * - `args->path` must not be NULL and must not be an empty string.
- * - `args->flags` must not be zero.
- *
- * Success:
- * - Returns STREAM_STATUS_OK.
- * - Stores a valid stream in `*out`.
- * - The produced stream is ready for normal runtime use.
- * - The produced stream must be destroyed via `stream_destroy()`.
- *
- * Failure:
- * - Returns:
- *     - STREAM_STATUS_INVALID for invalid arguments
- *     - STREAM_STATUS_OOM on allocation failure
- *     - STREAM_STATUS_IO_ERROR when OSAL file operations fail
- * - Leaves `*out` unchanged if `out` is not NULL.
- *
  * Doubles:
  * - fake_memory
  * - fake_file
  *
- * See also:
- * - @ref testing_foundation_fs_stream_unit_create_stream "fs_stream_create_stream() unit tests section"
+ * See contract:
  * - @ref specifications_fs_stream_create_stream "fs_stream_create_stream() specifications"
  *
- * The scenarios below define the test oracle for `fs_stream_create_stream()`.
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_create_stream "fs_stream_create_stream() unit tests section"
  */
 typedef enum {
 	/**
@@ -214,13 +152,23 @@ typedef enum {
 	FS_CREATE_STREAM_SCENARIO_PATH_EMPTY,
 
 	/**
-	 * WHEN `args != NULL` but `args->flags == 0`
+	 * WHEN `args != NULL` but `args->mode == NULL`
 	 * AND `out != NULL`
 	 * EXPECT:
 	 * - returns `STREAM_STATUS_INVALID`
 	 * - leaves `*out` unchanged
 	 */
-	FS_CREATE_STREAM_SCENARIO_FLAGS_ZERO,
+	FS_CREATE_STREAM_SCENARIO_MODE_NULL,
+
+	/**
+	 * WHEN `args != NULL` but `args->mode` is not supported by the
+	 * `fs_stream` contract
+	 * AND `out != NULL`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_INVALID`
+	 * - leaves `*out` unchanged
+	 */
+	FS_CREATE_STREAM_SCENARIO_MODE_UNSUPPORTED,
 
 	/**
 	 * WHEN allocation required by `fs_stream_create_stream()` fails
@@ -250,64 +198,30 @@ typedef enum {
 
 /** @cond INTERNAL */
 
-/**
- * @brief Expected state of the output handle after the call under test.
- *
- * @details
- * This helper enum is used by parametric tests to express the expected
- * postcondition on an output pointer managed by the test fixture.
- *
- * Notes:
- * - `OUT_CHECK_NONE` means no postcondition is asserted on the output handle.
- * - `OUT_EXPECT_NULL` means the output handle is expected to be `NULL`
- *   after the call.
- * - `OUT_EXPECT_NON_NULL` means the output handle is expected to be
- *   non-`NULL` after the call.
- * - `OUT_EXPECT_UNCHANGED` means the output handle is expected to preserve
- *   its pre-call value, typically verified with a sentinel pointer.
- */
 typedef enum {
-    OUT_CHECK_NONE,
-    OUT_EXPECT_NULL,
-    OUT_EXPECT_NON_NULL,
-    OUT_EXPECT_UNCHANGED
+	OUT_CHECK_NONE,
+	OUT_EXPECT_NULL,
+	OUT_EXPECT_NON_NULL,
+	OUT_EXPECT_UNCHANGED
 } out_expect_t;
 
-/**
- * @brief One parametric test case for `fs_stream_create_stream()`.
- *
- * Notes:
- * - `fail_call_idx` is used by `fake_memory` to inject an allocation failure
- *   on a specific call number (used by the OOM scenario).
- * - `open_fail_status` is used by `fake_file` to inject the OSAL status
- *   returned by the failing open operation.
- */
 typedef struct {
 	const char *name;
 
 	// arrange
 	fs_create_stream_scenario_t scenario;
 	size_t fail_call_idx; // 0 = no OOM, otherwise 1-based (scenario == FS_CREATE_STREAM_SCENARIO_OOM)
-	osal_file_status_t open_fail_status; // e.g. OSAL_FILE_NOENT
+	osal_file_status_t open_fail_status; // e.g. OSAL_FILE_STATUS_NOENT
 
 	// assert
 	stream_status_t expected_ret;
 	out_expect_t out_expect;
 } test_fs_stream_create_stream_case_t;
 
-/**
- * @brief Runtime fixture for `fs_stream_create_stream()` tests.
- *
- * Holds:
- * - the stream handle under test,
- * - the injected adapter environment,
- * - the adapter arguments and configuration,
- * - the fake file backing storage,
- * - a pointer to the active parametric test case.
- */
 typedef struct {
 	// runtime resources
 	stream_t *out;
+	OSAL_FILE *fake_file;
 
 	// injection
 	fs_stream_env_t env;
@@ -325,54 +239,51 @@ typedef struct {
 // FIXTURES
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Allocate and initialize the runtime fixture for `fs_stream_create_stream()` tests.
- */
 static int setup_fs_stream_create_stream(void **state)
 {
 	const test_fs_stream_create_stream_case_t *tc =
 		(const test_fs_stream_create_stream_case_t *)(*state);
 
 	test_fs_stream_create_stream_fixture_t *fx =
-		(test_fs_stream_create_stream_fixture_t *)malloc(sizeof(*fx));
+		(test_fs_stream_create_stream_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_file_reset();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+	fake_file_prepare_next_open_file(fx->fake_file);
+
 	fake_memory_reset();
 	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_OOM && tc->fail_call_idx > 0) {
 		fake_memory_fail_only_on_call(tc->fail_call_idx);
 	}
 
-	osal_memset(fx->backing, 0, sizeof(fx->backing));
-	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
-	fake_file_set_pos(0);
-	fake_file_fail_disable();
-
 	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_OPEN_FAIL) {
-		fake_file_fail_enable(FAKE_FILE_OP_OPEN, 1, tc->open_fail_status);
+		fake_file_prepare_next_open_status(tc->open_fail_status);
 	}
 
+	fx->cfg = fs_stream_default_cfg();
+
 	// DI
-	fx->env.file_env.mem = osal_mem_test_fake_ops();
-	fx->env.file_ops = osal_file_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	stream_env_t stream_env = stream_default_env(osal_mem_test_fake_ops());
+	fx->env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			osal_mem_test_fake_ops(),
+			&stream_env
+		);
 
 	fx->args.path = "crazy_injection.txt";
-	fx->args.flags = OSAL_FILE_READ | OSAL_FILE_WRITE | OSAL_FILE_CREATE | OSAL_FILE_TRUNC;
-	fx->args.autoclose = true;
-
-	fx->cfg.reserved = 0; /* Reserved for future use. */
+	fx->args.mode = "wb";
 
 	*state = fx;
 	return 0;
 }
 
-/**
- * @brief Release the `fs_stream_create_stream()` test fixture and verify memory invariants.
- */
 static int teardown_fs_stream_create_stream(void **state)
 {
 	test_fs_stream_create_stream_fixture_t *fx =
@@ -387,7 +298,18 @@ static int teardown_fs_stream_create_stream(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	if (!fx->out) {
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
+
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	osal_free(fx);
 	return 0;
 }
 
@@ -395,9 +317,6 @@ static int teardown_fs_stream_create_stream(void **state)
 // TEST
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Execute one parametric test scenario for `fs_stream_create_stream()`.
- */
 static void test_fs_stream_create_stream(void **state)
 {
 	test_fs_stream_create_stream_fixture_t *fx =
@@ -414,13 +333,30 @@ static void test_fs_stream_create_stream(void **state)
 	const fs_stream_env_t *env_arg = &fx->env;
 
 	// invalid args
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_OUT_NULL) out_arg = NULL;
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_ARGS_NULL) args_arg = NULL;
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_CFG_NULL) cfg_arg = NULL;
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_ENV_NULL) env_arg = NULL;
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_PATH_NULL) fx->args.path = NULL;
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_PATH_EMPTY) fx->args.path = "";
-	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_FLAGS_ZERO) fx->args.flags = (uint32_t)0;
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_OUT_NULL) {
+		out_arg = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_ARGS_NULL) {
+		args_arg = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_CFG_NULL) {
+		cfg_arg = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_ENV_NULL) {
+		env_arg = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_PATH_NULL) {
+		fx->args.path = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_PATH_EMPTY) {
+		fx->args.path = "";
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_MODE_NULL) {
+		fx->args.mode = NULL;
+	}
+	if (tc->scenario == FS_CREATE_STREAM_SCENARIO_MODE_UNSUPPORTED) {
+		fx->args.mode = "unsupported_mode";
+	}
 
     // ensure OUT_EXPECT_UNCHANGED is meaningful
     if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
@@ -452,9 +388,23 @@ static void test_fs_stream_create_stream(void **state)
 		size_t w = stream_write(fx->out, msg, sizeof(msg) - 1, &st);
 		assert_int_equal((int)w, (int)(sizeof(msg) - 1));
 		assert_true(st == STREAM_STATUS_OK);
-		assert_int_equal(fake_file_backing_len(), sizeof(msg) - 1);
-		assert_memory_equal(fx->backing, msg, sizeof(msg) - 1);
+		assert_true(
+			fake_file_buffered_len(fx->fake_file) == sizeof(msg) - 1
+		);
+		assert_memory_equal(
+			fake_file_buffered_backing(fx->fake_file),
+			msg,
+			sizeof(msg) - 1
+		);
 		assert_int_equal(stream_flush(fx->out), STREAM_STATUS_OK);
+		assert_true(
+			fake_file_sink_len(fx->fake_file) == sizeof(msg) - 1
+		);
+		assert_memory_equal(
+			fake_file_sink_backing(fx->fake_file),
+			msg,
+			sizeof(msg) - 1
+		);
 	}
 }
 
@@ -462,21 +412,11 @@ static void test_fs_stream_create_stream(void **state)
 // CASES
 //-----------------------------------------------------------------------------
 
-static const test_fs_stream_create_stream_case_t CASE_FS_OK = {
-	.name = "fs_create_stream_ok",
-	.scenario = FS_CREATE_STREAM_SCENARIO_OK,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
-
-	.expected_ret = STREAM_STATUS_OK,
-	.out_expect = OUT_EXPECT_NON_NULL
-};
-
 static const test_fs_stream_create_stream_case_t CASE_FS_OUT_NULL = {
 	.name = "fs_create_stream_out_null",
 	.scenario = FS_CREATE_STREAM_SCENARIO_OUT_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_CHECK_NONE
@@ -486,7 +426,7 @@ static const test_fs_stream_create_stream_case_t CASE_FS_ARGS_NULL = {
 	.name = "fs_create_stream_args_null",
 	.scenario = FS_CREATE_STREAM_SCENARIO_ARGS_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -496,7 +436,7 @@ static const test_fs_stream_create_stream_case_t CASE_FS_CFG_NULL = {
 	.name = "fs_create_stream_cfg_null",
 	.scenario = FS_CREATE_STREAM_SCENARIO_CFG_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -506,7 +446,7 @@ static const test_fs_stream_create_stream_case_t CASE_FS_ENV_NULL = {
 	.name = "fs_create_stream_env_null",
 	.scenario = FS_CREATE_STREAM_SCENARIO_ENV_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -516,7 +456,7 @@ static const test_fs_stream_create_stream_case_t CASE_FS_PATH_NULL = {
 	.name = "fs_create_stream_path_null",
 	.scenario = FS_CREATE_STREAM_SCENARIO_PATH_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -526,17 +466,27 @@ static const test_fs_stream_create_stream_case_t CASE_FS_PATH_EMPTY = {
 	.name = "fs_create_stream_path_empty",
 	.scenario = FS_CREATE_STREAM_SCENARIO_PATH_EMPTY,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
 };
 
-static const test_fs_stream_create_stream_case_t CASE_FS_FLAGS_ZERO = {
-	.name = "fs_create_stream_flags_zero",
-	.scenario = FS_CREATE_STREAM_SCENARIO_FLAGS_ZERO,
+static const test_fs_stream_create_stream_case_t CASE_FS_MODE_NULL = {
+	.name = "fs_create_stream_mode_null",
+	.scenario = FS_CREATE_STREAM_SCENARIO_MODE_NULL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
+
+	.expected_ret = STREAM_STATUS_INVALID,
+	.out_expect = OUT_EXPECT_UNCHANGED
+};
+
+static const test_fs_stream_create_stream_case_t CASE_FS_MODE_UNSUPPORTED = {
+	.name = "fs_create_stream_mode_unsupported",
+	.scenario = FS_CREATE_STREAM_SCENARIO_MODE_UNSUPPORTED,
+	.fail_call_idx = 0,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -546,7 +496,7 @@ static const test_fs_stream_create_stream_case_t CASE_FS_OOM_1 = {
 	.name = "fs_create_stream_oom_1",
 	.scenario = FS_CREATE_STREAM_SCENARIO_OOM,
 	.fail_call_idx = 1,
-	.open_fail_status = OSAL_FILE_OK,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_OOM,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -556,10 +506,20 @@ static const test_fs_stream_create_stream_case_t CASE_FS_OPEN_FAIL_NOT_FOUND = {
 	.name = "fs_create_stream_open_fail_not_found",
 	.scenario = FS_CREATE_STREAM_SCENARIO_OPEN_FAIL,
 	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_NOENT,
+	.open_fail_status = OSAL_FILE_STATUS_NOENT,
 
 	.expected_ret = STREAM_STATUS_IO_ERROR,
 	.out_expect = OUT_EXPECT_UNCHANGED
+};
+
+static const test_fs_stream_create_stream_case_t CASE_FS_OK = {
+	.name = "fs_create_stream_ok",
+	.scenario = FS_CREATE_STREAM_SCENARIO_OK,
+	.fail_call_idx = 0,
+	.open_fail_status = OSAL_FILE_STATUS_OK,
+
+	.expected_ret = STREAM_STATUS_OK,
+	.out_expect = OUT_EXPECT_NON_NULL
 };
 
 //-----------------------------------------------------------------------------
@@ -567,16 +527,17 @@ static const test_fs_stream_create_stream_case_t CASE_FS_OPEN_FAIL_NOT_FOUND = {
 //-----------------------------------------------------------------------------
 
 #define FS_STREAM_CREATE_STREAM_CASES(X) \
-X(CASE_FS_OK) \
 X(CASE_FS_OUT_NULL) \
 X(CASE_FS_ARGS_NULL) \
-X(CASE_FS_PATH_NULL) \
-X(CASE_FS_PATH_EMPTY) \
-X(CASE_FS_FLAGS_ZERO) \
 X(CASE_FS_CFG_NULL) \
 X(CASE_FS_ENV_NULL) \
+X(CASE_FS_PATH_NULL) \
+X(CASE_FS_PATH_EMPTY) \
+X(CASE_FS_MODE_NULL) \
+X(CASE_FS_MODE_UNSUPPORTED) \
 X(CASE_FS_OOM_1) \
-X(CASE_FS_OPEN_FAIL_NOT_FOUND)
+X(CASE_FS_OPEN_FAIL_NOT_FOUND) \
+X(CASE_FS_OK)
 
 #define FS_STREAM_MAKE_CREATE_STREAM_TEST(case_sym) \
 LEXLEO_MAKE_TEST(fs_stream_create_stream, case_sym)
@@ -593,36 +554,15 @@ static const struct CMUnitTest fs_stream_stream_create_stream_tests[] = {
 /**
  * @brief Scenarios for `fs_stream_create_desc()`.
  *
- * stream_status_t fs_stream_create_desc(
- *     stream_adapter_desc_t *out,
- *     stream_key_t key,
- *     const fs_stream_cfg_t *cfg,
- *     const fs_stream_env_t *env,
- *     const osal_mem_ops_t *mem );
- *
- * Invalid arguments:
- * - `out`, `key`, `cfg`, `env`, `mem` must not be NULL.
- * - `key` must not be an empty string.
- *
- * Success:
- * - Returns STREAM_STATUS_OK.
- * - Stores a valid adapter descriptor in `*out`.
- * - The produced descriptor must later be released via `out->ud_dtor()`.
- *
- * Failure:
- * - Returns:
- *     - STREAM_STATUS_INVALID for invalid arguments
- *     - STREAM_STATUS_OOM on allocation failure
- * - If `out` is not NULL, resets `*out` to an empty descriptor.
- *
  * Doubles:
- * - fake_memory
+ * - fake_memory for adapter and port allocation
+ * - dummy `osal_file_ops_t *`
  *
- * See also:
- * - @ref testing_foundation_fs_stream_unit_create_desc "fs_stream_create_desc() unit tests section"
+ * See contract:
  * - @ref specifications_fs_stream_create_desc "fs_stream_create_desc() specifications"
  *
- * The scenarios below define the test oracle for `fs_stream_create_desc()`.
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_create_desc "fs_stream_create_desc() unit tests section"
  */
 typedef enum {
 	/**
@@ -699,22 +639,12 @@ typedef enum {
 
 /** @cond INTERNAL */
 
-/**
- * @brief Expected state of the descriptor output after the call under test.
- */
 typedef enum {
 	DESC_CHECK_NONE,
     DESC_EXPECT_EMPTY,
     DESC_EXPECT_VALID
-} desc_expect_t;
+} fs_stream_desc_expect_t;
 
-/**
- * @brief One parametric test case for `fs_stream_create_desc()`.
- *
- * Notes:
- * - `fail_call_idx` is used by `fake_memory` to inject an allocation failure
- *   on a specific call number (used by the OOM scenario).
- */
 typedef struct {
 	const char *name;
 
@@ -724,26 +654,15 @@ typedef struct {
 
 	// assert
 	stream_status_t expected_ret;
-	desc_expect_t desc_expect;
+	fs_stream_desc_expect_t desc_expect;
 } test_fs_stream_create_desc_case_t;
 
-/**
- * @brief Runtime fixture for `fs_stream_create_desc()` tests.
- *
- * Holds:
- * - the descriptor output under test,
- * - the injected adapter environment,
- * - the injected descriptor allocator,
- * - the adapter key and configuration,
- * - a pointer to the active parametric test case.
- */
 typedef struct {
 	// runtime resources
 	stream_adapter_desc_t out;
 
 	// injection
 	fs_stream_env_t env;
-	const osal_mem_ops_t *mem;
 
 	stream_key_t key;
 	fs_stream_cfg_t cfg;
@@ -755,16 +674,13 @@ typedef struct {
 // FIXTURES
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Allocate and initialize the runtime fixture for `fs_stream_create_desc()` tests.
- */
 static int setup_fs_stream_create_desc(void **state)
 {
 	const test_fs_stream_create_desc_case_t *tc =
 		(const test_fs_stream_create_desc_case_t *)(*state);
 
 	test_fs_stream_create_desc_fixture_t *fx =
-		(test_fs_stream_create_desc_fixture_t *)malloc(sizeof(*fx));
+		(test_fs_stream_create_desc_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -775,35 +691,39 @@ static int setup_fs_stream_create_desc(void **state)
 		fake_memory_fail_only_on_call(tc->fail_call_idx);
 	}
 
+	stream_env_t stream_env =
+		stream_default_env(osal_mem_test_fake_ops());
+
 	// DI
-	fx->env.file_env.mem = osal_mem_test_fake_ops();
-	fx->env.file_ops = osal_file_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
-	fx->mem = osal_mem_test_fake_ops();
+	fx->env =
+		fs_stream_default_env(
+			(const osal_file_ops_t *)(uintptr_t)0x1234u,
+			osal_mem_test_fake_ops(),
+			&stream_env
+		);
+
+	fx->cfg = fs_stream_default_cfg();
 
 	fx->key = "fs";
-
-	fx->cfg.reserved = 0; /* Reserved for future use. */
 
 	*state = fx;
 	return 0;
 }
 
-/**
- * @brief Release the `fs_stream_create_desc()` test fixture and verify memory invariants.
- */
 static int teardown_fs_stream_create_desc(void **state)
 {
 	test_fs_stream_create_desc_fixture_t *fx =
 		(test_fs_stream_create_desc_fixture_t *)(*state);
 
-	if (fx->out.ud_dtor) fx->out.ud_dtor(fx->out.ud, fx->mem);
+	if (fx->out.ud && fx->out.ud_dtor) {
+		fx->out.ud_dtor(fx->out.ud, fx->env.adapter_mem_ops);
+	}
 
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -811,9 +731,6 @@ static int teardown_fs_stream_create_desc(void **state)
 // TEST
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Execute one parametric test scenario for `fs_stream_create_desc()`.
- */
 static void test_fs_stream_create_desc(void **state)
 {
 	test_fs_stream_create_desc_fixture_t *fx =
@@ -827,21 +744,33 @@ static void test_fs_stream_create_desc(void **state)
 	stream_key_t key_arg = fx->key;
 	const fs_stream_cfg_t *cfg_arg = &fx->cfg;
 	const fs_stream_env_t *env_arg = &fx->env;
-	const osal_mem_ops_t *mem_arg = fx->mem;
+	const osal_mem_ops_t *mem_arg = fx->env.adapter_mem_ops;
 
 	// invalid args
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_OUT_NULL) out_arg = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_KEY_NULL) key_arg = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_KEY_EMPTY) key_arg = "";
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_CFG_NULL) cfg_arg = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_ENV_NULL) env_arg = NULL;
-	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_MEM_NULL) mem_arg = NULL;
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_OUT_NULL) {
+		out_arg = NULL;
+	}
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_KEY_NULL) {
+		key_arg = NULL;
+	}
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_KEY_EMPTY) {
+		key_arg = "";
+	}
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_CFG_NULL) {
+		cfg_arg = NULL;
+	}
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_ENV_NULL) {
+		env_arg = NULL;
+	}
+	if (tc->scenario == FS_STREAM_CREATE_DESC_SCENARIO_MEM_NULL) {
+		mem_arg = NULL;
+	}
 
     if (tc->desc_expect == DESC_EXPECT_EMPTY && out_arg != NULL) {
         fx->out.key = (stream_key_t)(uintptr_t)0xDEADC0DEu;
-		fx->out.ctor = (void *)(uintptr_t)0xDEADC0DEu;
+		fx->out.ctor = (stream_ctor_fn_t)(uintptr_t)0xDEADC0DEu;
 		fx->out.ud = (void *)(uintptr_t)0xDEADC0DEu;
-		fx->out.ud_dtor = (void *)(uintptr_t)0xDEADC0DEu;
+		fx->out.ud_dtor = (ud_dtor_fn_t)(uintptr_t)0xDEADC0DEu;
     }
 
 	// ACT
@@ -860,11 +789,11 @@ static void test_fs_stream_create_desc(void **state)
 		assert_true(fx->out.key != (stream_key_t)(uintptr_t)0xDEADC0DEu);
 		assert_non_null(fx->out.key);
 		assert_true(*fx->out.key != '\0');
-		assert_true(fx->out.ctor != (void *)(uintptr_t)0xDEADC0DEu);
+		assert_true(fx->out.ctor != (stream_ctor_fn_t)(uintptr_t)0xDEADC0DEu);
 		assert_non_null(fx->out.ctor);
     	assert_true(fx->out.ud != (void *)(uintptr_t)0xDEADC0DEu);
 		assert_non_null(fx->out.ud);
-		assert_true(fx->out.ud_dtor != (void *)(uintptr_t)0xDEADC0DEu);
+		assert_true(fx->out.ud_dtor != (ud_dtor_fn_t)(uintptr_t)0xDEADC0DEu);
 		assert_non_null(fx->out.ud_dtor);
 	}
 	else {
@@ -875,15 +804,6 @@ static void test_fs_stream_create_desc(void **state)
 //-----------------------------------------------------------------------------
 // CASES
 //-----------------------------------------------------------------------------
-
-static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_OK = {
-	.name = "fs_stream_create_desc_ok",
-	.scenario = FS_STREAM_CREATE_DESC_SCENARIO_OK,
-	.fail_call_idx = 0,
-
-	.expected_ret = STREAM_STATUS_OK,
-	.desc_expect = DESC_EXPECT_VALID
-};
 
 static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_OUT_NULL = {
 	.name = "fs_stream_create_desc_out_null",
@@ -948,24 +868,33 @@ static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_OOM_1 
 	.desc_expect = DESC_EXPECT_EMPTY
 };
 
+static const test_fs_stream_create_desc_case_t CASE_FS_STREAM_CREATE_DESC_OK = {
+	.name = "fs_stream_create_desc_ok",
+	.scenario = FS_STREAM_CREATE_DESC_SCENARIO_OK,
+	.fail_call_idx = 0,
+
+	.expected_ret = STREAM_STATUS_OK,
+	.desc_expect = DESC_EXPECT_VALID
+};
+
 //-----------------------------------------------------------------------------
 // CASES REGISTRY
 //-----------------------------------------------------------------------------
 
 #define FS_STREAM_CREATE_DESC_CASES(X) \
-X(CASE_FS_STREAM_CREATE_DESC_OK) \
 X(CASE_FS_STREAM_CREATE_DESC_OUT_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_KEY_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_KEY_EMPTY) \
 X(CASE_FS_STREAM_CREATE_DESC_CFG_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_ENV_NULL) \
 X(CASE_FS_STREAM_CREATE_DESC_MEM_NULL) \
-X(CASE_FS_STREAM_CREATE_DESC_OOM_1)
+X(CASE_FS_STREAM_CREATE_DESC_OOM_1) \
+X(CASE_FS_STREAM_CREATE_DESC_OK)
 
 #define FS_STREAM_MAKE_CREATE_DESC_TEST(case_sym) \
 LEXLEO_MAKE_TEST(fs_stream_create_desc, case_sym)
 
-static const struct CMUnitTest create_desc_fs_stream_tests[] = {
+static const struct CMUnitTest fs_stream_create_desc_fs_stream_tests[] = {
 	FS_STREAM_CREATE_DESC_CASES(FS_STREAM_MAKE_CREATE_DESC_TEST)
 };
 
@@ -974,258 +903,202 @@ static const struct CMUnitTest create_desc_fs_stream_tests[] = {
 
 /** @endcond */
 
+/** @cond INTERNAL */
+#define FS_STREAM_WRITE_TEST_MSG "payload"
+#define FS_STREAM_WRITE_TEST_MSG_LEN (sizeof(FS_STREAM_WRITE_TEST_MSG) - 1u)
+/** @endcond */
+
 /**
- * @brief Scenarios for `fs_stream_create_desc()` descriptor constructor usage.
+ * @brief Scenarios for `fs_stream_write()`, exercised through `stream_write()`.
  *
- * stream_status_t desc.ctor(
- *     const void *ud,
- *     const fs_stream_args_t *args,
- *     stream_t **out );
+ * @details
+ * These tests create a valid `fs_stream` instance and call
+ * `stream_write(s, buf, n, st)` to exercise the private `fs_stream_write()`
+ * callback.
  *
- * Invalid arguments:
- * - `args` and `out` must not be NULL.
- * - `args->path` must not be NULL and must not be an empty string.
- * - `args->flags` must not be zero.
+ * Unless stated otherwise:
+ * - `s` is created by `fs_stream_create_stream()` in `"wb"` mode, with
+ *   `fake_file` prepared as the opened OSAL file and injected through
+ *   `fs_stream_env_t`;
+ * - `buf != NULL` and `st != NULL`;
+ * - `n == FS_STREAM_WRITE_TEST_MSG_LEN`;
+ * - the backend uses `fake_file` as its injected OSAL file dependency.
+ * - the fake file buffered backing is initially empty;
  *
- * Success:
- * - Returns STREAM_STATUS_OK.
- * - Stores a valid stream in `*out`.
- * - The produced stream is ready for normal runtime use.
- * - The produced stream must be destroyed via `stream_destroy()`.
- *
- * Failure:
- * - Returns:
- *     - STREAM_STATUS_INVALID for invalid arguments
- *     - STREAM_STATUS_OOM on allocation failure
- *     - STREAM_STATUS_IO_ERROR when OSAL file operations fail
- * - Leaves `*out` unchanged if `out` is not NULL.
+ * The oracle combines:
+ * - public return/status observation through `stream_write()`;
+ * - adapter-to-OSAL interaction checks through `fake_file` spies.
  *
  * Doubles:
  * - fake_memory
  * - fake_file
  *
- * See also:
- * - @ref testing_foundation_fs_stream_unit_desc_ctor "fs_stream descriptor constructor unit tests section"
- * - @ref specifications_fs_stream_create_desc "fs_stream_create_desc() specifications"
+ * See adapter contract:
+ * - @ref specifications_fs_stream_write "fs_stream_write() specifications"
  *
- * The scenarios below define the test oracle for descriptor constructor usage
- * through `fs_stream_create_desc()`.
+ * See public port contract:
+ * - @ref specifications_stream_write "stream_write() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_write "fs_stream_write() unit tests section"
  */
 typedef enum {
-	/**
-	 * WHEN `desc.ctor(ud, args, out)` is called with valid arguments and OSAL
-	 * file opening succeeds
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_OK`
-	 * - stores a non-NULL stream handle in `*out`
-	 * - the produced stream is ready for normal runtime use
-	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_OK = 0,
 
 	/**
-	 * WHEN `args == NULL` and `out != NULL`
+	 * WHEN `stream_write(s, buf, n, st)` is called under the default valid
+	 * preconditions
+	 * AND the injected OSAL file write operation reports `OSAL_FILE_STATUS_IO`
+	 * AND the injected OSAL file write operation returns `0`
 	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - leaves `*out` unchanged
+	 * - returns `0`
+	 * - sets `*st = STREAM_STATUS_IO_ERROR`
+	 * - calls the injected OSAL file write operation exactly once
+	 * - leaves the fake file buffered backing empty
 	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_ARGS_NULL,
+	FS_STREAM_WRITE_SCENARIO_OSAL_FILE_STATUS_IO = 0,
 
 	/**
-	 * WHEN `out == NULL`
+	 * WHEN `stream_write(s, buf, n, NULL)` is called under the default valid
+	 * preconditions
+	 * AND the injected OSAL file write operation reports `OSAL_FILE_STATUS_IO`
+	 * AND the injected OSAL file write operation returns `0`
 	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - no stream handle is produced
+	 * - returns `0`
+	 * - calls the injected OSAL file write operation exactly once
+	 * - leaves the fake file buffered backing empty
 	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_OUT_NULL,
+	FS_STREAM_WRITE_SCENARIO_OSAL_FILE_STATUS_IO_ST_NULL,
 
 	/**
-	 * WHEN `args != NULL` but `args->path == NULL`
-	 * AND `out != NULL`
+	 * WHEN `stream_write(s, buf, n, st)` is called with
+	 * `buf == FS_STREAM_WRITE_TEST_MSG`
+	 * AND `n == FS_STREAM_WRITE_TEST_MSG_LEN`
+	 * AND the injected OSAL file write operation reports `OSAL_FILE_STATUS_OK`
 	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - leaves `*out` unchanged
+	 * - returns `FS_STREAM_WRITE_TEST_MSG_LEN`
+	 * - sets `*st = STREAM_STATUS_OK`
+	 * - writes `FS_STREAM_WRITE_TEST_MSG` into the fake file buffered backing
+	 * - the fake file buffered backing contains exactly
+	 *   `FS_STREAM_WRITE_TEST_MSG`
 	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_PATH_NULL,
+	FS_STREAM_WRITE_SCENARIO_OK,
 
 	/**
-	 * WHEN `args != NULL` but `args->path` is an empty string
-	 * AND `out != NULL`
+	 * WHEN `stream_write(s, buf, n, NULL)` is called with
+	 * `buf == FS_STREAM_WRITE_TEST_MSG`
+	 * AND `n == FS_STREAM_WRITE_TEST_MSG_LEN`
+	 * AND the injected OSAL file write operation reports `OSAL_FILE_STATUS_OK`
 	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - leaves `*out` unchanged
+	 * - returns `FS_STREAM_WRITE_TEST_MSG_LEN`
+	 * - writes `FS_STREAM_WRITE_TEST_MSG` into the fake file buffered backing
+	 * - the fake file buffered backing contains exactly
+	 *   `FS_STREAM_WRITE_TEST_MSG`
 	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_PATH_EMPTY,
+	FS_STREAM_WRITE_SCENARIO_OK_ST_NULL
 
-	/**
-	 * WHEN `args != NULL` but `args->flags == 0`
-	 * AND `out != NULL`
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - leaves `*out` unchanged
-	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_FLAGS_ZERO,
-
-	/**
-	 * WHEN allocation required by `desc.ctor()` fails
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_OOM`
-	 * - leaves `*out` unchanged
-	 *
-	 * Notes:
-	 * - This scenario is exercised by configuring `fake_memory` to fail the
-	 *   allocation performed during stream creation.
-	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_OOM,
-
-	/**
-	 * WHEN `desc.ctor(ud, args, out)` is called with valid arguments but OSAL
-	 * file opening fails
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_IO_ERROR`
-	 * - leaves `*out` unchanged
-	 *
-	 * Notes:
-	 * - This scenario is exercised by configuring `fake_file` to fail the
-	 *   open operation.
-	 */
-	FS_STREAM_DESC_CTOR_SCENARIO_OPEN_FAIL,
-} fs_stream_desc_ctor_scenario_t;
+} fs_stream_write_scenario_t;
 
 /** @cond INTERNAL */
 
-/**
- * @brief One parametric test case for descriptor constructor usage through
- * `fs_stream_create_desc()`.
- *
- * Notes:
- * - `fail_call_idx` is used by `fake_memory` to inject an allocation failure
- *   on a specific call number (used by the OOM scenario).
- * - `open_fail_status` is used by `fake_file` to inject the OSAL status
- *   returned by the failing open operation.
- */
 typedef struct {
 	const char *name;
 
 	// arrange
-	fs_stream_desc_ctor_scenario_t scenario;
-	size_t fail_call_idx; // 0 = no OOM, otherwise 1-based
-	osal_file_status_t open_fail_status; // e.g. OSAL_FILE_NOENT
+	fs_stream_write_scenario_t scenario;
+	osal_file_status_t osal_file_write_status; // e.g. OSAL_FILE_STATUS_IO
+	const uint8_t *buf_arg;
+	size_t n_arg;
+	bool st_is_null;
 
 	// assert
-	stream_status_t expected_ret;
-	out_expect_t out_expect;
-} test_fs_stream_desc_ctor_case_t;
+	stream_status_t expected_st;
+	size_t expected_ret;
+	const uint8_t *expected_buffered;
+	size_t expected_buffered_len;
+} test_fs_stream_write_case_t;
 
-/**
- * @brief Runtime fixture for descriptor constructor usage tests through
- * `fs_stream_create_desc()`.
- *
- * Holds:
- * - the descriptor under test,
- * - the stream handle produced by `desc.ctor()`,
- * - the injected descriptor dependencies,
- * - the constructor call arguments,
- * - the fake file backing storage,
- * - a pointer to the active parametric test case.
- */
 typedef struct {
-	// descriptor under test
-	stream_adapter_desc_t desc;
+	// runtime resources
+	stream_t *s_arg;
+	OSAL_FILE *fake_file;
 
-	// runtime resource produced by desc.ctor()
-	stream_t *out;
-
-	// dependencies / descriptor inputs
+	// injection
 	fs_stream_env_t env;
-	const osal_mem_ops_t *mem;
-	fs_stream_cfg_t cfg;
 
-	// ctor call inputs
-	fs_stream_args_t args;
-
-	// fake file backing
-	uint8_t backing[64];
-
-	// reference to test case
-	const test_fs_stream_desc_ctor_case_t *tc;
-} test_fs_stream_desc_ctor_fixture_t;
+	const test_fs_stream_write_case_t *tc;
+} test_fs_stream_write_fixture_t;
 
 //-----------------------------------------------------------------------------
 // FIXTURES
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Allocate and initialize the runtime fixture for descriptor
- * constructor usage tests through `fs_stream_create_desc()`.
- */
-static int setup_fs_stream_desc_ctor(void **state)
+static int setup_fs_stream_write(void **state)
 {
-	const test_fs_stream_desc_ctor_case_t *tc =
-		(const test_fs_stream_desc_ctor_case_t *)(*state);
+	const test_fs_stream_write_case_t *tc =
+		(const test_fs_stream_write_case_t *)(*state);
 
-	test_fs_stream_desc_ctor_fixture_t *fx =
-		(test_fs_stream_desc_ctor_fixture_t *)malloc(sizeof(*fx));
+	test_fs_stream_write_fixture_t *fx =
+		(test_fs_stream_write_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
 	fake_file_reset();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+	fake_file_prepare_next_open_file(fx->fake_file);
+	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
+	const fs_stream_args_t args = {
+		.path = "dummy_pathname",
+		.mode =	"wb"
+	};
+	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
 	fake_memory_reset();
-
-	osal_memset(fx->backing, 0, sizeof(fx->backing));
-	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
-	fake_file_set_pos(0);
-	fake_file_fail_disable();
-
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_OPEN_FAIL) {
-		fake_file_fail_enable(FAKE_FILE_OP_OPEN, 1, tc->open_fail_status);
-	}
-
-	// DI
-	fx->env.file_env.mem = osal_mem_test_fake_ops();
-	fx->env.file_ops = osal_file_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
-	fx->mem = osal_mem_test_fake_ops();
-
-	fx->cfg.reserved = 0; /* Reserved for future use. */
-
-	stream_status_t st = fs_stream_create_desc(&fx->desc, "fs", &fx->cfg, &fx->env, fx->mem);
-	assert_true(st == STREAM_STATUS_OK);
-
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_OOM && tc->fail_call_idx > 0) {
-		fake_memory_fail_only_on_call(tc->fail_call_idx);
-	}
-
-	fx->args.path = "crazy_injection.txt";
-	fx->args.flags = OSAL_FILE_READ | OSAL_FILE_WRITE | OSAL_FILE_CREATE | OSAL_FILE_TRUNC;
-	fx->args.autoclose = true;
+	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
+	fx->env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			osal_mem_test_fake_ops(),
+			&port_env
+		);
+	assert_int_equal(
+		fs_stream_create_stream(
+			&fx->s_arg,
+			&args,
+			&cfg,
+			&fx->env
+		),
+		STREAM_STATUS_OK
+	);
 
 	*state = fx;
 	return 0;
 }
 
-/**
- * @brief Release the descriptor constructor usage test fixture through
- * `fs_stream_create_desc()` and verify memory invariants.
- */
-static int teardown_fs_stream_desc_ctor(void **state)
+static int teardown_fs_stream_write(void **state)
 {
-	test_fs_stream_desc_ctor_fixture_t *fx =
-		(test_fs_stream_desc_ctor_fixture_t *)(*state);
+	test_fs_stream_write_fixture_t *fx =
+		(test_fs_stream_write_fixture_t *)(*state);
 
-	if (fx->out) {
-		stream_destroy(&fx->out);
-		fx->out = NULL;
+	if (fx->s_arg) {
+		stream_destroy(&fx->s_arg);
+		fx->s_arg = NULL;
 	}
-
-	if (fx->desc.ud_dtor) fx->desc.ud_dtor(fx->desc.ud, fx->mem);
 
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
+
+	osal_free(fx);
 	return 0;
 }
 
@@ -1233,63 +1106,414 @@ static int teardown_fs_stream_desc_ctor(void **state)
 // TEST
 //-----------------------------------------------------------------------------
 
-/**
- * @brief Execute one parametric test scenario for descriptor constructor
- * usage through `fs_stream_create_desc()`.
- */
-static void test_fs_stream_desc_ctor(void **state)
-{
-	test_fs_stream_desc_ctor_fixture_t *fx =
-		(test_fs_stream_desc_ctor_fixture_t *)(*state);
-	const test_fs_stream_desc_ctor_case_t *tc = fx->tc;
+static void test_fs_stream_write(void **state) {
+	test_fs_stream_write_fixture_t *fx =
+		(test_fs_stream_write_fixture_t *)(*state);
+	const test_fs_stream_write_case_t *tc = fx->tc;
 
 	// ARRANGE
-	stream_status_t st = STREAM_STATUS_INVALID;
-	stream_status_t ret = STREAM_STATUS_INVALID;
 
-	stream_t **out_arg = &fx->out;
-	const fs_stream_args_t *args_arg = &fx->args;
+	size_t ret = 0;
 
-	// invalid args
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_OUT_NULL) out_arg = NULL;
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_ARGS_NULL) args_arg = NULL;
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_PATH_NULL) fx->args.path = NULL;
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_PATH_EMPTY) fx->args.path = "";
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_FLAGS_ZERO) fx->args.flags = (uint32_t)0;
+	stream_status_t st = STREAM_STATUS_OK;
+	stream_status_t *st_arg = (tc->st_is_null) ? NULL : &st;
 
-    // ensure OUT_EXPECT_UNCHANGED is meaningful
-    if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
-        fx->out = (stream_t *)(uintptr_t)0xDEADC0DEu; // sentinel
-    }
-
-    stream_t *out_arg_snapshot = fx->out;
+	fake_file_set_write_status(fx->fake_file, tc->osal_file_write_status);
 
 	// ACT
-	ret = fx->desc.ctor(fx->desc.ud, args_arg, out_arg);
+	ret =
+		stream_write(
+			fx->s_arg,
+			tc->buf_arg,
+			tc->n_arg,
+			st_arg
+		);
 
 	// ASSERT
-	assert_int_equal(ret, tc->expected_ret);
 
-	switch (tc->out_expect) {
-		case OUT_CHECK_NONE: break;
-		case OUT_EXPECT_NULL: assert_null(fx->out); break;
-		case OUT_EXPECT_NON_NULL: assert_non_null(fx->out); break;
-		case OUT_EXPECT_UNCHANGED:
-			assert_ptr_equal(out_arg_snapshot, fx->out);
-			fx->out = NULL; // prevent teardown from destroying sentinel
-			break;
-		default: assert_true(false);
+	assert_true(
+		fake_file_write_call_count(fx->fake_file)
+		==
+		1
+	);
+	assert_true(
+		fake_file_buffered_len(fx->fake_file)
+		==
+		tc->expected_buffered_len
+	);
+
+	assert_true(ret == tc->expected_ret);
+	if (!tc->st_is_null) {
+		assert_int_equal(*st_arg, tc->expected_st);
 	}
 
-	if (tc->scenario == FS_STREAM_DESC_CTOR_SCENARIO_OK) {
-		assert_non_null(fx->out);
-		const char msg[] = "hello";
-		size_t w = stream_write(fx->out, msg, sizeof(msg) - 1, &st);
-		assert_int_equal((int)w, (int)(sizeof(msg) - 1));
-		assert_true(st == STREAM_STATUS_OK);
-		assert_int_equal(fake_file_backing_len(), sizeof(msg) - 1);
-		assert_memory_equal(fx->backing, msg, sizeof(msg) - 1);
-		assert_int_equal(stream_flush(fx->out), STREAM_STATUS_OK);
+	assert_memory_equal(
+		fake_file_buffered_backing(fx->fake_file),
+		tc->expected_buffered,
+		tc->expected_buffered_len
+	);
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_fs_stream_write_case_t
+CASE_FS_STREAM_WRITE_OSAL_FILE_STATUS_IO = {
+	.name = "fs_stream_write_osal_file_status_io",
+	.scenario = FS_STREAM_WRITE_SCENARIO_OSAL_FILE_STATUS_IO,
+	.osal_file_write_status = OSAL_FILE_STATUS_IO,
+	.buf_arg = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.n_arg = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.st_is_null = false,
+
+	.expected_st = STREAM_STATUS_IO_ERROR,
+	.expected_ret = 0,
+	.expected_buffered = (const uint8_t *)"",
+	.expected_buffered_len = 0
+};
+
+static const test_fs_stream_write_case_t
+CASE_FS_STREAM_WRITE_OSAL_FILE_STATUS_IO_ST_NULL = {
+	.name = "fs_stream_write_osal_file_status_io_st_null",
+	.scenario = FS_STREAM_WRITE_SCENARIO_OSAL_FILE_STATUS_IO_ST_NULL,
+	.osal_file_write_status = OSAL_FILE_STATUS_IO,
+	.buf_arg = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.n_arg = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.st_is_null = true,
+
+	.expected_ret = 0,
+	.expected_buffered = (const uint8_t *)"",
+	.expected_buffered_len = 0
+};
+
+static const test_fs_stream_write_case_t
+CASE_FS_STREAM_WRITE_OK = {
+	.name = "fs_stream_write_ok",
+	.scenario = FS_STREAM_WRITE_SCENARIO_OK,
+	.osal_file_write_status = OSAL_FILE_STATUS_OK,
+	.buf_arg = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.n_arg = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.st_is_null = false,
+
+	.expected_st = STREAM_STATUS_OK,
+	.expected_ret = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.expected_buffered = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.expected_buffered_len = FS_STREAM_WRITE_TEST_MSG_LEN
+};
+
+static const test_fs_stream_write_case_t
+CASE_FS_STREAM_WRITE_OK_ST_NULL = {
+	.name = "fs_stream_write_ok_st_null",
+	.scenario = FS_STREAM_WRITE_SCENARIO_OK_ST_NULL,
+	.osal_file_write_status = OSAL_FILE_STATUS_OK,
+	.buf_arg = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.n_arg = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.st_is_null = true,
+
+	.expected_ret = FS_STREAM_WRITE_TEST_MSG_LEN,
+	.expected_buffered = (const uint8_t *)FS_STREAM_WRITE_TEST_MSG,
+	.expected_buffered_len = FS_STREAM_WRITE_TEST_MSG_LEN
+};
+
+//-----------------------------------------------------------------------------
+// CASES REGISTRY
+//-----------------------------------------------------------------------------
+
+#define FS_STREAM_WRITE_CASES(X) \
+X(CASE_FS_STREAM_WRITE_OSAL_FILE_STATUS_IO) \
+X(CASE_FS_STREAM_WRITE_OSAL_FILE_STATUS_IO_ST_NULL) \
+X(CASE_FS_STREAM_WRITE_OK) \
+X(CASE_FS_STREAM_WRITE_OK_ST_NULL)
+
+#define FS_STREAM_MAKE_WRITE_TEST(case_sym) \
+LEXLEO_MAKE_TEST(fs_stream_write, case_sym)
+
+static const struct CMUnitTest fs_stream_write_fs_stream_tests[] = {
+	FS_STREAM_WRITE_CASES(FS_STREAM_MAKE_WRITE_TEST)
+};
+
+#undef FS_STREAM_WRITE_CASES
+#undef FS_STREAM_MAKE_WRITE_TEST
+
+/** @endcond */
+
+/** @cond INTERNAL */
+#define FS_STREAM_READ_TEST_MSG "payload"
+#define FS_STREAM_READ_TEST_MSG_LEN (sizeof(FS_STREAM_READ_TEST_MSG) - 1u)
+#define FS_STREAM_READ_TEST_EOF_N (FS_STREAM_READ_TEST_MSG_LEN + 1u)
+/** @endcond */
+
+/**
+ * @brief Scenarios for `fs_stream_read()`, exercised through `stream_read()`.
+ *
+ * @details
+ * These tests create a valid `fs_stream` instance and call
+ * `stream_read(s, buf, n, st)` to exercise the private `fs_stream_read()`
+ * callback.
+ *
+ * Unless stated otherwise:
+ * - `s` is created by `fs_stream_create_stream()` in `"rb"` mode, with
+ *   `fake_file` prepared as the opened OSAL file and injected through
+ *   `fs_stream_env_t`;
+ * - `buf != NULL` and `st != NULL`;
+ * - `n == FS_STREAM_READ_TEST_MSG_LEN`;
+ * - the backend uses `fake_file` as its injected OSAL file dependency.
+ * - the fake file buffered backing contains `FS_STREAM_READ_TEST_MSG`;
+ *
+ * The oracle combines:
+ * - public return/status observation through `stream_read()`;
+ * - adapter-to-OSAL interaction checks through `fake_file` spies.
+ *
+ * Doubles:
+ * - fake_memory
+ * - fake_file
+ *
+ * See adapter contract:
+ * - @ref specifications_fs_stream_read "fs_stream_read() specifications"
+ *
+ * See public port contract:
+ * - @ref specifications_stream_read "stream_read() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_read "fs_stream_read() unit tests section"
+ */
+typedef enum {
+
+	/**
+	 * WHEN `stream_read(s, buf, n, st)` is called under the default valid
+	 * preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_IO`
+	 * AND the injected OSAL file read operation returns `0`
+	 * EXPECT:
+	 * - returns `0`
+	 * - sets `*st = STREAM_STATUS_IO_ERROR`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - leaves buf unchanged
+	 */
+	FS_STREAM_READ_SCENARIO_OSAL_FILE_STATUS_IO = 0,
+
+	/**
+	 * WHEN `stream_read(s, buf, n, NULL)` is called under the default valid
+	 * preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_IO`
+	 * AND the injected OSAL file read operation returns `0`
+	 * EXPECT:
+	 * - returns `0`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - leaves buf unchanged
+	 */
+	FS_STREAM_READ_SCENARIO_OSAL_FILE_STATUS_IO_ST_NULL,
+
+	/**
+	 * WHEN `stream_read(s, buf, FS_STREAM_READ_TEST_EOF_N, st)` is called
+	 * under the default valid preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_EOF`
+	 * EXPECT:
+	 * - returns `FS_STREAM_READ_TEST_MSG_LEN`
+	 * - sets `*st = STREAM_STATUS_EOF`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - copies exactly `FS_STREAM_READ_TEST_MSG` into `buf`
+	 */
+	FS_STREAM_READ_SCENARIO_OK_EOF,
+
+	/**
+	 * WHEN `stream_read(s, buf, FS_STREAM_READ_TEST_EOF_N, NULL)` is called
+	 * under the default valid preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_EOF`
+	 * EXPECT:
+	 * - returns `FS_STREAM_READ_TEST_MSG_LEN`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - copies exactly `FS_STREAM_READ_TEST_MSG` into `buf`
+	 */
+	FS_STREAM_READ_SCENARIO_OK_EOF_ST_NULL,
+
+	/**
+	 * WHEN `stream_read(s, buf, FS_STREAM_READ_TEST_MSG_LEN, st)` is called
+	 * under the default valid preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_OK`
+	 * EXPECT:
+	 * - returns `FS_STREAM_READ_TEST_MSG_LEN`
+	 * - sets `*st = STREAM_STATUS_OK`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - copies exactly `FS_STREAM_READ_TEST_MSG` into `buf`
+	 */
+	FS_STREAM_READ_SCENARIO_OK,
+
+	/**
+	 * WHEN `stream_read(s, buf, FS_STREAM_READ_TEST_MSG_LEN, NULL)` is called
+	 * under the default valid preconditions
+	 * AND the injected OSAL file read operation reports `OSAL_FILE_STATUS_OK`
+	 * EXPECT:
+	 * - returns `FS_STREAM_READ_TEST_MSG_LEN`
+	 * - calls the injected OSAL file read operation exactly once
+	 * - copies exactly `FS_STREAM_READ_TEST_MSG` into `buf`
+	 */
+	FS_STREAM_READ_SCENARIO_OK_ST_NULL,
+
+} fs_stream_read_scenario_t;
+
+/** @cond INTERNAL */
+
+typedef struct {
+	const char *name;
+
+	// arrange
+	fs_stream_read_scenario_t scenario;
+	osal_file_status_t osal_file_read_status; // e.g. OSAL_FILE_STATUS_EOF
+	size_t n_arg;
+	bool st_is_null;
+
+	// assert
+	stream_status_t expected_st;
+	size_t expected_ret;
+	const uint8_t *expected_buf;
+	size_t expected_buf_len;
+} test_fs_stream_read_case_t;
+
+typedef struct {
+	// runtime resources
+	stream_t *s_arg;
+	OSAL_FILE *fake_file;
+	uint8_t buf[64];
+
+	// injection
+	fs_stream_env_t env;
+
+	const test_fs_stream_read_case_t *tc;
+} test_fs_stream_read_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+static int setup_fs_stream_read(void **state)
+{
+	const test_fs_stream_read_case_t *tc =
+		(const test_fs_stream_read_case_t *)(*state);
+
+	test_fs_stream_read_fixture_t *fx =
+		(test_fs_stream_read_fixture_t *)osal_malloc(sizeof(*fx));
+	if (!fx) return -1;
+
+	osal_memset(fx, 0, sizeof(*fx));
+	fx->tc = tc;
+
+	fake_file_reset();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+	fake_file_set_sink_backing(
+		fx->fake_file,
+		(const uint8_t *)FS_STREAM_READ_TEST_MSG,
+		FS_STREAM_READ_TEST_MSG_LEN
+	);
+	fake_file_prepare_next_open_file(fx->fake_file);
+	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
+	const fs_stream_args_t args = {
+		.path = "dummy_pathname",
+		.mode =	"rb"
+	};
+	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
+
+	fake_memory_reset();
+	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
+	fx->env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			osal_mem_test_fake_ops(),
+			&port_env
+		);
+	assert_int_equal(
+		fs_stream_create_stream(
+			&fx->s_arg,
+			&args,
+			&cfg,
+			&fx->env
+		),
+		STREAM_STATUS_OK
+	);
+
+	*state = fx;
+	return 0;
+}
+
+static int teardown_fs_stream_read(void **state)
+{
+	test_fs_stream_read_fixture_t *fx =
+		(test_fs_stream_read_fixture_t *)(*state);
+
+	if (fx->s_arg) {
+		stream_destroy(&fx->s_arg);
+		fx->s_arg = NULL;
+	}
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
+
+	osal_free(fx);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+static void test_fs_stream_read(void **state) {
+	test_fs_stream_read_fixture_t *fx =
+		(test_fs_stream_read_fixture_t *)(*state);
+	const test_fs_stream_read_case_t *tc = fx->tc;
+
+	// ARRANGE
+
+	size_t ret = 0;
+
+	stream_status_t st = STREAM_STATUS_OK;
+	stream_status_t *st_arg = (tc->st_is_null) ? NULL : &st;
+
+	fake_file_set_read_status(fx->fake_file, tc->osal_file_read_status);
+
+	// ACT
+	ret =
+		stream_read(
+			fx->s_arg,
+			fx->buf,
+			tc->n_arg,
+			st_arg
+		);
+
+	// ASSERT
+
+	assert_true(
+		fake_file_read_call_count(fx->fake_file)
+		==
+		1
+	);
+	assert_true(
+		fake_file_pos(fx->fake_file)
+		==
+		ret
+	);
+
+	assert_true(ret == tc->expected_ret);
+	if (!tc->st_is_null) {
+		assert_int_equal(*st_arg, tc->expected_st);
+	}
+
+	if (tc->expected_buf_len > 0) {
+		assert_memory_equal(
+			fx->buf,
+			tc->expected_buf,
+			tc->expected_buf_len
+		);
 	}
 }
 
@@ -1297,126 +1521,587 @@ static void test_fs_stream_desc_ctor(void **state)
 // CASES
 //-----------------------------------------------------------------------------
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_OK = {
-	.name = "fs_stream_desc_ctor_create_stream_ok",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_OK,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OSAL_FILE_STATUS_IO = {
+	.name = "fs_stream_read_osal_file_status_io",
+	.scenario = FS_STREAM_READ_SCENARIO_OSAL_FILE_STATUS_IO,
+	.osal_file_read_status = OSAL_FILE_STATUS_IO,
+	.n_arg = FS_STREAM_READ_TEST_MSG_LEN,
+	.st_is_null = false,
 
-	.expected_ret = STREAM_STATUS_OK,
-	.out_expect = OUT_EXPECT_NON_NULL
+	.expected_st = STREAM_STATUS_IO_ERROR,
+	.expected_ret = 0,
+	.expected_buf = "",
+	.expected_buf_len = 0
 };
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_ARGS_NULL = {
-	.name = "fs_stream_desc_ctor_create_stream_args_null",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_ARGS_NULL,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OSAL_FILE_STATUS_IO_ST_NULL = {
+	.name = "fs_stream_read_osal_file_status_io_st_null",
+	.scenario = FS_STREAM_READ_SCENARIO_OSAL_FILE_STATUS_IO_ST_NULL,
+	.osal_file_read_status = OSAL_FILE_STATUS_IO,
+	.n_arg = FS_STREAM_READ_TEST_MSG_LEN,
+	.st_is_null = true,
 
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
+	.expected_ret = 0,
+	.expected_buf = "",
+	.expected_buf_len = 0
 };
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_OUT_NULL = {
-	.name = "fs_stream_desc_ctor_create_stream_out_null",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_OUT_NULL,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OK_EOF = {
+	.name = "fs_stream_read_ok_eof",
+	.scenario = FS_STREAM_READ_SCENARIO_OK_EOF,
+	.osal_file_read_status = OSAL_FILE_STATUS_EOF,
+	.n_arg = FS_STREAM_READ_TEST_EOF_N,
+	.st_is_null = false,
 
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_CHECK_NONE
+	.expected_st = STREAM_STATUS_EOF,
+	.expected_ret = FS_STREAM_READ_TEST_MSG_LEN,
+	.expected_buf = FS_STREAM_READ_TEST_MSG,
+	.expected_buf_len = FS_STREAM_READ_TEST_MSG_LEN
 };
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_PATH_NULL = {
-	.name = "fs_stream_desc_ctor_create_stream_path_null",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_PATH_NULL,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OK_EOF_ST_NULL = {
+	.name = "fs_stream_read_ok_eof_st_null",
+	.scenario = FS_STREAM_READ_SCENARIO_OK_EOF_ST_NULL,
+	.osal_file_read_status = OSAL_FILE_STATUS_EOF,
+	.n_arg = FS_STREAM_READ_TEST_EOF_N,
+	.st_is_null = true,
 
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
+	.expected_ret = FS_STREAM_READ_TEST_MSG_LEN,
+	.expected_buf = FS_STREAM_READ_TEST_MSG,
+	.expected_buf_len = FS_STREAM_READ_TEST_MSG_LEN
 };
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_PATH_EMPTY = {
-	.name = "fs_stream_desc_ctor_create_stream_path_empty",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_PATH_EMPTY,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OK = {
+	.name = "fs_stream_read_ok",
+	.scenario = FS_STREAM_READ_SCENARIO_OK,
+	.osal_file_read_status = OSAL_FILE_STATUS_OK,
+	.n_arg = FS_STREAM_READ_TEST_MSG_LEN,
+	.st_is_null = false,
 
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
+	.expected_st = STREAM_STATUS_OK,
+	.expected_ret = FS_STREAM_READ_TEST_MSG_LEN,
+	.expected_buf = FS_STREAM_READ_TEST_MSG,
+	.expected_buf_len = FS_STREAM_READ_TEST_MSG_LEN
 };
 
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_FLAGS_ZERO = {
-	.name = "fs_stream_desc_ctor_create_stream_flags_zero",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_FLAGS_ZERO,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_OK,
+static const test_fs_stream_read_case_t
+CASE_FS_STREAM_READ_OK_ST_NULL = {
+	.name = "fs_stream_read_ok_st_null",
+	.scenario = FS_STREAM_READ_SCENARIO_OK_ST_NULL,
+	.osal_file_read_status = OSAL_FILE_STATUS_OK,
+	.n_arg = FS_STREAM_READ_TEST_MSG_LEN,
+	.st_is_null = true,
 
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_OOM_1 = {
-	.name = "fs_stream_desc_ctor_create_stream_oom_1",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_OOM,
-	.fail_call_idx = 1,
-	.open_fail_status = OSAL_FILE_OK,
-
-	.expected_ret = STREAM_STATUS_OOM,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_fs_stream_desc_ctor_case_t CASE_FS_STREAM_DESC_CTOR_OPEN_FAIL = {
-	.name = "fs_stream_desc_ctor_create_stream_open_fail",
-	.scenario = FS_STREAM_DESC_CTOR_SCENARIO_OPEN_FAIL,
-	.fail_call_idx = 0,
-	.open_fail_status = OSAL_FILE_NOENT,
-
-	.expected_ret = STREAM_STATUS_IO_ERROR,
-	.out_expect = OUT_EXPECT_UNCHANGED
+	.expected_ret = FS_STREAM_READ_TEST_MSG_LEN,
+	.expected_buf = FS_STREAM_READ_TEST_MSG,
+	.expected_buf_len = FS_STREAM_READ_TEST_MSG_LEN
 };
 
 //-----------------------------------------------------------------------------
 // CASES REGISTRY
 //-----------------------------------------------------------------------------
 
-#define FS_STREAM_DESC_CTOR_CASES(X) \
-X(CASE_FS_STREAM_DESC_CTOR_OK) \
-X(CASE_FS_STREAM_DESC_CTOR_ARGS_NULL) \
-X(CASE_FS_STREAM_DESC_CTOR_OUT_NULL) \
-X(CASE_FS_STREAM_DESC_CTOR_PATH_NULL) \
-X(CASE_FS_STREAM_DESC_CTOR_PATH_EMPTY) \
-X(CASE_FS_STREAM_DESC_CTOR_FLAGS_ZERO) \
-X(CASE_FS_STREAM_DESC_CTOR_OOM_1) \
-X(CASE_FS_STREAM_DESC_CTOR_OPEN_FAIL)
+#define FS_STREAM_READ_CASES(X) \
+X(CASE_FS_STREAM_READ_OSAL_FILE_STATUS_IO) \
+X(CASE_FS_STREAM_READ_OSAL_FILE_STATUS_IO_ST_NULL) \
+X(CASE_FS_STREAM_READ_OK_EOF) \
+X(CASE_FS_STREAM_READ_OK_EOF_ST_NULL) \
+X(CASE_FS_STREAM_READ_OK) \
+X(CASE_FS_STREAM_READ_OK_ST_NULL)
 
-#define FS_STREAM_MAKE_DESC_CTOR_TEST(case_sym) \
-LEXLEO_MAKE_TEST(fs_stream_desc_ctor, case_sym)
+#define FS_STREAM_MAKE_READ_TEST(case_sym) \
+LEXLEO_MAKE_TEST(fs_stream_read, case_sym)
 
-static const struct CMUnitTest desc_ctor_fs_stream_tests[] = {
-	FS_STREAM_DESC_CTOR_CASES(FS_STREAM_MAKE_DESC_CTOR_TEST)
+static const struct CMUnitTest fs_stream_read_fs_stream_tests[] = {
+	FS_STREAM_READ_CASES(FS_STREAM_MAKE_READ_TEST)
 };
 
-#undef FS_STREAM_DESC_CTOR_CASES
-#undef FS_STREAM_MAKE_DESC_CTOR_TEST
+#undef FS_STREAM_READ_CASES
+#undef FS_STREAM_MAKE_READ_TEST
+
+/** @endcond */
+
+/**
+ * @brief Scenarios for `fs_stream_flush()`, exercised through `stream_flush()`.
+ *
+ * @details
+ * These tests create a valid `fs_stream` instance and call
+ * `stream_flush(s)` to exercise the private `fs_stream_flush()` callback.
+ *
+ * Unless stated otherwise:
+ * - `s` is created by `fs_stream_create_stream()` in `"wb"` mode, with
+ *   `fake_file` prepared as the opened OSAL file and injected through
+ *   `fs_stream_env_t`;
+ * - the backend uses `fake_file` as its injected OSAL file dependency.
+ *
+ * The oracle combines:
+ * - public return/status observation through `stream_flush()`;
+ * - adapter-to-OSAL interaction checks through `fake_file` spies.
+ *
+ * Doubles:
+ * - fake_memory
+ * - fake_file
+ *
+ * See adapter contract:
+ * - @ref specifications_fs_stream_flush "fs_stream_flush() specifications"
+ *
+ * See public port contract:
+ * - @ref specifications_stream_flush "stream_flush() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_flush "fs_stream_flush() unit tests section"
+ */
+typedef enum {
+
+	/**
+	 * WHEN `stream_flush(s)` is called under the default valid preconditions
+	 * AND the injected OSAL file flush operation reports `OSAL_FILE_STATUS_IO`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_IO_ERROR`
+	 * - calls the injected OSAL file flush operation exactly once
+	 */
+	FS_STREAM_FLUSH_SCENARIO_OSAL_FILE_STATUS_IO = 0,
+
+	/**
+	 * WHEN `stream_flush(s)` is called under the default valid preconditions
+	 * AND the injected OSAL file flush operation returns `OSAL_FILE_STATUS_OK`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_OK`
+	 * - calls the injected OSAL file flush operation exactly once
+	 */
+	FS_STREAM_FLUSH_SCENARIO_OSAL_FILE_STATUS_OK
+
+} fs_stream_flush_scenario_t;
+
+/** @cond INTERNAL */
+
+typedef struct {
+	const char *name;
+
+	// arrange
+	fs_stream_flush_scenario_t scenario;
+	osal_file_status_t osal_file_flush_status;
+
+	// assert
+	stream_status_t expected_ret;
+} test_fs_stream_flush_case_t;
+
+typedef struct {
+	// runtime resources
+	stream_t *s_arg;
+	OSAL_FILE *fake_file;
+
+	// injection
+	fs_stream_env_t env;
+
+	const test_fs_stream_flush_case_t *tc;
+} test_fs_stream_flush_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+static int setup_fs_stream_flush(void **state)
+{
+	const test_fs_stream_flush_case_t *tc =
+		(const test_fs_stream_flush_case_t *)(*state);
+
+	test_fs_stream_flush_fixture_t *fx =
+		(test_fs_stream_flush_fixture_t *)osal_malloc(sizeof(*fx));
+	if (!fx) return -1;
+
+	osal_memset(fx, 0, sizeof(*fx));
+	fx->tc = tc;
+
+	fake_file_reset();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+	fake_file_prepare_next_open_file(fx->fake_file);
+	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
+	const fs_stream_args_t args = {
+		.path = "dummy_pathname",
+		.mode =	"wb"
+	};
+	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
+	fake_memory_reset();
+	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
+	fx->env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			osal_mem_test_fake_ops(),
+			&port_env
+		);
+	assert_int_equal(
+		fs_stream_create_stream(
+			&fx->s_arg,
+			&args,
+			&cfg,
+			&fx->env
+		),
+		STREAM_STATUS_OK
+	);
+
+	*state = fx;
+	return 0;
+}
+
+static int teardown_fs_stream_flush(void **state)
+{
+	test_fs_stream_flush_fixture_t *fx =
+		(test_fs_stream_flush_fixture_t *)(*state);
+
+	if (fx->s_arg) {
+		fake_file_set_flush_status(fx->fake_file, OSAL_FILE_STATUS_OK);
+		stream_destroy(&fx->s_arg);
+		fx->s_arg = NULL;
+	}
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
+
+	osal_free(fx);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+static void test_fs_stream_flush(void **state) {
+	test_fs_stream_flush_fixture_t *fx =
+		(test_fs_stream_flush_fixture_t *)(*state);
+	const test_fs_stream_flush_case_t *tc = fx->tc;
+
+	// ARRANGE
+	stream_status_t ret = STREAM_STATUS_OK;
+	fake_file_set_flush_status(fx->fake_file, tc->osal_file_flush_status);
+
+	// ACT
+	ret = stream_flush(fx->s_arg);
+
+	// ASSERT
+	assert_true(
+		fake_file_flush_call_count(fx->fake_file)
+		==
+		1
+	);
+	assert_true(ret == tc->expected_ret);
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_fs_stream_flush_case_t
+CASE_FS_STREAM_FLUSH_OSAL_FILE_STATUS_IO = {
+	.name = "fs_stream_flush_osal_file_status_io",
+	.scenario = FS_STREAM_FLUSH_SCENARIO_OSAL_FILE_STATUS_IO,
+	.osal_file_flush_status = OSAL_FILE_STATUS_IO,
+
+	.expected_ret = STREAM_STATUS_IO_ERROR,
+};
+
+static const test_fs_stream_flush_case_t
+CASE_FS_STREAM_FLUSH_OSAL_FILE_STATUS_OK = {
+	.name = "fs_stream_flush_osal_file_status_ok",
+	.scenario = FS_STREAM_FLUSH_SCENARIO_OSAL_FILE_STATUS_OK,
+	.osal_file_flush_status = OSAL_FILE_STATUS_OK,
+
+	.expected_ret = STREAM_STATUS_OK,
+};
+
+//-----------------------------------------------------------------------------
+// CASES REGISTRY
+//-----------------------------------------------------------------------------
+
+#define FS_STREAM_FLUSH_CASES(X) \
+X(CASE_FS_STREAM_FLUSH_OSAL_FILE_STATUS_IO) \
+X(CASE_FS_STREAM_FLUSH_OSAL_FILE_STATUS_OK)
+
+#define FS_STREAM_MAKE_FLUSH_TEST(case_sym) \
+LEXLEO_MAKE_TEST(fs_stream_flush, case_sym)
+
+static const struct CMUnitTest fs_stream_flush_fs_stream_tests[] = {
+	FS_STREAM_FLUSH_CASES(FS_STREAM_MAKE_FLUSH_TEST)
+};
+
+#undef FS_STREAM_FLUSH_CASES
+#undef FS_STREAM_MAKE_FLUSH_TEST
+
+/** @endcond */
+
+/**
+ * @brief Scenarios for `fs_stream_close()`, exercised through `stream_destroy()`.
+ *
+ * @details
+ * These tests create a valid `fs_stream` instance and call
+ * `stream_destroy(s)` to exercise the private `fs_stream_close()` callback.
+ *
+ * Unless stated otherwise:
+ * - `s` is created by `fs_stream_create_stream()` in `"wb"` mode, with
+ *   `fake_file` prepared as the opened OSAL file and injected through
+ *   `fs_stream_env_t`;
+ * - the backend uses `fake_file` as its injected OSAL file dependency.
+ *
+ * The oracle combines:
+ * - public return/status observation through `stream_destroy()`;
+ * - adapter-to-OSAL interaction checks through `fake_file` spies.
+ *
+ * Doubles:
+ * - fake_memory
+ * - fake_file
+ *
+ * See adapter contract:
+ * - @ref specifications_fs_stream_close "fs_stream_close() specifications"
+ *
+ * See public port contract:
+ * - @ref specifications_stream_destroy "stream_destroy() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit_close "fs_stream_close() unit tests section"
+ */
+typedef enum {
+
+	/**
+	 * WHEN `stream_destroy(s)` is called under the default valid preconditions
+	 * AND the injected OSAL file close operation reports `OSAL_FILE_STATUS_IO`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_IO_ERROR`
+	 * - calls the injected OSAL file close operation exactly once
+	 */
+	FS_STREAM_CLOSE_SCENARIO_OSAL_FILE_STATUS_IO = 0,
+
+	/**
+	 * WHEN `stream_destroy(s)` is called under the default valid preconditions
+	 * AND the injected OSAL file close operation returns `OSAL_FILE_STATUS_OK`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_OK`
+	 * - calls the injected OSAL file close operation exactly once
+	 */
+	FS_STREAM_CLOSE_SCENARIO_OSAL_FILE_STATUS_OK
+
+} fs_stream_close_scenario_t;
+
+/** @cond INTERNAL */
+
+typedef struct {
+	const char *name;
+
+	// arrange
+	fs_stream_close_scenario_t scenario;
+	osal_file_status_t osal_file_close_status;
+
+	// assert
+	stream_status_t expected_ret;
+	bool s_arg_value_is_released;
+} test_fs_stream_close_case_t;
+
+typedef struct {
+	// runtime resources
+	stream_t *s_arg_value;
+	OSAL_FILE *fake_file;
+
+	// injection
+	fs_stream_env_t env;
+
+	const test_fs_stream_close_case_t *tc;
+} test_fs_stream_close_fixture_t;
+
+//-----------------------------------------------------------------------------
+// FIXTURES
+//-----------------------------------------------------------------------------
+
+static int setup_fs_stream_close(void **state)
+{
+	const test_fs_stream_close_case_t *tc =
+		(const test_fs_stream_close_case_t *)(*state);
+
+	test_fs_stream_close_fixture_t *fx =
+		(test_fs_stream_close_fixture_t *)osal_malloc(sizeof(*fx));
+	if (!fx) return -1;
+
+	osal_memset(fx, 0, sizeof(*fx));
+	fx->tc = tc;
+
+	fake_file_reset();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+	fake_file_prepare_next_open_file(fx->fake_file);
+	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
+	const fs_stream_args_t args = {
+		.path = "dummy_pathname",
+		.mode =	"wb"
+	};
+	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
+	fake_memory_reset();
+	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
+	fx->env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			osal_mem_test_fake_ops(),
+			&port_env
+		);
+	assert_int_equal(
+		fs_stream_create_stream(
+			&fx->s_arg_value,
+			&args,
+			&cfg,
+			&fx->env
+		),
+		STREAM_STATUS_OK
+	);
+
+	*state = fx;
+	return 0;
+}
+
+static int teardown_fs_stream_close(void **state)
+{
+	test_fs_stream_close_fixture_t *fx =
+		(test_fs_stream_close_fixture_t *)(*state);
+
+	if (!fx->tc->s_arg_value_is_released) {
+		fake_file_set_close_status(
+			fx->fake_file,
+			OSAL_FILE_STATUS_OK
+		);
+		stream_destroy(&fx->s_arg_value);
+		fx->s_arg_value = NULL;
+	}
+
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
+
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
+
+	osal_free(fx);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// TEST
+//-----------------------------------------------------------------------------
+
+static void test_fs_stream_close(void **state) {
+	test_fs_stream_close_fixture_t *fx =
+		(test_fs_stream_close_fixture_t *)(*state);
+	const test_fs_stream_close_case_t *tc = fx->tc;
+
+	// ARRANGE
+	stream_status_t ret = STREAM_STATUS_OK;
+	stream_t **s_arg = &fx->s_arg_value;
+	fake_file_set_close_status(fx->fake_file, tc->osal_file_close_status);
+	void *backend_snapshot = fx->s_arg_value->backend;
+
+	// ACT
+	ret = stream_destroy(s_arg);
+
+	// ASSERT
+	assert_int_equal(ret, tc->expected_ret);
+	if (tc->s_arg_value_is_released) {
+		assert_null(fx->s_arg_value);
+	} else {
+		assert_ptr_equal(
+			fx->s_arg_value->backend,
+			backend_snapshot
+		);
+	}
+	assert_true(
+		fake_file_close_call_count(fx->fake_file)
+		==
+		1
+	);
+}
+
+//-----------------------------------------------------------------------------
+// CASES
+//-----------------------------------------------------------------------------
+
+static const test_fs_stream_close_case_t
+CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_IO = {
+	.name = "fs_stream_close_osal_file_status_io",
+	.scenario = FS_STREAM_CLOSE_SCENARIO_OSAL_FILE_STATUS_IO,
+	.osal_file_close_status = OSAL_FILE_STATUS_IO,
+
+	.expected_ret = STREAM_STATUS_IO_ERROR,
+	.s_arg_value_is_released = false
+};
+
+static const test_fs_stream_close_case_t
+CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_OK = {
+	.name = "fs_stream_close_osal_file_status_ok",
+	.scenario = FS_STREAM_CLOSE_SCENARIO_OSAL_FILE_STATUS_OK,
+	.osal_file_close_status = OSAL_FILE_STATUS_OK,
+
+	.expected_ret = STREAM_STATUS_OK,
+	.s_arg_value_is_released = true
+};
+
+//-----------------------------------------------------------------------------
+// CASES REGISTRY
+//-----------------------------------------------------------------------------
+
+#define FS_STREAM_CLOSE_CASES(X) \
+X(CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_IO) \
+X(CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_OK)
+
+#define FS_STREAM_MAKE_CLOSE_TEST(case_sym) \
+LEXLEO_MAKE_TEST(fs_stream_close, case_sym)
+
+static const struct CMUnitTest fs_stream_close_fs_stream_tests[] = {
+	FS_STREAM_CLOSE_CASES(FS_STREAM_MAKE_CLOSE_TEST)
+};
+
+#undef FS_STREAM_CLOSE_CASES
+#undef FS_STREAM_MAKE_CLOSE_TEST
+
+/** @endcond */
+
+/** @cond INTERNAL */
 
 //-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
 int main(void) {
-	static const struct CMUnitTest fs_stream_tests[] = {
+	static const struct CMUnitTest fs_stream_non_parametric_tests[] = {
 		cmocka_unit_test(test_fs_stream_default_cfg),
-		cmocka_unit_test(test_fs_stream_default_env),
+		cmocka_unit_test(test_fs_stream_default_env)
 	};
 
 	int failed = 0;
-	failed += cmocka_run_group_tests(fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_non_parametric_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(fs_stream_stream_create_stream_tests, NULL, NULL);
-	failed += cmocka_run_group_tests(create_desc_fs_stream_tests, NULL, NULL);
-	failed += cmocka_run_group_tests(desc_ctor_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_create_desc_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_write_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_read_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_flush_fs_stream_tests, NULL, NULL);
+	failed += cmocka_run_group_tests(fs_stream_close_fs_stream_tests, NULL, NULL);
 	return failed;
 }
 
 /** @endcond */
+
+// <here>
+// then maybe creators of owner scope at high level with integration tests

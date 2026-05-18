@@ -28,9 +28,9 @@ target_link_libraries(
     osal_file
     PUBLIC
         osal_mem
+        osal_str
         lexleo_policy_headers
     PRIVATE
-        osal_str
         lexleo_assert
 )
 

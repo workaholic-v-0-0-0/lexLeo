@@ -2,11 +2,13 @@
 
 # Signature
 
-    stream_status_t fs_stream_create_stream(
-        stream_t **out,
-        const fs_stream_args_t *args,
-        const fs_stream_cfg_t *cfg,
-        const fs_stream_env_t *env);
+```c
+stream_status_t fs_stream_create_stream(
+    stream_t **out,
+    const fs_stream_args_t *args,
+    const fs_stream_cfg_t *cfg,
+    const fs_stream_env_t *env);
+```
 
 # Purpose
 
@@ -25,7 +27,8 @@ Create a file-backed stream instance.
 - `env` must not be `NULL`.
 - If `args != NULL`, `args->path` must not be `NULL`.
 - If `args != NULL`, `args->path` must not be empty.
-- If `args != NULL`, `args->flags` must not be zero.
+- If `args != NULL`, `args->mode` must not be `NULL`.
+- If `args != NULL`, `args->mode` must be one of `"rb"`, `"wb"`, or `"ab"`.
 
 # Success
 

@@ -4,10 +4,7 @@
  *
  * @brief Unit tests for the `fs_stream` adapter.
  *
- * The tests in this group verify the contracts of:
- * - `fs_stream_default_cfg()`
- * - `fs_stream_default_env()`
- * - `fs_stream_create_stream()`
- * - `fs_stream_create_desc()`
- * - descriptor constructor usage
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit "fs_stream unit tests page"
  */
+git checko

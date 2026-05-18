@@ -16,7 +16,7 @@ It provides:
 The module is designed to connect:
 - the generic `stream` port,
 - the OSAL file abstraction,
-- the Composition Root wiring used to inject file and memory dependencies.
+- the dependency injection wiring used to provide file and memory operations.
 
 # Public API
 
@@ -33,7 +33,7 @@ exposes Composition Root entry points for direct creation and factory
 registration.
 
 Typical responsibilities:
-- translate `fs_stream_args_t` creation arguments into OSAL file opening,
+- open OSAL files from `fs_stream_args_t` creation arguments,
 - create file-backed `stream_t` handles through the `stream` port,
 - package adapter configuration and injected dependencies for Composition Root
   use,
@@ -42,7 +42,7 @@ Typical responsibilities:
 
 # Main concepts
 
-## Direct adapter creation
+## Direct stream creation
 
 The Composition Root can create a file-backed stream directly through:
 - `fs_stream_create_stream()`
@@ -56,8 +56,8 @@ The Composition Root can register the adapter into a `stream` factory through:
 
 The adapter relies on injected dependencies grouped in `fs_stream_env_t`,
 typically including:
-- OSAL file environment data,
 - OSAL file operations,
+- adapter memory operations,
 - the underlying `stream` port environment.
 
 # Related modules

@@ -15,23 +15,14 @@
 #ifndef LEXLEO_FS_STREAM_STATE_H
 #define LEXLEO_FS_STREAM_STATE_H
 
-#include "policy/lexleo_cstd_types.h"
-
-typedef struct osal_file_t osal_file_t;
+#include "osal/file/osal_file_types.h"
 
 /**
  * @brief Private runtime state for the `fs_stream` backend.
- *
- * @details
- * This structure stores the OSAL file handle and close policy used by the
- * backend during the lifetime of the stream instance.
  */
 typedef struct fs_stream_state_t {
-	/** OSAL file handle backing the stream. May be `NULL` once closed. */
-	osal_file_t *f;
-
-	/** Whether the OSAL file must be closed when the backend is closed. */
-	bool autoclose;
+	/** OSAL file handle backing the stream. Must be `NULL` once closed. */
+	OSAL_FILE *file;
 } fs_stream_state_t;
 
-#endif // LEXLEO_FS_STREAM_STATE_H
+#endif /* LEXLEO_FS_STREAM_STATE_H */

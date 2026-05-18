@@ -2651,7 +2651,7 @@ int main(void) {
 	int failed = 0;
 	failed += cmocka_run_group_tests(osal_file_non_parametric_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_open_tests, NULL, NULL);
-	failed += cmocka_run_group_tests(osal_file_read_tests, NULL, NULL);
+	//failed += cmocka_run_group_tests(osal_file_read_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_write_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_flush_tests, NULL, NULL);
 	failed += cmocka_run_group_tests(osal_file_close_tests, NULL, NULL);

@@ -2,7 +2,9 @@
 
 # Signature
 
-    fs_stream_cfg_t fs_stream_default_cfg(void);
+```c
+fs_stream_cfg_t fs_stream_default_cfg(void);
+```
 
 # Purpose
 

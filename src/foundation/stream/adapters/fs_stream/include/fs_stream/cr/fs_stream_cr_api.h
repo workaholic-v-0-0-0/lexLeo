@@ -54,21 +54,24 @@ fs_stream_cfg_t fs_stream_default_cfg(void);
  * The returned environment does not take ownership of any pointer passed as
  * argument.
  *
- * @param[in] file_env
- * Borrowed OSAL file environment.
- *
  * @param[in] file_ops
  * Borrowed OSAL file operations table.
+ *
+ * @param[in] adapter_mem_ops
+ * Borrowed OSAL mem operations table.
  *
  * @param[in] port_env
  * Borrowed `stream` port environment.
  *
  * @return
  * A well-formed `fs_stream_env_t` aggregating the provided dependencies.
+ *
+ * See detailed contract:
+ * - @ref specifications_fs_stream_default_env
  */
 fs_stream_env_t fs_stream_default_env(
-	const osal_file_env_t *file_env,
 	const osal_file_ops_t *file_ops,
+	const osal_mem_ops_t *adapter_mem_ops,
 	const stream_env_t *port_env);
 
 /**
@@ -83,8 +86,8 @@ fs_stream_env_t fs_stream_default_env(
  * the adapter environment.
  *
  * Ownership:
- * - On success, a newly allocated stream is returned in `*out`.
- * - The caller becomes responsible for destroying it via `stream_destroy()`.
+ * - On success, the caller owns `*out` and must destroy it with
+ *   `stream_destroy()`.
  * - On failure, `*out` is left unchanged.
  *
  * @param[out] out
@@ -97,7 +100,7 @@ fs_stream_env_t fs_stream_default_env(
  *
  * Contract:
  * - `args->path` must not be `NULL` and must not be an empty string.
- * - `args->flags` must not be zero.
+ * - `args->mode` must not be `NULL` and must not be an empty string.
  *
  * @param[in] cfg
  * Adapter configuration.
@@ -118,6 +121,9 @@ fs_stream_env_t fs_stream_default_env(
  *
  * @retval STREAM_STATUS_IO_ERROR
  * The underlying OSAL file operation failed.
+ *
+ * See detailed contract:
+ * - @ref specifications_fs_stream_create_stream
  */
 stream_status_t fs_stream_create_stream(
 	stream_t **out,
@@ -133,15 +139,15 @@ stream_status_t fs_stream_create_stream(
  * suitable for registration into the `stream` factory, for example via
  * `stream_factory_add_adapter()`.
  *
- * Memory policy:
- * - `mem` must be the allocator that will later be used to destroy the
- *   descriptor-owned user data through `ud_dtor`.
+ * Ownership:
+ * - On success, descriptor-owned user data is allocated with `mem`.
+ * - The descriptor user data must later be released through `out->ud_dtor`
+ *   using the same allocator.
+ * - On failure, if `out != NULL`, `*out` is reset to an empty descriptor.
  *
  * @param[out] out
  * Descriptor to initialize.
  * Must not be `NULL`.
- *
- * On failure, if `out != NULL`, `*out` is reset to an empty descriptor.
  *
  * @param[in] key
  * Adapter key used by the factory to select this adapter.
@@ -167,6 +173,9 @@ stream_status_t fs_stream_create_stream(
  *
  * @retval STREAM_STATUS_OOM
  * Allocation of descriptor-owned user data failed.
+ *
+ * See detailed contract:
+ * - @ref specifications_fs_stream_create_desc
  */
 stream_status_t fs_stream_create_desc(
 	stream_adapter_desc_t *out,
@@ -179,4 +188,4 @@ stream_status_t fs_stream_create_desc(
 }
 #endif
 
-#endif // LEXLEO_FS_STREAM_CR_API_H
+#endif /* LEXLEO_FS_STREAM_CR_API_H */

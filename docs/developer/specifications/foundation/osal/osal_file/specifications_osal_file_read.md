@@ -36,7 +36,8 @@ Read up to `nmemb` elements of size `size` from an open `OSAL_FILE` into
 
 - Returns the number of elements successfully read.
 - Stores the read data into `ptr`.
-- Sets `*st` to `OSAL_FILE_STATUS_OK`.
+- If the end of the file has been reached, sets `*st` to `OSAL_FILE_STATUS_EOF`. 
+- If the end of the file has not been reached, sets `*st` to `OSAL_FILE_STATUS_OK`.
 
 # Failure
 

@@ -21,7 +21,7 @@
  * @brief Private constructor user-data for `fs_stream` factory registration.
  *
  * @details
- * This structure stores the configuration and environment snapshots bound into
+ * This structure stores copies of the configuration and environment bound into
  * the adapter descriptor and later reused by `fs_stream_ctor()`.
  */
 typedef struct fs_stream_ctor_ud_t {
@@ -32,4 +32,4 @@ typedef struct fs_stream_ctor_ud_t {
 	fs_stream_env_t env;
 } fs_stream_ctor_ud_t;
 
-#endif // LEXLEO_FS_STREAM_CTOR_UD_H
+#endif /* LEXLEO_FS_STREAM_CTOR_UD_H */

@@ -5,7 +5,8 @@
 /**
  * @file stream_fake_provider.h
  * @ingroup stream_tests_group
- * @brief Fake stream dependency provider for `stream` tests.
+ * @brief Fake stream dependency provider for tests requiring `stream`
+ * dependencies.
  *
  * @details
  * This header exposes fake stream creators ready to be injected in tests.

@@ -65,11 +65,14 @@ osal_file_status_t fake_file_mkdir(const char *pathname);
 
 // CFG
 
-OSAL_FILE *fake_file_create_fake(const osal_mem_ops_t *mem_ops);
-void fake_file_reset(OSAL_FILE *fake);
+void fake_file_reset(void);
 void fake_file_prepare_next_open_file(OSAL_FILE *fake);
 void fake_file_prepare_next_open_status(osal_file_status_t st);
 void fake_file_prepare_next_mkdir_status(osal_file_status_t st);
+
+OSAL_FILE *fake_file_create_fake(const osal_mem_ops_t *mem_ops);
+void fake_file_destroy_fake(OSAL_FILE *fake);
+void fake_file_reset_fake(OSAL_FILE *fake);
 
 void fake_file_set_buffered_backing(
 	OSAL_FILE *fake,

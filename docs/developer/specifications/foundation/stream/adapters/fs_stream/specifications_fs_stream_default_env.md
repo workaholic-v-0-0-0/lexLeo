@@ -4,8 +4,8 @@
 
 ```c
 fs_stream_env_t fs_stream_default_env(
-    const osal_file_env_t *file_env,
     const osal_file_ops_t *file_ops,
+    const osal_mem_ops_t *adapter_mem,
     const stream_env_t *port_env);
 ```
 
@@ -15,8 +15,8 @@ Build a default environment for the `fs_stream` adapter.
 
 # Preconditions
 
-- `file_env` must point to a valid OSAL file environment object.
 - `file_ops` must point to a valid OSAL file operations table.
+- `adapter_mem` must point to a valid OSAL memory operations table.
 - `port_env` must point to a valid `stream` port environment object.
 
 # Invalid arguments
@@ -26,8 +26,8 @@ Build a default environment for the `fs_stream` adapter.
 # Success
 
 - Returns a well-formed `fs_stream_env_t`.
-- Copies `*file_env` into `ret.file_env`.
 - Stores `file_ops` into `ret.file_ops`.
+- Stores `adapter_mem` into `ret.adapter_mem`.
 - Copies `*port_env` into `ret.port_env`.
 
 # Failure

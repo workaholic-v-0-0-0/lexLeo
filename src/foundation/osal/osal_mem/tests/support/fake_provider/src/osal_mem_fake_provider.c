@@ -5,7 +5,8 @@
 /**
  * @file osal_mem_fake_provider.c
  * @ingroup osal_mem_tests_group
- * @brief Fake memory operations provider for `osal_mem` tests.
+ * @brief Fake memory operations provider for tests requiring `osal_mem`
+ * dependencies.
  */
 
 #include "osal/mem/test/osal_mem_fake_provider.h"

@@ -18,6 +18,7 @@
 #include "stream/adapters/stream_env.h"
 
 #include "osal/file/osal_file_ops.h"
+#include "osal/mem/osal_mem_ops.h"
 
 #include "policy/lexleo_cstd_types.h"
 
@@ -54,23 +55,23 @@ typedef struct fs_stream_cfg_t {
  * Composition Root and required by `fs_stream` construction services.
  */
 typedef struct fs_stream_env_t {
-	/**
-	 * @brief Borrowed OSAL file environment.
-	 *
-	 * @details
-	 * This environment is used for file-backend allocation and related OSAL
-	 * file runtime support.
-	 */
-	osal_file_env_t file_env;
 
 	/**
 	 * @brief Borrowed OSAL file operations table.
 	 *
 	 * @details
-	 * This table provides the OSAL file operations used by the adapter
-	 * backend.
+	 * This table provides the OSAL file operations used by the adapter backend.
 	 */
 	const osal_file_ops_t *file_ops;
+
+	/**
+	 * @brief Borrowed memory operations used for adapter-backend allocation.
+	 *
+	 * @details
+	 * These memory operations are used to allocate and destroy the private
+	 * backend object owned by the `fs_stream` adapter.
+	 */
+	const osal_mem_ops_t *adapter_mem_ops;
 
 	/**
 	 * @brief Borrowed `stream` port environment.
@@ -80,6 +81,7 @@ typedef struct fs_stream_env_t {
 	 * public `stream_t` handle.
 	 */
 	stream_env_t port_env;
+
 } fs_stream_env_t;
 
 /**
@@ -94,14 +96,15 @@ typedef struct fs_stream_args_t {
 	const char *path;
 
 	/**
-	 * @brief OSAL file open flags.
+	 * @brief Portable OSAL file open mode.
+	 *
+	 * @details
+	 * This string is forwarded to `osal_file_ops_t::open()`.
+	 * Supported values are defined by the `osal_file` contract,
+	 * currently `"rb"`, `"wb"`, and `"ab"`.
 	 */
-	uint32_t flags;
+	const char *mode;
 
-	/**
-	 * @brief Whether the OSAL file must be closed when the stream is destroyed.
-	 */
-	bool autoclose;
 } fs_stream_args_t;
 
 #ifdef __cplusplus

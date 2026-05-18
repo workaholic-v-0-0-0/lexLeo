@@ -37,6 +37,7 @@ typedef struct osal_file_ops_t osal_file_ops_t;
  */
 typedef enum osal_file_status {
 	OSAL_FILE_STATUS_OK = 0,
+	OSAL_FILE_STATUS_EOF,
 	OSAL_FILE_STATUS_INVALID,
 	OSAL_FILE_STATUS_NOENT,
 	OSAL_FILE_STATUS_PERM,

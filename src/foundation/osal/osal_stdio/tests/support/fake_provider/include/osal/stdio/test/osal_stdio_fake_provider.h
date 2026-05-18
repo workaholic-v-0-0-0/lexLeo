@@ -5,7 +5,8 @@
 /**
  * @file osal_stdio_fake_provider.h
  * @ingroup osal_stdio_tests_group
- * @brief Fake provider for injectable `osal_stdio` operations in tests.
+ * @brief Fake stdio operations provider for tests requiring `osal_stdio`
+ * dependencies.
  *
  * @details
  * This header exposes a test-only operations table returning fake standard I/O

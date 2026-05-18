@@ -1,5 +1,39 @@
 - explain Mechanism of a non-port module for providing creators in
   docs/developer/architecture/module_taxonomy.md
 
+
 - refactor OSAL: avoid making `osal_file` a full I/O backend
   so that `fs_stream` remains the actual stream adapter
+
+
+- adjust `osal_file_ops_t::read()` unit tests after EOF status semantics update
+
+  Update expected statuses for read scenarios affected by end-of-file:
+  - reads requesting more elements than available;
+  - reads from an empty file;
+  - reads after EOF;
+  - `size > 1` reads that reach EOF.
+
+  Final convention:
+  - exact read of remaining content -> `OSAL_FILE_STATUS_OK`;
+  - read attempt beyond available content -> `OSAL_FILE_STATUS_EOF`.
+
+
+- update `stream_destroy()` contract and tests
+
+  `stream_destroy()` now returns a `stream_status_t`.
+
+  Final convention:
+  - `s == NULL` -> `STREAM_STATUS_OK`;
+  - `*s == NULL` -> `STREAM_STATUS_OK`;
+  - backend close succeeds -> release stream, set `*s = NULL`, return
+    `STREAM_STATUS_OK`;
+  - backend close fails -> return mapped failure status, leave `*s` unchanged,
+    do not release the stream.
+
+  Update affected implementation, public header documentation, specifications,
+  and unit tests.
+
+
+- align `dynamic_buffer_stream_close()` specifications with updated
+  `stream_close_fn_t` contract returning `stream_status_t`

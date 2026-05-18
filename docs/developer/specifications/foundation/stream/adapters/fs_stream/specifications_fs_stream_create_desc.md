@@ -13,7 +13,8 @@ stream_status_t fs_stream_create_desc(
 
 # Purpose
 
-Build an adapter descriptor for registering `fs_stream` in a factory.
+Initialize a caller-provided adapter descriptor for registering `fs_stream` in
+a factory.
 
 # Preconditions
 
@@ -35,17 +36,22 @@ Build an adapter descriptor for registering `fs_stream` in a factory.
 
 - Returns `STREAM_STATUS_OK`.
 - Stores a valid adapter descriptor in `*out`.
-- Binds the provided `key`, `cfg`, and `env` into the produced descriptor.
+- Sets `out->key` to the provided `key`.
+- Sets `out->ctor` to a non-`NULL` `fs_stream` constructor compatible with
+  `stream_ctor_fn_t`.
+- Sets `out->ud` to non-`NULL` descriptor-owned user data.
+- Sets `out->ud_dtor` to a non-`NULL` destructor suitable for releasing
+  `out->ud`.
 - The produced descriptor is suitable for registration into the `stream`
   factory.
-- The produced descriptor must later be released via `out->ud_dtor()`.
 
 # Failure
 
 - Returns `STREAM_STATUS_INVALID` for invalid arguments.
 - Returns `STREAM_STATUS_OOM` if allocation of descriptor-owned user data
   fails.
-- If `out` is not `NULL`, resets `*out` to an empty descriptor.
+- If `out` is not `NULL`, resets `*out` to an empty descriptor, including on
+  allocation failure.
 
 # Ownership
 

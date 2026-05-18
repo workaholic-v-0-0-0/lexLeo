@@ -2,11 +2,15 @@
  * @defgroup fs_stream_api fs_stream API
  * @ingroup stream_family_group
  *
- * @brief File-backed adapter for the stream port (OSAL file backend).
+ * @brief File-backed adapter for the `stream` port.
  *
- * The fs_stream adapter implements the stream port on top of OSAL file operations.
- * It is intended to be wired by the Composition Root through a stream factory
- * descriptor.
+ * @details
+ * The `fs_stream` adapter implements the `stream` port with a private
+ * `fs_stream_t` backend that manages a file-backed runtime state.
+ *
+ * It is intended to be wired by the Composition Root, either directly through
+ * `fs_stream_create_stream()` or through a factory descriptor built by
+ * `fs_stream_create_desc()`.
  *
  * Sub-APIs:
  * - @ref fs_stream_cr_api

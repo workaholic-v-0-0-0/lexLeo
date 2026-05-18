@@ -50,7 +50,7 @@
 static osal_file_status_t osal_file_map_errno(int errnum)
 {
 	switch (errnum) {
-		case 0:
+		case OSAL_FILE_STATUS_OK:
 			return OSAL_FILE_STATUS_OK;
 
 #ifdef EINVAL
@@ -262,8 +262,13 @@ static size_t osal_file_read(
 
 	size_t ret = fread(ptr, size, nmemb, stream->fp);
 
-	if (ret < nmemb && ferror(stream->fp)) {
-		*st = osal_file_map_errno(errno);
+	if (ret < nmemb) {
+		if (ferror(stream->fp)) {
+			*st = osal_file_map_errno(errno);
+		}
+		else if (feof(stream->fp)) {
+			*st = OSAL_FILE_STATUS_EOF;
+		}
 	}
 
 	return ret;

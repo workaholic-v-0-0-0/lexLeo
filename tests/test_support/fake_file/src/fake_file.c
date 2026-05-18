@@ -75,7 +75,7 @@ typedef struct fake_file_t
 	osal_file_status_t *last_gets_st;
 } fake_file_t;
 
-typedef struct fake_file_ctrl
+typedef struct fake_file_ctrl_t
 {
 	/* cfg */
 
@@ -95,9 +95,9 @@ typedef struct fake_file_ctrl
 	size_t mkdir_call_count;
 	const char *last_mkdir_pathname;
 
-} fake_file_ctrl;
+} fake_file_ctrl_t;
 
-static fake_file_ctrl g_fake_file_ctrl;
+static fake_file_ctrl_t g_fake_file_ctrl;
 
 static fake_file_t *osal_file_to_fake_file(
 	OSAL_FILE *file
@@ -109,6 +109,32 @@ static OSAL_FILE *fake_file_to_osal_file(
 	fake_file_t *fake
 ) {
 	return (OSAL_FILE *)fake;
+}
+
+void fake_file_reset(void)
+{
+	if (g_fake_file_ctrl.open_out) {
+		fake_file_destroy_fake(
+			fake_file_to_osal_file(
+				g_fake_file_ctrl.open_out
+			)
+		);
+	}
+
+	g_fake_file_ctrl = (fake_file_ctrl_t){
+		.open_status = OSAL_FILE_STATUS_OK,
+		.open_out = NULL,
+		.mkdir_status = OSAL_FILE_STATUS_OK,
+
+		.open_call_count = 0,
+		.last_open_out = NULL,
+		.last_open_pathname = NULL,
+		.last_open_mode = NULL,
+		.last_open_mem_ops = NULL,
+
+		.mkdir_call_count = 0,
+		.last_mkdir_pathname = NULL,
+	};
 }
 
 OSAL_FILE *fake_file_create_fake(
@@ -123,7 +149,20 @@ OSAL_FILE *fake_file_create_fake(
 	return fake_file_to_osal_file(fake);
 }
 
-void fake_file_reset(
+void fake_file_destroy_fake(OSAL_FILE *fake)
+{
+	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
+
+	LEXLEO_ASSERT(
+		   casted_fake
+		&& casted_fake->mem_ops
+		&& casted_fake->mem_ops->free
+	);
+
+	casted_fake->mem_ops->free(casted_fake);
+}
+
+void fake_file_reset_fake(
 	OSAL_FILE *fake
 ) {
 	LEXLEO_ASSERT(fake);
@@ -271,6 +310,8 @@ osal_file_status_t fake_file_open(
 	fake_file_t *fake = g_fake_file_ctrl.open_out;
 	LEXLEO_ASSERT(fake);
 
+	g_fake_file_ctrl.open_out = NULL;
+
 	LEXLEO_ASSERT(fake->sink_len <= FAKE_FILE_BUF_SIZE);
 
 	OSAL_FILE *fake_osal_file = fake_file_to_osal_file(fake);
@@ -309,8 +350,6 @@ size_t fake_file_read(
 ) {
 	LEXLEO_ASSERT(ptr && stream && st);
 
-	size_t ret = 0;
-
 	fake_file_t *fake = osal_file_to_fake_file(stream);
 
 	fake->read_call_count++;
@@ -325,28 +364,45 @@ size_t fake_file_read(
 		&& fake->pos <= fake->buffered_len
 	);
 
-	if (size != 0 && fake->read_status == OSAL_FILE_STATUS_OK) {
-		size_t requested_bytes = size * nmemb;
-		size_t available_bytes = fake->buffered_len - fake->pos;
-		size_t readable_bytes =
-			(requested_bytes < available_bytes)
-				? requested_bytes
-				: available_bytes;
-		size_t readable_nmemb = readable_bytes / size;
-		ret = readable_nmemb * size;
-		if (ret > 0) {
-			osal_memcpy(
-				ptr,
-				fake->buffered_backing + fake->pos,
-				ret
-			);
-			fake->pos += ret;
-		}
+	if (
+		   fake->read_status != OSAL_FILE_STATUS_OK
+		&& fake->read_status != OSAL_FILE_STATUS_EOF
+	) {
+		*st = fake->read_status;
+		return 0;
 	}
 
-	*st = fake->read_status;
+	if (size == 0 || nmemb == 0) {
+		*st = OSAL_FILE_STATUS_OK;
+		return 0;
+	}
 
-	return size ? ret / size : (size_t)0;
+	size_t requested_bytes = size * nmemb;
+	size_t available_bytes = fake->buffered_len - fake->pos;
+	size_t readable_bytes =
+		(requested_bytes < available_bytes)
+			? requested_bytes
+			: available_bytes;
+
+	size_t readable_nmemb = readable_bytes / size;
+	size_t copied_bytes = readable_nmemb * size;
+
+	if (copied_bytes > 0) {
+		osal_memcpy(
+			ptr,
+			fake->buffered_backing + fake->pos,
+			copied_bytes
+		);
+		fake->pos += copied_bytes;
+	}
+
+	if (readable_nmemb < nmemb) {
+		*st = OSAL_FILE_STATUS_EOF;
+	} else {
+		*st = OSAL_FILE_STATUS_OK;
+	}
+
+	return readable_nmemb;
 }
 
 size_t fake_file_write(

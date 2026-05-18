@@ -98,29 +98,30 @@ stream_status_t stream_create(
 	return STREAM_STATUS_OK;
 }
 
-void stream_destroy(stream_t **s)
+stream_status_t stream_destroy(stream_t **s)
 {
 	if (!s || !*s) {
-		return;
+		return STREAM_STATUS_OK;
 	}
 
-	stream_t *stream = *s;
+	stream_t *tmp = *s;
+
+	LEXLEO_ASSERT(
+		   tmp->vtbl.close
+		&& tmp->mem
+		&& tmp->mem->free
+	);
+
+	stream_status_t st = tmp->vtbl.close(tmp->backend);
+
+	if (st != STREAM_STATUS_OK) {
+		return st;
+	}
+
+	tmp->mem->free(tmp);
 	*s = NULL;
 
-	const osal_mem_ops_t *mem = stream->mem;
-	stream_close_fn_t close_fn = stream->vtbl.close;
-	void *backend = stream->backend;
-
-	if (close_fn) {
-		stream_status_t st = close_fn(backend);
-		LEXLEO_ASSERT(
-			st == STREAM_STATUS_OK ||
-			st == STREAM_STATUS_IO_ERROR ||
-			st == STREAM_STATUS_NO_BACKEND);
-	}
-
-	LEXLEO_ASSERT(mem && mem->free);
-	mem->free(stream);
+	return STREAM_STATUS_OK;
 }
 
 const stream_ops_t *stream_default_ops(void) {

@@ -75,7 +75,7 @@ typedef struct fake_stream_backend_t
 
 } fake_stream_backend_t;
 
-typedef struct fake_stream_ctrl
+typedef struct fake_stream_ctrl_t
 {
 	/* cfg */
 
@@ -104,9 +104,9 @@ typedef struct fake_stream_ctrl
 	const void *last_io_create_ud;
 	stream_io_kind_t last_io_create_kind;
 	stream_t **last_io_create_out;
-} fake_stream_ctrl;
+} fake_stream_ctrl_t;
 
-static fake_stream_ctrl g_fake_stream_ctrl = {0};
+static fake_stream_ctrl_t g_fake_stream_ctrl = {0};
 
 static fake_stream_backend_t *fake_stream_backend_real_to_fake(
 	void *backend
@@ -293,7 +293,7 @@ static stream_status_t fake_stream_create_buffer_stream(
 	const void *ud,
 	stream_t **out
 ) {
-	fake_stream_ctrl *ctrl = (fake_stream_ctrl *)ud;
+	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
 	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
 
 	ctrl->buffer_create_call_count++;
@@ -336,7 +336,7 @@ static stream_status_t fake_stream_create_file_stream(
 	bool autoclose,
 	stream_t **out
 ) {
-	fake_stream_ctrl *ctrl = (fake_stream_ctrl *)ud;
+	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
 	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
 
 	ctrl->file_create_call_count++;
@@ -380,7 +380,7 @@ static stream_status_t fake_stream_create_io_stream(
 	stream_io_kind_t kind,
 	stream_t **out
 ) {
-	fake_stream_ctrl *ctrl = (fake_stream_ctrl *)ud;
+	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
 	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
 
 	ctrl->io_create_call_count++;

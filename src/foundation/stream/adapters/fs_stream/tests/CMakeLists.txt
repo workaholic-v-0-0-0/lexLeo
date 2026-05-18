@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Sylvain Labopin
 
+add_subdirectory(support)
+
 add_executable(
     unit_test_fs_stream
     "${CMAKE_CURRENT_SOURCE_DIR}/unit/unit_test_fs_stream.c"
@@ -11,7 +13,9 @@ target_link_libraries(
     PRIVATE
         stream
         fs_stream
+        stream_white_box_tests_access
         osal_mem_fake_provider
+        osal_file
         osal_file_fake_provider
         lexleo_policy_headers
         lexleo_cmocka_support
@@ -38,3 +42,4 @@ if(VALGRIND_EXECUTABLE)
         PROPERTIES LABELS "memory"
     )
 endif()
+

@@ -27,11 +27,22 @@ extern "C" {
  * @param[in,out] s
  * Address of the stream handle to destroy.
  *
+ * @return
+ * `STREAM_STATUS_OK` if there is no stream to destroy or if destruction
+ * succeeds. Otherwise, returns the status reported by the backend close
+ * callback.
+ *
  * @details
- * If `s == NULL` or `*s == NULL`, this function does nothing.
- * Otherwise, it releases the stream object and sets `*s` to `NULL`.
+ * If `s == NULL` or `*s == NULL`, this function returns `STREAM_STATUS_OK`.
+ * Otherwise, it first delegates backend cleanup to the stream close callback.
+ *
+ * If backend cleanup succeeds, it releases the stream object and sets `*s` to
+ * `NULL`.
+ *
+ * If backend cleanup fails, it returns the reported status and leaves `*s`
+ * unchanged.
  */
-void stream_destroy(stream_t **s);
+stream_status_t stream_destroy(stream_t **s);
 
 #ifdef __cplusplus
 }

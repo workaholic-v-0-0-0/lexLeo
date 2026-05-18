@@ -8,7 +8,7 @@
  * @brief Private backend handle definition for the `fs_stream` adapter.
  *
  * @details
- * This header exposes the private in-memory backend handle used by the
+ * This header exposes the private file-backed backend handle used by the
  * `fs_stream` adapter implementation.
  */
 
@@ -26,18 +26,19 @@
  * @details
  * This structure stores:
  * - the backend runtime state,
- * - the memory operations used for backend destruction,
- * - the OSAL file operations used by the adapter.
+ * - the OSAL file operations used by the adapter,
+ * - the memory operations used for backend destruction.
  */
 typedef struct fs_stream_t {
 	/** Backend runtime state. */
 	fs_stream_state_t state;
 
+	/** OSAL file operations used by the backend. */
+	const osal_file_ops_t *file_ops;
+
 	/** Memory operations used to destroy the backend handle. */
 	const osal_mem_ops_t *mem_ops;
 
-	/** OSAL file operations used by the backend. */
-	const osal_file_ops_t *file_ops;
 } fs_stream_t;
 
-#endif // LEXLEO_FS_STREAM_HANDLE_H
+#endif /* LEXLEO_FS_STREAM_HANDLE_H */
