@@ -38,7 +38,7 @@
 #include "policy/lexleo_win32_base.h"
 #include "policy/lexleo_assert.h"
 
-/**
+/***
  * @brief Map a CRT `errno` value to an `osal_file_status_t`.
  *
  * @param errnum
@@ -567,26 +567,7 @@ static osal_file_status_t osal_file_close(OSAL_FILE *stream)
 	return OSAL_FILE_STATUS_OK;
 }
 
-/**
- * @brief Return the default Win32 / CRT OSAL file operations table.
- *
- * @return
- * A pointer to the default `osal_file_ops_t` table for this backend.
- */
-const osal_file_ops_t *osal_file_default_ops(void)
-{
-	static const osal_file_ops_t osal_file_ops = {
-		.open  = osal_file_open,
-		.read  = osal_file_read,
-		.write = osal_file_write,
-		.close = osal_file_close,
-		.flush = osal_file_flush
-	};
-
-	return &osal_file_ops;
-}
-
-char *osal_file_gets(
+static char *osal_file_gets(
 	char* out,
 	size_t out_size,
 	OSAL_FILE* stream,
@@ -619,7 +600,7 @@ char *osal_file_gets(
 	return NULL;
 }
 
-osal_file_status_t osal_file_mkdir(const char *pathname)
+static osal_file_status_t osal_file_mkdir(const char *pathname)
 {
 	if (!pathname || pathname[0] == '\0')
 		return OSAL_FILE_STATUS_INVALID;
@@ -640,4 +621,25 @@ osal_file_status_t osal_file_mkdir(const char *pathname)
 	DWORD err = GetLastError();
 	mem_ops->free(wpath);
 	return osal_file_win32_error(err);
+}
+
+/**
+ * @brief Return the default Win32 / CRT OSAL file operations table.
+ *
+ * @return
+ * A pointer to the default `osal_file_ops_t` table for this backend.
+ */
+const osal_file_ops_t *osal_file_default_ops(void)
+{
+	static const osal_file_ops_t osal_file_ops = {
+		.open  = osal_file_open,
+		.read  = osal_file_read,
+		.write = osal_file_write,
+		.close = osal_file_close,
+		.flush = osal_file_flush,
+		.gets  = osal_file_gets,
+		.mkdir = osal_file_mkdir
+	};
+
+	return &osal_file_ops;
 }

@@ -49,6 +49,8 @@ static void test_osal_file_default_ops(void **state) {
 	assert_non_null(ret->write);
 	assert_non_null(ret->flush);
 	assert_non_null(ret->close);
+	assert_non_null(ret->gets);
+	assert_non_null(ret->mkdir);
 }
 
 /**
