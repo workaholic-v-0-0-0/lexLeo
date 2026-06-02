@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Sylvain Labopin
+
+add_library(
+    lexleo_vm_borrower
+    STATIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lexleo_vm_borrower.c"
+)
+target_include_directories(
+    lexleo_vm_borrower
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/borrowers"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(
+    lexleo_vm_borrower
+    PRIVATE
+        osal_mem
+        osal_file
+        osal_stdio
+        osal_str
+        osal_time
+        stream_owner
+        logger
+        lexleo_assert
+)
+
+add_library(
+    lexleo_vm_cr
+    STATIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/lexleo_vm_cr.c"
+)
+target_include_directories(
+    lexleo_vm_cr
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(
+    lexleo_vm_cr
+    PUBLIC
+        lexleo_vm_borrower
+        osal_mem
+        osal_file
+        osal_stdio
+        osal_str
+        osal_time
+        stream_cr
+        logger
+    PRIVATE
+        dynamic_buffer_stream
+        stdio_stream
+        fs_stream
+        lexleo_assert
+)
+
+add_subdirectory(tests)

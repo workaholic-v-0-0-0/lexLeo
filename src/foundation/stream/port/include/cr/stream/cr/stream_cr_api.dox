@@ -1,0 +1,20 @@
+/**
+ * @defgroup stream_cr_api stream CR API
+ * @ingroup stream_api
+ *
+ * @brief Composition Root API for the `stream` port.
+ *
+ * @details
+ * This API exposes the CR-facing services used to configure and create
+ * `stream` factories, register adapters, and create or destroy specialized
+ * stream creator objects.
+ *
+ * Main headers:
+ * - `stream_cr_api.h`
+ * - `stream_creators_cr_api.h`
+ * - `creators/stream_buffer_creator_cr_api.h`
+ * - `creators/stream_file_creator_cr_api.h`
+ * - `creators/stream_io_creator_cr_api.h`
+ *
+ * @note Runtime modules should not include this API directly.
+ */

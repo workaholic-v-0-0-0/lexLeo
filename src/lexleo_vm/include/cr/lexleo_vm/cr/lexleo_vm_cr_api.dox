@@ -1,0 +1,22 @@
+/**
+ * @defgroup lexleo_vm_cr_api lexleo_vm CR API
+ * @ingroup lexleo_vm_api
+ *
+ * @brief Composition Root API for constructing and destroying LexLeo VM
+ * instances.
+ *
+ * @details
+ * This API is intended exclusively for Composition Root code responsible for
+ * assembling LexLeo VM instances.
+ *
+ * VM construction is split into two steps:
+ * - `lexleo_vm_create()` creates the VM handle from a configuration value and
+ *   a borrowed runtime environment.
+ * - `lexleo_vm_complete_default_init()` completes the handle by creating the
+ *   owned runtime resources required by the default VM configuration.
+ *
+ * The borrowed runtime environment stores dependencies provided by the
+ * caller. The owned runtime resources created during default initialization
+ * become part of the VM handle lifetime and are released by
+ * `lexleo_vm_destroy()`.
+ */

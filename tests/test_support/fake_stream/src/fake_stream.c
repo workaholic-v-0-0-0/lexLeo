@@ -8,13 +8,7 @@
  * @brief Fake stream backend implementation for unit tests.
  *
  * @details
- * This file implements the fake stream backend, fake stream creators, and
- * configuration/spy helpers declared by `fake_stream.h`.
- *
- * The fake backend provides deterministic read/write/flush/close behavior over
- * in-memory backing buffers. It also records operation calls and creator calls
- * so tests can observe how stream-dependent modules use injected stream
- * dependencies.
+ * This file todo
  */
 
 #include "lexleo/test/fake_stream.h"
@@ -90,18 +84,14 @@ typedef struct fake_stream_ctrl_t
 	/* spy */
 
 	size_t buffer_create_call_count;
-	const void *last_buffer_create_ud;
 	stream_t **last_buffer_create_out;
 
 	size_t file_create_call_count;
-	const void *last_file_create_ud;
 	const char *last_file_create_path;
-	uint32_t last_file_create_flags;
-	bool last_file_create_autoclose;
+	const char *last_file_create_mode;
 	stream_t **last_file_create_out;
 
 	size_t io_create_call_count;
-	const void *last_io_create_ud;
 	stream_io_kind_t last_io_create_kind;
 	stream_t **last_io_create_out;
 } fake_stream_ctrl_t;
@@ -279,6 +269,8 @@ static stream_status_t fake_stream_close(void *backend
 	fake_backend->pos = 0;
 	fake_backend->is_open = false;
 
+	fake_backend->mem_ops->free(fake_backend);
+
 	return STREAM_STATUS_OK;
 }
 
@@ -289,132 +281,155 @@ static const stream_vtbl_t g_fake_stream_vtbl = {
 	.close = fake_stream_close
 };
 
-static stream_status_t fake_stream_create_buffer_stream(
-	const void *ud,
-	stream_t **out
-) {
-	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
-	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
+static stream_status_t fake_stream_create_stream(stream_t **out)
+{
+	void *fake_backend = g_fake_stream_ctrl.next_backend
+		? g_fake_stream_ctrl.next_backend
+		: fake_stream_create_fake_backend();
 
-	ctrl->buffer_create_call_count++;
-	ctrl->last_buffer_create_ud = ud;
-	ctrl->last_buffer_create_out = out;
+	g_fake_stream_ctrl.next_backend = NULL;
 
-	if (ctrl->buffer_create_status != STREAM_STATUS_OK) {
-		return ctrl->buffer_create_status;
-	}
-
-	void *fake_backend = (ctrl->next_backend) ?
-		ctrl->next_backend : fake_stream_create_fake_backend();
-	ctrl->next_backend = NULL;
 	if (!fake_backend) {
 		return STREAM_STATUS_OOM;
 	}
 
 	fake_stream_backend_real_to_fake(fake_backend)->is_open = true;
 
-	return stream_create(
-		out,
-		&g_fake_stream_vtbl,
-		fake_backend,
-		&ctrl->env);
+	stream_status_t st = stream_create(out, &g_fake_stream_ctrl.env);
+	if (st != STREAM_STATUS_OK) {
+		return st;
+	}
+
+	return  stream_complete_default_init(*out, fake_backend);
 }
 
-static const stream_buffer_creator_t g_fake_stream_buffer_creator = {
-	.ud = &g_fake_stream_ctrl,
-	.create = fake_stream_create_buffer_stream
-};
-
-const stream_buffer_creator_t *fake_stream_buffer_creator(void) {
-	return &g_fake_stream_buffer_creator;
-}
-
-static stream_status_t fake_stream_create_file_stream(
+static stream_status_t fake_stream_dbs_ctor(
 	const void *ud,
-	const char *path,
-	uint32_t flags,
-	bool autoclose,
+	const void *args,
 	stream_t **out
 ) {
-	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
-	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
+	(void)ud;
+	LEXLEO_ASSERT(out);
 
-	ctrl->file_create_call_count++;
-	ctrl->last_file_create_ud = ud;
-	ctrl->last_file_create_path = path;
-	ctrl->last_file_create_flags = flags;
-	ctrl->last_file_create_autoclose = autoclose;
-	ctrl->last_file_create_out = out;
-
-	if (ctrl->file_create_status != STREAM_STATUS_OK) {
-		return ctrl->file_create_status;
+	if (args) {
+		return STREAM_STATUS_INVALID;
 	}
 
-	void *fake_backend = (ctrl->next_backend) ?
-		ctrl->next_backend : fake_stream_create_fake_backend();
-	ctrl->next_backend = NULL;
-	if (!fake_backend) {
-		return STREAM_STATUS_OOM;
+	g_fake_stream_ctrl.buffer_create_call_count++;
+	g_fake_stream_ctrl.last_buffer_create_out = out;
+
+	if (g_fake_stream_ctrl.buffer_create_status != STREAM_STATUS_OK) {
+		return g_fake_stream_ctrl.buffer_create_status;
 	}
 
-	fake_stream_backend_real_to_fake(fake_backend)->is_open = true;
-
-	return stream_create(
-		out,
-		&g_fake_stream_vtbl,
-		fake_backend,
-		&ctrl->env);
+	return fake_stream_create_stream(out);
 }
 
-static const stream_file_creator_t g_fake_stream_file_creator = {
-	.ud = &g_fake_stream_ctrl,
-	.create = fake_stream_create_file_stream
-};
-
-const stream_file_creator_t *fake_stream_file_creator(void) {
-	return &g_fake_stream_file_creator;
-}
-
-static stream_status_t fake_stream_create_io_stream(
+static stream_status_t fake_stream_file_ctor(
 	const void *ud,
-	stream_io_kind_t kind,
+	const void *args,
 	stream_t **out
 ) {
-	fake_stream_ctrl_t *ctrl = (fake_stream_ctrl_t *)ud;
-	LEXLEO_ASSERT(ctrl && ctrl->env.mem);
+	(void)ud;
+	LEXLEO_ASSERT(out);
 
-	ctrl->io_create_call_count++;
-	ctrl->last_io_create_ud = ud;
-	ctrl->last_io_create_kind = kind;
-	ctrl->last_io_create_out = out;
+	const stream_file_creator_args_t *file_args =
+		(const stream_file_creator_args_t *)args;
 
-	if (ctrl->io_create_status != STREAM_STATUS_OK) {
-		return ctrl->io_create_status;
+	if (!file_args) {
+		return STREAM_STATUS_INVALID;
 	}
 
-	void *fake_backend = (ctrl->next_backend) ?
-		ctrl->next_backend : fake_stream_create_fake_backend();
-	ctrl->next_backend = NULL;
-	if (!fake_backend) {
-		return STREAM_STATUS_OOM;
+	g_fake_stream_ctrl.file_create_call_count++;
+	g_fake_stream_ctrl.last_file_create_path = file_args->path;
+	g_fake_stream_ctrl.last_file_create_mode = file_args->mode;
+	g_fake_stream_ctrl.last_file_create_out = out;
+
+	if (g_fake_stream_ctrl.file_create_status != STREAM_STATUS_OK) {
+		return g_fake_stream_ctrl.file_create_status;
 	}
 
-	fake_stream_backend_real_to_fake(fake_backend)->is_open = true;
-
-	return stream_create(
-		out,
-		&g_fake_stream_vtbl,
-		fake_backend,
-		&ctrl->env);
+	return fake_stream_create_stream(out);
 }
 
-static const stream_io_creator_t g_fake_stream_io_creator = {
-	.ud = &g_fake_stream_ctrl,
-	.create = fake_stream_create_io_stream
-};
+static stream_status_t fake_stream_io_ctor(
+	const void *ud,
+	const void *args,
+	stream_t **out
+) {
+	(void)ud;
+	LEXLEO_ASSERT(out);
 
-const stream_io_creator_t *fake_stream_io_creator(void) {
-	return &g_fake_stream_io_creator;
+	const stream_io_kind_t *kind =
+		(const stream_io_kind_t *)args;
+
+	if (!kind) {
+		return STREAM_STATUS_INVALID;
+	}
+
+	g_fake_stream_ctrl.io_create_call_count++;
+	g_fake_stream_ctrl.last_io_create_kind = *kind;
+	g_fake_stream_ctrl.last_io_create_out = out;
+
+	if (g_fake_stream_ctrl.io_create_status != STREAM_STATUS_OK) {
+		return g_fake_stream_ctrl.io_create_status;
+	}
+
+	return fake_stream_create_stream(out);
+}
+
+void fake_stream_create_buffer_desc(
+	stream_adapter_desc_t *out,
+	stream_key_t key
+) {
+	LEXLEO_ASSERT(
+		   out
+		&& key
+		&& *key != '\0'
+	);
+
+	*out = (stream_adapter_desc_t){
+		.key = key,
+		.ctor = fake_stream_dbs_ctor,
+		.ud = NULL,
+		.ud_dtor = NULL
+	};
+}
+
+void fake_stream_create_file_desc(
+	stream_adapter_desc_t *out,
+	stream_key_t key
+) {
+	LEXLEO_ASSERT(
+		   out
+		&& key
+		&& *key != '\0'
+	);
+
+	*out = (stream_adapter_desc_t){
+		.key = key,
+		.ctor = fake_stream_file_ctor,
+		.ud = NULL,
+		.ud_dtor = NULL
+	};
+}
+
+void fake_stream_create_io_desc(
+	stream_adapter_desc_t *out,
+	stream_key_t key
+) {
+	LEXLEO_ASSERT(
+		   out
+		&& key
+		&& *key != '\0'
+	);
+
+	*out = (stream_adapter_desc_t){
+		.key = key,
+		.ctor = fake_stream_io_ctor,
+		.ud = NULL,
+		.ud_dtor = NULL
+	};
 }
 
 /* CFG */
@@ -577,10 +592,6 @@ size_t fake_stream_buffer_create_call_count(void) {
 	return g_fake_stream_ctrl.buffer_create_call_count;
 }
 
-const void *fake_stream_last_buffer_create_ud(void) {
-	return g_fake_stream_ctrl.last_buffer_create_ud;
-}
-
 stream_t **fake_stream_last_buffer_create_out(void) {
 	return g_fake_stream_ctrl.last_buffer_create_out;
 }
@@ -589,20 +600,12 @@ size_t fake_stream_file_create_call_count(void) {
 	return g_fake_stream_ctrl.file_create_call_count;
 }
 
-const void *fake_stream_last_file_create_ud(void) {
-	return g_fake_stream_ctrl.last_file_create_ud;
-}
-
 const char *fake_stream_last_file_create_path(void) {
 	return g_fake_stream_ctrl.last_file_create_path;
 }
 
-uint32_t fake_stream_last_file_create_flags(void) {
-	return g_fake_stream_ctrl.last_file_create_flags;
-}
-
-bool fake_stream_last_file_create_autoclose(void) {
-	return g_fake_stream_ctrl.last_file_create_autoclose;
+const char *fake_stream_last_file_create_mode(void) {
+	return g_fake_stream_ctrl.last_file_create_mode;
 }
 
 stream_t **fake_stream_last_file_create_out(void) {
@@ -611,10 +614,6 @@ stream_t **fake_stream_last_file_create_out(void) {
 
 size_t fake_stream_io_create_call_count(void) {
 	return g_fake_stream_ctrl.io_create_call_count;
-}
-
-const void *fake_stream_last_io_create_ud(void) {
-	return g_fake_stream_ctrl.last_io_create_ud;
 }
 
 stream_io_kind_t fake_stream_last_io_create_kind(void) {

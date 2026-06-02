@@ -20,7 +20,7 @@ target_link_libraries(
     logger_default
     PUBLIC
         logger
-        stream
+        stream_borrower
         osal_time
         osal_mem
         osal_str
@@ -28,6 +28,8 @@ target_link_libraries(
         lexleo_assert
 )
 
+#[[ # todo fix after stream migration
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()
+#]]

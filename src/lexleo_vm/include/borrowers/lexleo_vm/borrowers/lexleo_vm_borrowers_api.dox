@@ -1,0 +1,12 @@
+/** @defgroup lexleo_vm_borrowers_api lexleo_vm borrowers API
+ *  @ingroup lexleo_vm_api
+ *
+ *  @brief Borrower-facing API for the `lexleo_vm` module.
+ *
+ *  @details
+ *  This group contains the runtime API exposed to code that receives and uses
+ *  an already created LexLeo VM handle.
+ *
+ *  Borrower-facing functions do not create or destroy the VM handle. They
+ *  operate on a handle whose ownership remains with the caller.
+ */

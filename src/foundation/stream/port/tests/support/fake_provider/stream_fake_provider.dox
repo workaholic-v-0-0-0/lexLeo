@@ -1,0 +1,12 @@
+/** @defgroup stream_fake_provider_tests_support stream fake provider test support
+ *  @ingroup stream_tests_group
+ *
+ *  @brief Fake `stream` dependency provider for tests.
+ *
+ *  @details
+ *  This support module builds a fake stream factory, registers fake stream
+ *  adapters, and exposes ready-to-inject fake stream creators for tests.
+ *
+ *  Main header:
+ *  - `stream_fake_provider.h`
+ */

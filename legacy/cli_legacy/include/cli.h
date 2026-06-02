@@ -11,7 +11,7 @@
 */
 // maybe others...
 
-int cli_run(); // later, should handle CLD args
+int cli_run_app(); // later, should handle CLD args
 
 
 

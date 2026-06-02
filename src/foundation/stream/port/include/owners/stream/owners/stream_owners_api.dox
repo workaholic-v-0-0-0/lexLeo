@@ -1,0 +1,18 @@
+/** @defgroup stream_owners_api stream owners API
+ *  @ingroup stream_api
+ *
+ *  @brief Owner-facing API for the `stream` port.
+ *
+ *  @details
+ *  This API exposes the owner-facing types and operations used to create and
+ *  destroy owned `stream_t` handles.
+ *
+ *  Main headers:
+ *  - `stream_owners_api.h`
+ *  - `stream_owners_types.h`
+ *  - `stream_factory_create_stream.h`
+ *  - `stream_creators_api.h`
+ *  - `creators/stream_buffer_creator.h`
+ *  - `creators/stream_file_creator.h`
+ *  - `creators/stream_io_creator.h`
+ */

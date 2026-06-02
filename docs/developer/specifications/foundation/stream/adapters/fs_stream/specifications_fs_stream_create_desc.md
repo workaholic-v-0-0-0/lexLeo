@@ -55,19 +55,12 @@ a factory.
 
 # Ownership
 
-- On success, ownership of the descriptor-owned user data is transferred to the
-  produced descriptor.
+- Ownership of `cfg` and `env` is not transferred.
 - The caller remains responsible for the storage designated by `out`.
 - The produced descriptor-owned user data must later be released through
   `out->ud_dtor()`.
-- On failure, no descriptor-owned user data ownership is transferred.
 
 # Notes
 
-- The Composition Root uses this function to prepare a
-  `stream_adapter_desc_t` suitable for registration, for example via
-  `stream_factory_add_adapter()`.
 - The allocator passed in `mem` defines the lifetime management policy for the
   descriptor-owned user data.
-- On failure, the descriptor output is normalized to an empty descriptor when
-  possible.

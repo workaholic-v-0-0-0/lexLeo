@@ -152,7 +152,7 @@ static bool readline(
 }
 
 //<here> make a new unary operator "symbol" to make a symbol runtime value
-int cli_run() { // in a very dirty draft state!
+int cli_run_app() { // in a very dirty draft state!
 	struct stream_legacy *in = stdio_stream_legacy_from_stdin();
 	if (!in) return EXIT_FAILURE;
 

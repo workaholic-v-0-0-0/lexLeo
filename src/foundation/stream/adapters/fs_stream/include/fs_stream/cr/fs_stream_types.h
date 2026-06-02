@@ -5,17 +5,17 @@
 /**
  * @file fs_stream_types.h
  * @ingroup fs_stream_cr_api
- * @brief Types used by the `fs_stream` Composition Root API.
+ * @brief Public types used by the `fs_stream` Composition Root API.
  *
  * @details
- * This header exposes the public configuration, environment, and creation
- * argument types used by the `fs_stream` adapter CR-facing services.
+ * This header exposes the configuration and dependency-injection types used
+ * to construct and register the `fs_stream` adapter from a Composition Root.
  */
 
 #ifndef LEXLEO_FS_STREAM_TYPES_H
 #define LEXLEO_FS_STREAM_TYPES_H
 
-#include "stream/adapters/stream_env.h"
+#include "stream/adapters/stream_adapters_api.h"
 
 #include "osal/file/osal_file_ops.h"
 #include "osal/mem/osal_mem_ops.h"
@@ -29,18 +29,17 @@ extern "C" {
 /**
  * @struct fs_stream_cfg_t
  * @ingroup fs_stream_cr_api
- * @brief Configuration type for the `fs_stream` adapter.
+ * @brief Configuration values for the `fs_stream` adapter registration.
  *
  * @details
- * This structure carries the CR-provided configuration values used when
+ * This structure groups the CR-provided configuration values used when
  * constructing `fs_stream`-related objects.
  */
 typedef struct fs_stream_cfg_t {
 	/**
 	 * @brief Reserved configuration field.
 	 *
-	 * @details
-	 * Reserved for future extensions.
+	 * @details Reserved for future extensions.
 	 */
 	int reserved;
 } fs_stream_cfg_t;
@@ -48,64 +47,20 @@ typedef struct fs_stream_cfg_t {
 /**
  * @struct fs_stream_env_t
  * @ingroup fs_stream_cr_api
- * @brief Injected dependencies for the `fs_stream` adapter.
- *
- * @details
- * This structure aggregates the borrowed runtime dependencies provided by the
- * Composition Root and required by `fs_stream` construction services.
+ * @brief Borrowed dependencies required to construct the `fs_stream` adapter.
  */
 typedef struct fs_stream_env_t {
 
-	/**
-	 * @brief Borrowed OSAL file operations table.
-	 *
-	 * @details
-	 * This table provides the OSAL file operations used by the adapter backend.
-	 */
+	/** Borrowed OSAL file operations table used by the adapter backend. */
 	const osal_file_ops_t *file_ops;
 
-	/**
-	 * @brief Borrowed memory operations used for adapter-backend allocation.
-	 *
-	 * @details
-	 * These memory operations are used to allocate and destroy the private
-	 * backend object owned by the `fs_stream` adapter.
-	 */
+	/** Borrowed memory operations used by the adapter backend. */
 	const osal_mem_ops_t *adapter_mem_ops;
 
-	/**
-	 * @brief Borrowed `stream` port environment.
-	 *
-	 * @details
-	 * This environment is forwarded to `stream_create()` when constructing the
-	 * public `stream_t` handle.
-	 */
-	stream_env_t port_env;
+	/** Borrowed memory operations used by the `stream` port handle. */
+	const osal_mem_ops_t *port_mem_ops;
 
 } fs_stream_env_t;
-
-/**
- * @struct fs_stream_args_t
- * @ingroup fs_stream_cr_api
- * @brief Arguments provided when creating a file-backed stream.
- */
-typedef struct fs_stream_args_t {
-	/**
-	 * @brief UTF-8 path of the target file.
-	 */
-	const char *path;
-
-	/**
-	 * @brief Portable OSAL file open mode.
-	 *
-	 * @details
-	 * This string is forwarded to `osal_file_ops_t::open()`.
-	 * Supported values are defined by the `osal_file` contract,
-	 * currently `"rb"`, `"wb"`, and `"ab"`.
-	 */
-	const char *mode;
-
-} fs_stream_args_t;
 
 #ifdef __cplusplus
 }

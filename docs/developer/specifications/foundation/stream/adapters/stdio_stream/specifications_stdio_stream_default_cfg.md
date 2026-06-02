@@ -2,7 +2,9 @@
 
 # Signature
 
-    stdio_stream_cfg_t stdio_stream_default_cfg(void);
+```c
+stdio_stream_cfg_t stdio_stream_default_cfg(void);
+```
 
 # Purpose
 

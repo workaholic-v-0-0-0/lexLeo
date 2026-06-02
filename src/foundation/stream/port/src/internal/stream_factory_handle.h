@@ -8,18 +8,16 @@
  * @brief Private factory handle definition for the `stream` port.
  *
  * @details
- * This header exposes the private factory-side handle structures used by the
- * `stream` port implementation.
+ * This header defines the private registry entries and factory handle
+ * structure used by the `stream` factory implementation.
  */
 
 #ifndef LEXLEO_STREAM_FACTORY_HANDLE_H
 #define LEXLEO_STREAM_FACTORY_HANDLE_H
 
-#include "stream/adapters/stream_key_type.h"
-#include "stream/adapters/stream_install.h"
+#include "stream/adapters/stream_adapters_types.h"
 
-#include "osal/mem/osal_mem_ops.h"
-#include "osal/str/osal_str_ops.h"
+#include "osal/mem/osal_mem_types.h"
 
 #include "policy/lexleo_cstd_types.h"
 
@@ -31,6 +29,7 @@
  * `stream_adapter_desc_t` inside the factory registry.
  */
 typedef struct stream_branch_t {
+
 	/** Registered adapter key. */
 	stream_key_t key;
 
@@ -42,6 +41,7 @@ typedef struct stream_branch_t {
 
 	/** Optional destructor for `ud`. */
 	ud_dtor_fn_t ud_dtor;
+
 } stream_branch_t;
 
 /**
@@ -52,6 +52,7 @@ typedef struct stream_branch_t {
  * linear array.
  */
 typedef struct stream_registry_t {
+
 	/** Storage for registered entries. */
 	stream_branch_t *entries;
 
@@ -60,6 +61,7 @@ typedef struct stream_registry_t {
 
 	/** Maximum number of entries that can be stored. */
 	size_t cap;
+
 } stream_registry_t;
 
 /**
@@ -72,14 +74,15 @@ typedef struct stream_registry_t {
  * It stores:
  * - the internal adapter registry,
  * - the memory operations used for teardown,
- * - the string operations used for registry key lookup.
  */
 struct stream_factory_t {
+
 	/** Internal adapter registry. */
 	stream_registry_t reg;
 
 	/** Memory operations used to destroy the factory handle. */
 	const osal_mem_ops_t *mem;
+
 };
 
-#endif // LEXLEO_STREAM_FACTORY_HANDLE_H
+#endif /* LEXLEO_STREAM_FACTORY_HANDLE_H */

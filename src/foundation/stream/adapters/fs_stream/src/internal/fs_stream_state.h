@@ -5,11 +5,11 @@
 /**
  * @file fs_stream_state.h
  * @ingroup fs_stream_internal_group
- * @brief Private runtime state definition for the `fs_stream` backend.
+ * @brief Private runtime state for the `fs_stream` backend.
  *
  * @details
- * This header exposes the private runtime state stored inside the
- * `fs_stream` backend handle.
+ * This header defines the private runtime state stored by the `fs_stream`
+ * backend handle.
  */
 
 #ifndef LEXLEO_FS_STREAM_STATE_H
@@ -21,7 +21,7 @@
  * @brief Private runtime state for the `fs_stream` backend.
  */
 typedef struct fs_stream_state_t {
-	/** OSAL file handle backing the stream. Must be `NULL` once closed. */
+	/** OSAL file handle backing the stream. */
 	OSAL_FILE *file;
 } fs_stream_state_t;
 

@@ -1,0 +1,6 @@
+/**
+ * @defgroup lexleo_vm_tests_group lexleo_vm tests
+ * @ingroup tests_reference
+ *
+ * @brief Tests for lexleo_vm module.
+ */

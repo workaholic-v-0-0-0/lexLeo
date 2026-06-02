@@ -18,6 +18,9 @@ target_include_directories(
 target_link_libraries(
     stream_fake_provider
     PUBLIC
-        stream
+        stream_adapter
         fake_stream
+        osal_mem
+    PRIVATE
+        stream_cr
 )

@@ -43,8 +43,8 @@ See @ref specifications_stdio_stream_default_env "stdio_stream_default_env() spe
 ~~~c
 stdio_stream_env_t stdio_stream_default_env(
     const osal_stdio_ops_t *stdio_ops,
-    const osal_mem_ops_t *mem,
-    const stream_env_t *port_env);
+    const osal_mem_ops_t *adapter_mem_ops,
+    const osal_mem_ops_t *port_mem_ops);
 ~~~
 
 ## Success

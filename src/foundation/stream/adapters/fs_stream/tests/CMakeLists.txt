@@ -11,7 +11,7 @@ add_executable(
 target_link_libraries(
     unit_test_fs_stream
     PRIVATE
-        stream
+        stream_cr
         fs_stream
         stream_white_box_tests_access
         osal_mem_fake_provider

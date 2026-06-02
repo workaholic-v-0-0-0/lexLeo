@@ -5,12 +5,11 @@
  * @brief File-backed adapter for the `stream` port.
  *
  * @details
- * The `fs_stream` adapter implements the `stream` port with a private
- * `fs_stream_t` backend that manages a file-backed runtime state.
+ * The `fs_stream` adapter implements the `stream` port using a file-backed
+ * runtime backend.
  *
- * It is intended to be wired by the Composition Root, either directly through
- * `fs_stream_create_stream()` or through a factory descriptor built by
- * `fs_stream_create_desc()`.
+ * This module belongs to the `stream` adapter family and provides the
+ * functionality required to expose file I/O through the `stream` port.
  *
  * Sub-APIs:
  * - @ref fs_stream_cr_api

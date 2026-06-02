@@ -8,55 +8,127 @@
  * @brief Minimal packaged CLI bootstrap for `lexleo`.
  *
  * @details
- * This translation unit implements the current command-line entry behavior for
- * packaged `lexleo` builds.
- *
- * The current implementation:
- * - resolves the effective log-file path,
- * - opens or creates the target log file,
- * - writes a probe entry,
- * - flushes and closes the file,
- * - and reports the resolved path on standard output.
- *
- * This behavior is intentionally minimal and may evolve as the CLI module
- * grows.
+ * todo
  */
-
-#include "internal/cli_env.h"
-#include "internal/cli_log_path.h"
 
 #include "cli.h"
 
-#include "osal/mem/osal_mem_ops.h"
-#include "osal/stdio/osal_stdio_ops.h"
-#include "osal/file/osal_file_ops.h"
-#include "osal/str/osal_str_ops.h"
-#include "osal/str/osal_str.h"
-#include "osal/time/osal_time_ops.h"
+#include "lexleo_app/lexleo_app.h"
 
-#include "policy/lexleo_assert.h"
-
-#define CLI_LOG_PATH_BUFFER_SIZE 1024
-
-static bool cli_cr_init(cli_env_t *out)
+int cli_main(void)
 {
-	if (!out)
-		return false;
+	lexleo_app_t *app;
 
-	out->mem_ops = osal_mem_default_ops();
-	out->stdio_ops = osal_stdio_default_ops();
-	out->file_ops = osal_file_default_ops();
-	out->str_ops = osal_str_default_ops();
-	out->time_ops = osal_time_default_ops();
+	lexleo_app_cfg_t app_cfg = lexleo_app_default_cfg();
+
+	if
+	(
+		lexleo_app_create(
+			&app,
+			&app_cfg
+		)
+		!=
+		LEXLEO_APP_STATUS_OK
+	) {
+		return 1;
+	}
+
+	if (lexleo_app_complete_default_init(app) != LEXLEO_APP_STATUS_OK) {
+		lexleo_app_destroy(&app);
+		return 1;
+	}
+
+	if (lexleo_app_run(app) != LEXLEO_APP_STATUS_OK) {
+		lexleo_app_destroy(&app);
+		return 1;
+	}
+
+	lexleo_app_destroy(&app);
+
+	return 0;
+}
+
+// follow legacy
+
+/*
+static bool cli_create_app(lexleo_app_t **out)
+{
+	if (!out) {
+		return false;
+	}
+
+	osal_mem_ops_t *mem_ops = osal_mem_default_ops();
+
+	LEXLEO_ASSERT(mem_ops && mem_ops->calloc);
+
+	lexleo_app_t *tmp = mem_ops->calloc(1, sizeof(*tmp));
+
+	tmp->mem_ops = mem_ops;
+	tmp->stdio_ops = osal_stdio_default_ops();
+	tmp->file_ops = osal_file_default_ops();
+	tmp->str_ops = osal_str_default_ops();
+	tmp->time_ops = osal_time_default_ops();
+
+	tmp->stdin = tmp->stdio_ops->get_stdin();
+	tmp->stdout = tmp->stdio_ops->get_stdout();
+	tmp->stderr = tmp->stdio_ops->get_stderr();
+
+	stream_t *logger_stream = NULL;
+	char log_path[CLI_LOG_PATH_BUFFER_SIZE] = { 0 };
+	bool ret =
+		lexleo_app_resolve_log_path(
+			&log_path,
+			sizeof(log_path),
+			tmp->mem_ops,
+			tmp->file_ops
+		);
+	const stream_file_creator_args_t logger_args = {
+		.path = log_path,
+		.mode = "ab"
+	};
+	fs_stream_cfg_t fs_stream_cfg = fs_stream_default_cfg();
+	stream_env_t stream_env = stream_default_env(tmp->mem_ops);
+	fs_stream_env_t fs_stream_env =
+		fs_stream_default_env(
+			tmp->file_ops,
+			tmp->mem_ops,
+			&stream_env
+		);
+	stream_status_t stream_status =
+		fs_stream_create_stream(
+			&logger_stream,
+			&logger_args,
+			&fs_stream_cfg,
+			&fs_stream_env
+		);
+	logger_default_cfg_t logger_default_cfg = logger_default_default_cfg();
+	logger_env_t logger_env = logger_default_env(tmp->mem_ops);
+	logger_default_env_t logger_default_env =
+		logger_default_default_env(
+			logger_stream,
+			tmp->time_ops,
+			tmp->mem_ops,
+			&logger_env
+		);
+	logger_status_t logger_status =
+		logger_default_create_logger(
+			&tmp->logger,
+			&logger_default_cfg,
+			&logger_default_env
+		);
+
+	// init tmp->vm ; first migrate lexleo_vm is usual pattern of handle-based
 
 	return true;
 }
+*/
 
 /* Minimal packaging bootstrap:
    at this stage, the packaged CLI only resolves the log path,
    creates/appends the log file, writes a probe message, and reports
    the resolved path on standard output. */
-static int cli_run(const cli_env_t *env)
+/*
+static int cli_run_app(const lexleo_app_t *env)
 {
 	if (!env) {
 		return 1;
@@ -73,7 +145,7 @@ static int cli_run(const cli_env_t *env)
 	OSAL_STDIO *out = env->stdio_ops->get_stdout();
 
 	char log_path[CLI_LOG_PATH_BUFFER_SIZE] = { 0 };
-	bool ok = cli_resolve_log_path(log_path, sizeof(log_path), env);
+	bool ok = lexleo_app_resolve_log_path(log_path, sizeof(log_path), env->mem_ops, env->file_ops);
 
 	(void)env->stdio_ops->write("LexLeo CLI started\n", 1, 19, out);
 
@@ -133,14 +205,4 @@ static int cli_run(const cli_env_t *env)
 
 	return 0;
 }
-
-int cli_main(void)
-{
-	cli_env_t env;
-
-	if (!cli_cr_init(&env)) {
-		return 1;
-	}
-
-	return cli_run(&env);
-}
+*/

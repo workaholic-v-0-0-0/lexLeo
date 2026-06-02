@@ -17,16 +17,20 @@
  */
 
 /** @defgroup tests_reference Tests
- *  Documentation of the unit and integration tests.
+ *  @brief Documentation of the unit and integration tests.
  *
- *  The test suites serve as executable specifications validating
- *  the behavior of the modules.
+ *  @details
+ *  This section documents the unit and integration test suites associated
+ *  with the project modules.
+ *
+ *  These test suites serve as executable specifications validating the
+ *  documented behavior of the public APIs.
  *
  *  Typical contents include:
- *  - test fixtures
- *  - test scenarios
- *  - test doubles (fake_memory, fake_file, etc.)
- *  - behavioral validation of modules
+ *  - functions under test;
+ *  - test doubles (for example `fake_memory`);
+ *  - tested scenarios;
+ *  - expected behavior and observable results.
  */
 
 /** @defgroup test_support_reference Test support

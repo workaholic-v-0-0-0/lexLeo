@@ -1,34 +1,25 @@
 /** @defgroup stream_family_group stream family
  *  @ingroup foundation_group
  *
- *  @brief The `stream` port and its adapters.
+ *  @brief The `stream` port and related modules.
  *
  *  @details
- *  This family gathers the `stream` module together with the modules that
- *  implement or support it.
- *
- *  The `stream` module defines the common byte-stream abstraction used at
- *  runtime, while adapter modules provide concrete implementations and
- *  Composition Root registration support.
+ *  This family gathers the `stream` port together with the modules that
+ *  implement, extend, or support it.
  */
 
 /** @defgroup stream_family_tests_group stream family tests
  *  @ingroup foundation_tests_group
  *
- *  @brief Tests for the `stream` port and its adapters.
+ *  @brief Tests for the `stream` port and related modules.
  *
  *  @details
- *  This group gathers the unit and integration tests that verify the
- *  behavioral contracts of the `stream` module and its adapter modules.
- *
- *  It currently includes:
- *  - unit tests for the generic `stream` port
- *  - integration tests for the stream factory core
- *  - integration tests for factory-based creation with concrete adapters
+ *  This group gathers the unit and integration tests covering the `stream`
+ *  port and its related modules.
  *
  *  See also:
- *  - @ref testing_foundation_stream_unit "stream unit tests page"
- *  - @ref testing_foundation_stream_factory_integration "stream factory integration tests page"
- *  - @ref testing_foundation_stream_factory_fs_stream_integration "stream factory / fs_stream integration tests page"
- *  - @ref specifications_stream "stream specifications"
+ *  - @ref testing_foundation_stream_unit
+ *  - @ref testing_foundation_stream_factory_integration
+ *  - @ref testing_foundation_stream_factory_fs_stream_integration
+ *  - @ref specifications_stream
  */

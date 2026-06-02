@@ -51,7 +51,7 @@ See @ref specifications_dynamic_buffer_stream_default_env "dynamic_buffer_stream
 ~~~c
 dynamic_buffer_stream_env_t dynamic_buffer_stream_default_env(
     const osal_mem_ops_t *mem,
-    const stream_env_t *port_env);
+    const osal_mem_ops_t *port_mem_ops);
 ~~~
 
 ## Success

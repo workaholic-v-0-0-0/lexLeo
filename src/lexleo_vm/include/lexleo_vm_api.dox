@@ -1,0 +1,21 @@
+/**
+ * @defgroup lexleo_vm_api lexleo_vm API
+ * @ingroup api_reference
+ *
+ * @brief Public API for LexLeo VM construction, lifecycle, and runtime use.
+ *
+ * @details
+ * This module provides the public APIs used to construct LexLeo VM handles,
+ * manage their lifecycle, and run VM instances.
+ *
+ * The Composition Root API creates VM handles from configuration values and
+ * borrowed runtime environments, then completes their default initialization
+ * by creating internal owned runtime resources.
+ *
+ * The Composition Root API also destroys VM handles and releases the owned
+ * runtime resources attached to them.
+ *
+ * Sub-APIs:
+ * - @ref lexleo_vm_borrowers_api
+ * - @ref lexleo_vm_cr_api
+ */

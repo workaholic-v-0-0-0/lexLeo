@@ -5,11 +5,11 @@
 /**
  * @file stdio_stream_ctor_ud.h
  * @ingroup stdio_stream_internal_group
- * @brief Private constructor user-data stored in `stdio_stream`
+ * @brief Private constructor user data stored in `stdio_stream`
  * factory descriptors.
  *
  * @details
- * This header exposes the private user-data object allocated by
+ * This header exposes the private user data object allocated by
  * `stdio_stream_create_desc()` and later consumed by
  * `stdio_stream_ctor()`.
  */
@@ -20,7 +20,7 @@
 #include "stdio_stream/cr/stdio_stream_types.h"
 
 /**
- * @brief Private constructor user-data for `stdio_stream` factory
+ * @brief Private constructor user data for `stdio_stream` factory
  * registration.
  *
  * @details

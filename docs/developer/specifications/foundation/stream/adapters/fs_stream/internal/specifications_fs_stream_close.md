@@ -37,24 +37,21 @@ See:
 - Delegates the close operation to the injected OSAL file close operation.
 - Returns the mapped `stream_status_t` corresponding to the
   `osal_file_status_t` reported by the underlying OSAL file close operation.
-- Releases adapter-owned resources only if the underlying OSAL file close
-  operation reports success.
+- Releases the adapter-owned backend resources.
 
 # Failure
 
 - None handled directly by this callback.
 - Any failure status reported by the underlying OSAL file close operation is
   mapped to `stream_status_t` and returned.
-- If the underlying close operation fails, the backend OSAL file handle is left
-  unchanged.
+- Adapter-owned backend resources are still released before returning.
 
 # Ownership
 
 - `backend` is borrowed.
-- This function does not take ownership of `backend`.
-- This function releases the underlying OSAL file handle only through the
-  injected OSAL file close operation.
-- After a successful close, the backend no longer owns an open OSAL file handle.
+- This function releases the adapter-owned backend resources before returning.
+- The underlying OSAL file handle is released only through the injected OSAL
+  file close operation.
 
 # Notes
 
@@ -62,6 +59,5 @@ See:
 - Public argument validation is performed by `stream_destroy()` before dispatch.
 - Therefore, this callback treats the listed preconditions as internal
   invariants.
-- If the OSAL close operation fails, the backend remains usable so that
-  `stream_destroy()` can leave the public stream handle unchanged and allow the
-  caller to retry destruction.
+- Backend cleanup is completed even if the underlying OSAL file close operation
+  reports a failure. The mapped status is still returned to the caller.

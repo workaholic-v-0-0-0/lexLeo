@@ -16,7 +16,7 @@ target_include_directories(
 target_link_libraries(
     dynamic_buffer_stream
     PUBLIC
-        stream
+        stream_adapter
         osal_mem
         lexleo_policy_headers
     PRIVATE

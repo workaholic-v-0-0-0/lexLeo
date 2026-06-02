@@ -5,8 +5,8 @@
 ```c
 stdio_stream_env_t stdio_stream_default_env(
     const osal_stdio_ops_t *stdio_ops,
-    const osal_mem_ops_t *mem,
-    const stream_env_t *port_env);
+    const osal_mem_ops_t *adapter_mem_ops,
+    const osal_mem_ops_t *port_mem_ops);
 ```
 
 # Purpose
@@ -15,9 +15,9 @@ Build a default environment for the `stdio_stream` adapter.
 
 # Preconditions
 
-- `stdio_ops` must designate a valid OSAL stdio operations table.
-- `mem` must designate a valid OSAL memory operations table.
-- `port_env` must designate a valid `stream` port environment object.
+- `stdio_ops` must point to a valid OSAL stdio operations table.
+- `adapter_mem_ops` must point to a valid OSAL memory operations table.
+- `port_mem_ops` must point to a valid OSAL memory operations table.
 
 # Invalid arguments
 
@@ -27,20 +27,20 @@ Build a default environment for the `stdio_stream` adapter.
 
 - Returns a well-formed `stdio_stream_env_t`.
 - Stores `stdio_ops` into `ret.stdio_ops`.
-- Stores `mem` into `ret.mem`.
-- Copies `*port_env` into `ret.port_env`.
+- Stores `adapter_mem_ops` into `ret.adapter_mem_ops`.
+- Stores `port_mem_ops` into `ret.port_mem_ops`.
 
 # Failure
 
 - None.
 
+# Ownership
+
+- Ownership of the provided dependencies is not transferred.
+- The returned environment borrows `stdio_ops`.
+- The returned environment borrows `adapter_mem_ops`.
+- The returned environment borrows `port_mem_ops`.
+
 # Notes
 
-- This helper packages borrowed dependencies into a value-initialized
-  `stdio_stream_env_t`.
-- The returned environment does not take ownership of any pointer passed as
-  argument.
-- `ret.stdio_ops` provides the borrowed OSAL stdio boundary used by the
-  adapter backend to access the standard streams and the stdio primitives
-  required to implement the `stream` port contract.
 - This helper does not allocate.

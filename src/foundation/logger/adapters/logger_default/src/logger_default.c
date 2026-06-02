@@ -19,7 +19,7 @@
 #include "logger/adapters/logger_adapters_api.h"
 #include "logger_default/cr/logger_default_cr_api.h"
 
-#include "stream/borrowers/stream.h"
+#include "stream/borrowers/stream_borrowers_api.h"
 
 #include "osal/time/osal_time_ops.h"
 #include "osal/mem/osal_mem_ops.h"

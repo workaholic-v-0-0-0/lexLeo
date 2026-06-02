@@ -13,7 +13,8 @@ stream_status_t stdio_stream_create_desc(
 
 # Purpose
 
-Build a `stream` adapter descriptor for the `stdio_stream` adapter.
+Initialize a caller-provided adapter descriptor for registering `stdio_stream`
+in a factory.
 
 # Preconditions
 
@@ -37,10 +38,14 @@ Build a `stream` adapter descriptor for the `stdio_stream` adapter.
 
 - Returns `STREAM_STATUS_OK`.
 - Stores a valid adapter descriptor in `*out`.
-- Binds the provided `key`, `cfg`, and `env` into descriptor-owned constructor
-  data.
-- The produced descriptor is suitable for registration into a `stream` factory.
-- The produced descriptor must later be released via `out->ud_dtor()`.
+- Sets `out->key` to the provided `key`.
+- Sets `out->ctor` to a non-`NULL` `stdio_stream` constructor compatible with
+  `stream_ctor_fn_t`.
+- Sets `out->ud` to non-`NULL` descriptor-owned user data.
+- Sets `out->ud_dtor` to a non-`NULL` destructor suitable for releasing
+  `out->ud`.
+- The produced descriptor is suitable for registration into the `stream`
+  factory.
 
 # Failure
 

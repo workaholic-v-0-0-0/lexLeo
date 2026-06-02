@@ -5,10 +5,10 @@
 /**
  * @file dynamic_buffer_stream.c
  * @ingroup dynamic_buffer_stream_internal_group
- * @brief dynamic_buffer_stream adapter implementation (in-memory dynamic
- * buffer backend).
+ * @brief `dynamic_buffer_stream` adapter implementation.
  *
- * @details In-memory dynamic-buffer-backed stream adapter.
+ * @details
+ * In-memory dynamic-buffer-backed stream adapter.
  */
 
 #include "internal/dynamic_buffer_stream_state.h"
@@ -17,7 +17,7 @@
 
 #include "dynamic_buffer_stream/cr/dynamic_buffer_stream_cr_api.h"
 
-#include "osal/mem/osal_mem_ops.h"
+#include "osal/mem/osal_mem_types.h"
 #include "osal/mem/osal_mem.h"
 
 #include "policy/lexleo_assert.h"
@@ -194,7 +194,7 @@ static stream_status_t dynamic_buffer_stream_close(void *backend)
 	return STREAM_STATUS_OK;
 }
 
-static const stream_vtbl_t VTBL = {
+static const stream_vtbl_t g_dynamic_buffer_stream_vtbl = {
 	.read = dynamic_buffer_stream_read,
 	.write = dynamic_buffer_stream_write,
 	.flush = dynamic_buffer_stream_flush,
@@ -204,36 +204,36 @@ static const stream_vtbl_t VTBL = {
 static stream_status_t dynamic_buffer_stream_create_backend(
 	dynamic_buffer_stream_t **out,
 	const dynamic_buffer_stream_cfg_t *cfg,
-	const dynamic_buffer_stream_env_t *env)
-{
-	if (out) {
-		*out = NULL;
-	}
-
-	if (!out
+	const dynamic_buffer_stream_env_t *env
+) {
+	if (
+		   !out
 		|| !cfg
 		|| !cfg->default_cap
 		|| !env
-		|| !env->mem
-		|| !env->mem->calloc
-		|| !env->mem->realloc
-		|| !env->mem->free) {
+		|| !env->adapter_mem_ops
+		|| !env->adapter_mem_ops->calloc
+		|| !env->adapter_mem_ops->realloc
+		|| !env->adapter_mem_ops->free
+	) {
 		return STREAM_STATUS_INVALID;
 	}
 
 	dynamic_buffer_stream_t *backend =
-		(dynamic_buffer_stream_t *)env->mem->calloc(1, sizeof(*backend));
+		(dynamic_buffer_stream_t *)
+		env->adapter_mem_ops->calloc(1, sizeof(*backend));
 	if (!backend) {
 		return STREAM_STATUS_OOM;
 	}
 
-	backend->mem = env->mem;
+	backend->mem = env->adapter_mem_ops;
 	backend->state.dbuf.cap = cfg->default_cap;
 	backend->state.dbuf.buf =
-		(char *)env->mem->calloc(backend->state.dbuf.cap, sizeof(char));
+		(char *)
+		env->adapter_mem_ops->calloc(backend->state.dbuf.cap, sizeof(char));
 
 	if (!backend->state.dbuf.buf) {
-		env->mem->free(backend);
+		env->adapter_mem_ops->free(backend);
 		return STREAM_STATUS_OOM;
 	}
 
@@ -274,21 +274,30 @@ stream_status_t dynamic_buffer_stream_create_stream(
 	}
 
 	stream_t *tmp = NULL;
-	st = stream_create(&tmp, &VTBL, backend, &env->port_env);
+	stream_env_t stream_env =
+		stream_default_env(
+			&g_dynamic_buffer_stream_vtbl,
+			env->port_mem_ops
+		);
+	st = stream_create(&tmp, &stream_env);
 	if (st != STREAM_STATUS_OK) {
-		dynamic_buffer_stream_close(backend);
+		stream_status_t st2 = dynamic_buffer_stream_close(backend);
+		LEXLEO_ASSERT(st2 == STREAM_STATUS_OK);
 		return st;
 	}
+
+	st = stream_complete_default_init(tmp, backend);
+	LEXLEO_ASSERT(st == STREAM_STATUS_OK);
 
 	*out = tmp;
 	return STREAM_STATUS_OK;
 }
 
-stream_status_t dynamic_buffer_stream_ctor(
+static stream_status_t dynamic_buffer_stream_ctor(
 	const void *ud,
 	const void *args,
-	stream_t **out)
-{
+	stream_t **out
+) {
 	const dynamic_buffer_stream_ctor_ud_t *ctor_ud =
 		(const dynamic_buffer_stream_ctor_ud_t *)ud;
 
@@ -361,13 +370,13 @@ dynamic_buffer_stream_cfg_t dynamic_buffer_stream_default_cfg(void)
 }
 
 dynamic_buffer_stream_env_t dynamic_buffer_stream_default_env(
-	const osal_mem_ops_t *mem,
-	const stream_env_t *port_env)
-{
-	LEXLEO_ASSERT(port_env);
+	const osal_mem_ops_t *adapter_mem_ops,
+	const osal_mem_ops_t *port_mem_ops
+) {
+	LEXLEO_ASSERT(adapter_mem_ops && port_mem_ops);
 
 	return (dynamic_buffer_stream_env_t){
-		.mem = mem ? mem : osal_mem_default_ops(),
-		.port_env = *port_env
+		.adapter_mem_ops = adapter_mem_ops,
+		.port_mem_ops = port_mem_ops
 	};
 }

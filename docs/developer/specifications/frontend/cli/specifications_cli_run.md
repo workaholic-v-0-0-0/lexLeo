@@ -1,9 +1,9 @@
-@page specifications_cli_run cli_run() specifications
+@page specifications_cli_run_app cli_run_app() specifications
 
 # Signature
 
 ```c
-int cli_run(void);
+int cli_run_app(void);
 ```
 
 # Purpose
@@ -30,7 +30,7 @@ Run the `lexleo` command-line interface.
 
 # Notes
 
-- `cli_run()` is the public runtime entry point of the `lexleo` command-line
+- `cli_run_app()` is the public runtime entry point of the `lexleo` command-line
   interface module.
 - The current implementation provides a minimal bootstrap behavior centered on
   log-path resolution and probe log creation.

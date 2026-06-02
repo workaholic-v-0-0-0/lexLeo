@@ -37,7 +37,12 @@ Build a `stream` adapter descriptor for the `dynamic_buffer_stream` adapter.
 
 - Returns `STREAM_STATUS_OK`.
 - Stores a valid adapter descriptor in `*out`.
-- Binds the provided `key`, `cfg`, and `env` into descriptor-owned constructor data.
+- Sets `out->key` to the provided `key`.
+- Sets `out->ctor` to a non-`NULL` constructor compatible with
+  `stream_ctor_fn_t`.
+- Sets `out->ud` to non-`NULL` descriptor-owned user data.
+- Sets `out->ud_dtor` to a non-`NULL` destructor suitable for releasing
+  `out->ud`.
 - The produced descriptor is suitable for registration into a `stream` factory.
 - The produced descriptor must later be released via `out->ud_dtor()`.
 
@@ -50,20 +55,13 @@ Build a `stream` adapter descriptor for the `dynamic_buffer_stream` adapter.
 
 # Ownership
 
-- On success, ownership of the descriptor-owned constructor data is transferred
-  to the produced descriptor.
+- Ownership of `cfg` and `env` is not transferred.
 - The caller remains responsible for the storage designated by `out`.
-- The descriptor-owned constructor data must later be released via
+- The produced descriptor-owned user data must later be released through
   `out->ud_dtor()`.
-- On failure, no descriptor-owned data ownership is transferred.
+- On failure, no descriptor-owned user data ownership is transferred.
 
 # Notes
 
-- This helper prepares a `stream_adapter_desc_t` suitable for registration,
-  for example via `stream_factory_add_adapter()`.
-- The constructor user data allocated by this function is owned by the
-  descriptor lifecycle.
 - The allocator passed in `mem` defines the lifetime management policy for the
-  descriptor-owned constructor data.
-- On failure, the descriptor output is normalized to an empty descriptor when
-  possible.
+  descriptor-owned user data.

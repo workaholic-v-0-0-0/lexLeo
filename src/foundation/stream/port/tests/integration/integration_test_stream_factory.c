@@ -32,9 +32,12 @@
  * - @ref specifications_stream "stream specifications"
  */
 
-#include "stream/cr/stream_factory_cr_api.h"
+#include "stream/cr/stream_cr_api.h"
+
+#include "stream/tests/stream_white_box_tests_access.h"
 
 #include "osal/mem/osal_mem.h"
+#include "osal/mem/osal_mem_ops.h"
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_cstd_lib.h"
@@ -106,7 +109,7 @@ static stream_status_t test_stream_ctor_2(
  * - uses the provided adapter key,
  * - binds the provided constructor,
  * - carries no constructor user data,
- * - requires no user-data destructor.
+ * - requires no user data destructor.
  *
  * It is intended only for test scenarios that validate generic factory
  * behavior independently of any real stream adapter implementation.
@@ -130,46 +133,22 @@ static stream_adapter_desc_t make_test_desc(
 /**
  * @brief Scenarios for `stream_create_factory()` / `stream_destroy_factory()`.
  *
- * stream_status_t stream_create_factory(
- *     stream_factory_t **out,
- *     const stream_factory_cfg_t *cfg,
- *     const stream_env_t *env );
- *
- * void stream_destroy_factory(stream_factory_t **fact);
- *
- * Invalid arguments:
- * - `out`, `cfg`, and `env` must not be NULL.
- * - `env->mem` must not be NULL.
- * - `env->mem->calloc` and `env->mem->free` must not be NULL.
- *
- * Success:
- * - Returns STREAM_STATUS_OK.
- * - Stores a valid factory handle in `*out`.
- * - The produced factory must be destroyed via `stream_destroy_factory()`.
- *
- * Failure:
- * - Returns:
- *     - STREAM_STATUS_INVALID for invalid arguments
- * - Leaves `*out` unchanged if `out` is not NULL.
- *
- * Lifecycle:
- * - `stream_destroy_factory()` does nothing if `fact` is NULL or `*fact` is NULL.
- * - Otherwise, it releases the factory object and sets `*fact` to NULL.
- *
  * Doubles:
  * - none
  *
- * See also:
- * - @ref testing_foundation_stream_integration_stream_create_factory_stream_destroy_factory "stream_create_factory() / stream_destroy_factory() integration tests section"
+ * See contract:
  * - @ref specifications_stream_create_factory "stream_create_factory() specifications"
  * - @ref specifications_stream_destroy_factory "stream_destroy_factory() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_stream_integration_stream_create_factory_stream_destroy_factory "stream_create_factory() / stream_destroy_factory() integration tests section"
  *
  * The scenarios below define the test oracle for
  * `stream_create_factory()` and `stream_destroy_factory()`.
  */
 typedef enum {
     /**
-     * WHEN `stream_create_factory(out, cfg, env)` is called with valid arguments
+     * WHEN `stream_create_factory(out, cfg, mem)` is called with valid arguments
      * EXPECT:
      * - returns `STREAM_STATUS_OK`
      * - stores a non-NULL factory handle in `*out`
@@ -195,38 +174,12 @@ typedef enum {
     STREAM_FACT_LIFECYCLE_SCENARIO_CFG_NULL,
 
     /**
-     * WHEN `env == NULL` and `out != NULL`
+     * WHEN `mem == NULL` and `out != NULL`
      * EXPECT:
      * - returns `STREAM_STATUS_INVALID`
      * - leaves `*out` unchanged
      */
-    STREAM_FACT_LIFECYCLE_SCENARIO_ENV_NULL,
-
-    /**
-     * WHEN `env != NULL` but `env->mem == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `STREAM_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_NULL,
-
-    /**
-     * WHEN `env->mem != NULL` but `env->mem->calloc == NULL`
-     * AND `out != NULL`
-     * EXPECT:
-     * - returns `STREAM_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_CALLOC_NULL,
-
-    /**
-     * WHEN `env->mem != NULL` but `env->mem->free == NULL`
-     * AND `out != NULL`
-     * EXPECT:
-     * - returns `STREAM_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_FREE_NULL,
+    STREAM_FACT_LIFECYCLE_SCENARIO_MEM_NULL,
 
     /**
      * WHEN `stream_create_factory()` succeeds and
@@ -262,12 +215,6 @@ typedef enum {
 
 /**
  * @brief One parametric test case for the stream factory lifecycle contract.
- *
- * Holds:
- * - the case name used by the test runner,
- * - the selected lifecycle scenario,
- * - the expected return status,
- * - the expected post-call state of the output handle.
  */
 typedef struct {
 	const char *name;
@@ -282,12 +229,6 @@ typedef struct {
 
 /**
  * @brief Runtime fixture for `stream_create_factory()` / `stream_destroy_factory()` tests.
- *
- * Holds:
- * - the factory handle under test,
- * - the injected factory configuration,
- * - the injected factory environment,
- * - a pointer to the active parametric test case.
  */
 typedef struct {
 	// runtime resource
@@ -295,7 +236,7 @@ typedef struct {
 
 	// injection
 	stream_factory_cfg_t stream_factory_cfg;
-	stream_env_t stream_env;
+	const osal_mem_ops_t *mem;
 
 	// reference to test case
 	const test_stream_fact_lifecycle_case_t *tc;
@@ -324,7 +265,7 @@ static int setup_stream_fact_lifecycle(void **state)
 	fx->stream_factory_cfg.fact_cap = 8;
 
 	// DI
-	fx->stream_env.mem = osal_mem_default_ops();
+	fx->mem = osal_mem_default_ops();
 
 	*state = fx;
 	return 0;
@@ -366,30 +307,12 @@ static void test_stream_fact_lifecycle(void **state)
 
 	stream_factory_t **out_arg = &fx->out;
 	const stream_factory_cfg_t *cfg_arg = &fx->stream_factory_cfg;
-	stream_env_t env = fx->stream_env;
-	const stream_env_t *env_arg = &env;
-	osal_mem_ops_t mem_ops;
-	bool use_mem_ops_copy = false;
+	const osal_mem_ops_t *mem_arg = osal_mem_default_ops();
 
 	// invalid args
 	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_OUT_NULL) out_arg = NULL;
 	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_CFG_NULL) cfg_arg = NULL;
-	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_ENV_NULL) env_arg = NULL;
-	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_NULL) env.mem = NULL;
-	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_CALLOC_NULL) {
-		mem_ops = *fx->stream_env.mem;
-	    use_mem_ops_copy = true;
-		mem_ops.calloc = NULL;
-	}
-	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_FREE_NULL)  {
-		mem_ops = *fx->stream_env.mem;
-	    use_mem_ops_copy = true;
-		mem_ops.free = NULL;
-	}
-
-	if (use_mem_ops_copy) {
-		env.mem = &mem_ops;
-	}
+	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_MEM_NULL) mem_arg = NULL;
 
     // ensure OUT_EXPECT_UNCHANGED is meaningful
     if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
@@ -399,7 +322,7 @@ static void test_stream_fact_lifecycle(void **state)
     stream_factory_t *out_arg_snapshot = fx->out;
 
 	// ACT
-	ret = stream_create_factory(out_arg, cfg_arg, env_arg);
+	ret = stream_create_factory(out_arg, cfg_arg, mem_arg);
 	if (tc->scenario == STREAM_FACT_LIFECYCLE_SCENARIO_DESTROY_IDEMPOTENT) {
 	    assert_int_equal(ret, STREAM_STATUS_OK);
     	assert_non_null(fx->out);
@@ -454,33 +377,9 @@ static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_CFG_NU
 	.out_expect = OUT_EXPECT_UNCHANGED
 };
 
-static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_ENV_NULL = {
-	.name = "stream_fact_lifecycle_env_null",
-	.scenario = STREAM_FACT_LIFECYCLE_SCENARIO_ENV_NULL,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_NULL = {
+static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_MEM_NULL = {
 	.name = "stream_fact_lifecycle_env_mem_null",
-	.scenario = STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_NULL,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_CALLOC_NULL = {
-	.name = "stream_fact_lifecycle_env_mem_calloc_null",
-	.scenario = STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_CALLOC_NULL,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_FREE_NULL = {
-	.name = "stream_fact_lifecycle_env_mem_free_null",
-	.scenario = STREAM_FACT_LIFECYCLE_SCENARIO_ENV_MEM_FREE_NULL,
+	.scenario = STREAM_FACT_LIFECYCLE_SCENARIO_MEM_NULL,
 
 	.expected_ret = STREAM_STATUS_INVALID,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -502,10 +401,7 @@ static const test_stream_fact_lifecycle_case_t CASE_STREAM_FACT_LIFECYCLE_DESTRO
 X(CASE_STREAM_FACT_LIFECYCLE_OK) \
 X(CASE_STREAM_FACT_LIFECYCLE_OUT_NULL) \
 X(CASE_STREAM_FACT_LIFECYCLE_CFG_NULL) \
-X(CASE_STREAM_FACT_LIFECYCLE_ENV_NULL) \
-X(CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_NULL) \
-X(CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_CALLOC_NULL) \
-X(CASE_STREAM_FACT_LIFECYCLE_ENV_MEM_FREE_NULL) \
+X(CASE_STREAM_FACT_LIFECYCLE_MEM_NULL) \
 X(CASE_STREAM_FACT_LIFECYCLE_DESTROY_IDEMPOTENT)
 
 #define STREAM_MAKE_FACT_LIFECYCLE_TEST(case_sym) \
@@ -523,36 +419,14 @@ static const struct CMUnitTest fact_lifecycle_tests[] = {
 /**
  * @brief Scenarios for `stream_factory_add_adapter()`.
  *
- * stream_status_t stream_factory_add_adapter(
- *     stream_factory_t *fact,
- *     const stream_adapter_desc_t *desc );
- *
- * Precondition:
- * - `fact` designates a valid factory instance previously created by
- *   `stream_create_factory()`.
- *
- * Invalid arguments:
- * - `fact` and `desc` must not be NULL.
- * - `desc->key` and `desc->ctor` must not be NULL.
- * - `desc->key` must not be empty.
- *
- * Success:
- * - Returns STREAM_STATUS_OK.
- * - A later call to `stream_factory_create_stream()` with the registered key
- *   can resolve the descriptor.
- *
- * Failure:
- * - Returns:
- *     - STREAM_STATUS_INVALID for invalid arguments
- *     - STREAM_STATUS_ALREADY_EXISTS if the key is already registered
- *     - STREAM_STATUS_FULL if the factory capacity is exhausted
- *
  * Doubles:
  * - none
  *
- * See also:
- * - @ref testing_foundation_stream_integration_stream_factory_add_adapter "stream_factory_add_adapter() integration tests section"
+ * See contract:
  * - @ref specifications_stream_factory_add_adapter "stream_factory_add_adapter() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_stream_integration_stream_factory_add_adapter "stream_factory_add_adapter() integration tests section"
  *
  * The scenarios below define the test oracle for
  * `stream_factory_add_adapter()`.
@@ -605,6 +479,14 @@ typedef enum {
      */
     STREAM_FACT_ADD_ADAPTER_SCENARIO_CTOR_NULL,
 
+	/**
+	 * WHEN `desc != NULL`, `desc->ud != NULL`, and `desc->ud_dtor == NULL`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_INVALID`
+	 * - the descriptor is not registered
+	 */
+	STREAM_FACT_ADD_ADAPTER_SCENARIO_UD_DTOR_NULL,
+
     /**
      * WHEN a descriptor is added with a key that is already registered
      * EXPECT:
@@ -631,13 +513,6 @@ typedef enum {
 
 /**
  * @brief One parametric test case for `stream_factory_add_adapter()`.
- *
- * Holds:
- * - the case name used by the test runner,
- * - the selected adapter-registration scenario,
- * - the expected return status,
- * - whether post-registration resolution must be checked,
- * - the expected constructor result when resolution is checked.
  */
 typedef struct {
 	const char *name;
@@ -654,15 +529,6 @@ typedef struct {
 
 /**
  * @brief Runtime fixture for `stream_factory_add_adapter()` tests.
- *
- * Holds:
- * - the factory handle under test,
- * - the injected factory configuration,
- * - the injected factory environment,
- * - the adapter descriptors used by test scenarios,
- * - the stream handle produced by follow-up resolution checks,
- * - a dummy argument blob used for `stream_factory_create_stream()`,
- * - a pointer to the active parametric test case.
  */
 typedef struct {
 	// runtime resources
@@ -673,7 +539,7 @@ typedef struct {
 	stream_factory_cfg_t stream_factory_cfg;
 
 	// injection
-	stream_env_t stream_env;
+	const osal_mem_ops_t *mem;
 
 	// descriptors under test
 	stream_adapter_desc_t desc;
@@ -707,12 +573,12 @@ static int setup_stream_fact_add_adapter(void **state)
 	fx->tc = tc;
 
 	// DI
-	fx->stream_env.mem = osal_mem_default_ops();
+	fx->mem = osal_mem_default_ops();
 
 	fx->stream_factory_cfg.fact_cap = (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_CAP_REACHED) ? 1 : 8;
 
 	assert_int_equal(
-		stream_create_factory(&fx->factory, &fx->stream_factory_cfg, &fx->stream_env),
+		stream_create_factory(&fx->factory, &fx->stream_factory_cfg, fx->mem),
 		STREAM_STATUS_OK );
 
 	// valid test descriptors used by scenarios
@@ -775,6 +641,10 @@ static void test_stream_fact_add_adapter(void **state)
 	if (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_KEY_NULL) fx->desc.key = NULL;
 	if (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_KEY_EMPTY) fx->desc.key = "";
 	if (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_CTOR_NULL) fx->desc.ctor = NULL;
+	if (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_UD_DTOR_NULL) {
+		fx->desc.ud = &fx->dummy_args;
+		fx->desc.ud_dtor = NULL;
+	}
 
 	// make factory full
 	if (tc->scenario == STREAM_FACT_ADD_ADAPTER_SCENARIO_CAP_REACHED) {
@@ -793,7 +663,7 @@ static void test_stream_fact_add_adapter(void **state)
 	if (tc->check_resolution) {
 		assert_null(fx->created_stream);
 		assert_int_equal(
-			stream_factory_create_stream(
+			stream_white_box_factory_create_stream(
 				fact_arg,
 				resolution_key,
 				(void*)&fx->dummy_args,
@@ -849,6 +719,16 @@ static const test_stream_fact_add_adapter_case_t CASE_STREAM_FACT_ADD_ADAPTER_CT
 	.check_resolution = false,
 };
 
+static const test_stream_fact_add_adapter_case_t CASE_STREAM_FACT_ADD_ADAPTER_UD_DTOR_NULL = {
+	.name = "stream_fact_add_adapter_ud_dtor_null",
+	.scenario = STREAM_FACT_ADD_ADAPTER_SCENARIO_UD_DTOR_NULL,
+
+	.expected_ret = STREAM_STATUS_INVALID,
+	.check_resolution = true,
+	.expected_create_ret = STREAM_STATUS_NOT_FOUND,
+	.expected_created_stream = NULL,
+};
+
 static const test_stream_fact_add_adapter_case_t CASE_STREAM_FACT_ADD_ADAPTER_DUPLICATE_KEY = {
 	.name = "stream_fact_add_adapter_duplicate_key",
 	.scenario = STREAM_FACT_ADD_ADAPTER_SCENARIO_DUPLICATE_KEY,
@@ -889,6 +769,7 @@ X(CASE_STREAM_FACT_ADD_ADAPTER_DESC_NULL) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_KEY_NULL) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_KEY_EMPTY) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_CTOR_NULL) \
+X(CASE_STREAM_FACT_ADD_ADAPTER_UD_DTOR_NULL) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_DUPLICATE_KEY) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_CAP_REACHED) \
 X(CASE_STREAM_FACT_ADD_ADAPTER_OK)

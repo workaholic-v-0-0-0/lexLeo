@@ -4,14 +4,13 @@
  *
  * @brief Standard-stream-backed adapter for the `stream` port.
  *
- * The `stdio_stream` adapter implements the `stream` port on top of the C
- * standard I/O streams:
- * - `stdin`
- * - `stdout`
- * - `stderr`
+ * @details
+ * The `stdio_stream` adapter implements the `stream` port using the process
+ * standard I/O streams (`stdin`, `stdout`, and `stderr`).
  *
- * It is intended to expose these process-standard streams through the generic
- * `stream` abstraction.
+ * This module belongs to the `stream` adapter family and provides the
+ * functionality required to expose standard I/O streams through the
+ * `stream` port.
  *
  * Sub-APIs:
  * - @ref stdio_stream_cr_api

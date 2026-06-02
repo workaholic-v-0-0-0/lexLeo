@@ -17,10 +17,11 @@ target_include_directories(
 
 target_link_libraries(
     fs_stream
-    PRIVATE
-        stream
-        osal_mem
+    PUBLIC
         osal_file
+        osal_mem
+    PRIVATE
+        stream_adapter
         lexleo_policy_headers
         lexleo_assert
 )

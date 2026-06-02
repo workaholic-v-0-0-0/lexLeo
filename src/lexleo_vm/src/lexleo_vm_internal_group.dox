@@ -1,0 +1,6 @@
+/**
+ * @defgroup lexleo_vm_internal_group lexleo_vm private
+ * @ingroup internal_reference
+ *
+ * @brief Private implementation details of lexleo_vm module.
+ */

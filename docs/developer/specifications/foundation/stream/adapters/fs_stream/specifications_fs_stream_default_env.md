@@ -5,8 +5,8 @@
 ```c
 fs_stream_env_t fs_stream_default_env(
     const osal_file_ops_t *file_ops,
-    const osal_mem_ops_t *adapter_mem,
-    const stream_env_t *port_env);
+    const osal_mem_ops_t *adapter_mem_ops,
+    const osal_mem_ops_t *port_mem_ops);
 ```
 
 # Purpose
@@ -16,8 +16,8 @@ Build a default environment for the `fs_stream` adapter.
 # Preconditions
 
 - `file_ops` must point to a valid OSAL file operations table.
-- `adapter_mem` must point to a valid OSAL memory operations table.
-- `port_env` must point to a valid `stream` port environment object.
+- `adapter_mem_ops` must point to a valid OSAL memory operations table.
+- `port_mem_ops` must point to a valid OSAL memory operations table.
 
 # Invalid arguments
 
@@ -27,17 +27,20 @@ Build a default environment for the `fs_stream` adapter.
 
 - Returns a well-formed `fs_stream_env_t`.
 - Stores `file_ops` into `ret.file_ops`.
-- Stores `adapter_mem` into `ret.adapter_mem`.
-- Copies `*port_env` into `ret.port_env`.
+- Stores `adapter_mem_ops` into `ret.adapter_mem_ops`.
+- Stores `port_mem_ops` into `ret.port_mem_ops`.
 
 # Failure
 
 - None.
 
+# Ownership
+
+- Ownership of the provided dependencies is not transferred.
+- The returned environment borrows `file_ops`.
+- The returned environment borrows `adapter_mem_ops`.
+- The returned environment borrows `port_mem_ops`.
+
 # Notes
 
-- This helper packages borrowed dependencies into a value-initialized
-  `fs_stream_env_t`.
-- The returned environment does not take ownership of any pointer passed as
-  argument.
 - This helper does not allocate.

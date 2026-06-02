@@ -9,7 +9,7 @@
  *
  * @details
  * This translation unit defines the program entry point and delegates
- * execution to the CLI module through `cli_run()`.
+ * execution to the CLI module through `cli_run_app()`.
  */
 
 #include "cli.h"

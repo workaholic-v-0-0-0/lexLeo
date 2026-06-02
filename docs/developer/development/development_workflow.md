@@ -86,6 +86,6 @@ and **Tests**.
 - generate/check Doxygen
 - verify main refs/subpages/groups
 
-## Brief
+## The work flow in short
 
 API, specifications, scenarios, TDD implementation, testing page, module page

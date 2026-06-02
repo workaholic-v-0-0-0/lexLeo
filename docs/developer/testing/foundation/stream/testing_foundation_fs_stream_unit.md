@@ -1,15 +1,5 @@
 @page testing_foundation_fs_stream_unit fs_stream unit tests
 
-It covers:
-- `fs_stream_default_cfg()`
-- `fs_stream_default_env()`
-- `fs_stream_create_stream()`
-- `fs_stream_create_desc()`
-- `fs_stream_write()`
-- `fs_stream_read()`
-- `fs_stream_flush()`
-- `fs_stream_close()`
-
 ---
 
 @anchor testing_foundation_fs_stream_unit_default_cfg
@@ -91,7 +81,7 @@ See @ref specifications_fs_stream_create_stream "fs_stream_create_stream() speci
 ~~~c
 stream_status_t fs_stream_create_stream(
     stream_t **out,
-    const fs_stream_args_t *args,
+    const stream_file_creator_args_t *args,
     const fs_stream_cfg_t *cfg,
     const fs_stream_env_t *env);
 ~~~
@@ -428,12 +418,17 @@ Unless stated otherwise:
 
 - Returns the mapped `stream_status_t` corresponding to the status reported by the underlying OSAL file close operation.
 - Delegates the close operation to the injected OSAL file close operation.
-- Releases the public stream handle only when close succeeds.
+- Releases the adapter-owned backend resources.
+- Releases the public stream handle.
+- Sets `s` to `NULL`.
 
 ## Failure
 
 - Returns the mapped failure status reported by the underlying OSAL file close operation.
-- Leaves the public stream handle unchanged when close fails.
+- Delegates the close operation to the injected OSAL file close operation.
+- Releases the adapter-owned backend resources.
+- Releases the public stream handle.
+- Sets `s` to `NULL`.
 
 ## Test doubles
 
@@ -444,10 +439,11 @@ Unless stated otherwise:
 
 | WHEN | EXPECT |
 |---|---|
-| `stream_destroy(&s)` is called and the injected OSAL file close operation reports `OSAL_FILE_STATUS_IO` | returns `STREAM_STATUS_IO_ERROR`;<br>calls the injected OSAL file close operation exactly once;<br>leaves `s` unchanged |
+| `stream_destroy(&s)` is called and the injected OSAL file close operation reports `OSAL_FILE_STATUS_IO` | returns `STREAM_STATUS_IO_ERROR`;<br>calls the injected OSAL file close operation exactly once;<br>releases the public stream handle;<br>sets `s` to `NULL` |
 | `stream_destroy(&s)` is called and the injected OSAL file close operation reports `OSAL_FILE_STATUS_OK` | returns `STREAM_STATUS_OK`;<br>calls the injected OSAL file close operation exactly once;<br>releases the public stream handle;<br>sets `s` to `NULL` |
 
 ## Notes
 
 - These tests exercise `fs_stream_close()` through the public `stream_destroy()` API.
 - The oracle combines public return/status observation with fake-file interaction checks.
+- The backend close status is propagated even though destruction always completes.

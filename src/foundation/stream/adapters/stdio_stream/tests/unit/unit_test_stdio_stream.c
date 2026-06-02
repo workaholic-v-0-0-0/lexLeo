@@ -41,8 +41,7 @@
 
 #include "stdio_stream/cr/stdio_stream_cr_api.h"
 
-#include "stream/borrowers/stream.h"
-#include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/cr/stream_cr_api.h"
 
 #include "osal/stdio/test/osal_stdio_fake_provider.h"
 
@@ -51,8 +50,7 @@
 
 // for white-box tests
 #include "internal/stdio_stream_handle.h"
-#include "internal/stream_handle.h"
-#include "internal/stdio_stream_ctor_ud.h"
+#include "stream/tests/stream_white_box_tests_access.h"
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_cstd_lib.h"
@@ -88,19 +86,6 @@ static void test_stdio_stream_default_cfg(void **state)
 /**
  * @brief Test `stdio_stream_default_env()`.
  *
- * stdio_stream_env_t stdio_stream_default_env(
- *     const osal_stdio_ops_t *stdio_ops,
- *     const osal_mem_ops_t *mem,
- *     const stream_env_t *port_env);
- *
- * Success:
- * - `ret.stdio_ops == stdio_ops`.
- * - `ret.mem == mem`.
- * - `ret.port_env == *port_env`.
- *
- * Failure:
- * - None.
- *
  * Doubles:
  * - dummy `osal_stdio_ops_t *`
  * - dummy `osal_mem_ops_t *`
@@ -118,17 +103,19 @@ static void test_stdio_stream_default_env(void **state) {
 	const osal_mem_ops_t *dummy_mem_p =
 		(const osal_mem_ops_t *)(uintptr_t)0x1234u;
 
-	const stream_env_t dummy_port_env = {0};
-	const stream_env_t *dummy_port_env_p = &dummy_port_env;
+	const osal_mem_ops_t dummy_port_mem_ops = {0};
+	const osal_mem_ops_t *dummy_port_mem_ops_p = &dummy_port_mem_ops;
 
-	stdio_stream_env_t ret = stdio_stream_default_env(
-		dummy_stdio_ops_p,
-		dummy_mem_p,
-		dummy_port_env_p);
+	stdio_stream_env_t ret =
+		stdio_stream_default_env(
+			dummy_stdio_ops_p,
+			dummy_mem_p,
+			dummy_port_mem_ops_p
+		);
 
 	assert_ptr_equal(ret.stdio_ops, dummy_stdio_ops_p);
-	assert_ptr_equal(ret.mem, dummy_mem_p);
-	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
+	assert_ptr_equal(ret.adapter_mem_ops, dummy_mem_p);
+	assert_memory_equal(ret.port_mem_ops, dummy_port_mem_ops_p, sizeof(ret.port_mem_ops));
 }
 
 /**
@@ -282,7 +269,7 @@ typedef struct {
 	// injection
 	stdio_stream_env_t env;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 	stdio_stream_cfg_t cfg;
 
 	const test_stdio_stream_create_stream_case_t *tc;
@@ -301,7 +288,7 @@ static int setup_stdio_stream_create_stream(void **state)
 		(const test_stdio_stream_create_stream_case_t *)(*state);
 
 	test_stdio_stream_create_stream_fixture_t *fx =
-		(test_stdio_stream_create_stream_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_create_stream_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -316,8 +303,8 @@ static int setup_stdio_stream_create_stream(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	fx->args.kind = tc->kind;
 
@@ -344,7 +331,7 @@ static int teardown_stdio_stream_create_stream(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -366,7 +353,7 @@ static void test_stdio_stream_create_stream(void **state)
 	stream_status_t ret = STREAM_STATUS_INVALID;
 
 	stream_t **out_arg = &fx->out;
-	const stdio_stream_args_t *args_arg = &fx->args;
+	const stream_io_creator_args_t *args_arg = &fx->args;
 	const stdio_stream_cfg_t *cfg_arg = &fx->cfg;
 	const stdio_stream_env_t *env_arg = &fx->env;
 
@@ -709,7 +696,7 @@ static int setup_stdio_stream_create_desc(void **state)
 		(const test_stdio_stream_create_desc_case_t *)(*state);
 
 	test_stdio_stream_create_desc_fixture_t *fx =
-		(test_stdio_stream_create_desc_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_create_desc_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -724,8 +711,8 @@ static int setup_stdio_stream_create_desc(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 	fx->mem = osal_mem_test_fake_ops();
 
 	fx->key = "stdio";
@@ -751,7 +738,7 @@ static int teardown_stdio_stream_create_desc(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -933,7 +920,7 @@ static const struct CMUnitTest create_desc_stdio_stream_tests[] = {
 /** @endcond */
 
 /**
- * @brief Scenarios for `stdio_stream_ctor()`.
+ * @brief Scenarios for the `stdio_stream` descriptor constructor.
  *
  * stream_status_t stdio_stream_ctor(
  *     const void *ud,
@@ -941,19 +928,18 @@ static const struct CMUnitTest create_desc_stdio_stream_tests[] = {
  *     stream_t **out);
  *
  * Contract:
- * - See @ref specifications_stdio_stream_ctor
- *   "stdio_stream_ctor() specifications".
+ * - See @ref specifications_stdio_stream_ctor "stdio_stream_ctor() specifications".
  *
  * Doubles:
  * - fake_stdio
  * - fake_memory
  *
  * See also:
- * - @ref testing_foundation_stdio_stream_unit_ctor
- *   "stdio_stream_ctor() unit tests section"
+ * - @ref testing_foundation_stdio_stream_unit_ctor "stdio_stream_ctor() unit tests section"
  *
- * The scenarios below define the test oracle for
- * `stdio_stream_ctor()`.
+ * The scenarios below define the test oracle for invoking
+ * `stream_adapter_desc_t::ctor` from a descriptor built by
+ * `stdio_stream_create_desc()`.
  */
 typedef enum {
 	/**
@@ -1037,22 +1023,17 @@ typedef struct {
 
 /**
  * @brief Runtime fixture for `stdio_stream_ctor()` tests.
- *
- * Holds:
- * - the stream handle under test,
- * - the injected adapter environment,
- * - the adapter arguments and configuration,
- * - a pointer to the active parametric test case.
  */
 typedef struct {
 	// runtime resources
 	stream_t *out;
-	stdio_stream_ctor_ud_t ud;
+	stream_adapter_desc_t desc;
 
 	// injection
 	stdio_stream_env_t env;
+	const osal_mem_ops_t *mem;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 	stdio_stream_cfg_t cfg;
 
 	const test_stdio_stream_ctor_case_t *tc;
@@ -1071,7 +1052,7 @@ static int setup_stdio_stream_ctor(void **state)
 		(const test_stdio_stream_ctor_case_t *)(*state);
 
 	test_stdio_stream_ctor_fixture_t *fx =
-		(test_stdio_stream_ctor_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_ctor_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -1086,12 +1067,22 @@ static int setup_stdio_stream_ctor(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
+	fx->mem = osal_mem_default_ops();
 	fx->args.kind = tc->kind;
 	fx->cfg.reserved = 0; /* Reserved for future use. */
-	fx->ud.cfg = fx->cfg;
-	fx->ud.env = fx->env;
+
+	assert_int_equal(
+		stdio_stream_create_desc(
+			&fx->desc,
+			"stdio",
+			&fx->cfg,
+			&fx->env,
+			fx->mem
+		),
+		STREAM_STATUS_OK
+	);
 
 	*state = fx;
 	return 0;
@@ -1110,11 +1101,16 @@ static int teardown_stdio_stream_ctor(void **state)
 		fx->out = NULL;
 	}
 
+	if (fx->desc.ud_dtor) {
+		fx->desc.ud_dtor(fx->desc.ud, fx->mem);
+		fx->desc = (stream_adapter_desc_t){0};
+	}
+
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -1136,8 +1132,8 @@ static void test_stdio_stream_ctor(void **state)
 	stream_status_t ret = STREAM_STATUS_INVALID;
 
 	stream_t **out_arg = &fx->out;
-	const stdio_stream_args_t *args_arg = &fx->args;
-	const void *ud_arg = (const void *)&fx->ud;
+	const stream_io_creator_args_t *args_arg = &fx->args;
+	const void *ud_arg = fx->desc.ud;
 
 	// invalid args
 	if (tc->scenario == STDIO_STREAM_CTOR_SCENARIO_OUT_NULL) out_arg = NULL;
@@ -1152,7 +1148,8 @@ static void test_stdio_stream_ctor(void **state)
     stream_t *out_arg_snapshot = fx->out;
 
 	// ACT
-	ret = stdio_stream_ctor(ud_arg, args_arg, out_arg);
+	assert_non_null(fx->desc.ctor);
+	ret = fx->desc.ctor(ud_arg, args_arg, out_arg);
 
 	// ASSERT
 	assert_int_equal(ret, tc->expected_ret);
@@ -1501,7 +1498,7 @@ typedef struct {
 	stdio_stream_env_t env;
 	stdio_stream_cfg_t cfg;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 
 	/* status storage used when `st != NULL` */
 	stream_status_t st;
@@ -1523,7 +1520,7 @@ static int setup_stdio_stream_write(void **state)
 		(const test_stdio_stream_write_case_t *)(*state);
 
 	test_stdio_stream_write_fixture_t *fx =
-		(test_stdio_stream_write_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_write_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -1534,14 +1531,14 @@ static int setup_stdio_stream_write(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	// creation of the stream handle with stdio_stream backend
 	fx->cfg.reserved = 0;
 	fx->args.kind = tc->kind;
 	if (stdio_stream_create_stream(&fx->s, &fx->args, &fx->cfg, &fx->env) != STREAM_STATUS_OK) {
-		free(fx);
+		osal_free(fx);
 		return -1;
 	}
 
@@ -1567,7 +1564,7 @@ static int teardown_stdio_stream_write(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -1589,7 +1586,7 @@ static void test_stdio_stream_write(void **state)
 		(test_stdio_stream_write_fixture_t *)(*state);
 	const test_stdio_stream_write_case_t *tc = fx->tc;
 
-	OSAL_STDIO *stdio = ((stdio_stream_t *)fx->s->backend)->stdio;
+	OSAL_STDIO *stdio = ((stdio_stream_t *)stream_get_backend(fx->s))->stdio;
 
 	// ARRANGE
 	size_t ret = 0;
@@ -2031,7 +2028,7 @@ typedef struct {
 	stdio_stream_env_t env;
 	stdio_stream_cfg_t cfg;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 
 	/* status storage used when `st != NULL` */
 	stream_status_t st;
@@ -2053,7 +2050,7 @@ static int setup_stdio_stream_read(void **state)
 		(const test_stdio_stream_read_case_t *)(*state);
 
 	test_stdio_stream_read_fixture_t *fx =
-		(test_stdio_stream_read_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_read_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -2064,19 +2061,19 @@ static int setup_stdio_stream_read(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	// creation of the stream handle with stdio_stream backend
 	fx->cfg.reserved = 0;
 	fx->args.kind = tc->kind;
 	if (stdio_stream_create_stream(&fx->s, &fx->args, &fx->cfg, &fx->env) != STREAM_STATUS_OK) {
-		free(fx);
+		osal_free(fx);
 		return -1;
 	}
 
 	// seed fake stdio stream
-	OSAL_STDIO *stdio = ((stdio_stream_t *)fx->s->backend)->stdio;
+	OSAL_STDIO *stdio = ((stdio_stream_t *)stream_get_backend(fx->s))->stdio;
 	fake_stdio_set_buffered_backing(
 		stdio,
 		tc->buffered_backing,
@@ -2109,7 +2106,7 @@ static int teardown_stdio_stream_read(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -2131,7 +2128,7 @@ static void test_stdio_stream_read(void **state)
 		(test_stdio_stream_read_fixture_t *)(*state);
 	const test_stdio_stream_read_case_t *tc = fx->tc;
 
-	OSAL_STDIO *stdio = ((stdio_stream_t *)fx->s->backend)->stdio;
+	OSAL_STDIO *stdio = ((stdio_stream_t *)stream_get_backend(fx->s))->stdio;
 
 	// ARRANGE
 	size_t ret = 0;
@@ -2540,7 +2537,7 @@ typedef struct {
 	stdio_stream_env_t env;
 	stdio_stream_cfg_t cfg;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 
 	const test_stdio_stream_flush_case_t *tc;
 } test_stdio_stream_flush_fixture_t;
@@ -2559,7 +2556,7 @@ static int setup_stdio_stream_flush(void **state)
 		(const test_stdio_stream_flush_case_t *)(*state);
 
 	test_stdio_stream_flush_fixture_t *fx =
-		(test_stdio_stream_flush_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_flush_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -2570,19 +2567,19 @@ static int setup_stdio_stream_flush(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	// creation of the stream handle with stdio_stream backend
 	fx->cfg.reserved = 0;
 	fx->args.kind = tc->kind;
 	if (stdio_stream_create_stream(&fx->s, &fx->args, &fx->cfg, &fx->env) != STREAM_STATUS_OK) {
-		free(fx);
+		osal_free(fx);
 		return -1;
 	}
 
 	// seed fake stdio stream
-	OSAL_STDIO *stdio = ((stdio_stream_t *)fx->s->backend)->stdio;
+	OSAL_STDIO *stdio = ((stdio_stream_t *)stream_get_backend(fx->s))->stdio;
 	fake_stdio_set_buffered_backing(
 		stdio,
 		tc->initial_buffered_backing,
@@ -2616,7 +2613,7 @@ static int teardown_stdio_stream_flush(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -2638,7 +2635,7 @@ static void test_stdio_stream_flush(void **state)
 		(test_stdio_stream_flush_fixture_t *)(*state);
 	const test_stdio_stream_flush_case_t *tc = fx->tc;
 
-	OSAL_STDIO *stdio = ((stdio_stream_t *)fx->s->backend)->stdio;
+	OSAL_STDIO *stdio = ((stdio_stream_t *)stream_get_backend(fx->s))->stdio;
 
 	// ARRANGE
 	stream_status_t status = STREAM_STATUS_OK;
@@ -2919,7 +2916,7 @@ typedef struct {
 	stdio_stream_env_t env;
 	stdio_stream_cfg_t cfg;
 
-	stdio_stream_args_t args;
+	stream_io_creator_args_t args;
 
 	const test_stdio_stream_close_case_t *tc;
 } test_stdio_stream_close_fixture_t;
@@ -2938,7 +2935,7 @@ static int setup_stdio_stream_close(void **state)
 		(const test_stdio_stream_close_case_t *)(*state);
 
 	test_stdio_stream_close_fixture_t *fx =
-		(test_stdio_stream_close_fixture_t *)malloc(sizeof(*fx));
+		(test_stdio_stream_close_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 
 	osal_memset(fx, 0, sizeof(*fx));
@@ -2949,14 +2946,14 @@ static int setup_stdio_stream_close(void **state)
 
 	// DI
 	fx->env.stdio_ops = osal_stdio_test_fake_ops();
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	// creation of the stream handle with stdio_stream backend
 	fx->cfg.reserved = 0;
 	fx->args.kind = tc->kind;
 	if (stdio_stream_create_stream(&fx->s, &fx->args, &fx->cfg, &fx->env) != STREAM_STATUS_OK) {
-		free(fx);
+		osal_free(fx);
 		return -1;
 	}
 
@@ -2982,7 +2979,7 @@ static int teardown_stdio_stream_close(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 

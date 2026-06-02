@@ -18,7 +18,7 @@ target_include_directories(
 target_link_libraries(
     stdio_stream
     PUBLIC
-        stream
+        stream_adapter
         osal_stdio
         osal_mem
     PRIVATE

@@ -151,13 +151,20 @@ OSAL_FILE *fake_file_create_fake(
 
 void fake_file_destroy_fake(OSAL_FILE *fake)
 {
+	if (!fake) {
+		return;
+	}
+
 	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
 
 	LEXLEO_ASSERT(
-		   casted_fake
-		&& casted_fake->mem_ops
+		   casted_fake->mem_ops
 		&& casted_fake->mem_ops->free
 	);
+
+	if (g_fake_file_ctrl.open_out == casted_fake) {
+		g_fake_file_ctrl.open_out = NULL;
+	}
 
 	casted_fake->mem_ops->free(casted_fake);
 }

@@ -1,0 +1,12 @@
+/** @defgroup stream_api stream API
+ *  @ingroup stream_family_group
+ *
+ *  @brief Public API for the `stream` port.
+ *
+ *  @details
+ *  This API is organized into the following public sub-APIs:
+ *  - @ref stream_borrowers_api
+ *  - @ref stream_owners_api
+ *  - @ref stream_adapters_api
+ *  - @ref stream_cr_api
+ */

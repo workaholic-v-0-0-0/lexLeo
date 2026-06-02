@@ -17,7 +17,7 @@
 
 #include "logger/adapters/logger_env.h"
 
-#include "stream/borrowers/stream_types.h"
+#include "stream/borrowers/stream_borrowers_types.h"
 
 #include "osal/time/osal_time_ops.h"
 #include "osal/mem/osal_mem_ops.h"

@@ -5,7 +5,7 @@
 ```c
 stream_status_t fs_stream_create_stream(
     stream_t **out,
-    const fs_stream_args_t *args,
+    const stream_file_creator_args_t *args,
     const fs_stream_cfg_t *cfg,
     const fs_stream_env_t *env);
 ```
@@ -45,7 +45,8 @@ Create a file-backed stream instance.
 
 # Ownership
 
-- On success, ownership of the newly created stream handle is transferred to the
-  caller.
+- On success, ownership of the newly created stream handle is transferred to
+- the caller.
 - The produced stream handle must later be destroyed via `stream_destroy()`.
 - On failure, no stream ownership is transferred.
+- Ownership of `args`, `cfg`, and `env` is not transferred.

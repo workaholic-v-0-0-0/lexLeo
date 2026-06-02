@@ -11,7 +11,7 @@ add_executable(
 target_link_libraries(
     unit_test_stdio_stream
     PRIVATE
-        stream
+        stream_cr
         stream_white_box_tests_access
         stdio_stream
         stdio_stream_white_box_tests_access

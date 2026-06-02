@@ -1,11 +1,6 @@
 - explain Mechanism of a non-port module for providing creators in
   docs/developer/architecture/module_taxonomy.md
 
-
-- refactor OSAL: avoid making `osal_file` a full I/O backend
-  so that `fs_stream` remains the actual stream adapter
-
-
 - adjust `osal_file_ops_t::read()` unit tests after EOF status semantics update
 
   Update expected statuses for read scenarios affected by end-of-file:
@@ -18,22 +13,36 @@
   - exact read of remaining content -> `OSAL_FILE_STATUS_OK`;
   - read attempt beyond available content -> `OSAL_FILE_STATUS_EOF`.
 
-
-- update `stream_destroy()` contract and tests
-
-  `stream_destroy()` now returns a `stream_status_t`.
-
-  Final convention:
-  - `s == NULL` -> `STREAM_STATUS_OK`;
-  - `*s == NULL` -> `STREAM_STATUS_OK`;
-  - backend close succeeds -> release stream, set `*s = NULL`, return
-    `STREAM_STATUS_OK`;
-  - backend close fails -> return mapped failure status, leave `*s` unchanged,
-    do not release the stream.
-
-  Update affected implementation, public header documentation, specifications,
-  and unit tests.
-
-
 - align `dynamic_buffer_stream_close()` specifications with updated
   `stream_close_fn_t` contract returning `stream_status_t`
+
+- fix logger_default unit tests after stream migration
+
+- review stream adapter argument validation policy
+
+  Some adapter CR entry points currently validate nested creation arguments
+  defensively and return `STREAM_STATUS_INVALID`, for example file path and
+  mode fields in `stream_file_creator_args_t`.
+
+  Consider migrating to the following convention:
+  - keep top-level NULL checks as runtime validation;
+  - treat fields of non-NULL argument structures as contract/precondition data;
+  - check such invariants with `LEXLEO_ASSERT()` in development builds;
+  - update specifications and tests accordingly.
+
+
+- rename all *_default_env() fct by replacing the substring "_default"
+  by the substring "_make" from this sufix except lexleo_app_default_env()
+
+- logger_default has a stream_t* field in its env_t ; migrate that to align
+  with new architecture
+
+- Make `stream_create()` reject NULL backends and remove the "no backend" state from the stream port.
+- Remove obsolete unit tests covering NULL backend scenarios.
+
+- refactor module API layering and CMake architecture with authority stack
+  as in stream and lexleo_vm
+
+<here> align stream and its adapters with create/complete_init decomposition design already done, tests, don't forget
+       docs), maybe I'm here architecture page, start docs of lexleo_app ;
+       don't forget to adjust for new stream_create_factory signature alignment

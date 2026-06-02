@@ -1,9 +1,5 @@
 @page testing_foundation_stream_factory_integration stream factory integration tests
 
-It covers:
-- `stream_create_factory()` / `stream_destroy_factory()`
-- `stream_factory_add_adapter()`
-
 Minimal local test adapters are used only as test doubles to observe registration
 and resolution behavior through the public factory API.
 
@@ -16,7 +12,7 @@ and resolution behavior through the public factory API.
 stream_status_t stream_create_factory(
     stream_factory_t **out,
     const stream_factory_cfg_t *cfg,
-    const stream_env_t *env);
+    const osal_mem_ops_t *mem);
 
 void stream_destroy_factory(stream_factory_t **fact);
 ```
@@ -25,7 +21,6 @@ void stream_destroy_factory(stream_factory_t **fact);
 
 - `out`, `cfg`, and `env` must not be `NULL`.
 - `env->mem` must not be `NULL`.
-- `env->mem->calloc` and `env->mem->free` must not be `NULL`.
 
 ## Success
 
@@ -57,8 +52,6 @@ void stream_destroy_factory(stream_factory_t **fact);
 | `cfg == NULL` and `out != NULL` | returns `STREAM_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `env == NULL` and `out != NULL` | returns `STREAM_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `env != NULL` but `env->mem == NULL` and `out != NULL` | returns `STREAM_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `env->mem != NULL` but `env->mem->calloc == NULL` and `out != NULL` | returns `STREAM_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `env->mem != NULL` but `env->mem->free == NULL` and `out != NULL` | returns `STREAM_STATUS_INVALID`;<br>leaves `*out` unchanged |
 | `stream_create_factory()` succeeds and `stream_destroy_factory()` is called twice | first `stream_destroy_factory(&fact)` releases the handle and sets `fact` to `NULL`;<br>second `stream_destroy_factory(&fact)` is a no-op and keeps `fact` as `NULL` |
 
 ## Notes

@@ -3,5 +3,4 @@
  * @ingroup foundation_internal_group
  *
  * @brief Private implementation details of the `dynamic_buffer_stream` adapter.
- *
  */

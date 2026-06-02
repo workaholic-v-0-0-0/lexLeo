@@ -18,8 +18,6 @@
 
 #include "fs_stream/cr/fs_stream_cr_api.h"
 
-#include "stream/borrowers/stream.h"
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/cr/stream_cr_api.h"
 
 #include "osal/file/test/osal_file_fake_provider.h"
@@ -27,8 +25,7 @@
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
-// for white-box tests
-#include "internal/stream_handle.h"
+#include "stream/tests/stream_white_box_tests_access.h"
 
 #include "lexleo_cmocka.h"
 
@@ -67,15 +64,15 @@ static void test_fs_stream_default_env(void **state) {
 
 	const osal_file_ops_t *dummy_file_ops_p = (const osal_file_ops_t *)(uintptr_t)0x1234u;
 	const osal_mem_ops_t *dummy_mem_ops_p = (const osal_mem_ops_t *)(uintptr_t)0x2345u;
-	const stream_env_t dummy_port_env = {0};
-	const stream_env_t *dummy_port_env_p = &dummy_port_env;
+	const osal_mem_ops_t dummy_port_mem_ops = {0};
+	const osal_mem_ops_t *dummy_port_mem_ops_p = &dummy_port_mem_ops;
 
 	fs_stream_env_t ret =
-		fs_stream_default_env(dummy_file_ops_p, dummy_mem_ops_p, dummy_port_env_p);
+		fs_stream_default_env(dummy_file_ops_p, dummy_mem_ops_p, dummy_port_mem_ops_p);
 
 	assert_ptr_equal(ret.file_ops, dummy_file_ops_p);
 	assert_ptr_equal(ret.adapter_mem_ops, dummy_mem_ops_p);
-	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
+	assert_memory_equal(ret.port_mem_ops, dummy_port_mem_ops_p, sizeof(ret.port_mem_ops));
 }
 
 /**
@@ -226,7 +223,7 @@ typedef struct {
 	// injection
 	fs_stream_env_t env;
 
-	fs_stream_args_t args;
+	stream_file_creator_args_t args;
 	fs_stream_cfg_t cfg;
 
 	// fake file backing
@@ -269,12 +266,11 @@ static int setup_fs_stream_create_stream(void **state)
 	fx->cfg = fs_stream_default_cfg();
 
 	// DI
-	stream_env_t stream_env = stream_default_env(osal_mem_test_fake_ops());
 	fx->env =
 		fs_stream_default_env(
 			osal_file_test_fake_ops(),
 			osal_mem_test_fake_ops(),
-			&stream_env
+			osal_mem_test_fake_ops()
 		);
 
 	fx->args.path = "crazy_injection.txt";
@@ -298,13 +294,9 @@ static int teardown_fs_stream_create_stream(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	if (!fx->out) {
-		fx->fake_file = NULL;
-	}
-
 	fake_file_reset();
 
-	if (fx->fake_file) {
+	if (fx->tc->scenario == FS_CREATE_STREAM_SCENARIO_OK) {
 		fake_file_destroy_fake(fx->fake_file);
 		fx->fake_file = NULL;
 	}
@@ -328,7 +320,7 @@ static void test_fs_stream_create_stream(void **state)
 	stream_status_t ret = STREAM_STATUS_INVALID;
 
 	stream_t **out_arg = &fx->out;
-	const fs_stream_args_t *args_arg = &fx->args;
+	const stream_file_creator_args_t *args_arg = &fx->args;
 	const fs_stream_cfg_t *cfg_arg = &fx->cfg;
 	const fs_stream_env_t *env_arg = &fx->env;
 
@@ -691,15 +683,12 @@ static int setup_fs_stream_create_desc(void **state)
 		fake_memory_fail_only_on_call(tc->fail_call_idx);
 	}
 
-	stream_env_t stream_env =
-		stream_default_env(osal_mem_test_fake_ops());
-
 	// DI
 	fx->env =
 		fs_stream_default_env(
 			(const osal_file_ops_t *)(uintptr_t)0x1234u,
 			osal_mem_test_fake_ops(),
-			&stream_env
+			osal_mem_test_fake_ops()
 		);
 
 	fx->cfg = fs_stream_default_cfg();
@@ -1050,18 +1039,17 @@ static int setup_fs_stream_write(void **state)
 	assert_non_null(fx->fake_file);
 	fake_file_prepare_next_open_file(fx->fake_file);
 	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
-	const fs_stream_args_t args = {
+	const stream_file_creator_args_t args = {
 		.path = "dummy_pathname",
 		.mode =	"wb"
 	};
 	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
 	fake_memory_reset();
-	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
 	fx->env =
 		fs_stream_default_env(
 			osal_file_test_fake_ops(),
 			osal_mem_test_fake_ops(),
-			&port_env
+			osal_mem_test_fake_ops()
 		);
 	assert_int_equal(
 		fs_stream_create_stream(
@@ -1410,19 +1398,18 @@ static int setup_fs_stream_read(void **state)
 	);
 	fake_file_prepare_next_open_file(fx->fake_file);
 	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
-	const fs_stream_args_t args = {
+	const stream_file_creator_args_t args = {
 		.path = "dummy_pathname",
 		.mode =	"rb"
 	};
 	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
 
 	fake_memory_reset();
-	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
 	fx->env =
 		fs_stream_default_env(
 			osal_file_test_fake_ops(),
 			osal_mem_test_fake_ops(),
-			&port_env
+			osal_mem_test_fake_ops()
 		);
 	assert_int_equal(
 		fs_stream_create_stream(
@@ -1724,18 +1711,17 @@ static int setup_fs_stream_flush(void **state)
 	assert_non_null(fx->fake_file);
 	fake_file_prepare_next_open_file(fx->fake_file);
 	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
-	const fs_stream_args_t args = {
+	const stream_file_creator_args_t args = {
 		.path = "dummy_pathname",
 		.mode =	"wb"
 	};
 	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
 	fake_memory_reset();
-	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
 	fx->env =
 		fs_stream_default_env(
 			osal_file_test_fake_ops(),
 			osal_mem_test_fake_ops(),
-			&port_env
+			osal_mem_test_fake_ops()
 		);
 	assert_int_equal(
 		fs_stream_create_stream(
@@ -1907,7 +1893,6 @@ typedef struct {
 
 	// assert
 	stream_status_t expected_ret;
-	bool s_arg_value_is_released;
 } test_fs_stream_close_case_t;
 
 typedef struct {
@@ -1943,18 +1928,17 @@ static int setup_fs_stream_close(void **state)
 	assert_non_null(fx->fake_file);
 	fake_file_prepare_next_open_file(fx->fake_file);
 	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
-	const fs_stream_args_t args = {
+	const stream_file_creator_args_t args = {
 		.path = "dummy_pathname",
 		.mode =	"wb"
 	};
 	const fs_stream_cfg_t cfg = fs_stream_default_cfg();
 	fake_memory_reset();
-	stream_env_t port_env = stream_default_env(osal_mem_test_fake_ops());
 	fx->env =
 		fs_stream_default_env(
 			osal_file_test_fake_ops(),
 			osal_mem_test_fake_ops(),
-			&port_env
+			osal_mem_test_fake_ops()
 		);
 	assert_int_equal(
 		fs_stream_create_stream(
@@ -1975,14 +1959,9 @@ static int teardown_fs_stream_close(void **state)
 	test_fs_stream_close_fixture_t *fx =
 		(test_fs_stream_close_fixture_t *)(*state);
 
-	if (!fx->tc->s_arg_value_is_released) {
-		fake_file_set_close_status(
-			fx->fake_file,
-			OSAL_FILE_STATUS_OK
-		);
-		stream_destroy(&fx->s_arg_value);
-		fx->s_arg_value = NULL;
-	}
+	stream_destroy(&fx->s_arg_value);
+
+	fake_file_reset();
 
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
@@ -1992,8 +1971,6 @@ static int teardown_fs_stream_close(void **state)
 		fake_file_destroy_fake(fx->fake_file);
 		fx->fake_file = NULL;
 	}
-
-	fake_file_reset();
 
 	osal_free(fx);
 	return 0;
@@ -2012,21 +1989,14 @@ static void test_fs_stream_close(void **state) {
 	stream_status_t ret = STREAM_STATUS_OK;
 	stream_t **s_arg = &fx->s_arg_value;
 	fake_file_set_close_status(fx->fake_file, tc->osal_file_close_status);
-	void *backend_snapshot = fx->s_arg_value->backend;
+	void *backend_snapshot = stream_get_backend(fx->s_arg_value);
 
 	// ACT
 	ret = stream_destroy(s_arg);
 
 	// ASSERT
 	assert_int_equal(ret, tc->expected_ret);
-	if (tc->s_arg_value_is_released) {
-		assert_null(fx->s_arg_value);
-	} else {
-		assert_ptr_equal(
-			fx->s_arg_value->backend,
-			backend_snapshot
-		);
-	}
+	assert_null(fx->s_arg_value);
 	assert_true(
 		fake_file_close_call_count(fx->fake_file)
 		==
@@ -2045,7 +2015,6 @@ CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_IO = {
 	.osal_file_close_status = OSAL_FILE_STATUS_IO,
 
 	.expected_ret = STREAM_STATUS_IO_ERROR,
-	.s_arg_value_is_released = false
 };
 
 static const test_fs_stream_close_case_t
@@ -2055,7 +2024,6 @@ CASE_FS_STREAM_CLOSE_OSAL_FILE_STATUS_OK = {
 	.osal_file_close_status = OSAL_FILE_STATUS_OK,
 
 	.expected_ret = STREAM_STATUS_OK,
-	.s_arg_value_is_released = true
 };
 
 //-----------------------------------------------------------------------------
@@ -2102,6 +2070,3 @@ int main(void) {
 }
 
 /** @endcond */
-
-// <here>
-// then maybe creators of owner scope at high level with integration tests

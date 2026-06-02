@@ -26,7 +26,7 @@
 
 #include "stream/cr/stream_cr_api.h"
 #include "stream/lifecycle/stream_lifecycle.h"
-#include "stream/test/stream_fake_provider.h"
+#include "stream/tests/stream_fake_provider.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"

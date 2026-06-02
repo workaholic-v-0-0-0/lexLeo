@@ -11,7 +11,6 @@ target_link_libraries(
     PRIVATE
         dynamic_buffer_stream
         dynamic_buffer_stream_white_box_tests_access
-        stream
         stream_white_box_tests_access
         osal_mem_fake_provider
         lexleo_cmocka_support

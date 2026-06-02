@@ -1,0 +1,20 @@
+/** @defgroup stream_adapters_api stream adapters API
+ *  @ingroup stream_api
+ *
+ *  @brief Adapter-facing API for the `stream` port.
+ *
+ *  @details
+ *  This API exposes the contracts used to implement concrete `stream`
+ *  adapters and bind backend operations to public stream handles.
+ *
+ *  It provides:
+ *  - the adapter-side constructor helper,
+ *  - adapter environment types,
+ *  - adapter descriptor types,
+ *  - backend operation callbacks and dispatch table types.
+ *
+ *  Main headers:
+ *  - `stream_adapters_api.h`
+ *  - `stream_adapters_types.h`
+ *  - `stream_adapters_vtbl.h`
+ */

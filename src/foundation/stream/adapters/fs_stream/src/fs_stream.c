@@ -28,17 +28,17 @@ fs_stream_cfg_t fs_stream_default_cfg(void)
 fs_stream_env_t fs_stream_default_env(
 	const osal_file_ops_t *file_ops,
 	const osal_mem_ops_t *adapter_mem_ops,
-	const stream_env_t *port_env
+	const osal_mem_ops_t *port_mem_ops
 ) {
 	LEXLEO_ASSERT(
 		   file_ops
 		&& adapter_mem_ops
-		&& port_env
+		&& port_mem_ops
 	);
 	return (fs_stream_env_t){
 		.file_ops = file_ops,
 		.adapter_mem_ops = adapter_mem_ops,
-		.port_env = *port_env
+		.port_mem_ops = port_mem_ops
 	};
 }
 
@@ -177,10 +177,8 @@ static stream_status_t fs_stream_close(
 			fs_stream->file_ops->close(fs_stream->state.file)
 		);
 
-	if (close_st == STREAM_STATUS_OK) {
-		fs_stream->state.file = NULL;
-		fs_stream->mem_ops->free(fs_stream);
-	}
+	fs_stream->state.file = NULL;
+	fs_stream->mem_ops->free(fs_stream);
 
 	return close_st;
 }
@@ -192,9 +190,9 @@ static const stream_vtbl_t g_fs_stream_vtbl = {
 	.close = fs_stream_close
 };
 
-stream_status_t fs_stream_create_stream(
-	stream_t **out,
-	const fs_stream_args_t *args,
+static stream_status_t fs_stream_create_backend(
+	fs_stream_t **out,
+	const stream_file_creator_args_t *args,
 	const fs_stream_cfg_t *cfg,
 	const fs_stream_env_t *env
 ) {
@@ -207,10 +205,12 @@ stream_status_t fs_stream_create_stream(
 		|| *args->path == '\0'
 		|| !args->mode
 		|| (   osal_strcmp(args->mode, "rb") != 0
-			&& osal_strcmp(args->mode, "wb") != 0
-			&& osal_strcmp(args->mode, "ab") != 0 )
+		   && osal_strcmp(args->mode, "wb") != 0
+		   && osal_strcmp(args->mode, "ab") != 0 )
 		|| !cfg
 		|| !env
+		|| !env->file_ops
+		|| !env->adapter_mem_ops
 	) {
 		return STREAM_STATUS_INVALID;
 	}
@@ -224,8 +224,9 @@ stream_status_t fs_stream_create_stream(
 		&& env->adapter_mem_ops->free
 	);
 
-	fs_stream_t *fs_stream = env->adapter_mem_ops->calloc(1, sizeof(*fs_stream));
-	if (!fs_stream) {
+	fs_stream_t *backend =
+		env->adapter_mem_ops->calloc(1, sizeof(*backend));
+	if (!backend) {
 		return STREAM_STATUS_OOM;
 	}
 
@@ -238,29 +239,57 @@ stream_status_t fs_stream_create_stream(
 			env->adapter_mem_ops
 		);
 	if (open_st != OSAL_FILE_STATUS_OK) {
-		env->adapter_mem_ops->free(fs_stream);
+		env->adapter_mem_ops->free(backend);
 		return STREAM_STATUS_IO_ERROR;
 	}
 
-	fs_stream->state.file = file;
-	fs_stream->file_ops = env->file_ops;
-	fs_stream->mem_ops = env->adapter_mem_ops;
+	backend->state.file = file;
+	backend->file_ops = env->file_ops;
+	backend->mem_ops = env->adapter_mem_ops;
 
-	stream_t *out_stream = NULL;
-	stream_status_t stream_st =
-		stream_create(
-			&out_stream,
-			&g_fs_stream_vtbl,
-			fs_stream,
-			&env->port_env);
-	if (stream_st != STREAM_STATUS_OK) {
-		env->file_ops->close(file);
-		env->adapter_mem_ops->free(fs_stream);
-		return stream_st;
+	*out = backend;
+	return STREAM_STATUS_OK;
+}
+
+stream_status_t fs_stream_create_stream(
+	stream_t **out,
+	const stream_file_creator_args_t *args,
+	const fs_stream_cfg_t *cfg,
+	const fs_stream_env_t *env
+) {
+	if (
+		   !out
+		|| !args
+		|| !cfg
+		|| !env
+		|| !env->port_mem_ops
+	) {
+		return STREAM_STATUS_INVALID;
 	}
 
-	*out = out_stream;
+	fs_stream_t *backend = NULL;
+	stream_status_t st = fs_stream_create_backend(&backend, args, cfg, env);
+	if (st != STREAM_STATUS_OK) {
+		return st;
+	}
 
+	stream_t *tmp = NULL;
+	stream_env_t stream_env =
+		stream_default_env(
+			&g_fs_stream_vtbl,
+			env->port_mem_ops
+		);
+	st = stream_create(&tmp, &stream_env);
+	if (st != STREAM_STATUS_OK) {
+		stream_status_t st2 = fs_stream_close(backend);
+		LEXLEO_ASSERT(st2 == STREAM_STATUS_OK);
+		return st;
+	}
+
+	st = stream_complete_default_init(tmp, backend);
+	LEXLEO_ASSERT(st == STREAM_STATUS_OK);
+
+	*out = tmp;
 	return STREAM_STATUS_OK;
 }
 
@@ -284,10 +313,12 @@ static stream_status_t fs_stream_ctor(
 	);
 }
 
-static void fs_stream_ud_dtor(const void *ud, const osal_mem_ops_t *mem
+static void fs_stream_ud_dtor(
+	const void *ud,
+	const osal_mem_ops_t *mem
 ) {
 	LEXLEO_ASSERT(ud && mem && mem->free);
-	mem->free((void*)ud);
+	mem->free((void *)ud);
 }
 
 stream_status_t fs_stream_create_desc(
@@ -327,7 +358,7 @@ stream_status_t fs_stream_create_desc(
 
 	out->key = key;
 	out->ctor = fs_stream_ctor;
-	out->ud = (void*)ud;
+	out->ud = (void *)ud;
 	out->ud_dtor = fs_stream_ud_dtor;
 
 	return STREAM_STATUS_OK;

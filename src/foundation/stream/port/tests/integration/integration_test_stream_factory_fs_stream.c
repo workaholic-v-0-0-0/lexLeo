@@ -37,9 +37,9 @@
 
 #include "fs_stream/cr/fs_stream_cr_api.h"
 
-#include "stream/borrowers/stream.h"
-#include "stream/lifecycle/stream_lifecycle.h"
-#include "stream/cr/stream_factory_cr_api.h"
+#include "stream/cr/stream_cr_api.h"
+
+#include "stream/tests/stream_white_box_tests_access.h"
 
 #include "osal/file/test/osal_file_fake_provider.h"
 
@@ -60,39 +60,14 @@
  *     const void *args,
  *     stream_t **out );
  *
- * Precondition:
- * - Unless stated otherwise by the scenario, `f` designates a valid factory
- *   instance previously created by `stream_create_factory()`.
- * - Unless stated otherwise by the scenario, the factory contains a valid
- *   `fs_stream` adapter descriptor registered under the key `"fs"`.
- * - Unless stated otherwise by the scenario, `args` designates a valid
- *   `fs_stream_args_t` object prepared by the fixture.
- *
- * Invalid arguments:
- * - `f`, `key`, `args`, and `out` must not be `NULL`.
- * - `key` must not be `NULL` and must not be an empty string.
- * - `args->path` must not be `NULL` and must not be an empty string.
- * - `args->flags` must not be zero.
- *
- * Success:
- * - Returns `STREAM_STATUS_OK`.
- * - Stores a valid stream in `*out`.
- * - The produced stream is ready for normal runtime use.
- * - The produced stream must be destroyed via `stream_destroy()`.
- *
- * Failure:
- * - Returns:
- *     - `STREAM_STATUS_INVALID` for invalid arguments
- *     - `STREAM_STATUS_NOT_FOUND` if `key` is not registered
- *     - `STREAM_STATUS_IO_ERROR` when OSAL file operations fail
- * - Leaves `*out` unchanged if `out` is not `NULL`.
- *
  * Doubles:
  * - `fake_file`
  *
- * See also:
- * - @ref testing_foundation_stream_integration_stream_factory_create_stream_fs_stream "stream_factory_create_stream() / fs_stream integration section"
+ * See contract:
  * - @ref specifications_stream_factory_create_stream "stream_factory_create_stream() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_stream_integration_stream_factory_create_stream_fs_stream "stream_factory_create_stream() / fs_stream integration section"
  *
  * The scenarios below define the test oracle for
  * `stream_factory_create_stream()` with the `fs_stream` adapter.
@@ -142,14 +117,6 @@ typedef enum {
 	STREAM_FACT_CREATE_FS_SCENARIO_PATH_EMPTY,
 
 	/**
-	 * WHEN `args != NULL` but `args->flags == 0`
-	 * EXPECT:
-	 * - returns `STREAM_STATUS_INVALID`
-	 * - leaves `*out` unchanged
-	 */
-	STREAM_FACT_CREATE_FS_SCENARIO_FLAGS_ZERO,
-
-	/**
 	 * WHEN `stream_factory_create_stream(f, key, args, out)` is called with a
 	 * valid factory, a registered `fs_stream` key, valid `fs_stream` arguments,
 	 * and backend file open fails
@@ -166,6 +133,22 @@ typedef enum {
 	 * - leaves `*out` unchanged
 	 */
 	STREAM_FACT_CREATE_FS_SCENARIO_FACTORY_NULL,
+
+	/**
+	 * WHEN `args != NULL` but `args->mode == NULL`
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_INVALID`
+	 * - leaves `*out` unchanged
+	 */
+	STREAM_FACT_CREATE_FS_SCENARIO_MODE_NULL,
+
+	/**
+	 * WHEN `args != NULL` but `args->mode` is not a supported mode
+	 * EXPECT:
+	 * - returns `STREAM_STATUS_INVALID`
+	 * - leaves `*out` unchanged
+	 */
+	STREAM_FACT_CREATE_FS_SCENARIO_MODE_INVALID,
 
 	/**
 	 * WHEN `key == NULL`
@@ -212,17 +195,6 @@ typedef enum {
 /**
  * @brief One parametric test case for
  * `stream_factory_create_stream()` / `fs_stream` integration.
- *
- * Holds:
- * - the case name used by the test runner,
- * - the selected creation scenario,
- * - the backend file-open failure status to inject when applicable,
- * - the expected return status,
- * - the expected post-call state of the output handle.
- *
- * Notes:
- * - `open_fail_status` is only meaningful for scenarios that simulate a
- *   backend open failure.
  */
 typedef struct {
 	const char *name;
@@ -239,16 +211,6 @@ typedef struct {
 /**
  * @brief Runtime fixture for
  * `stream_factory_create_stream()` / `fs_stream` integration tests.
- *
- * Holds:
- * - the registered `fs_stream` adapter descriptor,
- * - the factory handle under test,
- * - the stream handle produced by the call under test,
- * - the injected `fs_stream` configuration and environment,
- * - the injected factory configuration and environment,
- * - the `fs_stream` argument object used by the scenarios,
- * - the fake file backing storage used by `fake_file`,
- * - a pointer to the active parametric test case.
  */
 typedef struct {
 	stream_adapter_desc_t desc;
@@ -260,12 +222,10 @@ typedef struct {
 	fs_stream_env_t fs_stream_env;
 
 	stream_factory_cfg_t stream_factory_cfg;
-	stream_env_t stream_env;
 
-	fs_stream_args_t args;
+	stream_file_creator_args_t args;
 
-	// fake file backing
-	uint8_t backing[64];
+	OSAL_FILE *fake_file;
 
 	const test_stream_fact_create_fs_case_t *tc;
 } test_stream_fact_create_fs_fixture_t;
@@ -277,18 +237,6 @@ typedef struct {
 /**
  * @brief Allocate and initialize the runtime fixture for
  * `stream_factory_create_stream()` / `fs_stream` integration tests.
- *
- * @details
- * This setup:
- * - resets and configures the `fake_file` backend,
- * - injects default OSAL memory and file dependencies,
- * - creates a valid factory instance,
- * - creates and registers an `fs_stream` adapter descriptor under the key
- *   `"fs"`,
- * - initializes nominal `fs_stream_args_t` values for the active scenario.
- *
- * For `STREAM_FACT_CREATE_FS_SCENARIO_OPEN_FAIL`, the fake file backend is
- * configured to fail the first open operation with `tc->open_fail_status`.
  */
 static int setup_stream_fact_create_fs(void **state)
 {
@@ -304,23 +252,27 @@ static int setup_stream_fact_create_fs(void **state)
 
 	fake_file_reset();
 
-	osal_memset(fx->backing, 0, sizeof(fx->backing));
-	fake_file_set_backing(fx->backing, sizeof(fx->backing), 0);
-	fake_file_set_pos(0);
-	fake_file_fail_disable();
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	fx->fake_file = fake_file_create_fake(real_mem);
+	assert_non_null(fx->fake_file);
+
+	fake_file_prepare_next_open_file(fx->fake_file);
+	fake_file_prepare_next_open_status(OSAL_FILE_STATUS_OK);
 
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_OPEN_FAIL) {
-		fake_file_fail_enable(FAKE_FILE_OP_OPEN, 1, tc->open_fail_status);
+		fake_file_prepare_next_open_status(tc->open_fail_status);
 	}
 
 	// DI
-	fx->fs_stream_env.file_env.mem = osal_mem_default_ops();
-	fx->fs_stream_env.file_ops = osal_file_test_fake_ops();
-	fx->fs_stream_env.port_env.mem = osal_mem_default_ops();
-	fx->stream_env.mem = osal_mem_default_ops();
+	fx->fs_stream_cfg = fs_stream_default_cfg();
+	fx->fs_stream_env =
+		fs_stream_default_env(
+			osal_file_test_fake_ops(),
+			real_mem,
+			real_mem
+		);
 
-	fx->fs_stream_cfg.reserved = 0;
-	fx->stream_factory_cfg.fact_cap = 8;
+	fx->stream_factory_cfg = stream_default_factory_cfg();
 
 	stream_status_t st;
 
@@ -328,7 +280,8 @@ static int setup_stream_fact_create_fs(void **state)
 		stream_create_factory(
 			&fx->factory,
 			&fx->stream_factory_cfg,
-			&fx->stream_env );
+			real_mem
+		);
 	assert_int_equal(st, STREAM_STATUS_OK);
 
 	st =
@@ -337,18 +290,19 @@ static int setup_stream_fact_create_fs(void **state)
 			"fs",
 			&fx->fs_stream_cfg,
 			&fx->fs_stream_env,
-			fx->stream_env.mem );
+			osal_mem_default_ops()
+		);
 	assert_int_equal(st, STREAM_STATUS_OK);
 
 	st =
 		stream_factory_add_adapter(
 			fx->factory,
-			&fx->desc );
+			&fx->desc
+		);
 	assert_int_equal(st, STREAM_STATUS_OK);
 
 	fx->args.path = "crazy_injection.txt";
-	fx->args.flags = OSAL_FILE_READ | OSAL_FILE_WRITE | OSAL_FILE_CREATE | OSAL_FILE_TRUNC;
-	fx->args.autoclose = true;
+	fx->args.mode = "wb";
 
 	*state = fx;
 	return 0;
@@ -357,22 +311,25 @@ static int setup_stream_fact_create_fs(void **state)
 /**
  * @brief Release the `stream_factory_create_stream()` / `fs_stream`
  * integration test fixture.
- *
- * @details
- * Destroys the produced stream handle when present, destroys the factory
- * handle, and releases the fixture storage.
  */
 static int teardown_stream_fact_create_fs(void **state)
 {
 	test_stream_fact_create_fs_fixture_t *fx =
 		(test_stream_fact_create_fs_fixture_t *)(*state);
 
-	if (fx->out) {
-		stream_destroy(&fx->out);
-		fx->out = NULL;
+	if (!fx) {
+		return 0;
 	}
 
+	stream_destroy(&fx->out);
 	stream_destroy_factory(&fx->factory);
+
+	if (fx->fake_file) {
+		fake_file_destroy_fake(fx->fake_file);
+		fx->fake_file = NULL;
+	}
+
+	fake_file_reset();
 
 	free(fx);
 	return 0;
@@ -385,14 +342,6 @@ static int teardown_stream_fact_create_fs(void **state)
 /**
  * @brief Execute the active parametric test scenario for
  * `stream_factory_create_stream()` / `fs_stream` integration.
- *
- * @details
- * This test:
- * - adjusts the nominal fixture state according to the selected scenario,
- * - calls `stream_factory_create_stream()` through the public factory API,
- * - verifies the expected return status and output-handle state,
- * - and, for the nominal success scenario, validates that the produced stream
- *   is usable through the public borrower API.
  */
 static void test_stream_fact_create_fs(void **state)
 {
@@ -400,59 +349,78 @@ static void test_stream_fact_create_fs(void **state)
 		(test_stream_fact_create_fs_fixture_t *)(*state);
 	const test_stream_fact_create_fs_case_t *tc = fx->tc;
 
-	// ARRANGE
 	stream_status_t st = STREAM_STATUS_INVALID;
 	stream_status_t ret = STREAM_STATUS_INVALID;
 
 	const stream_factory_t *factory_arg = fx->factory;
-	const fs_stream_args_t *args_arg = &fx->args;
+	const stream_file_creator_args_t *args_arg = &fx->args;
 	stream_key_t key_arg = fx->desc.key;
 	stream_t **out_arg = &fx->out;
 
-	// invalid args
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_OUT_NULL) out_arg = NULL;
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_ARGS_NULL) args_arg = NULL;
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_PATH_NULL) fx->args.path = NULL;
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_PATH_EMPTY) fx->args.path = "";
-	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_FLAGS_ZERO) fx->args.flags = (uint32_t)0;
+	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_MODE_NULL) fx->args.mode = NULL;
+	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_MODE_INVALID) fx->args.mode = "invalid";
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_FACTORY_NULL) factory_arg = NULL;
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_KEY_NULL) key_arg = NULL;
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_KEY_EMPTY) key_arg = "";
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_KEY_UNKNOWN) key_arg = "unknown_key";
 
-    // ensure OUT_EXPECT_UNCHANGED is meaningful
-    if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
-        fx->out = (stream_t *)(uintptr_t)0xDEADC0DEu; // sentinel
-    }
+	if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
+		fx->out = (stream_t *)(uintptr_t)0xDEADC0DEu;
+	}
 
-    stream_t *out_arg_snapshot = fx->out;
+	stream_t *out_arg_snapshot = fx->out;
 
-	// ACT
-	ret = stream_factory_create_stream(factory_arg, key_arg, args_arg, out_arg);
+	ret =
+		stream_white_box_factory_create_stream(
+			factory_arg,
+			key_arg,
+			args_arg,
+			out_arg
+		);
 
-	// ASSERT
 	assert_int_equal(ret, tc->expected_ret);
 
 	switch (tc->out_expect) {
-		case OUT_CHECK_NONE: break;
-		case OUT_EXPECT_NULL: assert_null(fx->out); break;
-		case OUT_EXPECT_NON_NULL: assert_non_null(fx->out); break;
+		case OUT_CHECK_NONE:
+			break;
+		case OUT_EXPECT_NULL:
+			assert_null(fx->out);
+			break;
+		case OUT_EXPECT_NON_NULL:
+			assert_non_null(fx->out);
+			break;
 		case OUT_EXPECT_UNCHANGED:
 			assert_ptr_equal(out_arg_snapshot, fx->out);
-			fx->out = NULL; // prevent teardown from destroying sentinel
+			fx->out = NULL;
 			break;
-		default: fail();
+		default:
+			fail();
 	}
 
 	if (tc->scenario == STREAM_FACT_CREATE_FS_SCENARIO_OK) {
 		assert_non_null(fx->out);
+
 		const char msg[] = "hello";
+
 		size_t w = stream_write(fx->out, msg, sizeof(msg) - 1, &st);
 		assert_int_equal((int)w, (int)(sizeof(msg) - 1));
 		assert_int_equal(st, STREAM_STATUS_OK);
-		assert_int_equal(fake_file_backing_len(), sizeof(msg) - 1);
-		assert_memory_equal(fx->backing, msg, sizeof(msg) - 1);
+
 		assert_int_equal(stream_flush(fx->out), STREAM_STATUS_OK);
+
+		assert_int_equal(
+			(int)fake_file_sink_len(fx->fake_file),
+			(int)(sizeof(msg) - 1)
+		);
+		assert_memory_equal(
+			fake_file_sink_backing(fx->fake_file),
+			msg,
+			sizeof(msg) - 1
+		);
 	}
 }
 
@@ -500,17 +468,10 @@ static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_PATH_E
 	.out_expect = OUT_EXPECT_UNCHANGED
 };
 
-static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_FLAGS_ZERO = {
-	.name = "fs_stream_fact_create_stream_flags_zero",
-	.scenario = STREAM_FACT_CREATE_FS_SCENARIO_FLAGS_ZERO,
-
-	.expected_ret = STREAM_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
 static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_OPEN_FAIL = {
 	.name = "fs_stream_fact_create_stream_open_fail",
 	.scenario = STREAM_FACT_CREATE_FS_SCENARIO_OPEN_FAIL,
+	.open_fail_status = OSAL_FILE_STATUS_IO,
 
 	.expected_ret = STREAM_STATUS_IO_ERROR,
 	.out_expect = OUT_EXPECT_UNCHANGED
@@ -548,6 +509,22 @@ static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_KEY_UN
 	.out_expect = OUT_EXPECT_UNCHANGED
 };
 
+static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_MODE_NULL = {
+	.name = "fs_stream_fact_create_stream_mode_null",
+	.scenario = STREAM_FACT_CREATE_FS_SCENARIO_MODE_NULL,
+
+	.expected_ret = STREAM_STATUS_INVALID,
+	.out_expect = OUT_EXPECT_UNCHANGED
+};
+
+static const test_stream_fact_create_fs_case_t CASE_STREAM_FACT_CREATE_FS_MODE_INVALID = {
+	.name = "fs_stream_fact_create_stream_mode_invalid",
+	.scenario = STREAM_FACT_CREATE_FS_SCENARIO_MODE_INVALID,
+
+	.expected_ret = STREAM_STATUS_INVALID,
+	.out_expect = OUT_EXPECT_UNCHANGED
+};
+
 //-----------------------------------------------------------------------------
 // CASES REGISTRY
 //-----------------------------------------------------------------------------
@@ -558,12 +535,13 @@ X(CASE_STREAM_FACT_CREATE_FS_ARGS_NULL) \
 X(CASE_STREAM_FACT_CREATE_FS_OUT_NULL) \
 X(CASE_STREAM_FACT_CREATE_FS_PATH_NULL) \
 X(CASE_STREAM_FACT_CREATE_FS_PATH_EMPTY) \
-X(CASE_STREAM_FACT_CREATE_FS_FLAGS_ZERO) \
 X(CASE_STREAM_FACT_CREATE_FS_OPEN_FAIL) \
 X(CASE_STREAM_FACT_CREATE_FS_FACTORY_NULL) \
 X(CASE_STREAM_FACT_CREATE_FS_KEY_NULL) \
 X(CASE_STREAM_FACT_CREATE_FS_KEY_EMPTY) \
-X(CASE_STREAM_FACT_CREATE_FS_KEY_UNKNOWN)
+X(CASE_STREAM_FACT_CREATE_FS_KEY_UNKNOWN) \
+X(CASE_STREAM_FACT_CREATE_FS_MODE_NULL) \
+X(CASE_STREAM_FACT_CREATE_FS_MODE_INVALID)
 
 #define STREAM_MAKE_FACT_CREATE_FS_TEST(case_sym) \
 LEXLEO_MAKE_TEST(stream_fact_create_fs, case_sym)

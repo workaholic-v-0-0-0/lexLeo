@@ -45,15 +45,14 @@
 
 #include "dynamic_buffer_stream/cr/dynamic_buffer_stream_cr_api.h"
 
-#include "stream/borrowers/stream.h"
-#include "stream/lifecycle/stream_lifecycle.h"
+#include "stream/owners/stream_owners_api.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
 
 // for white-box tests
 #include "internal/dynamic_buffer_stream_handle.h"
-#include "internal/stream_handle.h"
+#include "stream/tests/stream_white_box_tests_access.h"
 
 #include "policy/lexleo_cstd_types.h"
 #include "policy/lexleo_cstd_lib.h"
@@ -89,17 +88,6 @@ static void test_dynamic_buffer_stream_default_cfg(void **state)
 /**
  * @brief Test `dynamic_buffer_stream_default_env()`.
  *
- * dynamic_buffer_stream_env_t dynamic_buffer_stream_default_env(
- *     const osal_mem_ops_t *mem,
- *     const stream_env_t *port_env );
- *
- * Success:
- * - `ret.mem == mem`.
- * - `ret.port_env == *port_env`.
- *
- * Failure:
- * - None.
- *
  * Doubles:
  * - dummy `osal_mem_ops_t *`
  * - dummy `stream_env_t`
@@ -115,29 +103,21 @@ static void test_dynamic_buffer_stream_default_env(void **state)
 	const osal_mem_ops_t *dummy_mem_p =
 		(const osal_mem_ops_t *)(uintptr_t)0x1234u;
 
-	const stream_env_t dummy_port_env = {0};
-	const stream_env_t *dummy_port_env_p = &dummy_port_env;
+	const osal_mem_ops_t dummy_port_mem_ops = {0};
+	const osal_mem_ops_t *dummy_port_mem_ops_p = &dummy_port_mem_ops;
 
 	dynamic_buffer_stream_env_t ret =
-		dynamic_buffer_stream_default_env(dummy_mem_p, dummy_port_env_p);
+		dynamic_buffer_stream_default_env(dummy_mem_p, dummy_port_mem_ops_p);
 
-	assert_ptr_equal(ret.mem, dummy_mem_p);
-	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
+	assert_ptr_equal(ret.adapter_mem_ops, dummy_mem_p);
+	assert_memory_equal(ret.port_mem_ops, dummy_port_mem_ops_p, sizeof(ret.port_mem_ops));
 }
 
 /**
  * @brief Scenarios for `dynamic_buffer_stream_create_stream()`.
  *
- * stream_status_t dynamic_buffer_stream_create_stream(
- *     stream_t **out,
- *     const dynamic_buffer_stream_cfg_t *cfg,
- *     const dynamic_buffer_stream_env_t *env);
- *
  * Doubles:
  * - fake_memory
- *
- * Isolation:
- * - the public `stream` port wrapper is not doubled
  *
  * See also:
  * - @ref testing_foundation_dynamic_buffer_stream_unit_create_stream "dynamic_buffer_stream_create_stream() unit tests section"
@@ -285,8 +265,8 @@ static int setup_dynamic_buffer_stream_create_stream(void **state)
 	}
 
 	// DI
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	fx->cfg.default_cap = 16;
 
@@ -646,8 +626,8 @@ static int setup_dynamic_buffer_stream_create_desc(void **state)
 	}
 
 	// DI
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 	fx->mem = osal_mem_test_fake_ops();
 
 	fx->key = "dynamic_buffer";
@@ -1061,8 +1041,8 @@ static int setup_dynamic_buffer_stream_write(void **state)
 	fake_memory_reset();
 
 	// DI
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	fx->cfg.default_cap = tc->initial_cap;
 
@@ -1133,9 +1113,9 @@ static void test_dynamic_buffer_stream_write(void **state)
 
 	stream_t *s = fx->s;
 	assert_non_null(s);
-	assert_non_null(s->backend);
+	assert_non_null(stream_get_backend(s));
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)s->backend;
+	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)stream_get_backend(s);
 	assert_non_null(dbs);
 
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
@@ -1560,8 +1540,8 @@ static int setup_dynamic_buffer_stream_read(void **state)
 	fake_memory_reset();
 
 	// DI
-	fx->env.mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	fx->cfg.default_cap = tc->initial_cap;
 
@@ -1628,9 +1608,9 @@ static void test_dynamic_buffer_stream_read(void **state)
 
 	stream_t *s = fx->s;
 	assert_non_null(s);
-	assert_non_null(s->backend);
+	assert_non_null(stream_get_backend(s));
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)s->backend;
+	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)stream_get_backend(s);
 	assert_non_null(dbs);
 
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
@@ -1876,19 +1856,17 @@ static void test_dynamic_buffer_stream_flush(void **state)
 	};
 
 	const dynamic_buffer_stream_env_t env = {
-		.mem = osal_mem_test_fake_ops(),
-		.port_env = {
-			.mem = osal_mem_test_fake_ops()
-		}
+		.adapter_mem_ops = osal_mem_test_fake_ops(),
+		.port_mem_ops = osal_mem_test_fake_ops()
 	};
 
 	assert_int_equal(
 		dynamic_buffer_stream_create_stream(&s, &cfg, &env),
 		STREAM_STATUS_OK);
 	assert_non_null(s);
-	assert_non_null(s->backend);
+	assert_non_null(stream_get_backend(s));
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)s->backend;
+	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)stream_get_backend(s);
 	assert_non_null(dbs);
 
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
@@ -1956,19 +1934,17 @@ static void test_dynamic_buffer_stream_close(void **state)
 	};
 
 	const dynamic_buffer_stream_env_t env = {
-		.mem = osal_mem_test_fake_ops(),
-		.port_env = {
-			.mem = osal_mem_test_fake_ops()
-		}
+		.adapter_mem_ops = osal_mem_test_fake_ops(),
+		.port_mem_ops = osal_mem_test_fake_ops()
 	};
 
 	assert_int_equal(
 		dynamic_buffer_stream_create_stream(&s, &cfg, &env),
 		STREAM_STATUS_OK);
 	assert_non_null(s);
-	assert_non_null(s->backend);
+	assert_non_null(stream_get_backend(s));
 
-	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)s->backend;
+	dynamic_buffer_stream_t *dbs = (dynamic_buffer_stream_t *)stream_get_backend(s);
 	assert_non_null(dbs);
 
 	dynamic_buffer_t *dbuf = &dbs->state.dbuf;
