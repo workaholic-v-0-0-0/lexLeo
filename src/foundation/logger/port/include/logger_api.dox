@@ -5,17 +5,8 @@
  * @brief Structured logging interface (port).
  *
  * @details
- * This module defines the stable logging API used by the rest of the
- * codebase.
+ * This module defines the stable logging API used throughout the codebase.
  *
  * Concrete logging backends are provided by adapter modules and injected by
- * the Composition Root.
- *
- * The public API is intentionally split by visibility level.
- *
- * Typical contents:
- * - borrower-facing runtime services declared in `logger/borrowers/logger.h`
- * - lifecycle services declared in `logger/lifecycle/logger_lifecycle.h`
- * - Composition Root helpers declared in `logger/cr/logger_cr_api.h`
- * - adapter-facing contracts declared in `logger/adapters/logger_adapters_api.h`
+ * the application Composition Root.
  */

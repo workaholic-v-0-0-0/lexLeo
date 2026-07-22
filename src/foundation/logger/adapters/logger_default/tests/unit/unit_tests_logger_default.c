@@ -20,12 +20,10 @@
 
 #include "logger_default/cr/logger_default_cr_api.h"
 
-#include "logger/borrowers/logger.h"
-#include "logger/lifecycle/logger_lifecycle.h"
-#include "logger/cr/logger_cr_api.h"
+#include "logger/borrowers/logger_borrowers_api.h"
+#include "logger/owners/logger_owners_api.h"
+#include "logger/adapters/logger_adapters_api.h"
 
-#include "stream/cr/stream_cr_api.h"
-#include "stream/lifecycle/stream_lifecycle.h"
 #include "stream/tests/stream_fake_provider.h"
 
 #include "osal/mem/osal_mem.h"
@@ -66,30 +64,12 @@ static void test_logger_default_default_cfg(void **state)
 /**
  * @brief Test `logger_default_default_env()`.
  *
- * logger_default_env_t logger_default_default_env(
- *     stream_t *stream,
- *     const osal_time_ops_t *time_ops,
- *     const osal_mem_ops_t *adapter_mem,
- *     const logger_env_t *port_env );
- *
- * Success:
- * - `ret.stream == stream`.
- * - `ret.time_ops == time_ops`.
- * - `ret.adapter_mem == adapter_mem`.
- * - `ret.port_env == *port_env`.
- *
- * Failure:
- * - None.
- *
- * Doubles:
- * - dummy `stream_t *`
- * - dummy `osal_time_ops_t *`
- * - dummy `osal_mem_ops_t *`
- * - dummy `logger_env_t`
- *
- * See also:
- * - @ref testing_foundation_logger_default_unit_default_env "logger_default_default_env() unit tests section"
+ * See contract:
  * - @ref specifications_logger_default_default_env "logger_default_default_env() specifications".
+ *
+ * See test description:
+ * - @ref testing_foundation_logger_default_unit_default_env "logger_default_default_env() unit tests section"
+ *
  */
 static void test_logger_default_default_env(void **state) {
 	(void)state;
@@ -99,42 +79,34 @@ static void test_logger_default_default_env(void **state) {
 	const osal_time_ops_t *dummy_time_ops =
 		(const osal_time_ops_t *)(uintptr_t)0x4567u;
 
-	const osal_mem_ops_t *dummy_adapter_mem_p =
+	const osal_mem_ops_t *dummy_adapter_mem_ops_p =
 		(const osal_mem_ops_t *)(uintptr_t)0x5678u;
 
-	const logger_env_t dummy_port_env = {0};
-	const logger_env_t *dummy_port_env_p = &dummy_port_env;
+	const osal_mem_ops_t dummy_port_mem_ops = {0};
+	const osal_mem_ops_t *dummy_port_mem_ops_p = &dummy_port_mem_ops;
 
 	logger_default_env_t ret =
 		logger_default_default_env(
 			dummy_stream_p,
 			dummy_time_ops,
-			dummy_adapter_mem_p,
-			dummy_port_env_p);
+			dummy_adapter_mem_ops_p,
+			dummy_port_mem_ops_p);
 
 	assert_ptr_equal(ret.stream, dummy_stream_p);
 	assert_ptr_equal(ret.time_ops, dummy_time_ops);
-	assert_ptr_equal(ret.adapter_mem, dummy_adapter_mem_p);
-	assert_memory_equal(&ret.port_env, dummy_port_env_p, sizeof(ret.port_env));
+	assert_ptr_equal(ret.adapter_mem_ops, dummy_adapter_mem_ops_p);
+	assert_memory_equal(ret.port_mem_ops, dummy_port_mem_ops_p, sizeof(ret.port_mem_ops));
 }
 
 /**
  * @brief Test `logger_default_destroy()`.
  *
- * Oracle:
- * This private callback is exercised through the public `logger_destroy()`
- * lifecycle entry point on a logger created by `logger_default_create_logger()`.
- *
  * See contract:
  * - @ref specifications_logger_default_destroy "logger_default_destroy() specifications"
  *
- * Doubles:
- * - fake_stream
- * - fake_time
- * - fake_memory
- *
- * See also:
+ * See test description:
  * - @ref testing_foundation_logger_default_unit_destroy "logger_default_destroy() unit tests section"
+ *
  */
 static void test_logger_default_destroy(void **state)
 {
@@ -143,10 +115,17 @@ static void test_logger_default_destroy(void **state)
 	/* SETUP */
 
 	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
+	const osal_mem_ops_t *fake_mem = osal_mem_test_fake_ops();
+	fake_memory_reset();
 
-	stream_env_t stream_env = stream_default_env(real_mem);
-	fake_stream_reset(&stream_env);
-	const stream_buffer_creator_t *stream_buffer_creator = stream_test_fake_buffer_creator();
+	assert_int_equal(
+		stream_test_fake_provider_setup(real_mem, "dbs", "fs", "io"),
+		STREAM_STATUS_OK
+	);
+	const stream_buffer_creator_t *stream_buffer_creator =
+		stream_test_fake_buffer_creator();
+	assert_non_null(stream_buffer_creator);
+	fake_stream_reset(real_mem);
 	void *fake_stream_backend = fake_stream_create_fake_backend();
 	fake_stream_backend_reset(fake_stream_backend);
 	fake_stream_prepare_next_backend(fake_stream_backend);
@@ -159,20 +138,16 @@ static void test_logger_default_destroy(void **state)
 		STREAM_STATUS_OK
 	);
 
-	const osal_mem_ops_t *fake_mem = osal_mem_test_fake_ops();
-	fake_memory_reset();
-
 	const osal_time_ops_t *fake_time = osal_time_test_fake_ops();
 	fake_time_reset();
 
 	/* DI */
-	logger_env_t logger_env = logger_default_env(fake_mem);
 	logger_default_env_t logger_default_env =
 		logger_default_default_env(
 			fake_stream,
 			fake_time,
 			fake_mem,
-			&logger_env
+			fake_mem
 		);
 
 	const logger_default_cfg_t cfg = {
@@ -206,26 +181,22 @@ static void test_logger_default_destroy(void **state)
 	/* TEARDOWN */
 
 	stream_destroy(&fake_stream);
-	fake_stream_destroy_fake_backend(fake_stream_backend);
+	assert_null(fake_stream);
 }
 
 /**
  * @brief Scenarios for `logger_default_create_logger()`.
  *
- * Doubles:
- * - fake_stream
- * - fake_time
- * - fake_memory
- *
  * See contract:
  * - @ref specifications_logger_default_create_logger "logger_default_create_logger() specifications"
  *
- * See also:
+ * See test description:
  * - @ref testing_foundation_logger_default_unit_create_logger "logger_default_create_logger() unit tests section"
  *
  * The scenarios below define the test oracle for `logger_default_create_logger()`.
  */
 typedef enum {
+
 	/**
 	 * WHEN `logger_default_create_logger(out, cfg, env)` is called with valid arguments
 	 * EXPECT:
@@ -268,6 +239,7 @@ typedef enum {
 	 *   allocation performed during logger creation.
 	 */
 	LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_OOM,
+
 } logger_default_create_logger_scenario_t;
 
 /** @cond INTERNAL */
@@ -313,11 +285,11 @@ static int setup_logger_default_create_logger(void **state)
 {
 	const test_logger_default_create_logger_case_t *tc =
 		(const test_logger_default_create_logger_case_t *)(*state);
-
 	test_logger_default_create_logger_fixture_t *fx = osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
 	osal_memset(fx, 0, sizeof(*fx));
 
+	const osal_mem_ops_t *fake_mem = osal_mem_test_fake_ops();
 	fake_memory_reset();
 	fake_time_reset();
 
@@ -325,12 +297,11 @@ static int setup_logger_default_create_logger(void **state)
 
 	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
 
-	stream_env_t stream_env = stream_default_env(real_mem);
-	fake_stream_reset(&stream_env);
+	fake_stream_reset(real_mem);
 	fx->fake_stream_backend = fake_stream_create_fake_backend();
 	fake_stream_backend_reset(fx->fake_stream_backend);
 	fake_stream_prepare_next_backend(fx->fake_stream_backend);
-	const stream_buffer_creator_t *stream_buffer_creator = fake_stream_buffer_creator();
+	const stream_buffer_creator_t *stream_buffer_creator = stream_test_fake_buffer_creator();
 	assert_int_equal(
 		stream_buffer_creator_create(
 			stream_buffer_creator,
@@ -339,11 +310,11 @@ static int setup_logger_default_create_logger(void **state)
 		STREAM_STATUS_OK
 	);
 
-	// DI
+	// borrowed DI
 	fx->env.stream = fx->fake_stream;
 	fx->env.time_ops = osal_time_test_fake_ops();
-	fx->env.adapter_mem = osal_mem_test_fake_ops();
-	fx->env.port_env.mem = osal_mem_test_fake_ops();
+	fx->env.adapter_mem_ops = osal_mem_test_fake_ops();
+	fx->env.port_mem_ops = osal_mem_test_fake_ops();
 
 	fx->tc = tc;
 
@@ -371,7 +342,7 @@ static int teardown_logger_default_create_logger(void **state)
 	assert_true(fake_memory_no_double_free());
 
 	stream_destroy(&fx->fake_stream);
-	fake_stream_destroy_fake_backend(fx->fake_stream_backend);
+	//fake_stream_destroy_fake_backend(fx->fake_stream_backend);
 
 	osal_free(fx);
 
@@ -396,9 +367,15 @@ static void test_logger_default_create_logger(void **state)
 	const logger_default_env_t *env_arg = &fx->env;
 
 	// invalid args
-	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_OUT_NULL) out_arg = NULL;
-	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_CFG_NULL) cfg_arg = NULL;
-	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_ENV_NULL) env_arg = NULL;
+	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_OUT_NULL) {
+		out_arg = NULL;
+	}
+	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_CFG_NULL) {
+		cfg_arg = NULL;
+	}
+	if (tc->scenario == LOGGER_DEFAULT_CREATE_LOGGER_SCENARIO_ENV_NULL) {
+		env_arg = NULL;
+	}
 
     // ensure OUT_EXPECT_UNCHANGED is meaningful
     if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
@@ -514,20 +491,11 @@ static const struct CMUnitTest logger_default_create_logger_tests[] = {
 /**
  * @brief Scenarios for `logger_default_log()`.
  *
- * Doubles:
- * - fake_stream
- * - fake_time
- * - fake_memory
- *
- * Isolation:
- * - the callback is not called directly
- * - behavior is exercised through the public `logger` API
- *
  * See contract:
  * - @ref specifications_logger_default_log "logger_default_log() specifications"
  * - @ref specifications_logger_log "logger_log() specifications"
  *
- * See test scenario description:
+ * See test description:
  * - @ref testing_foundation_logger_default_unit_log "logger_default_log() unit tests section"
  */
 typedef enum {
@@ -579,6 +547,7 @@ static int setup_logger_default_log(void **state)
 	if (!fx) return -1;
 	osal_memset(fx, 0, sizeof(*fx));
 
+	const osal_mem_ops_t *real_mem = osal_mem_default_ops();
 	const osal_mem_ops_t *fake_mem = osal_mem_test_fake_ops();
 	fake_memory_reset();
 
@@ -587,12 +556,11 @@ static int setup_logger_default_log(void **state)
 	fake_time_set_now_status(OSAL_TIME_STATUS_OK);
 	fake_time_set_now_out((osal_time_t){ .epoch_seconds = 0 });
 
-	stream_env_t stream_env = stream_default_env(fake_mem);
-	fake_stream_reset(&stream_env);
+	fake_stream_reset(real_mem);
 	fx->fake_stream_backend = fake_stream_create_fake_backend();
 	fake_stream_backend_reset(fx->fake_stream_backend);
 	fake_stream_prepare_next_backend(fx->fake_stream_backend);
-	const stream_buffer_creator_t *buffer_creator = fake_stream_buffer_creator();
+	const stream_buffer_creator_t *buffer_creator = stream_test_fake_buffer_creator();
 	assert_int_equal(
 		stream_buffer_creator_create(
 			buffer_creator,
@@ -604,14 +572,12 @@ static int setup_logger_default_log(void **state)
 	fx->cfg.append_newline =
 		(tc->scenario == LOGGER_DEFAULT_LOG_SCENARIO_OK_APPEND_NEWLINE);
 
-	logger_env_t logger_env = logger_default_env(fake_mem);
-
 	fx->env =
 		logger_default_default_env(
 			fx->fake_stream,
 			fake_time,
 			fake_mem,
-			&logger_env
+			fake_mem
 		);
 
 	assert_int_equal(
@@ -634,12 +600,12 @@ static int teardown_logger_default_log(void **state)
 	test_logger_default_log_fixture_t *fx = *state;
 
 	logger_destroy(&fx->logger);
-	stream_destroy(&fx->fake_stream);
-	fake_stream_destroy_fake_backend(fx->fake_stream_backend);
 
 	assert_true(fake_memory_no_leak());
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
+
+	stream_destroy(&fx->fake_stream);
 
 	osal_free(fx);
 	return 0;

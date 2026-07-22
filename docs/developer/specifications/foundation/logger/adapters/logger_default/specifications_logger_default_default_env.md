@@ -3,11 +3,11 @@
 # Signature
 
 ```c
-    logger_default_env_t logger_default_default_env(
-        stream_t *stream,
-        const osal_time_ops_t *time_ops,
-        const osal_mem_ops_t *adapter_mem,
-        const logger_env_t *port_env);
+logger_default_env_t logger_default_default_env(
+    stream_t *stream,
+    const osal_time_ops_t *time_ops,
+    const osal_mem_ops_t *adapter_mem_ops,
+    const osal_mem_ops_t *port_mem_ops);
 ```
 
 # Purpose
@@ -18,8 +18,8 @@ Build a default environment for the `logger_default` adapter.
 
 - `stream` must point to a valid `stream_t`.
 - `time_ops` must point to a valid `osal_time_ops_t`.
-- `adapter_mem` must point to a valid `osal_mem_ops_t`.
-- `port_env` must point to a valid `logger_env_t`.
+- `adapter_mem_ops` must point to a valid `osal_mem_ops_t`.
+- `port_mem_ops` must point to a valid `osal_mem_ops_t`.
 
 # Invalid arguments
 
@@ -30,8 +30,8 @@ Build a default environment for the `logger_default` adapter.
 - Returns a well-formed `logger_default_env_t`.
 - `ret.stream == stream`.
 - `ret.time_ops == time_ops`.
-- `ret.adapter_mem == adapter_mem`.
-- `ret.port_env == *port_env`.
+- `ret.adapter_mem_ops == adapter_mem_ops`.
+- `ret.port_mem_ops == port_mem_ops`.
 
 # Failure
 

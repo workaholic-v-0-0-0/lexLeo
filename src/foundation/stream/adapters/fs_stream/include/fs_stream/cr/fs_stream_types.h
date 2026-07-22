@@ -15,8 +15,6 @@
 #ifndef LEXLEO_FS_STREAM_TYPES_H
 #define LEXLEO_FS_STREAM_TYPES_H
 
-#include "stream/adapters/stream_adapters_api.h"
-
 #include "osal/file/osal_file_ops.h"
 #include "osal/mem/osal_mem_ops.h"
 

@@ -21,8 +21,8 @@
 
 #include "stdio_stream/cr/stdio_stream_cr_api.h"
 
-#include "logger/lifecycle/logger_lifecycle.h"
-#include "logger/cr/logger_cr_api.h"
+#include "logger/owners/logger_owners_api.h"
+#include "logger/adapters/logger_adapters_api.h"
 
 #include "logger_default/cr/logger_default_cr_api.h"
 
@@ -384,13 +384,12 @@ static lexleo_app_status_t lexleo_app_init_default_logger(
 	LEXLEO_ASSERT(app);
 
 	logger_default_cfg_t logger_default_cfg = logger_default_default_cfg();
-	logger_env_t logger_env = logger_default_env(app->mem_ops);
 	logger_default_env_t logger_default_env =
 		logger_default_default_env(
 			logger_stream,
 			app->time_ops,
 			app->mem_ops,
-			&logger_env
+			app->mem_ops
 		);
 
 	return (

@@ -30,11 +30,37 @@ extern "C" {
 /* FAKE API */
 
 /*
- * No injectable stream service.
+ * No fake API is provided because this module fakes a port module.
  *
- * Stream behavior is injected through the backend-specific vtable
- * bound to each stream instance.
+ * Tests call the production stream API. Each API call is dispatched through
+ * `stream->vtbl`, whose fake operations are injected as borrowed dependencies.
+ *
+ * Consequently, the production API transparently executes the fake
+ * implementation.
  */
+
+/* TEST HELPERS */
+
+/**
+ * @brief Create a `stream_t` backed by the fake stream implementation.
+ *
+ * @details
+ * This function requires the fake stream module to have been initialized with
+ * `fake_stream_reset()` beforehand.
+ *
+ * If a backend was previously supplied through
+ * `fake_stream_prepare_next_backend()`, that backend is bound to the created
+ * stream. Otherwise, a new fake backend is allocated automatically.
+ *
+ * @param[out] out
+ * Receives the created stream handle.
+ *
+ * @return
+ * - `STREAM_STATUS_OK` on success.
+ * - `STREAM_STATUS_INVALID` if `out == NULL`.
+ * - `STREAM_STATUS_OOM` if allocation fails.
+ */
+stream_status_t fake_stream_create_stream(stream_t **out);
 
 /* CFG */
 
@@ -61,7 +87,7 @@ void fake_stream_create_io_desc(
 	stream_adapter_desc_t *out,
 	stream_key_t key);
 
-void fake_stream_reset(const stream_env_t *env);
+void fake_stream_reset(const osal_mem_ops_t *mem_ops);
 void fake_stream_prepare_next_backend(void *backend);
 
 /**
@@ -71,11 +97,12 @@ void fake_stream_prepare_next_backend(void *backend);
  * Newly allocated fake backend object.
  *
  * @details
- * The returned backend can be bound to a real `stream_t` through
- * `stream_create()`.
+ * The returned backend can be configured and passed to
+ * `fake_stream_prepare_next_backend()` for use by the next stream created
+ * through a fake adapter.
  *
- * This allows tests to exercise the public `stream` API while all backend
- * operations are handled by the fake implementation.
+ * This allows tests to configure backend behavior before exercising the
+ * public `stream` API.
  */
 void *fake_stream_create_fake_backend(void);
 

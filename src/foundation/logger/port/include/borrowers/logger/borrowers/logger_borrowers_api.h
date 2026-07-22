@@ -3,7 +3,7 @@
  */
 
 /**
- * @file logger.h
+ * @file logger_borrowers_api.h
  * @ingroup logger_borrowers_api
  * @brief Borrower-facing runtime operations for the `logger` port.
  *
@@ -12,10 +12,10 @@
  * through a borrowed `logger_t` handle.
  */
 
-#ifndef LEXLEO_LOGGER_H
-#define LEXLEO_LOGGER_H
+#ifndef LEXLEO_LOGGER_BORROWERS_API_H
+#define LEXLEO_LOGGER_BORROWERS_API_H
 
-#include "logger_types.h"
+#include "logger/borrowers/logger_borrowers_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,4 +43,4 @@ logger_status_t logger_log(logger_t *l, const char *message);
 }
 #endif
 
-#endif //LEXLEO_LOGGER_H
+#endif /* LEXLEO_LOGGER_BORROWERS_API_H */

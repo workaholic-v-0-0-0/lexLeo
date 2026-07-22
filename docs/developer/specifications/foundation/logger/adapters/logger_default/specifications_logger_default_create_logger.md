@@ -2,10 +2,12 @@
 
 # Signature
 
-    logger_status_t logger_default_create_logger(
-        logger_t **out,
-        const logger_default_cfg_t *cfg,
-        const logger_default_env_t *env);
+```c
+logger_status_t logger_default_create_logger(
+    logger_t **out,
+    const logger_default_cfg_t *cfg,
+    const logger_default_env_t *env);
+```
 
 # Purpose
 
@@ -18,9 +20,9 @@ Create a logger instance backed by the `logger_default` adapter.
 
 # Invalid arguments
 
-- `out` must not be `NULL`.
-- `cfg` must not be `NULL`.
-- `env` must not be `NULL`.
+- `out == NULL`.
+- `cfg == NULL`.
+- `env == NULL`.
 
 # Success
 
@@ -31,7 +33,7 @@ Create a logger instance backed by the `logger_default` adapter.
 
 - Returns `LOGGER_STATUS_INVALID` for invalid arguments.
 - Returns `LOGGER_STATUS_OOM` if memory allocation fails.
-- Leaves `*out` unchanged if `out` is not `NULL`.
+- Leaves `*out` unchanged if `out != NULL`.
 
 # Ownership
 

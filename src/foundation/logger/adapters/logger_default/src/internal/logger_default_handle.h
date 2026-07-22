@@ -46,4 +46,4 @@ typedef struct logger_default_t {
 	const osal_mem_ops_t *mem;
 } logger_default_t;
 
-#endif // LEXLEO_LOGGER_DEFAULT_HANDLE_H
+#endif /* LEXLEO_LOGGER_DEFAULT_HANDLE_H */

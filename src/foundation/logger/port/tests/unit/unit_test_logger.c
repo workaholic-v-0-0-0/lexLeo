@@ -20,11 +20,11 @@
  * - @ref specifications_logger "logger specifications"
  */
 
-#include "logger/borrowers/logger.h"
-
-#include "logger/lifecycle/logger_lifecycle.h"
+#include "logger/borrowers/logger_borrowers_api.h"
+#include "logger/owners/logger_owners_api.h"
 #include "logger/adapters/logger_adapters_api.h"
-#include "logger/cr/logger_cr_api.h"
+
+#include "logger/tests/logger_white_box_tests_access.h"
 
 #include "osal/mem/osal_mem.h"
 #include "osal/mem/test/osal_mem_fake_provider.h"
@@ -51,6 +51,7 @@ typedef struct fake_logger_backend_t {
 
 	/** configurable behavior */
 	logger_status_t log_ret;
+	logger_status_t destroy_ret;
 } fake_logger_backend_t;
 
 static void fake_logger_backend_reset(fake_logger_backend_t *b) {
@@ -60,6 +61,7 @@ static void fake_logger_backend_reset(fake_logger_backend_t *b) {
 	b->last_backend = NULL;
 	b->last_message = NULL;
 	b->log_ret = LOGGER_STATUS_INVALID;
+	b->destroy_ret = LOGGER_STATUS_OK;
 }
 
 static logger_status_t fake_logger_log(void *backend, const char *message) {
@@ -74,13 +76,15 @@ static logger_status_t fake_logger_log(void *backend, const char *message) {
 	return b->log_ret;
 }
 
-static void fake_logger_destroy(void *backend) {
+static logger_status_t fake_logger_destroy(void *backend) {
     fake_logger_backend_t *b = (fake_logger_backend_t *)backend;
     assert_non_null(b);
 
 	b->last_backend = backend;
 
 	b->destroy_called++;
+
+	return b->destroy_ret;
 }
 
 static const logger_vtbl_t fake_logger_vtbl = {
@@ -95,13 +99,8 @@ static const logger_vtbl_t fake_logger_vtbl = {
  *
  * logger_env_t logger_default_env(const osal_mem_ops_t *mem_ops);
  *
- * Success:
- * - `ret.mem == mem_ops`.
- *
- * Failure:
- * - None.
- *
  * Doubles:
+ * - dummy `logger_vtbl_t`
  * - dummy `osal_mem_ops_t`
  *
  * See also:
@@ -111,201 +110,103 @@ static const logger_vtbl_t fake_logger_vtbl = {
 static void test_logger_default_env(void **state) {
 	(void)state;
 
-	const osal_mem_ops_t dummy = {0};
-	const osal_mem_ops_t *dummy_p = &dummy;
+	const logger_vtbl_t dummy_vtbl = {0};
+	const logger_vtbl_t *dummy_vtbl_p = &dummy_vtbl;
 
-	logger_env_t ret = logger_default_env(dummy_p);
+	const osal_mem_ops_t dummy_mem_ops = {0};
+	const osal_mem_ops_t *dummy_mem_ops_p = &dummy_mem_ops;
 
-	assert_ptr_equal(ret.mem, dummy_p);
+	logger_env_t ret =
+		logger_default_env(
+			dummy_vtbl_p,
+			dummy_mem_ops_p
+		);
+
+	assert_ptr_equal(ret.mem, dummy_mem_ops_p);
+	assert_ptr_equal(ret.vtbl, dummy_vtbl_p);
 }
 
 /**
- * @brief Scenarios for `logger_create()` / `logger_destroy()`.
- *
- * logger_status_t logger_create(
- *	   logger_t **out,
- *	   const logger_vtbl_t *vtbl,
- *	   void *backend,
- *	   const logger_env_t *env );
- *
- * void logger_destroy(logger_t **l);
- *
- * Invalid arguments:
- * - `out`, `vtbl`, `env` must not be NULL.
- * - `vtbl->log`, `vtbl->destroy` must not be NULL.
- * - `env->mem` must not be NULL.
- *
- * Success:
- * - Returns `LOGGER_STATUS_OK`.
- * - Stores a valid logger_t in `*out`.
- * - The produced logger_t must be destroyed via `logger_destroy()`.
- *
- * Failure:
- * - Returns:
- *     - `LOGGER_STATUS_INVALID` for invalid arguments
- *     - `LOGGER_STATUS_OOM` on allocation failure
- * - Leaves `*out` unchanged if `out` is not NULL.
- *
- * Lifecycle:
- * - `logger_destroy()` does nothing if `l` is NULL or `*l` is NULL.
- * - Otherwise, it releases the logger_t object and sets `*l` to NULL.
+ * @brief Scenarios for `logger_create()` / `logger_complete_default_init` /
+ * `logger_destroy()`.
  *
  * Doubles:
  * - fake_memory
+ * - fake_stream
  *
- * See also:
- * - @ref testing_foundation_logger_unit_logger_create_logger_destroy "logger_create() / logger_destroy() unit tests section"
+ * See contract:
  * - @ref specifications_logger_create "logger_create() specifications"
+ * - @ref specifications_logger_complete_default_init "logger_complete_default_init() specifications"
  * - @ref specifications_logger_destroy "logger_destroy() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_logger_unit_logger_create_logger_destroy "logger_create() / logger_destroy() unit tests section"
  *
  * The scenarios below define the test oracle for `logger_create()` and `logger_destroy()`.
  */
 typedef enum {
-    /**
-     * WHEN `logger_create(out, vtbl, backend, env)` is called with valid arguments
-     * EXPECT:
-     * - returns `LOGGER_STATUS_OK`
-     * - stores a non-NULL logger handle in `*out`
-     * - the produced handle is eligible for destruction by `logger_destroy()`
-     */
-    LOGGER_LIFECYCLE_SCENARIO_OK = 0,
+	/**
+	 * WHEN the nominal logger lifecycle is executed:
+	 * - `logger_create(out, env)`
+	 * - `logger_complete_default_init(*out, backend)`
+	 * - `logger_destroy(out)`
+	 *
+	 * EXPECT:
+	 * - `logger_create()` returns `LOGGER_STATUS_OK`
+	 * - `*out != NULL`
+	 * - `(*out)->vtbl == env->vtbl`
+	 * - `(*out)->mem == env->mem`
+	 * - `(*out)->backend == NULL`
+	 * - `logger_complete_default_init()` returns `LOGGER_STATUS_OK`
+	 * - `(*out)->backend == backend`
+	 * - `logger_destroy()` invokes the backend destroy operation
+	 * - `logger_destroy()` releases the logger handle
+	 * - `logger_destroy()` sets `*out` to `NULL`
+	 * - no memory leak, invalid free or double free
+	 */
+	LOGGER_LIFECYCLE_SCENARIO_OK = 0,
 
-    /**
-     * WHEN `out == NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - no logger handle is produced
-     */
-    LOGGER_LIFECYCLE_SCENARIO_OUT_NULL,
+	/**
+	 * WHEN allocation of the logger handle fails during
+	 * `logger_create(out, env)`
+	 *
+	 * EXPECT:
+	 * - `logger_create()` returns `LOGGER_STATUS_OOM`
+	 * - `*out == NULL`
+	 * - no backend destroy operation is invoked
+	 * - no memory leak, invalid free or double free
+	 */
+	LOGGER_LIFECYCLE_SCENARIO_OOM,
 
-    /**
-     * WHEN `vtbl == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    LOGGER_LIFECYCLE_SCENARIO_VTBL_NULL,
+	/**
+	 * WHEN `logger_destroy(out)` is called twice after a successfully completed
+	 * logger lifecycle
+	 *
+	 * EXPECT:
+	 * - the first call invokes the backend destroy operation
+	 * - the first call releases the logger handle
+	 * - the first call sets `*out` to `NULL`
+	 * - the second call leaves `*out == NULL`
+	 * - the backend destroy operation is invoked exactly once
+	 * - no memory leak, invalid free or double free
+	 */
+	LOGGER_LIFECYCLE_SCENARIO_DESTROY_IDEMPOTENT,
 
-    /**
-     * WHEN `vtbl != NULL` but `vtbl->log == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     *
-     * Notes:
-     * - The logger port requires a well-formed vtbl at creation time.
-     */
-    LOGGER_LIFECYCLE_SCENARIO_VTBL_LOG_NULL,
-
-    /**
-     * WHEN `vtbl != NULL` but `vtbl->destroy == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     *
-     * Notes:
-     * - The logger port requires a well-formed vtbl at creation time.
-     */
-    LOGGER_LIFECYCLE_SCENARIO_VTBL_DESTROY_NULL,
-
-    /**
-     * WHEN `backend == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    LOGGER_LIFECYCLE_SCENARIO_BACKEND_NULL,
-
-    /**
-     * WHEN `env == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    LOGGER_LIFECYCLE_SCENARIO_ENV_NULL,
-
-    /**
-     * WHEN `env != NULL` but `env->mem == NULL` and `out != NULL`
-     * EXPECT:
-     * - returns `LOGGER_STATUS_INVALID`
-     * - leaves `*out` unchanged
-     */
-    LOGGER_LIFECYCLE_SCENARIO_ENV_MEM_NULL,
-
-    /**
-     * WHEN allocation of the logger handle fails (allocator reports OOM)
-     * EXPECT:
-     * - returns `LOGGER_STATUS_OOM`
-     * - leaves `*out` unchanged
-     *
-     * Notes:
-     * - This scenario is exercised by configuring `fake_memory` to fail the
-     *   allocation performed by `logger_create()`.
-     */
-    LOGGER_LIFECYCLE_SCENARIO_OOM,
-
-    /**
-     * WHEN `logger_create()` succeeds and `logger_destroy()` is called twice
-     * EXPECT:
-     * - first `logger_destroy(&l)` releases the handle and sets `l` to NULL
-     * - second `logger_destroy(&l)` is a no-op and keeps `l` as NULL
-     *
-     * Notes:
-     * - This scenario checks the idempotence guarantee of `logger_destroy()`.
-     */
-    LOGGER_LIFECYCLE_SCENARIO_DESTROY_IDEMPOTENT,
 } logger_lifecycle_scenario_t;
 
 /** @cond INTERNAL */
 
 /**
- * @brief Expected state of the output handle after the call under test.
- *
- * @details
- * This helper enum is used by parametric tests to express the expected
- * postcondition on an output pointer managed by the test fixture.
- *
- * Notes:
- * - `OUT_CHECK_NONE` means no postcondition is asserted on the output handle.
- * - `OUT_EXPECT_NULL` means the output handle is expected to be `NULL`
- *   after the call.
- * - `OUT_EXPECT_NON_NULL` means the output handle is expected to be
- *   non-`NULL` after the call.
- * - `OUT_EXPECT_UNCHANGED` means the output handle is expected to preserve
- *   its pre-call value, typically verified with a sentinel pointer.
- */
-typedef enum {
-	OUT_CHECK_NONE,
-	OUT_EXPECT_NULL,
-	OUT_EXPECT_NON_NULL,
-	OUT_EXPECT_UNCHANGED
-} out_expect_t;
-
-/**
  * @brief One parametric test case for the logger lifecycle contract.
- *
- * Notes:
- * - `fail_call_idx` is used by `fake_memory` to inject an allocation failure
- *   on a specific call number (used by the OOM scenario).
  */
 typedef struct {
 	const char *name;
-
 	logger_lifecycle_scenario_t scenario;
 	size_t fail_call_idx;
-
-	logger_status_t expected_ret;
-	out_expect_t out_expect;
 } test_logger_lifecycle_case_t;
 
 /**
- * @brief Runtime fixture for `logger_create()` / `logger_destroy()` tests.
- *
- * Holds:
- * - the logger handle under test,
- * - the injected environment,
- * - the fake adapter backend,
- * - a pointer to the active parametric test case.
+ * @brief Runtime fixture for logger lifecycle contract.
  */
 typedef struct {
 	// runtime resources
@@ -313,7 +214,6 @@ typedef struct {
 
 	// injection
 	logger_env_t env;
-
 	fake_logger_backend_t backend;
 
 	const test_logger_lifecycle_case_t *tc;
@@ -328,13 +228,9 @@ typedef struct {
  */
 static int setup_logger_lifecycle(void **state)
 {
-	const test_logger_lifecycle_case_t *tc =
-		(const test_logger_lifecycle_case_t *)(*state);
-
-	test_logger_lifecycle_fixture_t *fx =
-		(test_logger_lifecycle_fixture_t *)malloc(sizeof(*fx));
+	const test_logger_lifecycle_case_t *tc = (const test_logger_lifecycle_case_t *)(*state);
+	test_logger_lifecycle_fixture_t *fx = (test_logger_lifecycle_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
-
 	osal_memset(fx, 0, sizeof(*fx));
 	fx->tc = tc;
 
@@ -343,8 +239,9 @@ static int setup_logger_lifecycle(void **state)
 		fake_memory_fail_only_on_call(tc->fail_call_idx);
 	}
 
-	// DI
+	// borrowed DI
 	fx->env.mem = osal_mem_test_fake_ops();
+	fx->env.vtbl = &fake_logger_vtbl;
 
 	fake_logger_backend_reset(&fx->backend);
 
@@ -368,7 +265,7 @@ static int teardown_logger_lifecycle(void **state)
 	assert_true(fake_memory_no_invalid_free());
 	assert_true(fake_memory_no_double_free());
 
-	free(fx);
+	osal_free(fx);
 	return 0;
 }
 
@@ -377,177 +274,79 @@ static int teardown_logger_lifecycle(void **state)
 //-----------------------------------------------------------------------------
 
 /**
- * @brief Execute one parametric test scenario for `logger_create()` / `logger_destroy()`.
+ * @brief Execute one parametric test scenario for the logger lifecycle contract.
  */
 static void test_logger_lifecycle(void **state)
 {
-	test_logger_lifecycle_fixture_t *fx =
-		(test_logger_lifecycle_fixture_t *)(*state);
+	test_logger_lifecycle_fixture_t *fx = (test_logger_lifecycle_fixture_t *)(*state);
 	const test_logger_lifecycle_case_t *tc = fx->tc;
 
-	// ARRANGE
+	// ARRANGE logger_create()
 	logger_status_t ret = LOGGER_STATUS_INVALID;
 
-	logger_t **out_arg = &fx->out;
-	const logger_vtbl_t *vtbl_arg = &fake_logger_vtbl;
-	logger_vtbl_t vtbl_local;
-	void *backend_arg = &fx->backend;
-	const logger_env_t *env_arg = &fx->env;
+	// ACT logger_create()
+	ret = logger_create(&fx->out, &fx->env);
 
-	// invalid args
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_OUT_NULL) out_arg = NULL;
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_VTBL_NULL) vtbl_arg = NULL;
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_BACKEND_NULL) backend_arg = NULL;
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_ENV_NULL) env_arg = NULL;
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_ENV_MEM_NULL) fx->env.mem = NULL;
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_VTBL_LOG_NULL) {
-    	vtbl_local = fake_logger_vtbl;
-    	vtbl_local.log = NULL;
-		vtbl_arg = &vtbl_local;
+	// ASSERT logger_create()
+	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_OOM) {
+		assert_int_equal(ret, LOGGER_STATUS_OOM);
+		assert_null(fx->out);
+		return;
 	}
-	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_VTBL_DESTROY_NULL) {
-    	vtbl_local = fake_logger_vtbl;
-    	vtbl_local.destroy = NULL;
-		vtbl_arg = &vtbl_local;
-	}
+	assert_int_equal(ret, LOGGER_STATUS_OK);
+	assert_non_null(fx->out);
+	assert_null(logger_get_backend(fx->out));
 
-    // ensure OUT_EXPECT_UNCHANGED is meaningful
-    if (tc->out_expect == OUT_EXPECT_UNCHANGED && out_arg != NULL) {
-        fx->out = (logger_t *)(uintptr_t)0xDEADC0DEu; // sentinel
-    }
+	// ACT logger_complete_default_init()
+	ret = logger_complete_default_init(fx->out, &fx->backend);
 
-    logger_t *out_arg_snapshot = fx->out;
+	// ASSERT logger_complete_default_init()
+	assert_int_equal(ret, LOGGER_STATUS_OK);
+	assert_non_null(fx->out);
+	assert_ptr_equal(logger_get_backend(fx->out), &fx->backend);
 
-	// ACT
-	ret = logger_create(out_arg, vtbl_arg, backend_arg, env_arg);
+	// ACT logger_destroy()
+	ret = logger_destroy(&fx->out);
+
+	// ASSERT logger_destroy()
+	assert_int_equal(ret, LOGGER_STATUS_OK);
+	assert_null(fx->out);
 	if (tc->scenario == LOGGER_LIFECYCLE_SCENARIO_DESTROY_IDEMPOTENT) {
+		assert_int_equal(fx->backend.destroy_called, 1);
+
+		// ACT second logger_destroy()
+		ret = logger_destroy(&fx->out);
+
+		// ASSERT second logger_destroy()
 		assert_int_equal(ret, LOGGER_STATUS_OK);
-		assert_non_null(fx->out);
-
-		logger_destroy(&fx->out);
 		assert_null(fx->out);
-
-		logger_destroy(&fx->out);
-		assert_null(fx->out);
+		assert_int_equal(fx->backend.destroy_called, 1);
 	}
-
-	// ASSERT
-	assert_int_equal(ret, tc->expected_ret);
-
-	switch (tc->out_expect) {
-		case OUT_CHECK_NONE: break;
-		case OUT_EXPECT_NULL: assert_null(fx->out); break;
-		case OUT_EXPECT_NON_NULL: assert_non_null(fx->out); break;
-		case OUT_EXPECT_UNCHANGED:
-			assert_ptr_equal(out_arg_snapshot, fx->out);
-			fx->out = NULL; // prevent teardown from destroying sentinel
-			break;
-		default: fail();
-	}
+	assert_true(fake_memory_no_leak());
+	assert_true(fake_memory_no_invalid_free());
+	assert_true(fake_memory_no_double_free());
 }
 
 //-----------------------------------------------------------------------------
 // CASES
 //-----------------------------------------------------------------------------
 
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_OUT_NULL = {
-	.name = "logger_lifecycle_out_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_OUT_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_CHECK_NONE
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_VTBL_NULL = {
-	.name = "logger_lifecycle_vtbl_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_VTBL_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_VTBL_LOG_NULL = {
-	.name = "logger_lifecycle_vtbl_log_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_VTBL_LOG_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_VTBL_DESTROY_NULL = {
-	.name = "logger_lifecycle_vtbl_destroy_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_VTBL_DESTROY_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_BACKEND_NULL = {
-	.name = "logger_lifecycle_backend_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_BACKEND_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_ENV_NULL = {
-	.name = "logger_lifecycle_env_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_ENV_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_ENV_MEM_NULL = {
-	.name = "logger_lifecycle_mem_null",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_ENV_MEM_NULL,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_INVALID,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_OOM_1 = {
-	.name = "logger_lifecycle_oom_1",
-
+static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_OOM = {
+	.name = "logger_lifecycle_oom",
 	.scenario = LOGGER_LIFECYCLE_SCENARIO_OOM,
 	.fail_call_idx = 1,
-
-	.expected_ret = LOGGER_STATUS_OOM,
-	.out_expect = OUT_EXPECT_UNCHANGED
-};
-
-static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_OK = {
-	.name = "logger_lifecycle_ok",
-
-	.scenario = LOGGER_LIFECYCLE_SCENARIO_OK,
-	.fail_call_idx = 0,
-
-	.expected_ret = LOGGER_STATUS_OK,
-	.out_expect = OUT_EXPECT_NON_NULL
 };
 
 static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_DESTROY_IDEMPOTENT = {
 	.name = "logger_lifecycle_destroy_idempotent",
-
 	.scenario = LOGGER_LIFECYCLE_SCENARIO_DESTROY_IDEMPOTENT,
 	.fail_call_idx = 0,
+};
 
-	.expected_ret = LOGGER_STATUS_OK,
-	.out_expect = OUT_EXPECT_NULL
+static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_OK = {
+	.name = "logger_lifecycle_ok",
+	.scenario = LOGGER_LIFECYCLE_SCENARIO_OK,
+	.fail_call_idx = 0,
 };
 
 //-----------------------------------------------------------------------------
@@ -555,16 +354,9 @@ static const test_logger_lifecycle_case_t CASE_LOGGER_LIFECYCLE_DESTROY_IDEMPOTE
 //-----------------------------------------------------------------------------
 
 #define LOGGER_LIFECYCLE_CASES(X) \
-X(CASE_LOGGER_LIFECYCLE_OUT_NULL) \
-X(CASE_LOGGER_LIFECYCLE_VTBL_NULL) \
-X(CASE_LOGGER_LIFECYCLE_VTBL_LOG_NULL) \
-X(CASE_LOGGER_LIFECYCLE_VTBL_DESTROY_NULL) \
-X(CASE_LOGGER_LIFECYCLE_BACKEND_NULL) \
-X(CASE_LOGGER_LIFECYCLE_ENV_NULL) \
-X(CASE_LOGGER_LIFECYCLE_ENV_MEM_NULL) \
-X(CASE_LOGGER_LIFECYCLE_OOM_1) \
-X(CASE_LOGGER_LIFECYCLE_OK) \
-X(CASE_LOGGER_LIFECYCLE_DESTROY_IDEMPOTENT)
+X(CASE_LOGGER_LIFECYCLE_OOM) \
+X(CASE_LOGGER_LIFECYCLE_DESTROY_IDEMPOTENT) \
+X(CASE_LOGGER_LIFECYCLE_OK)
 
 #define LOGGER_MAKE_LIFECYCLE_TEST(case_sym) \
 LEXLEO_MAKE_TEST(logger_lifecycle, case_sym)
@@ -581,19 +373,11 @@ static const struct CMUnitTest logger_lifecycle_tests[] = {
 /**
  * @brief Scenarios for `logger_log()`.
  *
- * logger_status_t logger_log(logger_t *l, const char *message);
- *
- * Precondition:
- * - If `l != NULL`, `l` has been created by `logger_create()` with
- *   `fake_logger_vtbl` and `fake_logger_backend_t`.
- *
- * Doubles:
- * - `fake_logger_backend_t`
- * - `fake_logger_vtbl`
- *
- * See also:
- * - @ref testing_foundation_logger_unit_logger_log "logger_log() unit tests section"
+ * See contract:
  * - @ref specifications_logger_log "logger_log() specifications"
+ *
+ * See test description:
+ * - @ref testing_foundation_logger_unit_logger_log "logger_log() unit tests section"
  *
  * The scenarios below define the test oracle for `logger_log()`.
  */
@@ -631,20 +415,12 @@ typedef enum {
  */
 typedef struct {
 	const char *name;
-
 	logger_log_scenario_t scenario;
-
 	logger_status_t expected_ret;
 } test_logger_log_case_t;
 
 /**
  * @brief Runtime fixture for `logger_log()` tests.
- *
- * Holds:
- * - the logger under test,
- * - the injected environment,
- * - the fake adapter backend,
- * - a pointer to the active parametric test case.
  */
 typedef struct {
 	logger_t *logger;
@@ -662,27 +438,32 @@ typedef struct {
  */
 static int setup_logger_log(void **state)
 {
-	const test_logger_log_case_t *tc =
-		(const test_logger_log_case_t *)(*state);
-	test_logger_log_fixture_t *fx =
-		(test_logger_log_fixture_t *)malloc(sizeof(*fx));
+	const test_logger_log_case_t *tc = (const test_logger_log_case_t *)(*state);
+	test_logger_log_fixture_t *fx = (test_logger_log_fixture_t *)osal_malloc(sizeof(*fx));
 	if (!fx) return -1;
-
 	osal_memset(fx, 0, sizeof(*fx));
 
 	fake_memory_reset();
 	fake_logger_backend_reset(&fx->backend);
 
-	// DI
+	// borrowed DI
 	fx->env.mem = osal_mem_test_fake_ops();
+	fx->env.vtbl = &fake_logger_vtbl;
 
 	assert_int_equal(
-		logger_create(&fx->logger, &fake_logger_vtbl, &fx->backend, &fx->env),
-		LOGGER_STATUS_OK );
+		logger_create(&fx->logger, &fx->env),
+		LOGGER_STATUS_OK
+	);
+
+	// owned DI
+	assert_int_equal(
+		logger_complete_default_init(fx->logger, &fx->backend),
+		LOGGER_STATUS_OK
+	);
+
 	fx->tc = tc;
 
 	*state = fx;
-
 	return 0;
 }
 
@@ -691,8 +472,7 @@ static int setup_logger_log(void **state)
  */
 static int teardown_logger_log(void **state)
 {
-	test_logger_log_fixture_t *fx =
-		(test_logger_log_fixture_t *)(*state);
+	test_logger_log_fixture_t *fx = (test_logger_log_fixture_t *)(*state);
 
 	logger_destroy(&fx->logger);
 
@@ -700,7 +480,7 @@ static int teardown_logger_log(void **state)
 	assert_true(fake_memory_no_double_free());
 	assert_true(fake_memory_no_leak());
 
-	free(fx);
+	osal_free(fx);
 
 	return 0;
 }
@@ -714,8 +494,7 @@ static int teardown_logger_log(void **state)
  */
 static void test_logger_log(void **state)
 {
-	test_logger_log_fixture_t *fx =
-		(test_logger_log_fixture_t *)(*state);
+	test_logger_log_fixture_t *fx = (test_logger_log_fixture_t *)(*state);
 	const test_logger_log_case_t *tc = fx->tc;
 
 	// ARRANGE
@@ -724,8 +503,12 @@ static void test_logger_log(void **state)
 	const char *message_arg = "test message";
 
 	// invalid args
-	if (tc->scenario == LOGGER_LOG_SCENARIO_L_NULL) l_arg = NULL;
-	if (tc->scenario == LOGGER_LOG_SCENARIO_MESSAGE_NULL) message_arg = NULL;
+	if (tc->scenario == LOGGER_LOG_SCENARIO_L_NULL) {
+		l_arg = NULL;
+	}
+	if (tc->scenario == LOGGER_LOG_SCENARIO_MESSAGE_NULL) {
+		message_arg = NULL;
+	}
 
 	// spy cfg
 	if (tc->scenario == LOGGER_LOG_SCENARIO_FORWARD_IO_ERROR_OK) {

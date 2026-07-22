@@ -32,53 +32,24 @@
 #include "internal/logger_default_handle.h"
 #include "internal/logger_default_utc_timestamp.h"
 
-/**
- * @brief Return the default configuration for the `logger_default` adapter.
- *
- * @details
- * This helper establishes the default runtime behavior of the adapter.
- *
- * @return
- * A well-formed `logger_default_cfg_t`.
- */
 logger_default_cfg_t logger_default_default_cfg(void)
 {
-	return (logger_default_cfg_t){ .append_newline = true };
+	return (logger_default_cfg_t) {
+		.append_newline = true
+	};
 }
 
-/**
- * @brief Build a default environment for the `logger_default` adapter.
- *
- * @details
- * This helper packages borrowed runtime dependencies into a
- * `logger_default_env_t`.
- *
- * @param[in] stream
- * Borrowed target stream used by the adapter.
- *
- * @param[in] time_ops
- * Borrowed time operations used for timestamp generation.
- *
- * @param[in] adapter_mem
- * Borrowed memory operations used for adapter-backend allocation.
- *
- * @param[in] port_env
- * Borrowed `logger` port environment.
- *
- * @return
- * A well-formed `logger_default_env_t` aggregating the provided dependencies.
- */
 logger_default_env_t logger_default_default_env(
 	stream_t *stream,
 	const osal_time_ops_t *time_ops,
-	const osal_mem_ops_t *adapter_mem,
-	const logger_env_t *port_env)
-{
+	const osal_mem_ops_t *adapter_mem_ops,
+	const osal_mem_ops_t *port_mem_ops
+) {
 	return (logger_default_env_t){
 		.stream = stream,
 		.time_ops = time_ops,
-		.adapter_mem = adapter_mem,
-		.port_env = *port_env
+		.adapter_mem_ops = adapter_mem_ops,
+		.port_mem_ops = port_mem_ops
 	};
 }
 
@@ -263,69 +234,66 @@ static logger_status_t logger_default_log(
 	return LOGGER_STATUS_OK;
 }
 
-/**
- * @brief Private `destroy` implementation for the `logger_default` backend.
- *
- * @details
- * This function releases the private backend object using the injected
- * adapter-memory operations table.
- *
- * @param[in] backend
- * Private `logger_default` backend handle.
- * May be `NULL`.
- */
-static void logger_default_destroy(void *backend)
+static logger_status_t logger_default_destroy(void *backend)
 {
-	if (!backend) {
-		return;
-	}
+	LEXLEO_ASSERT(backend); /* via logger_destroy() contract */
 
 	logger_default_t *logger_default = (logger_default_t *)backend;
+
 	LEXLEO_ASSERT(
 		   logger_default->mem
 		&& logger_default->mem->free
 	);
 
 	logger_default->mem->free(logger_default);
+
+	return LOGGER_STATUS_OK;
 }
 
 /**
  * @brief Private backend vtable for `logger_default`.
  */
-static const logger_vtbl_t DEFAULT_VTBL = {
+static const logger_vtbl_t g_logger_default_vtbl = {
 	.log = logger_default_log,
 	.destroy = logger_default_destroy,
 };
 
-/**
- * @brief Create a logger instance backed by the `logger_default` adapter.
- *
- * @details
- * This function allocates the private `logger_default` backend, initializes it
- * from the injected configuration and environment, and then wires it into the
- * public `logger` port through `logger_create()`.
- *
- * @param[out] out
- * Receives the created logger handle.
- * Must not be `NULL`.
- *
- * @param[in] cfg
- * Adapter configuration.
- * Must not be `NULL`.
- *
- * @param[in] env
- * Adapter environment.
- * Must not be `NULL`.
- *
- * @retval LOGGER_STATUS_OK
- * Logger successfully created.
- *
- * @retval LOGGER_STATUS_INVALID
- * One or more public arguments are invalid.
- *
- * @retval LOGGER_STATUS_OOM
- * Adapter-backend allocation failed.
- */
+static logger_status_t logger_default_create_backend(
+	logger_default_t **out,
+	const logger_default_cfg_t *cfg,
+	const logger_default_env_t *env
+) {
+	if (
+		   !out
+		|| !cfg
+		|| !env
+	) {
+		return LOGGER_STATUS_INVALID;
+	}
+
+	LEXLEO_ASSERT(
+		   env->stream
+		&& env->time_ops
+		&& env->adapter_mem_ops
+		&& env->adapter_mem_ops->calloc
+		&& env->adapter_mem_ops->free
+	);
+
+	logger_default_t *backend =
+		env->adapter_mem_ops->calloc(1, sizeof(*backend));
+	if (!backend) {
+		return LOGGER_STATUS_OOM;
+	}
+
+	backend->stream = env->stream;
+	backend->time_ops = env->time_ops;
+	backend->append_newline = cfg->append_newline;
+	backend->mem = env->adapter_mem_ops;
+
+	*out = backend;
+	return LOGGER_STATUS_OK;
+}
+
 logger_status_t logger_default_create_logger(
 	logger_t **out,
 	const logger_default_cfg_t *cfg,
@@ -335,36 +303,29 @@ logger_status_t logger_default_create_logger(
 		return LOGGER_STATUS_INVALID;
 	}
 
-	LEXLEO_ASSERT(
-		   env->time_ops
-		&& env->time_ops->now
-		&& env->adapter_mem
-		&& env->adapter_mem->malloc
-		&& env->adapter_mem->free
-		&& env->stream
-	);
-
-	logger_default_t *backend = env->adapter_mem->malloc(sizeof(*backend));
-	if (!backend) {
-		return LOGGER_STATUS_OOM;
-	}
-
-	backend->stream = env->stream;
-	backend->time_ops = env->time_ops;
-	backend->append_newline = cfg->append_newline;
-	backend->mem = env->adapter_mem;
-
-	logger_t *tmp = NULL;
-
-	logger_status_t st =
-		logger_create(&tmp, &DEFAULT_VTBL, (void *)backend, &env->port_env);
-
+	logger_default_t *backend = NULL;
+	logger_status_t st = logger_default_create_backend(&backend, cfg, env);
 	if (st != LOGGER_STATUS_OK) {
-		env->adapter_mem->free(backend);
 		return st;
 	}
 
-	*out = tmp;
+	logger_t *tmp = NULL;
 
+	logger_env_t logger_env =
+		logger_default_env(
+			&g_logger_default_vtbl,
+			env->port_mem_ops
+		);
+	st = logger_create(&tmp, &logger_env);
+	if (st != LOGGER_STATUS_OK) {
+		logger_status_t st2 = logger_default_destroy(backend);
+		LEXLEO_ASSERT(st2 == LOGGER_STATUS_OK);
+		return st;
+	}
+
+	st = logger_complete_default_init(tmp, backend);
+	LEXLEO_ASSERT(st == LOGGER_STATUS_OK);
+
+	*out = tmp;
 	return LOGGER_STATUS_OK;
 }

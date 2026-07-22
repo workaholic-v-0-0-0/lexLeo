@@ -8,7 +8,7 @@
  * @brief Private UTC timestamp conversion helpers for the `logger_default` adapter.
  *
  * @details
- * This header exposes private timestamp-related types and helpers used by the
+ * This header defines private timestamp-related types and helpers used by the
  * `logger_default` adapter implementation.
  */
 
@@ -73,4 +73,4 @@ bool logger_default_epoch_time_to_date(
 	logger_default_utc_timestamp_t *out,
 	const osal_time_t *time);
 
-#endif //LEXLEO_LOGGER_DEFAULT_UTC_TIMESTAMP_H
+#endif /* LEXLEO_LOGGER_DEFAULT_UTC_TIMESTAMP_H */

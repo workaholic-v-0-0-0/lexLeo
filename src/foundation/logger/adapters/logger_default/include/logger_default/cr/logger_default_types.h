@@ -15,8 +15,6 @@
 #ifndef LEXLEO_LOGGER_DEFAULT_TYPES_H
 #define LEXLEO_LOGGER_DEFAULT_TYPES_H
 
-#include "logger/adapters/logger_env.h"
-
 #include "stream/borrowers/stream_borrowers_types.h"
 
 #include "osal/time/osal_time_ops.h"
@@ -64,38 +62,19 @@ typedef struct logger_default_env_t {
 	 */
 	stream_t *stream;
 
-	/**
-	 * @brief Borrowed time operations used for timestamp generation.
-	 *
-	 * @details
-	 * These operations are used to obtain the current time when producing
-	 * timestamped log records.
-	 * The operations table remains owned by the caller and is not modified by
-	 * the `logger_default` adapter.
-	 */
+	/** Borrowed time operations table used by the adapter backend. */
 	const osal_time_ops_t *time_ops;
 
-	/**
-	 * @brief Borrowed memory operations used for adapter-backend allocation.
-	 *
-	 * @details
-	 * These memory operations are used to allocate and destroy the private
-	 * backend object owned by the `logger_default` adapter.
-	 */
-	const osal_mem_ops_t *adapter_mem;
+	/** Borrowed memory operations used by the adapter backend. */
+	const osal_mem_ops_t *adapter_mem_ops;
 
-	/**
-	 * @brief Borrowed `logger` port environment.
-	 *
-	 * @details
-	 * This environment is forwarded to `logger_create()` when constructing the
-	 * public `logger_t` handle.
-	 */
-	logger_env_t port_env;
+	/** Borrowed memory operations used by the `logger` port handle. */
+	const osal_mem_ops_t *port_mem_ops;
+
 } logger_default_env_t;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LEXLEO_LOGGER_DEFAULT_TYPES_H
+#endif /* LEXLEO_LOGGER_DEFAULT_TYPES_H */

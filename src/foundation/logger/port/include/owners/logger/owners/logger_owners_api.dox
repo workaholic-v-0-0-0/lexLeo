@@ -1,0 +1,9 @@
+/** @defgroup logger_owners_api logger owners API
+ *  @ingroup logger_api
+ *
+ *  @brief Owner-facing lifecycle API for the `logger` port.
+ *
+ *  @details
+ *  This API exposes the lifecycle operations available to modules that own
+ *  a @ref logger_t instance.
+ */

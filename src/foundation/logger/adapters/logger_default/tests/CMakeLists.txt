@@ -10,8 +10,7 @@ target_link_libraries(
     unit_test_logger_default
     PRIVATE
         logger_default
-        logger
-        stream
+        logger_white_box_tests_access
         stream_fake_provider
         osal_time_fake_provider
         osal_mem_fake_provider

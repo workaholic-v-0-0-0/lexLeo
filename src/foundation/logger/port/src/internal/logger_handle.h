@@ -15,7 +15,7 @@
 #ifndef LEXLEO_LOGGER_HANDLE_H
 #define LEXLEO_LOGGER_HANDLE_H
 
-#include "logger/adapters/logger_adapters_api.h"
+#include "logger/adapters/logger_adapters_vtbl.h"
 
 #include "osal/mem/osal_mem_ops.h"
 
@@ -25,21 +25,18 @@
  * @details
  * This structure is the private in-memory handle bound to a public `logger_t`
  * object.
- *
- * It stores:
- * - the bound adapter dispatch table,
- * - the opaque backend instance,
- * - the memory operations used for destruction.
  */
 struct logger_t {
-	/** Bound adapter dispatch table. */
-	logger_vtbl_t vtbl;
 
-	/** Opaque adapter-owned backend instance. */
+	/** Borrowed adapter dispatch table. */
+	const logger_vtbl_t *vtbl;
+
+	/** Borrowed memory operations used to destroy the handle. */
+	const osal_mem_ops_t *mem;
+
+	/** Owned opaque backend instance destroyed through `vtbl->destroy`. */
 	void *backend;
 
-	/** Memory operations used to destroy the handle. */
-	const osal_mem_ops_t *mem;
 };
 
-#endif // LEXLEO_LOGGER_HANDLE_H
+#endif /* LEXLEO_LOGGER_HANDLE_H */

@@ -12,8 +12,9 @@ Emit the message `message` through the `logger` port.
 
 # Preconditions
 
-- If `l != NULL`, `l` must point to a valid `logger_t` handle created by
-  `logger_create()`. 
+- If `l != NULL`, `l` must point to a fully initialized `logger_t` handle.
+- The handle must contain a valid backend compatible with its validated virtual
+  table.
 
 # Invalid arguments
 
@@ -33,5 +34,5 @@ Emit the message `message` through the `logger` port.
 
 # Notes
 
-- `logger_log()` exposes the borrower-facing logging operation of the `logger` port.
-- This function requires a logger handle whose adapter-facing virtual table has been validated at creation time by `logger_create()`.
+- A handle created by `logger_create()` must first be completed through
+  `logger_complete_default_init()`.

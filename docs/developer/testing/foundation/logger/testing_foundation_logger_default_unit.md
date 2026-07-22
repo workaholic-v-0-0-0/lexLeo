@@ -1,16 +1,5 @@
 @page testing_foundation_logger_default_unit logger_default unit tests
 
-It covers:
-- `logger_default_default_cfg()`
-- `logger_default_default_env()`
-- `logger_default_create_logger()`
-- behavior implemented by the following private adapter callbacks,
-  exercised through the public `logger` API and lifecycle entry points:
-  - `logger_default_log()`
-  - `logger_default_destroy()`
-
----
-
 @anchor testing_foundation_logger_default_unit_default_cfg
 # logger_default_default_cfg() unit tests
 
@@ -40,66 +29,56 @@ logger_default_cfg_t logger_default_default_cfg(void);
 ---
 
 @anchor testing_foundation_logger_default_unit_default_env
+
 # logger_default_default_env() unit tests
 
 See @ref specifications_logger_default_default_env "logger_default_default_env() specifications"
 
 ## Functions under test
 
-~~~c
+```c
 logger_default_env_t logger_default_default_env(
     stream_t *stream,
     const osal_time_ops_t *time_ops,
-    const osal_mem_ops_t *adapter_mem,
-    const logger_env_t *port_env);
-~~~
-
-## Success
-
-- `env.stream == stream`.
-- `env.time_ops == time_ops`.
-- `env.adapter_mem == adapter_mem`.
-- `env.port_env == *port_env`.
-
-## Failure
-
-- None.
+    const osal_mem_ops_t *adapter_mem_ops,
+    const osal_mem_ops_t *port_mem_ops);
+```
 
 ## Test doubles
 
 - dummy `stream_t *`
 - dummy `osal_time_ops_t *`
-- dummy `osal_mem_ops_t *`
-- dummy `logger_env_t`
+- dummy `osal_mem_ops_t *` for the adapter memory operations
+- dummy `osal_mem_ops_t *` for the port memory operations
 
 ## Tested scenarios
 
-| WHEN | EXPECT |
-|---|---|
-| `logger_default_default_env(stream, time_ops, adapter_mem, port_env)` is called with valid inputs | returns a `logger_default_env_t` such that `env.stream == stream`, `env.time_ops == time_ops`, `env.adapter_mem == adapter_mem`, and `env.port_env == *port_env` |
+| WHEN                                                                                                                     | EXPECT                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `logger_default_default_env(stream, time_ops, adapter_mem_ops, port_mem_ops)` is called with the four dummy dependencies | returns a `logger_default_env_t` such that:<br>`ret.stream == stream`;<br>`ret.time_ops == time_ops`;<br>`ret.adapter_mem_ops == adapter_mem_ops`;<br>`ret.port_mem_ops == port_mem_ops` |
 
 ## Notes
 
-- This helper preserves the injected stream, time, and logger-port dependencies
-  provided by the caller.
-- The returned environment does not take ownership of the borrowed `stream`
-  handle, borrowed `time_ops` table, or borrowed `adapter_mem` table.
+- This test verifies that the helper stores each injected dependency unchanged
+  in the corresponding environment field.
+- No ownership or lifetime behavior is exercised by this test.
 
 ---
 
 @anchor testing_foundation_logger_default_unit_create_logger
+
 # logger_default_create_logger() unit tests
 
 See @ref specifications_logger_default_create_logger "logger_default_create_logger() specifications"
 
 ## Functions under test
 
-~~~c
+```c
 logger_status_t logger_default_create_logger(
     logger_t **out,
     const logger_default_cfg_t *cfg,
     const logger_default_env_t *env);
-~~~
+```
 
 ## Invalid arguments
 
@@ -114,9 +93,9 @@ logger_status_t logger_default_create_logger(
 
 ## Failure
 
-- Returns:
-  - `LOGGER_STATUS_INVALID` for invalid arguments
-  - `LOGGER_STATUS_OOM` on allocation failure
+- Returns `LOGGER_STATUS_INVALID` if `out`, `cfg`, or `env` is `NULL`.
+- Returns `LOGGER_STATUS_OOM` if either allocation performed during logger
+  creation fails.
 - If `out != NULL`, leaves `*out` unchanged on failure.
 
 ## Test doubles
@@ -127,18 +106,24 @@ logger_status_t logger_default_create_logger(
 
 ## Tested scenarios
 
-| WHEN | EXPECT |
-|---|---|
+| WHEN                                                                         | EXPECT                                                                     |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `logger_default_create_logger(out, cfg, env)` is called with valid arguments | returns `LOGGER_STATUS_OK`;<br>stores a non-`NULL` logger handle in `*out` |
-| `out == NULL` | returns `LOGGER_STATUS_INVALID` |
-| `cfg == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `env == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| allocation required by `logger_default_create_logger()` fails | returns `LOGGER_STATUS_OOM`;<br>leaves `*out` unchanged |
+| `out == NULL`                                                                | returns `LOGGER_STATUS_INVALID`                                            |
+| `cfg == NULL` and `out != NULL`                                              | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged                |
+| `env == NULL` and `out != NULL`                                              | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged                |
+| the first allocation performed during logger creation fails                  | returns `LOGGER_STATUS_OOM`;<br>leaves `*out` unchanged                    |
+| the second allocation performed during logger creation fails                 | returns `LOGGER_STATUS_OOM`;<br>leaves `*out` unchanged                    |
 
 ## Notes
 
 - Logger creation is exercised directly through the adapter CR API.
-- Allocation failure is injected through `fake_memory`.
+- The target stream is provided by `fake_stream`.
+- The time operations table is provided by `fake_time`.
+- Failure of each allocation performed during logger creation is injected
+  separately through `fake_memory`.
+- The output-preservation scenarios use a non-`NULL` sentinel value to verify
+  that `*out` remains unchanged on failure.
 
 ---
 
@@ -235,7 +220,7 @@ See @ref specifications_logger_default_destroy "logger_default_destroy() specifi
 ## Functions under test
 
 ~~~c
-static void logger_default_destroy(void *backend);
+static logger_status_t logger_default_destroy(void *backend);
 ~~~
 
 ## Exercise path
@@ -243,19 +228,17 @@ static void logger_default_destroy(void *backend);
 This private callback is exercised through:
 
 ~~~c
-void logger_destroy(logger_t **logger);
+logger_status_t logger_destroy(logger_t **logger);
 ~~~
 
 on a logger previously created by `logger_default_create_logger()`.
 
 ## Success
 
-- Backend-owned resources are released during `logger_destroy()`.
-- The public logger handle is destroyed and set to `NULL`.
-
-## Failure
-
-- None.
+- Returns `LOGGER_STATUS_OK`.
+- Releases the private `logger_default` backend object.
+- Does not destroy the borrowed target stream.
+- Does not destroy the borrowed time operations table.
 
 ## Test doubles
 
@@ -267,11 +250,5 @@ on a logger previously created by `logger_default_create_logger()`.
 
 | WHEN | EXPECT |
 |---|---|
-| a `logger_default`-backed logger is created and later destroyed through `logger_destroy(&logger)` | releases backend-owned resources;<br>destroys the public logger handle;<br>sets `logger` to `NULL` |
+| a `logger_default`-backed logger is created and later destroyed through `logger_destroy(&logger)` | returns `LOGGER_STATUS_OK`;<br>releases the private backend object;<br>destroys the public logger handle;<br>sets `logger` to `NULL`;<br>does not destroy the borrowed target stream |
 
-## Notes
-
-- The private callback is not called directly.
-- It is exercised through the public `logger` lifecycle API.
-- The borrowed target stream and borrowed time-ops table are not destroyed by
-  this callback.

@@ -1,169 +1,131 @@
 @page testing_foundation_logger_unit logger unit tests
 
-It covers:
-- `logger_default_env()`
-- `logger_create()` / `logger_destroy()`
-- `logger_log()`
-
----
-
 @anchor testing_foundation_logger_unit_logger_default_env
+
 # logger_default_env() unit tests
 
 See @ref specifications_logger_default_env "logger_default_env() specifications"
 
 ## Functions under test
 
-~~~c
-logger_env_t logger_default_env(const osal_mem_ops_t *mem_ops);
-~~~
-
-## Success
-
-- `env.mem == mem_ops`.
-
-## Failure
-
-- None.
+```c
+logger_env_t logger_default_env(
+    const logger_vtbl_t *vtbl,
+    const osal_mem_ops_t *mem_ops);
+```
 
 ## Test doubles
 
+- dummy `logger_vtbl_t`
 - dummy `osal_mem_ops_t`
 
 ## Tested scenarios
 
-| WHEN | EXPECT |
-|---|---|
-| `logger_default_env(mem_ops)` is called with a valid `mem_ops` pointer | returns a `logger_env_t` such that `env.mem == mem_ops` |
+| WHEN                                                                          | EXPECT                                                                             |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `logger_default_env(vtbl, mem_ops)` is called with the two dummy dependencies | returns a `logger_env_t` such that:<br>`ret.vtbl == vtbl`;<br>`ret.mem == mem_ops` |
 
 ## Notes
 
-- This helper preserves the allocator dependency provided by the caller.
+- This test verifies that the helper stores each injected dependency unchanged
+  in the corresponding environment field.
+- No ownership or lifetime behavior is exercised by this test.
 
 ---
 
 @anchor testing_foundation_logger_unit_logger_create_logger_destroy
-# logger_create() / logger_destroy() unit tests
+
+# logger_create() / logger_complete_default_init() / logger_destroy() unit tests
 
 See:
+
 - @ref specifications_logger_create "logger_create() specifications"
+- @ref specifications_logger_complete_default_init "logger_complete_default_init() specifications"
 - @ref specifications_logger_destroy "logger_destroy() specifications"
 
 ## Functions under test
 
-~~~c
+```c
 logger_status_t logger_create(
     logger_t **out,
-    const logger_vtbl_t *vtbl,
-    void *backend,
     const logger_env_t *env);
 
-void logger_destroy(logger_t **l);
-~~~
+logger_status_t logger_complete_default_init(
+    logger_t *logger,
+    void *backend);
 
-## Invalid arguments
-
-- `out`, `vtbl`, `env` must not be `NULL`.
-- `backend` must not be `NULL`.
-- `vtbl->log`, `vtbl->destroy` must not be `NULL`.
-- `env->mem` must not be `NULL`.
-
-## Success
-
-- Returns `LOGGER_STATUS_OK`.
-- Stores a valid logger handle in `*out`.
-- The produced handle must be destroyed via `logger_destroy()`.
-
-## Failure
-
-- Returns:
-    - `LOGGER_STATUS_INVALID` for invalid arguments
-    - `LOGGER_STATUS_OOM` on allocation failure
-- Leaves `*out` unchanged if `out` is not `NULL`.
-
-## Lifecycle
-
-- `logger_destroy()` does nothing if `l == NULL` or `*l == NULL`.
-- Otherwise, it releases the logger object and sets `*l` to `NULL`.
+logger_status_t logger_destroy(logger_t **l);
+```
 
 ## Test doubles
 
 - `fake_memory`
-
-## Tested scenarios
-
-| WHEN | EXPECT |
-|---|---|
-| `logger_create(out, vtbl, backend, env)` is called with valid arguments | returns `LOGGER_STATUS_OK`;<br>stores a non-`NULL` logger handle in `*out`;<br>the produced handle is eligible for destruction by `logger_destroy()` |
-| `out == NULL` | returns `LOGGER_STATUS_INVALID`;<br>no logger handle is produced |
-| `vtbl == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `vtbl != NULL` but `vtbl->log == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `vtbl != NULL` but `vtbl->destroy == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `backend == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `env == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| `env != NULL` but `env->mem == NULL` and `out != NULL` | returns `LOGGER_STATUS_INVALID`;<br>leaves `*out` unchanged |
-| allocation of the logger handle fails | returns `LOGGER_STATUS_OOM`;<br>leaves `*out` unchanged |
-| `logger_create()` succeeds and `logger_destroy()` is called twice | first `logger_destroy(&l)` releases the handle and sets `l` to `NULL`;<br>second `logger_destroy(&l)` is a no-op and keeps `l` as `NULL` |
-
-## Notes
-
-- These tests validate the public lifecycle contract of the `logger` port.
-- The invalid-argument and OOM scenarios verify the output-handle preservation guarantee.
-- The idempotent destruction scenario validates the best-effort no-op behavior of `logger_destroy()` when called on an already-destroyed handle.
-
----
-
-@anchor testing_foundation_logger_unit_logger_log
-# logger_log() unit tests
-
-See:
-- @ref specifications_logger_log "logger_log() specifications"
-
-## Functions under test
-
-~~~c
-logger_status_t logger_log(logger_t *l, const char *message);
-~~~
-
-## Precondition
-
-- If `l != NULL`, `l` has been created by `logger_create()` with
-  `fake_logger_vtbl` and `fake_logger_backend_t`.
-
-## Invalid arguments
-
-- `l` must not be `NULL`.
-- `message` must not be `NULL`.
-
-## Success
-
-- Delegates the log operation to the adapter-facing `log` callback stored in
-  the logger handle.
-- Returns the value produced by the underlying `log` callback.
-
-## Failure
-
-- If `l == NULL`, returns `LOGGER_STATUS_INVALID`.
-- If `message == NULL`, returns `LOGGER_STATUS_INVALID`.
-
-## Test doubles
-
 - `fake_logger_backend_t`
 - `fake_logger_vtbl`
 
 ## Tested scenarios
 
-| WHEN | EXPECT |
-|---|---|
-| `l == NULL` and `message != NULL` | returns `LOGGER_STATUS_INVALID` |
-| `l != NULL` and `message == NULL` | returns `LOGGER_STATUS_INVALID` |
-| `l != NULL` and `message != NULL` and `fake_logger_backend.log_ret == LOGGER_STATUS_IO_ERROR` | calls `fake_logger_vtbl.log(fake_logger_backend, message)` exactly once;<br>does not call `fake_logger_vtbl.destroy`;<br>returns `LOGGER_STATUS_IO_ERROR` |
+| WHEN                                                                                                                                                    | EXPECT                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the nominal logger lifecycle is executed through `logger_create(&out, &env)`, `logger_complete_default_init(out, &backend)`, and `logger_destroy(&out)` | `logger_create()` returns `LOGGER_STATUS_OK`;<br>`out` is non-`NULL`;<br>the newly created logger has no backend attached;<br>`logger_complete_default_init()` returns `LOGGER_STATUS_OK`;<br>the logger backend becomes `&backend`;<br>`logger_destroy()` returns `LOGGER_STATUS_OK`;<br>`out` becomes `NULL`;<br>no memory leak, invalid free, or double free occurs |
+| allocation of the logger handle fails during `logger_create(&out, &env)`                                                                                | returns `LOGGER_STATUS_OOM`;<br>`out == NULL`;<br>no memory leak, invalid free, or double free occurs                                                                                                                                                                                                                                                                  |
+| the nominal lifecycle is completed and `logger_destroy(&out)` is called twice                                                                           | the first call returns `LOGGER_STATUS_OK`;<br>releases the logger handle;<br>sets `out` to `NULL`;<br>the second call returns `LOGGER_STATUS_OK`;<br>`out` remains `NULL`;<br>the backend destroy operation is invoked exactly once;<br>no memory leak, invalid free, or double free occurs                                                                            |
 
 ## Notes
 
-- These tests validate the borrower-facing runtime contract of the `logger`
-  port.
-- The forwarding scenario verifies that `logger_log()` delegates to the bound
-  adapter callback and propagates its returned status unchanged.
+- These tests exercise the public lifecycle of the `logger` port.
+- Backend attachment is exercised separately through
+  `logger_complete_default_init()`.
+- Allocation failure is injected through `fake_memory`.
+- The tests verify the absence of memory leaks, invalid frees, and double frees.
+
+---
+
+@anchor testing_foundation_logger_unit_logger_log
+
+# logger_log() unit tests
+
+See @ref specifications_logger_log "logger_log() specifications"
+
+## Functions under test
+
+```c
+logger_status_t logger_log(logger_t *l, const char *message);
+```
+
+## Test setup
+
+- Unless overridden by the scenario, `l` designates a logger:
+
+    - created by `logger_create()` with `fake_logger_vtbl`;
+    - completed by `logger_complete_default_init()` with a
+      `fake_logger_backend_t`.
+- Unless overridden by the scenario, `message` designates the string
+  `"test message"`.
+
+## Test doubles
+
+- `fake_logger_backend_t`
+- `fake_logger_vtbl`
+- `fake_memory`
+
+## Tested scenarios
+
+| WHEN                                                                                        | EXPECT                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `l == NULL` and `message != NULL`                                                           | returns `LOGGER_STATUS_INVALID`                                                                                                                                                                                                    |
+| `l != NULL` and `message == NULL`                                                           | returns `LOGGER_STATUS_INVALID`                                                                                                                                                                                                    |
+| `l != NULL`, `message != NULL`, and `fake_logger_backend.log_ret == LOGGER_STATUS_IO_ERROR` | returns `LOGGER_STATUS_IO_ERROR`;<br>calls `fake_logger_vtbl.log` exactly once;<br>passes the injected `fake_logger_backend_t` as the backend argument;<br>passes `message` unchanged;<br>does not call `fake_logger_vtbl.destroy` |
+
+## Notes
+
+- These tests exercise `logger_log()` through a fully initialized logger handle.
+- The forwarding scenario verifies that `logger_log()`:
+
+    - delegates to the bound `log` callback;
+    - forwards the backend and message arguments unchanged;
+    - propagates the callback return status unchanged.
+- Logger allocation and destruction performed by the fixture are checked
+  through `fake_memory` for leaks, invalid frees, and double frees.
 
 ---

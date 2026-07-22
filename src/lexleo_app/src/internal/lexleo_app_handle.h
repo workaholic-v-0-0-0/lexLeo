@@ -15,7 +15,7 @@
 
 #include "stream/borrowers/stream_borrowers_types.h"
 
-#include "logger/borrowers/logger_types.h"
+#include "logger/borrowers/logger_borrowers_types.h"
 
 #include "lexleo_vm/borrowers/lexleo_vm_types.h"
 
@@ -34,6 +34,7 @@ struct lexleo_app_t {
 	stream_t *err;
 
 	char log_path[LEXLEO_APP_LOG_PATH_BUFFER_SIZE];
+	stream_t *logger_stream;
 	logger_t *logger;
 
 	lexleo_vm_t *vm;

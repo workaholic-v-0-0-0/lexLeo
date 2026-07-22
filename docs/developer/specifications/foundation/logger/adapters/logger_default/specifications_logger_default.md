@@ -3,5 +3,6 @@
 - @subpage specifications_logger_default_default_cfg
 - @subpage specifications_logger_default_default_env
 - @subpage specifications_logger_default_create_logger
-- @subpage specifications_logger_default_log
+- @subpage specifications_logger_complete_default_init
 - @subpage specifications_logger_default_destroy
+- @subpage specifications_logger_default_log

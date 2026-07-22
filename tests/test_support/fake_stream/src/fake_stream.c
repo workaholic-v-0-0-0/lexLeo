@@ -281,26 +281,60 @@ static const stream_vtbl_t g_fake_stream_vtbl = {
 	.close = fake_stream_close
 };
 
-static stream_status_t fake_stream_create_stream(stream_t **out)
+stream_status_t fake_stream_create_stream(stream_t **out)
 {
-	void *fake_backend = g_fake_stream_ctrl.next_backend
-		? g_fake_stream_ctrl.next_backend
-		: fake_stream_create_fake_backend();
+	if (!out) {
+		return STREAM_STATUS_INVALID;
+	}
 
-	g_fake_stream_ctrl.next_backend = NULL;
+	void *fake_backend = g_fake_stream_ctrl.next_backend;
+	bool backend_was_prepared = fake_backend != NULL;
 
 	if (!fake_backend) {
-		return STREAM_STATUS_OOM;
+		fake_backend = fake_stream_create_fake_backend();
+		if (!fake_backend) {
+			return STREAM_STATUS_OOM;
+		}
+	}
+
+	stream_t *tmp = NULL;
+
+	stream_status_t st =
+		stream_create(&tmp, &g_fake_stream_ctrl.env);
+
+	if (st != STREAM_STATUS_OK) {
+		/*
+		 * An automatically created backend is owned locally and must
+		 * therefore be released on failure.
+		 *
+		 * A prepared backend remains owned by the test and remains prepared
+		 * so that creation may be retried.
+		 */
+		if (!backend_was_prepared) {
+			fake_stream_destroy_fake_backend(fake_backend);
+		}
+
+		return st;
+	}
+
+	st = stream_complete_default_init(tmp, fake_backend);
+	if (st != STREAM_STATUS_OK) {
+		stream_status_t destroy_st = stream_destroy(&tmp);
+		LEXLEO_ASSERT(destroy_st == STREAM_STATUS_OK);
+
+		if (!backend_was_prepared) {
+			fake_stream_destroy_fake_backend(fake_backend);
+		}
+
+		return st;
 	}
 
 	fake_stream_backend_real_to_fake(fake_backend)->is_open = true;
 
-	stream_status_t st = stream_create(out, &g_fake_stream_ctrl.env);
-	if (st != STREAM_STATUS_OK) {
-		return st;
-	}
+	g_fake_stream_ctrl.next_backend = NULL;
+	*out = tmp;
 
-	return  stream_complete_default_init(*out, fake_backend);
+	return STREAM_STATUS_OK;
 }
 
 static stream_status_t fake_stream_dbs_ctor(
@@ -434,11 +468,11 @@ void fake_stream_create_io_desc(
 
 /* CFG */
 
-void fake_stream_reset(const stream_env_t *env)
+void fake_stream_reset(const osal_mem_ops_t *mem_ops)
 {
-	LEXLEO_ASSERT(env);
+	LEXLEO_ASSERT(mem_ops);
 	osal_memset(&g_fake_stream_ctrl, 0, sizeof(g_fake_stream_ctrl));
-	g_fake_stream_ctrl.env = *env;
+	g_fake_stream_ctrl.env = stream_default_env(&g_fake_stream_vtbl, mem_ops);
 	g_fake_stream_ctrl.buffer_create_status = STREAM_STATUS_OK;
 	g_fake_stream_ctrl.file_create_status = STREAM_STATUS_OK;
 	g_fake_stream_ctrl.io_create_status = STREAM_STATUS_OK;
@@ -465,7 +499,8 @@ void *fake_stream_create_fake_backend(void)
 		   g_fake_stream_ctrl.env.mem
 		&& g_fake_stream_ctrl.env.mem->calloc);
 
-	fake_stream_backend_t *ret = g_fake_stream_ctrl.env.mem->calloc(1, sizeof(*ret));
+	fake_stream_backend_t *ret =
+		g_fake_stream_ctrl.env.mem->calloc(1, sizeof(*ret));
 	if (!ret) {
 		return NULL;
 	}

@@ -43,6 +43,3 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
-<here> align stream and its adapters with create/complete_init decomposition design already done, tests, don't forget
-       docs), maybe I'm here architecture page, start docs of lexleo_app ;
-       don't forget to adjust for new stream_create_factory signature alignment

@@ -8,6 +8,8 @@
  *  concrete adapters for the `logger` port.
  *
  *  Typical contents:
- *  - backend dispatch contracts declared in `logger_adapters_api.h`
+ *  - backend operation types and dispatch table declared in
+ *    `logger_adapters_vtbl.h`
+ *  - adapter-facing types declared in `logger_adapters_types.h`
  *  - adapter-facing creation helpers declared in `logger_adapters_api.h`
  */

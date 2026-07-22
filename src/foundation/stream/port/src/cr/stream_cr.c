@@ -15,7 +15,7 @@
 
 #include "stream/cr/stream_cr_api.h"
 
-#include "../internal/stream_factory_handle.h"
+#include "internal/stream_factory_handle.h"
 
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/str/osal_str.h"

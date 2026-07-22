@@ -22,7 +22,7 @@ target_link_libraries(
         osal_str
         osal_time
         stream_owner
-        logger
+        logger_borrower
         lexleo_assert
 )
 
@@ -48,7 +48,7 @@ target_link_libraries(
         osal_str
         osal_time
         stream_cr
-        logger
+        logger_borrower
     PRIVATE
         dynamic_buffer_stream
         stdio_stream

@@ -33,12 +33,6 @@ regardless of the backend cleanup status.
     - stores `NULL` in `*s`;
     - returns that status.
 
-# Ownership
-
-- `s` is borrowed.
-- `*s` is consumed when `s != NULL` and `*s != NULL`.
-- After destruction, `*s == NULL`, even if backend cleanup reports a failure.
-
 # Notes
 
 - `stream_destroy()` reports backend cleanup status.

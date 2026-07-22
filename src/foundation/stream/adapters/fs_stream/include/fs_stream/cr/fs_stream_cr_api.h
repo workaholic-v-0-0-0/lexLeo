@@ -42,8 +42,8 @@ fs_stream_cfg_t fs_stream_default_cfg(void);
 /**
  * @brief Build a default environment for the `fs_stream` adapter.
  *
- * @param[in] file_ops OSAL file operations table.
- * @param[in] adapter_mem_ops OSAL memory operations table.
+ * @param[in] file_ops Borrowed OSAL file operations table.
+ * @param[in] adapter_mem_ops Borrowed OSAL memory operations table.
  * @param[in] port_mem_ops Borrowed memory operations used by the `stream` port
  * handle.
  *

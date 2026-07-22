@@ -26,7 +26,7 @@
 
 #include "stream/owners/stream_creators_api.h"
 
-#include "logger/borrowers/logger_types.h"
+#include "logger/borrowers/logger_borrowers_types.h"
 
 #ifdef __cplusplus
 extern "C" {

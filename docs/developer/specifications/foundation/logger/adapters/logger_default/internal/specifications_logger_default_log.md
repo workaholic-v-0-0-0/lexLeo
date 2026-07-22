@@ -2,7 +2,9 @@
 
 # Signature
 
-    static logger_status_t logger_default_log(void *backend, const char *message);
+```c
+static logger_status_t logger_default_log(void *backend, const char *message);
+```
 
 # Purpose
 
@@ -48,6 +50,7 @@ Write one log record through the `logger_default` backend.
     - writing `message` fails,
     - writing the optional trailing newline fails,
     - or any of these writes is partial.
+- Returns `LOGGER_STATUS_IO_ERROR` if flushing the target stream fails.
 - Returns any non-`LOGGER_STATUS_OK` status propagated by the private timestamp
   writing helper, if that helper fails before message emission can complete.
 
