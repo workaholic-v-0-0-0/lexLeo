@@ -13,39 +13,29 @@
 
 #include "cli.h"
 
-#include "lexleo_app/lexleo_app.h"
+#include "lexleo_app/cr_opaque/lexleo_app_cr_opaque_api.h"
+#include "lexleo_app/borrowers/lexleo_app_borrowers_api.h"
+
+#include "policy/lexleo_cstd_lib.h"
 
 int cli_main(void)
 {
 	lexleo_app_t *app;
 
-	lexleo_app_cfg_t app_cfg = lexleo_app_default_cfg();
+	lexleo_app_cfg_t app_cfg = lexleo_app_default_cfg(); /* To be adjusted for usage such as 'lexleo prog.leo output.txt' */
 
-	if
-	(
-		lexleo_app_create(
-			&app,
-			&app_cfg
-		)
-		!=
-		LEXLEO_APP_STATUS_OK
-	) {
-		return 1;
-	}
-
-	if (lexleo_app_complete_default_init(app) != LEXLEO_APP_STATUS_OK) {
-		lexleo_app_destroy(&app);
-		return 1;
+	if (!lexleo_app_create_init(&app, &app_cfg)) {
+		return EXIT_FAILURE;
 	}
 
 	if (lexleo_app_run(app) != LEXLEO_APP_STATUS_OK) {
 		lexleo_app_destroy(&app);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	lexleo_app_destroy(&app);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 // follow legacy

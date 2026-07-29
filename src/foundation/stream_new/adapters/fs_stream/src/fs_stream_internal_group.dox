@@ -1,0 +1,6 @@
+/**
+ * @defgroup fs_stream_internal_group fs_stream private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the `fs_stream` adapter.
+ */

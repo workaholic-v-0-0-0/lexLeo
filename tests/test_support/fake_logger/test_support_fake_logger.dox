@@ -1,0 +1,10 @@
+/**
+ * @defgroup test_support_fake_logger Fake logger
+ * @ingroup test_support_reference
+ *
+ * @brief Test double support for `logger`.
+ *
+ * @details
+ * Constructs a `logger_t` backed by the fake logger adapter.
+ * Tests can configure its log result and inspect recorded calls.
+ */

@@ -18,7 +18,9 @@ target_include_directories(
 target_link_libraries(
     lexleo_cli
     PRIVATE
-        lexleo_app
+        lexleo_app_cr_opaque
+        lexleo_app_borrower
+        lexleo_policy_headers
 )
 
 add_executable(

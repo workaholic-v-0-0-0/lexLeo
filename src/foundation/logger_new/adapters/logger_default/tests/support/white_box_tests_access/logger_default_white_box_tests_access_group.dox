@@ -1,0 +1,11 @@
+/**
+ * @defgroup logger_default_white_box_tests_access_group logger_default white-box test access
+ * @ingroup logger_default_tests_group
+ *
+ * @brief Privileged white-box test access to the `logger_default` adapter.
+ *
+ * @details
+ * Exposes test-only helpers used to inspect the private `logger_default_t`
+ * external borrowed dependencies and configuration state without exposing
+ * private implementation headers to test translation units.
+ */

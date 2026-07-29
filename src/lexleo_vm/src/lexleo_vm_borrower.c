@@ -14,7 +14,7 @@
 
 #include "internal/lexleo_vm_handle.h"
 
-#include "lexleo_vm/borrowers/lexleo_vm.h"
+#include "lexleo_vm/borrowers/lexleo_vm_borrowers_api.h"
 
 #include "policy/lexleo_assert.h"
 
@@ -22,5 +22,5 @@ lexleo_vm_status_t lexleo_vm_run(lexleo_vm_t *vm)
 {
 	LEXLEO_ASSERT(vm);
 
-	return LEXLEO_VM_STATUS_OK;
+	return LEXLEO_VM_STATUS_OK; // placeholder
 }

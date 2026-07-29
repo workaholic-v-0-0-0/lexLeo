@@ -1,0 +1,12 @@
+/**
+ * @defgroup logger_cr_api Logger Composition Root API
+ * @ingroup logger_api
+ * @brief Composition Root-facing API for the `logger` port.
+ *
+ * @details
+ * Exposes the types and lifecycle operations required by the Composition Root
+ * to create, complete the initialization of, and destroy a `logger` instance.
+ *
+ * The Composition Root provides the external borrowed dependencies required
+ * by the port and binds the adapter backend to the logger handle.
+ */

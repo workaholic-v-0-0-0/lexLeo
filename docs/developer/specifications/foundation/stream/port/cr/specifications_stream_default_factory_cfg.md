@@ -13,7 +13,7 @@ Return a default configuration for a stream factory.
 # Success
 
 - Returns a well-formed default `stream_factory_cfg_t`.
-- `ret.fact_cap == STREAM_FACTORY_DEFAULT_CAPACITY`.
+- `ret.fact_cap == 16`.
 
 # Failure
 

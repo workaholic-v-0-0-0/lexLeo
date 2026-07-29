@@ -6,3 +6,4 @@
 | @subpage modules_core "Core modules"             | Language pipeline and runtime: lexer, AST, resolver, symbol table, interpreter and runtime env/session modules.        |
 | @subpage modules_frontend "Frontend modules" | User-facing entry points, currently the `lexleo` command-line interface. |
 | @subpage modules_lexleo_vm_family "LexLeo VM modules" | Runtime environment and Composition Root wiring for assembling VM-owned resources. |
+| @subpage modules_lexleo_app_family "LexLeo application modules" | Application configuration, Composition Root wiring, runtime execution and lifecycle management. |

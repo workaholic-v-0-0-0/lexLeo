@@ -1,11 +1,19 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Sylvain Labopin
+ */
 
+/**
+ * @file lexleo_app_handle.h
+ * @ingroup lexleo_app_internal_group
+ * @brief Private application handle representation for lexleo_app.
+ *
+ * @details
+ * Defines the application handle fields storing borrowed runtime operations,
+ * owned streams, logger and VM, and the log-path buffer.
+ */
 
 #ifndef LEXLEO_LEXLEO_APP_HANDLE_H
 #define LEXLEO_LEXLEO_APP_HANDLE_H
-
-#include "internal/lexleo_app_log_path.h"
-
-#include "lexleo_app/lexleo_app_types.h"
 
 #include "osal/mem/osal_mem_types.h"
 #include "osal/stdio/osal_stdio_types.h"
@@ -13,15 +21,15 @@
 #include "osal/str/osal_str_types.h"
 #include "osal/time/osal_time_types.h"
 
-#include "stream/borrowers/stream_borrowers_types.h"
+#include "stream/common/stream_opaque_type.h"
 
-#include "logger/borrowers/logger_borrowers_types.h"
+#include "logger/common/logger_opaque_type.h"
 
-#include "lexleo_vm/borrowers/lexleo_vm_types.h"
+#include "lexleo_vm/borrowers/lexleo_vm_borrowers_types.h"
+
+#define LEXLEO_APP_LOG_PATH_BUFFER_SIZE 1024
 
 struct lexleo_app_t {
-
-	lexleo_app_cfg_t cfg;
 
 	const osal_mem_ops_t *mem_ops;
 	const osal_stdio_ops_t *stdio_ops;
@@ -38,8 +46,6 @@ struct lexleo_app_t {
 	logger_t *logger;
 
 	lexleo_vm_t *vm;
-
-	// ...
 
 };
 

@@ -27,15 +27,15 @@
 #include "osal/str/osal_str_types.h"
 #include "osal/time/osal_time_types.h"
 
-#include "stream/borrowers/stream_borrowers_types.h"
-#include "stream/owners/stream_owners_types.h"
-#include "stream/owners/stream_creators_api.h"
+#include "stream/common/stream_opaque_type.h"
 
-#include "logger/borrowers/logger_borrowers_types.h"
+#include "logger/common/logger_opaque_type.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct lexleo_vm_owned_resources_t lexleo_vm_owned_resources_t;
 
 /**
  * @brief Private LexLeo VM handle structure.
@@ -46,8 +46,6 @@ extern "C" {
  * `lexleo_vm_complete_default_init()`.
  */
 struct lexleo_vm_t {
-
-	/* Borrowed dependencies. */
 
 	/** Borrowed memory operations. */
 	const osal_mem_ops_t *mem_ops;
@@ -76,20 +74,8 @@ struct lexleo_vm_t {
 	/** Borrowed logger. */
 	logger_t *logger;
 
-
 	/* Owned runtime resources. */
-
-	/** Owned stream factory. */
-	stream_factory_t *stream_factory;
-
-	/** Owned stdio stream creator. */
-	stream_io_creator_t *stream_io_creator;
-
-	/** Owned file stream creator. */
-	stream_file_creator_t *stream_file_creator;
-
-	/** Owned buffer stream creator. */
-	stream_buffer_creator_t *stream_buffer_creator;
+	lexleo_vm_owned_resources_t *lexleo_vm_owned_resources;
 };
 
 #ifdef __cplusplus

@@ -43,3 +43,63 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
+<here> continue migration "port-adapter decoupling" ;
+       already done:
+         - src/foundation/stream_new/*
+         - src/foundation/logger_new/*
+         - src/lexleo_vm/*
+         - src/lexleo_app/*
+
+        WIP: <here> migrate lexleo_app with stream_new ; in lexleo_app.c
+        I stopped that by desactivating lexleo_app and frontend compilation via "#add_subdirectory(lexleo_app)" and "#add_subdirectory(frontend)"
+        because it depends on logger that in turn depends on stream ; hence I
+        must migrate logger before. -> This is done now! -> So I go back to lexleo_app by "reactivating add_subdirectory(lexleo_app)"" ; it consists of make it depend on *_new rather than stream and logger old versions
+        <here> I've changed my mind because of usages considerations at the bottom of this page ; so I've changed lexleo_app_cfg_t and then I've gotta refact lexleo_app
+
+        refact lexleo_vm_t in order to avoid a dep of the kind lexleo_vm_borrower -> stream_owner due to the presence of stream creators -> done
+        <here>refact lexleo_app in order to make it depend on new versions and split it into scopes stack! -> done!
+        <here> do an integration test to test lexleo_app_create_init, maybe with a smoke test -> done!
+
+remove err from vm
+add in vm_t:
+    /** Offset of the next instruction in RAM. */
+    size_t pc;
+    /** Memory visible to programs executed by the VM. */
+    uint8_t ram[LEXLEO_VM_RAM_SIZE];
+typedef enum lexleo_vm_opcode_t {
+    LEXLEO_VM_OP_STORE         = 0x01,
+    LEXLEO_VM_OP_LOAD          = 0x02,
+    LEXLEO_VM_OP_PUSH          = 0x03,
+    LEXLEO_VM_OP_ADD           = 0x04,
+    LEXLEO_VM_OP_SUB           = 0x05,
+    LEXLEO_VM_OP_MUL           = 0x06,
+    LEXLEO_VM_OP_JUMP          = 0x07,
+    LEXLEO_VM_OP_JUMP_IF_FALSE = 0x08,
+    LEXLEO_VM_OP_HALT          = 0x09
+} lexleo_vm_opcode_t;
+
+Notes:
+    Think!: What is to be opaque in handle is simultaneously "external dep" and owned?
+    Think!: Do not port/adapters architecture for all module! Hence how to double the ones that are note like that ? -> Maybe with symbol substitution at linkage!
+    port/adapters architecture is justified because it makes possible to test without the wrap mechanism of ld
+    compiler in not in vm
+
+
+draft:
+usages:
+lexleo compile prog.leo
+lexleo compile prog.leo prog.bytecode
+lexleo execute prog.bytecode
+lexleo interpret prog.leo
+lexleo interpret
+lexleo interpret <<'EOF'
+instruction1
+42
+instruction2
+EOF
+lexleo interpret prog.leo < responses.txt
+lexleo execute prog.bytecode < responses.txt
+lexleo execute prog.bytecode > results.txt 2> errors.txt
+lexleo interpret < prog.leo
+lexleo --help
+lexleo --version
