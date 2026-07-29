@@ -1,0 +1,15 @@
+/**
+ * @defgroup dynamic_buffer_stream_cr_api dynamic_buffer_stream CR API
+ * @ingroup dynamic_buffer_stream_api
+ *
+ * @brief Composition Root (CR) API for the `dynamic_buffer_stream` adapter.
+ *
+ * @details
+ * Exposes the CR-facing types and services used to configure and construct
+ * `dynamic_buffer_stream` backends from their external borrowed dependencies,
+ * complete their initialization with owned resources, and register the
+ * adapter with a `stream` factory.
+ *
+ * @note This API is part of the CR surface. Runtime modules should not
+ *       include it directly.
+ */

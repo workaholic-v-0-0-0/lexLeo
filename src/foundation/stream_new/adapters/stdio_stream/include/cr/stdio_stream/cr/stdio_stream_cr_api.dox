@@ -1,0 +1,12 @@
+/**
+ * @defgroup stdio_stream_cr_api stdio_stream CR API
+ * @ingroup stdio_stream_api
+ *
+ * @brief Composition Root API for the `stdio_stream` adapter.
+ *
+ * @details
+ * Exposes the CR-facing types and services used to configure and construct
+ * `stdio_stream` backends from their external borrowed dependencies, complete
+ * their initialization with internal borrowed dependencies, and register the
+ * adapter with a `stream` factory.
+ */

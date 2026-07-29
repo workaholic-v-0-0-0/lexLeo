@@ -1,0 +1,13 @@
+/**
+ * @defgroup dynamic_buffer_stream_white_box_tests_access_group dynamic_buffer_stream white-box test access
+ * @ingroup dynamic_buffer_stream_tests_group
+ *
+ * @brief Privileged white-box test access to the `dynamic_buffer_stream`
+ * adapter.
+ *
+ * @details
+ * Exposes test-only helpers used to inspect the private
+ * `dynamic_buffer_stream_t` external borrowed dependencies and inspect or
+ * inject its internal state without exposing private implementation headers
+ * directly to test translation units.
+ */

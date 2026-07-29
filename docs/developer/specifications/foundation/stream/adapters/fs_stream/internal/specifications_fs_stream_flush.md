@@ -10,7 +10,8 @@ static stream_status_t fs_stream_flush(void *backend);
 
 Implement the `stream` port flush callback for the `fs_stream` adapter.
 
-This callback flushes the OSAL file handle owned by the `fs_stream` backend.
+This callback flushes the OSAL file handle owned by the `fs_stream_t`
+designated by `backend`.
 
 # Relationship to the public port contract
 
@@ -19,14 +20,14 @@ It implements the behavior exposed through `stream_flush()` for stream
 instances created by the `fs_stream` adapter.
 
 See:
+
 - @ref specifications_stream_flush
 
 # Preconditions
 
 - `backend` must designate a valid `fs_stream_t`.
-- `backend->state.file` must designate a valid open `OSAL_FILE`.
-- `backend->file_ops` must designate a valid OSAL file operations table.
-- `backend->file_ops->flush` must not be `NULL`.
+- The `fs_stream_t` designated by `backend` must contain a valid OSAL file
+  operations table and a valid open `OSAL_FILE`.
 
 # Invalid arguments
 
@@ -46,13 +47,8 @@ See:
 
 # Ownership
 
-- `backend` is borrowed.
-- This function does not take ownership of `backend`.
-- This function does not release the underlying OSAL file handle.
+- The `fs_stream_t` designated by `backend` is borrowed.
 
 # Notes
 
 - This callback is intended to be invoked through `stream_flush()`.
-- Public argument validation is performed by `stream_flush()` before dispatch.
-- Therefore, this callback treats the listed preconditions as internal
-  invariants.

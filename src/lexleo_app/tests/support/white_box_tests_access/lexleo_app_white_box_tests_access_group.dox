@@ -1,0 +1,10 @@
+/**
+ * @defgroup lexleo_app_white_box_tests_access_group lexleo_app white-box test access
+ * @ingroup lexleo_app_tests_group
+ *
+ * @brief White-box test support for lexleo_app.
+ *
+ * @details
+ * Provides test-only helpers to inject and observe internal fields
+ * of LexLeo application handles.
+ */

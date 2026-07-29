@@ -5,5 +5,5 @@
  * @brief Unit tests for the stream port.
  *
  * See also:
- * - @ref testing_foundation_stream_unit
+ * - @ref testing_foundation_stream_cr_unit
  */

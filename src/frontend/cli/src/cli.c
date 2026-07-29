@@ -21,20 +21,7 @@ int cli_main(void)
 
 	lexleo_app_cfg_t app_cfg = lexleo_app_default_cfg();
 
-	if
-	(
-		lexleo_app_create(
-			&app,
-			&app_cfg
-		)
-		!=
-		LEXLEO_APP_STATUS_OK
-	) {
-		return 1;
-	}
-
-	if (lexleo_app_complete_default_init(app) != LEXLEO_APP_STATUS_OK) {
-		lexleo_app_destroy(&app);
+	if (!lexleo_app_create_init(&app, &app_cfg)) {
 		return 1;
 	}
 

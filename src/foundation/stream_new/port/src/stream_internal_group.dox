@@ -1,0 +1,11 @@
+/**
+ * @defgroup stream_internal_group Stream private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation of the `stream` port.
+ *
+ * @details
+ * This group gathers the non-public implementation units and internal
+ * structures used by the `stream` port, including borrower, owner, and
+ * Composition Root implementation units.
+ */

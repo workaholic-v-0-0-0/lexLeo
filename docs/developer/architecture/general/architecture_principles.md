@@ -503,7 +503,7 @@ mod_status_t mod_complete_default_init(
 This function creates internal owned runtime resources required by the default module
 configuration and takes ownership of the resources that is externally built.
 
-For example, it may take ownership of a `stream_factory_t`, `stream_file_creator_t`
+For example, it may take ownership of a `stream_factory_t`, `stream_regular_file_creator_t`
 and a handle (all created by cr) and initialize resources. 
 
 This separation allows tests to create a handle, inject fakes and then 

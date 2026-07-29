@@ -1,9 +1,16 @@
 @page specifications_dynamic_buffer_stream dynamic_buffer_stream specifications
 
+## Composition Root API
+
 - @subpage specifications_dynamic_buffer_stream_default_cfg
 - @subpage specifications_dynamic_buffer_stream_default_env
-- @subpage specifications_dynamic_buffer_stream_create_stream
-- @subpage specifications_dynamic_buffer_stream_create_desc
+- @subpage specifications_dynamic_buffer_stream_vtbl
+- @subpage specifications_dynamic_buffer_stream_create
+- @subpage specifications_dynamic_buffer_stream_complete_default_init
+- @subpage specifications_dynamic_buffer_stream_create_adapter_provider
+
+## Internal callbacks
+
 - @subpage specifications_dynamic_buffer_stream_read
 - @subpage specifications_dynamic_buffer_stream_write
 - @subpage specifications_dynamic_buffer_stream_flush

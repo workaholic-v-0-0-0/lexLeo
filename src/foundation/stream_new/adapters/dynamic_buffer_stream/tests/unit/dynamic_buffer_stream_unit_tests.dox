@@ -1,0 +1,6 @@
+/**
+ * @defgroup dynamic_buffer_stream_unit_tests dynamic_buffer_stream unit tests
+ * @ingroup dynamic_buffer_stream_tests_group
+ *
+ * @brief Unit tests for the `dynamic_buffer_stream` adapter.
+ */

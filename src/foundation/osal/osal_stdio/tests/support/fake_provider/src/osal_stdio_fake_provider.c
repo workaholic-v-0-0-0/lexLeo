@@ -17,9 +17,9 @@
 const osal_stdio_ops_t *osal_stdio_test_fake_ops(void)
 {
 	static const osal_stdio_ops_t FAKE_STDIO_OPS = {
-		.get_stdin = fake_stdio_stdin,
-		.get_stdout = fake_stdio_stdout,
-		.get_stderr = fake_stdio_stderr,
+		.get_stdin = fake_get_stdio_stdin,
+		.get_stdout = fake_get_stdio_stdout,
+		.get_stderr = fake_get_stdio_stderr,
 		.read = fake_stdio_read,
 		.write = fake_stdio_write,
 		.flush = fake_stdio_flush,
