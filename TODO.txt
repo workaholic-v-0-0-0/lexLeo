@@ -43,3 +43,22 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
+<here> continue migration "port-adapter decoupling" ;
+       already done:
+         stream_new/port/
+         stream_new/adapters/fs_stream/
+         stream_new/adapters/stdio_stream
+         stream_new/adapters/dynamic_buffer_stream
+
+        WIP: <here> migrate lexleo_app with stream_new ; in lexleo_app.c
+        I stopped that by desactivating lexleo_app and frontend compilation via "#add_subdirectory(lexleo_app)"
+        and "#add_subdirectory(frontend)"
+        because it depends on logger that in turn depends on stream ; hence I
+        must migrate logger before.
+        Hence new WIP: logger module
+        in this WIP:
+          are done:
+            - src/foundation/logger_new/port/ and all the relative docs
+          <here> logger/adapters/
+
+

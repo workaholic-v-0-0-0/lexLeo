@@ -24,276 +24,86 @@
 
 #include "policy/lexleo_assert.h"
 
-typedef struct fake_file_t
-{
-	/* state */
-
-	bool is_open;
-	const char *pathname;
-	const char *mode;
-	const osal_mem_ops_t *mem_ops;
-	uint8_t buffered_backing[FAKE_FILE_BUF_SIZE];
-	uint8_t sink_backing[FAKE_FILE_BUF_SIZE];
-	size_t buffered_len;
-	size_t sink_len;
-	size_t pos;
-
-	/* cfg */
-
-	osal_file_status_t read_status;
-	osal_file_status_t write_status;
-	osal_file_status_t flush_status;
-	osal_file_status_t close_status;
-	osal_file_status_t gets_status;
-
-	/* spy */
-
-	size_t read_call_count;
-	void *last_read_ptr;
-	size_t last_read_size;
-	size_t last_read_nmemb;
-	OSAL_FILE *last_read_stream;
-	osal_file_status_t *last_read_st;
-
-	size_t write_call_count;
-	const void *last_write_ptr;
-	size_t last_write_size;
-	size_t last_write_nmemb;
-	OSAL_FILE *last_write_stream;
-	osal_file_status_t *last_write_st;
-
-	size_t flush_call_count;
-	OSAL_FILE *last_flush_stream;
-
-	size_t close_call_count;
-	OSAL_FILE *last_close_stream;
-
-	size_t gets_call_count;
-	char *last_gets_out;
-	size_t last_gets_out_size;
-	OSAL_FILE *last_gets_stream;
-	osal_file_status_t *last_gets_st;
-} fake_file_t;
-
-typedef struct fake_file_ctrl_t
-{
-	/* cfg */
-
-	osal_file_status_t open_status;
-	fake_file_t *open_out;
-
-	osal_file_status_t mkdir_status;
-
-	/* spy */
-
-	size_t open_call_count;
-	OSAL_FILE **last_open_out;
-	const char *last_open_pathname;
-	const char *last_open_mode;
-	const osal_mem_ops_t *last_open_mem_ops;
-
-	size_t mkdir_call_count;
-	const char *last_mkdir_pathname;
-
-} fake_file_ctrl_t;
-
-static fake_file_ctrl_t g_fake_file_ctrl;
-
-static fake_file_t *osal_file_to_fake_file(
-	OSAL_FILE *file
-) {
-	return (fake_file_t *)file;
-}
-
-static OSAL_FILE *fake_file_to_osal_file(
-	fake_file_t *fake
-) {
-	return (OSAL_FILE *)fake;
-}
+fake_file_ctrl_t g_fake_file_ctrl_seq[FAKE_FILE_MAX_SEQ_LEN] = {0};
+static size_t g_fake_file_ctrl_seq_next = 0;
 
 void fake_file_reset(void)
 {
-	if (g_fake_file_ctrl.open_out) {
-		fake_file_destroy_fake(
-			fake_file_to_osal_file(
-				g_fake_file_ctrl.open_out
-			)
-		);
-	}
-
-	g_fake_file_ctrl = (fake_file_ctrl_t){
-		.open_status = OSAL_FILE_STATUS_OK,
-		.open_out = NULL,
-		.mkdir_status = OSAL_FILE_STATUS_OK,
-
-		.open_call_count = 0,
-		.last_open_out = NULL,
-		.last_open_pathname = NULL,
-		.last_open_mode = NULL,
-		.last_open_mem_ops = NULL,
-
-		.mkdir_call_count = 0,
-		.last_mkdir_pathname = NULL,
-	};
-}
-
-OSAL_FILE *fake_file_create_fake(
-	const osal_mem_ops_t *mem_ops
-) {
-	LEXLEO_ASSERT(mem_ops && mem_ops->calloc);
-	fake_file_t *fake = mem_ops->calloc(1, sizeof(*fake));
-	if (!fake) {
-		return NULL;
-	}
-	fake->mem_ops = mem_ops;
-	return fake_file_to_osal_file(fake);
-}
-
-void fake_file_destroy_fake(OSAL_FILE *fake)
-{
-	if (!fake) {
-		return;
-	}
-
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-
-	LEXLEO_ASSERT(
-		   casted_fake->mem_ops
-		&& casted_fake->mem_ops->free
+	osal_memset(
+		g_fake_file_ctrl_seq,
+		0,
+		sizeof g_fake_file_ctrl_seq
 	);
-
-	if (g_fake_file_ctrl.open_out == casted_fake) {
-		g_fake_file_ctrl.open_out = NULL;
+	g_fake_file_ctrl_seq_next = 0;
+	for (size_t i = 0; i < FAKE_FILE_MAX_SEQ_LEN; i++) {
+		g_fake_file_ctrl_seq[i].next_open_status = OSAL_FILE_STATUS_OK;
+		g_fake_file_ctrl_seq[i].next_mkdir_status = OSAL_FILE_STATUS_OK;
 	}
-
-	casted_fake->mem_ops->free(casted_fake);
 }
 
-void fake_file_reset_fake(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	const osal_mem_ops_t *mem_ops = casted_fake->mem_ops;
-	osal_memset(casted_fake, 0, sizeof(*casted_fake));
-	casted_fake->mem_ops = mem_ops;
-	casted_fake->read_status = OSAL_FILE_STATUS_OK;
-	casted_fake->write_status = OSAL_FILE_STATUS_OK;
-	casted_fake->flush_status = OSAL_FILE_STATUS_OK;
-	casted_fake->close_status = OSAL_FILE_STATUS_OK;
-	casted_fake->gets_status = OSAL_FILE_STATUS_OK;
-}
+void fake_file_init_instance(fake_file_t *fake_file)
+{
+	LEXLEO_ASSERT(fake_file);
 
-void fake_file_prepare_next_open_file(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	g_fake_file_ctrl.open_out = casted_fake;
-}
+	osal_memset(fake_file, 0, sizeof(*fake_file));
 
-void fake_file_prepare_next_open_status(
-	osal_file_status_t st
-) {
-	g_fake_file_ctrl.open_status = st;
-}
-
-void fake_file_prepare_next_mkdir_status(
-	osal_file_status_t st
-) {
-	g_fake_file_ctrl.mkdir_status = st;
+	fake_file->next_read_status = OSAL_FILE_STATUS_OK;
+	fake_file->next_write_status = OSAL_FILE_STATUS_OK;
+	fake_file->next_flush_status = OSAL_FILE_STATUS_OK;
+	fake_file->next_close_status = OSAL_FILE_STATUS_OK;
+	fake_file->next_gets_status = OSAL_FILE_STATUS_OK;
 }
 
 void fake_file_set_buffered_backing(
-	OSAL_FILE *fake,
+	fake_file_t *fake_file,
 	const uint8_t *data,
 	size_t len
 ) {
 	LEXLEO_ASSERT(
-		   fake
+		   fake_file
 		&& (data || len == 0)
 		&& len <= FAKE_FILE_BUF_SIZE
 	);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	osal_memset(casted_fake->buffered_backing, 0, FAKE_FILE_BUF_SIZE);
-	casted_fake->pos = 0;
-	casted_fake->buffered_len = len;
+	osal_memset(
+		fake_file->buffered_backing,
+		0,
+		sizeof(fake_file->buffered_backing)
+	);
+	fake_file->pos = 0;
+	fake_file->buffered_len = len;
 	if (len > 0) {
-		osal_memcpy(casted_fake->buffered_backing, data, len);
+		osal_memcpy(fake_file->buffered_backing, data, len);
 	}
 }
 
 void fake_file_set_sink_backing(
-	OSAL_FILE *fake,
+	fake_file_t *fake_file,
 	const uint8_t *data,
 	size_t len
 ) {
 	LEXLEO_ASSERT(
-		   fake
+		   fake_file
 		&& (data || len == 0)
 		&& len <= FAKE_FILE_BUF_SIZE
 	);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	osal_memset(casted_fake->sink_backing, 0, FAKE_FILE_BUF_SIZE);
-	casted_fake->sink_len = len;
+
+	osal_memset(
+		fake_file->sink_backing,
+		0,
+		sizeof(fake_file->sink_backing)
+	);
+	fake_file->sink_len = len;
 	if (len > 0) {
-		osal_memcpy(casted_fake->sink_backing, data, len);
+		osal_memcpy(fake_file->sink_backing, data, len);
 	}
 }
 
-void fake_file_set_read_status(
-	OSAL_FILE *fake,
-	osal_file_status_t st
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	casted_fake->read_status = st;
-}
-
-void fake_file_set_write_status(
-	OSAL_FILE *fake,
-	osal_file_status_t st
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	casted_fake->write_status = st;
-}
-
-void fake_file_set_flush_status(
-	OSAL_FILE *fake,
-	osal_file_status_t st
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	casted_fake->flush_status = st;
-}
-
-void fake_file_set_close_status(
-	OSAL_FILE *fake,
-	osal_file_status_t st
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	casted_fake->close_status = st;
-}
-
-void fake_file_set_gets_status(
-	OSAL_FILE *fake,
-	osal_file_status_t st
-) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	casted_fake->gets_status = st;
-}
-
 void fake_file_set_pos(
-	OSAL_FILE *fake,
+	fake_file_t *fake_file,
 	size_t n
 ) {
-	LEXLEO_ASSERT(fake);
-	fake_file_t *casted_fake = osal_file_to_fake_file(fake);
-	LEXLEO_ASSERT(n <= casted_fake->buffered_len);
-	casted_fake->pos = n;
+	LEXLEO_ASSERT(fake_file && n <= fake_file->buffered_len);
+	fake_file->pos = n;
 }
 
 osal_file_status_t fake_file_open(
@@ -302,49 +112,62 @@ osal_file_status_t fake_file_open(
 	const char *mode,
 	const osal_mem_ops_t *mem_ops
 ) {
-	LEXLEO_ASSERT(out && mode);
+	LEXLEO_ASSERT(
+		   out
+		&& mode
+		&& g_fake_file_ctrl_seq_next < FAKE_FILE_MAX_SEQ_LEN
+	);
 
-	g_fake_file_ctrl.open_call_count++;
-	g_fake_file_ctrl.last_open_out = out;
-	g_fake_file_ctrl.last_open_pathname = pathname;
-	g_fake_file_ctrl.last_open_mode = mode;
-	g_fake_file_ctrl.last_open_mem_ops = mem_ops;
+	fake_file_ctrl_t *ctrl =
+		&g_fake_file_ctrl_seq[g_fake_file_ctrl_seq_next++];
 
-	if (g_fake_file_ctrl.open_status != OSAL_FILE_STATUS_OK) {
-		return g_fake_file_ctrl.open_status;
+	ctrl->open_call_count++;
+	ctrl->last_open_out = out;
+	ctrl->last_open_pathname = pathname;
+	ctrl->last_open_mode = mode;
+	ctrl->last_open_mem_ops = mem_ops;
+
+	if (ctrl->next_open_status != OSAL_FILE_STATUS_OK) {
+		return ctrl->next_open_status;
 	}
 
-	fake_file_t *fake = g_fake_file_ctrl.open_out;
-	LEXLEO_ASSERT(fake);
+	fake_file_t *fake_file = ctrl->next_open_out;
 
-	g_fake_file_ctrl.open_out = NULL;
+	LEXLEO_ASSERT(
+		   fake_file
+		&& fake_file->sink_len <= FAKE_FILE_BUF_SIZE
+	);
 
-	LEXLEO_ASSERT(fake->sink_len <= FAKE_FILE_BUF_SIZE);
-
-	OSAL_FILE *fake_osal_file = fake_file_to_osal_file(fake);
-	fake_file_set_buffered_backing(fake_osal_file, NULL, 0);
+	fake_file_set_buffered_backing(fake_file, NULL, 0);
 
 	if (osal_strcmp(mode, "rb") == 0) {
-		osal_memcpy(fake->buffered_backing, fake->sink_backing, fake->sink_len);
-		fake->buffered_len = fake->sink_len;
-		fake->pos = 0;
+		osal_memcpy(
+			fake_file->buffered_backing,
+			fake_file->sink_backing,
+			fake_file->sink_len
+		);
+		fake_file->buffered_len = fake_file->sink_len;
+		fake_file->pos = 0;
 	} else if (osal_strcmp(mode, "wb") == 0) {
-		fake_file_set_sink_backing(fake_osal_file, NULL, 0);
-		fake->pos = 0;
+		fake_file_set_sink_backing(fake_file, NULL, 0);
+		fake_file->pos = 0;
 	} else if (osal_strcmp(mode, "ab") == 0) {
-		osal_memcpy(fake->buffered_backing, fake->sink_backing, fake->sink_len);
-		fake->buffered_len = fake->sink_len;
-		fake->pos = fake->buffered_len;
+		osal_memcpy(
+			fake_file->buffered_backing,
+			fake_file->sink_backing,
+			fake_file->sink_len
+		);
+		fake_file->buffered_len = fake_file->sink_len;
+		fake_file->pos = fake_file->buffered_len;
 	} else {
 		LEXLEO_ASSERT(false);
 	}
 
-	fake->is_open = true;
-	fake->pathname = pathname;
-	fake->mode = mode;
+	fake_file->is_open = true;
+	fake_file->pathname = pathname;
+	fake_file->mode = mode;
 
-	*out = fake_osal_file;
-
+	*out = fake_file_to_osal_file(fake_file);
 	return OSAL_FILE_STATUS_OK;
 }
 
@@ -357,25 +180,25 @@ size_t fake_file_read(
 ) {
 	LEXLEO_ASSERT(ptr && stream && st);
 
-	fake_file_t *fake = osal_file_to_fake_file(stream);
+	fake_file_t *fake_file = osal_file_to_fake_file(stream);
 
-	fake->read_call_count++;
-	fake->last_read_ptr = ptr;
-	fake->last_read_size = size;
-	fake->last_read_nmemb = nmemb;
-	fake->last_read_stream = stream;
-	fake->last_read_st = st;
+	fake_file->read_call_count++;
+	fake_file->last_read_ptr = ptr;
+	fake_file->last_read_size = size;
+	fake_file->last_read_nmemb = nmemb;
+	fake_file->last_read_stream = stream;
+	fake_file->last_read_st = st;
 
 	LEXLEO_ASSERT(
-		   fake->buffered_len <= FAKE_FILE_BUF_SIZE
-		&& fake->pos <= fake->buffered_len
+		   fake_file->buffered_len <= FAKE_FILE_BUF_SIZE
+		&& fake_file->pos <= fake_file->buffered_len
 	);
 
 	if (
-		   fake->read_status != OSAL_FILE_STATUS_OK
-		&& fake->read_status != OSAL_FILE_STATUS_EOF
+		   fake_file->next_read_status != OSAL_FILE_STATUS_OK
+		&& fake_file->next_read_status != OSAL_FILE_STATUS_EOF
 	) {
-		*st = fake->read_status;
+		*st = fake_file->next_read_status;
 		return 0;
 	}
 
@@ -385,7 +208,7 @@ size_t fake_file_read(
 	}
 
 	size_t requested_bytes = size * nmemb;
-	size_t available_bytes = fake->buffered_len - fake->pos;
+	size_t available_bytes = fake_file->buffered_len - fake_file->pos;
 	size_t readable_bytes =
 		(requested_bytes < available_bytes)
 			? requested_bytes
@@ -397,10 +220,10 @@ size_t fake_file_read(
 	if (copied_bytes > 0) {
 		osal_memcpy(
 			ptr,
-			fake->buffered_backing + fake->pos,
+			fake_file->buffered_backing + fake_file->pos,
 			copied_bytes
 		);
-		fake->pos += copied_bytes;
+		fake_file->pos += copied_bytes;
 	}
 
 	if (readable_nmemb < nmemb) {
@@ -422,18 +245,18 @@ size_t fake_file_write(
 	LEXLEO_ASSERT(ptr && stream && st);
 	LEXLEO_ASSERT(size == 0 || nmemb <= FAKE_FILE_BUF_SIZE / size);
 
-	fake_file_t *fake = osal_file_to_fake_file(stream);
+	fake_file_t *fake_file = osal_file_to_fake_file(stream);
 
-	fake->write_call_count++;
-	fake->last_write_ptr = ptr;
-	fake->last_write_size = size;
-	fake->last_write_nmemb = nmemb;
-	fake->last_write_stream = stream;
-	fake->last_write_st = st;
+	fake_file->write_call_count++;
+	fake_file->last_write_ptr = ptr;
+	fake_file->last_write_size = size;
+	fake_file->last_write_nmemb = nmemb;
+	fake_file->last_write_stream = stream;
+	fake_file->last_write_st = st;
 
-	*st = fake->write_status;
+	*st = fake_file->next_write_status;
 
-	if (fake->write_status != OSAL_FILE_STATUS_OK) {
+	if (fake_file->next_write_status != OSAL_FILE_STATUS_OK) {
 		return 0;
 	}
 
@@ -443,17 +266,17 @@ size_t fake_file_write(
 
 	size_t requested_bytes = size * nmemb;
 
-	LEXLEO_ASSERT(fake->pos + requested_bytes <= FAKE_FILE_BUF_SIZE);
+	LEXLEO_ASSERT(fake_file->pos + requested_bytes <= FAKE_FILE_BUF_SIZE);
 
 	if (requested_bytes) {
 		osal_memcpy(
-			fake->buffered_backing + fake->pos,
+			fake_file->buffered_backing + fake_file->pos,
 			ptr,
 			requested_bytes
 		);
-		fake->pos += requested_bytes;
-		if (fake->pos > fake->buffered_len) {
-			fake->buffered_len = fake->pos;
+		fake_file->pos += requested_bytes;
+		if (fake_file->pos > fake_file->buffered_len) {
+			fake_file->buffered_len = fake_file->pos;
 		}
 	}
 
@@ -465,25 +288,25 @@ osal_file_status_t fake_file_flush(
 ) {
 	LEXLEO_ASSERT(stream);
 
-	fake_file_t *fake = osal_file_to_fake_file(stream);
+	fake_file_t *fake_file = osal_file_to_fake_file(stream);
 
-	fake->flush_call_count++;
-	fake->last_flush_stream = stream;
+	fake_file->flush_call_count++;
+	fake_file->last_flush_stream = stream;
 
-	if (fake->flush_status == OSAL_FILE_STATUS_OK) {
-		LEXLEO_ASSERT(fake->buffered_len <= FAKE_FILE_BUF_SIZE);
-		fake_file_set_sink_backing(stream, NULL, 0);
-		if (fake->buffered_len != 0) {
+	if (fake_file->next_flush_status == OSAL_FILE_STATUS_OK) {
+		LEXLEO_ASSERT(fake_file->buffered_len <= FAKE_FILE_BUF_SIZE);
+		fake_file_set_sink_backing(fake_file, NULL, 0);
+		if (fake_file->buffered_len != 0) {
 			osal_memcpy(
-				fake->sink_backing,
-				fake->buffered_backing,
-				fake->buffered_len
+				fake_file->sink_backing,
+				fake_file->buffered_backing,
+				fake_file->buffered_len
 			);
 		}
-		fake->sink_len = fake->buffered_len;
+		fake_file->sink_len = fake_file->buffered_len;
 	}
 
-	return fake->flush_status;
+	return fake_file->next_flush_status;
 }
 
 osal_file_status_t fake_file_close(
@@ -491,20 +314,20 @@ osal_file_status_t fake_file_close(
 ) {
 	LEXLEO_ASSERT(stream);
 
-	fake_file_t *fake = osal_file_to_fake_file(stream);
+	fake_file_t *fake_file = osal_file_to_fake_file(stream);
 
-	fake->close_call_count++;
-	fake->last_close_stream = stream;
+	fake_file->close_call_count++;
+	fake_file->last_close_stream = stream;
 
-	if (fake->close_status != OSAL_FILE_STATUS_OK) {
-		return fake->close_status;
+	if (fake_file->next_close_status != OSAL_FILE_STATUS_OK) {
+		return fake_file->next_close_status;
 	}
 
 	LEXLEO_ASSERT(fake_file_flush(stream) == OSAL_FILE_STATUS_OK);
 
-	fake_file_set_buffered_backing(stream, NULL, 0);
+	fake_file_set_buffered_backing(fake_file, NULL, 0);
 
-	fake->is_open = false;
+	fake_file->is_open = false;
 
 	return OSAL_FILE_STATUS_OK;
 }
@@ -517,26 +340,26 @@ char *fake_file_gets(
 ) {
 	LEXLEO_ASSERT(out && stream && st);
 
-	fake_file_t *fake = osal_file_to_fake_file(stream);
+	fake_file_t *fake_file = osal_file_to_fake_file(stream);
 
-	fake->gets_call_count++;
-	fake->last_gets_out = out;
-	fake->last_gets_out_size = out_size;
-	fake->last_gets_stream = stream;
-	fake->last_gets_st = st;
+	fake_file->gets_call_count++;
+	fake_file->last_gets_out = out;
+	fake_file->last_gets_out_size = out_size;
+	fake_file->last_gets_stream = stream;
+	fake_file->last_gets_st = st;
 
-	*st = fake->gets_status;
+	*st = fake_file->next_gets_status;
 
-	if (fake->gets_status != OSAL_FILE_STATUS_OK) {
+	if (fake_file->next_gets_status != OSAL_FILE_STATUS_OK) {
 		return NULL;
 	}
 
 	LEXLEO_ASSERT(
-		   fake->pos <= fake->buffered_len
-		&& fake->buffered_len <= FAKE_FILE_BUF_SIZE
+		   fake_file->pos <= fake_file->buffered_len
+		&& fake_file->buffered_len <= FAKE_FILE_BUF_SIZE
 		&& out_size != 0
 	);
-	size_t available_bytes = fake->buffered_len - fake->pos;
+	size_t available_bytes = fake_file->buffered_len - fake_file->pos;
 
 	if (available_bytes == 0) {
 		return NULL;
@@ -544,7 +367,7 @@ char *fake_file_gets(
 
 	char *ret = out;
 
-	const uint8_t *p = fake->buffered_backing + fake->pos;
+	const uint8_t *p = fake_file->buffered_backing + fake_file->pos;
 	size_t len = 0;
 	while (
 		   len < available_bytes
@@ -563,7 +386,7 @@ char *fake_file_gets(
 		*out++ = '\n';
 	}
  	*out = '\0';
-	fake->pos += len;
+	fake_file->pos += len;
 
 	return ret;
 }
@@ -571,225 +394,12 @@ char *fake_file_gets(
 osal_file_status_t fake_file_mkdir(
 	const char *pathname
 ) {
-	g_fake_file_ctrl.mkdir_call_count++;
-	g_fake_file_ctrl.last_mkdir_pathname = pathname;
-
-	return g_fake_file_ctrl.mkdir_status;
-}
-
-size_t fake_file_open_call_count(void)
-{
-	return g_fake_file_ctrl.open_call_count;
-}
-
-OSAL_FILE **fake_file_last_open_out(void)
-{
-	return g_fake_file_ctrl.last_open_out;
-}
-
-const char *fake_file_last_open_pathname(void)
-{
-	return g_fake_file_ctrl.last_open_pathname;
-}
-
-const char *fake_file_last_open_mode(void)
-{
-	return g_fake_file_ctrl.last_open_mode;
-}
-
-const osal_mem_ops_t *fake_file_last_open_mem_ops(void)
-{
-	return g_fake_file_ctrl.last_open_mem_ops;
-}
-
-size_t fake_file_read_call_count(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->read_call_count;
-}
-
-void *fake_file_last_read_ptr(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_read_ptr;
-}
-
-size_t fake_file_last_read_size(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_read_size;
-}
-
-size_t fake_file_last_read_nmemb(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_read_nmemb;
-}
-
-OSAL_FILE *fake_file_last_read_stream(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_read_stream;
-}
-
-osal_file_status_t *fake_file_last_read_status_ptr(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_read_st;
-}
-
-size_t fake_file_write_call_count(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->write_call_count;
-}
-
-const void *fake_file_last_write_ptr(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_write_ptr;
-}
-
-size_t fake_file_last_write_size(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_write_size;
-}
-
-size_t fake_file_last_write_nmemb(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_write_nmemb;
-}
-
-OSAL_FILE *fake_file_last_write_stream(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_write_stream;
-}
-
-osal_file_status_t *fake_file_last_write_status_ptr(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_write_st;
-}
-
-size_t fake_file_flush_call_count(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->flush_call_count;
-}
-
-OSAL_FILE *fake_file_last_flush_stream(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_flush_stream;
-}
-
-size_t fake_file_close_call_count(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->close_call_count;
-}
-
-OSAL_FILE *fake_file_last_close_stream(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_close_stream;
-}
-
-size_t fake_file_gets_call_count(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->gets_call_count;
-}
-
-char *fake_file_last_gets_out(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_gets_out;
-}
-
-size_t fake_file_last_gets_out_size(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_gets_out_size;
-}
-
-OSAL_FILE *fake_file_last_gets_stream(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_gets_stream;
-}
-
-osal_file_status_t *fake_file_last_gets_status_ptr(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->last_gets_st;
-}
-
-size_t fake_file_mkdir_call_count(void)
-{
-	return g_fake_file_ctrl.mkdir_call_count;
-}
-
-const char *fake_file_last_mkdir_pathname(void)
-{
-	return g_fake_file_ctrl.last_mkdir_pathname;
-}
-
-const uint8_t *fake_file_buffered_backing(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->buffered_backing;
-}
-
-const uint8_t *fake_file_sink_backing(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->sink_backing;
-}
-
-size_t fake_file_buffered_len(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->buffered_len;
-}
-
-size_t fake_file_sink_len(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->sink_len;
-}
-
-size_t fake_file_pos(
-	OSAL_FILE *fake
-) {
-	LEXLEO_ASSERT(fake);
-	return osal_file_to_fake_file(fake)->pos;
+	LEXLEO_ASSERT(
+		g_fake_file_ctrl_seq_next < FAKE_FILE_MAX_SEQ_LEN
+	);
+	fake_file_ctrl_t *ctrl =
+		&g_fake_file_ctrl_seq[g_fake_file_ctrl_seq_next++];
+	ctrl->mkdir_call_count++;
+	ctrl->last_mkdir_pathname = pathname;
+	return ctrl->next_mkdir_status;
 }

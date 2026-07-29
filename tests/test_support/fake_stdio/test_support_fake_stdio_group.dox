@@ -6,8 +6,7 @@
  *
  * @details
  * Provides a deterministic test double for stdio-dependent code. Tests can
- * configure stream contents, observe read/write/flush calls, inspect buffered
- * and flushed data, and inject fake standard streams instead of real runtime
- * stdio dependencies.
+ * configure stream contents and operation results, observe read/write/flush,
+ * error, and EOF calls, inspect buffered and flushed data, and inject fake
+ * standard streams instead of real runtime stdio dependencies.
  */
-

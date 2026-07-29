@@ -29,6 +29,7 @@ target_include_directories(
 )
 
 target_link_libraries(
+
     lexleo_app
 
     PRIVATE
@@ -40,11 +41,11 @@ target_link_libraries(
         osal_time
         osal_env
 
-        stream_cr
-        stdio_stream
-        fs_stream
+        stream_new_cr
+        stdio_stream_new_cr
+        fs_stream_new_cr
 
-        logger
+        logger_adapter
         logger_default
 
         lexleo_vm_cr

@@ -18,7 +18,7 @@
  *  port and its related modules.
  *
  *  See also:
- *  - @ref testing_foundation_stream_unit
+ *  - @ref testing_foundation_stream_cr_unit
  *  - @ref testing_foundation_stream_factory_integration
  *  - @ref testing_foundation_stream_factory_fs_stream_integration
  *  - @ref specifications_stream

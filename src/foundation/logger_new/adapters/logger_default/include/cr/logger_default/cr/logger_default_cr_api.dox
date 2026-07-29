@@ -1,0 +1,14 @@
+/**
+ * @defgroup logger_default_cr_api logger_default CR API
+ * @ingroup logger_default_api
+ *
+ * @brief Composition Root (CR) API for the `logger_default` adapter.
+ *
+ * @details
+ * Exposes the CR-facing types and services used to configure and construct
+ * `logger_default` backends from their external borrowed dependencies and
+ * complete their initialization.
+ *
+ * @note This API is part of the CR surface. Runtime modules should not
+ *       include it directly.
+ */

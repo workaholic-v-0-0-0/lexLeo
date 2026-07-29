@@ -1,0 +1,15 @@
+/**
+ * @defgroup logger_adapters_api Logger adapter API
+ * @ingroup logger_api
+ * @brief Adapter-facing contracts for the `logger` port.
+ *
+ * @details
+ * Exposes the types required to implement `logger` adapters.
+ *
+ * This group provides the status type and backend dispatch-table types shared
+ * between the `logger` port implementation and concrete adapter modules.
+ *
+ * Adapter implementations operate on their own backend instances and expose
+ * backend operations through a @ref logger_vtbl_t. They do not own or
+ * manipulate the opaque @ref logger_t handle directly.
+ */

@@ -15,7 +15,7 @@ static size_t fs_stream_read(
 Implement the `stream` port read callback for the `fs_stream` adapter.
 
 This callback reads up to `n` bytes from the OSAL file handle owned by the
-`fs_stream` backend into `buf`.
+`fs_stream_t` designated by `backend` into `buf`.
 
 # Relationship to the public port contract
 
@@ -24,16 +24,16 @@ It implements the behavior exposed through `stream_read()` for stream instances
 created by the `fs_stream` adapter.
 
 See:
+
 - @ref specifications_stream_read
 
 # Preconditions
 
 - `backend` must designate a valid `fs_stream_t`.
-- `backend->state.file` must designate a valid open `OSAL_FILE`.
-- `backend->file_ops` must designate a valid OSAL file operations table.
-- `backend->file_ops->read` must not be `NULL`.
 - `buf` must designate at least `n` writable bytes.
 - `n` must be greater than `0`.
+- The `fs_stream_t` designated by `backend` must contain a valid OSAL file
+  operations table and must own a valid open `OSAL_FILE`.
 
 # Invalid arguments
 
@@ -42,7 +42,8 @@ See:
 # Success
 
 - Delegates the read operation to the injected OSAL file read operation.
-- Returns the number of bytes reported by the underlying OSAL file read operation.
+- Returns the number of bytes reported by the underlying OSAL file read
+  operation.
 - If `st != NULL`, stores the mapped `stream_status_t` corresponding to the
   `osal_file_status_t` reported by the underlying OSAL file read operation.
 
@@ -54,10 +55,8 @@ See:
 
 # Ownership
 
-- `backend` is borrowed.
+- The `fs_stream_t` designated by `backend` is borrowed.
 - `buf` is borrowed.
-- This function does not take ownership of either pointer.
-- This function does not release the underlying OSAL file handle.
 
 # Notes
 

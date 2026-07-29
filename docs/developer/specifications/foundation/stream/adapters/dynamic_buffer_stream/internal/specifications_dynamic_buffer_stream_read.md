@@ -7,7 +7,7 @@ static size_t dynamic_buffer_stream_read(
     void *backend,
     void *buf,
     size_t n,
-    stream_status_t *st)
+    stream_status_t *st);
 ```
 
 # Purpose
@@ -35,39 +35,40 @@ See:
 
 # Invalid arguments
 
-- `backend == NULL`
-- `buf == NULL && n > 0`
+- `backend == NULL`.
+- `buf == NULL && n > 0`.
 
 # Success
 
 - If `n == 0`:
     - Returns `0`.
-    - `backend` is left unchanged.
-    - If `st != NULL`, `*st` is set to `STREAM_STATUS_OK`.
-
-- If `0 < n` and unread data is available:
+    - Leaves `backend` unchanged.
+    - If `st != NULL`, sets `*st` to `STREAM_STATUS_OK`.
+- If `n > 0` and unread data is available:
     - Reads exactly `min(n, dbuf->len - dbuf->read_pos)` bytes from the internal
-      buffer starting at offset `dbuf->read_pos`.
+      dynamic buffer starting at offset `dbuf->read_pos`.
     - Copies the read bytes into `buf`.
     - Advances `dbuf->read_pos` by the number of bytes returned.
-    - Leaves `dbuf->len` unchanged.
+    - Leaves `dbuf->len` and `dbuf->cap` unchanged.
     - Returns the number of bytes read.
-    - If `st != NULL`, `*st` is set to `STREAM_STATUS_OK`.
+    - If `st != NULL`, sets `*st` to `STREAM_STATUS_OK`.
 
 # Failure
 
 ## Invalid arguments
 
+If `backend == NULL` or `buf == NULL && n > 0`:
+
 - Returns `0`.
-- If `st != NULL`, `*st` is set to `STREAM_STATUS_INVALID`.
+- If `st != NULL`, sets `*st` to `STREAM_STATUS_INVALID`.
 
 ## End of buffer
 
-If `dbuf->read_pos >= dbuf->len`:
+If `n > 0` and `dbuf->read_pos >= dbuf->len`:
 
 - Returns `0`.
 - Leaves `backend` unchanged.
-- If `st != NULL`, `*st` is set to `STREAM_STATUS_EOF`.
+- If `st != NULL`, sets `*st` to `STREAM_STATUS_EOF`.
 
 # Ownership
 
@@ -77,6 +78,8 @@ If `dbuf->read_pos >= dbuf->len`:
 
 # Notes
 
+- Argument validation is performed before accessing the backend state.
+- A zero-length read succeeds even if no unread data remains.
 - This callback reads from the current read cursor only; it does not compact
   or shrink the underlying dynamic buffer.
 - The amount returned is bounded by both the caller-requested size `n` and the

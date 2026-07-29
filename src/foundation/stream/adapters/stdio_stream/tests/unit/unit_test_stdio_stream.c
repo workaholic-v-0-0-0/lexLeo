@@ -395,15 +395,15 @@ static void test_stdio_stream_create_stream(void **state)
 		assert_int_equal(n, sizeof(payload));
 
 		assert_int_equal(
-			fake_stdio_write_call_count(fake_stdio_stdout()),
+			fake_stdio_write_call_count(fake_get_stdio_stdout()),
 			1u
 		);
 		assert_int_equal(
-			fake_stdio_buffered_len(fake_stdio_stdout()),
+			fake_stdio_buffered_len(fake_get_stdio_stdout()),
 			sizeof(payload)
 		);
 		assert_memory_equal(
-			fake_stdio_buffered_backing(fake_stdio_stdout()),
+			fake_stdio_buffered_backing(fake_get_stdio_stdout()),
 			payload,
 			sizeof(payload)
 		);
@@ -1173,15 +1173,15 @@ static void test_stdio_stream_ctor(void **state)
 		assert_int_equal(n, sizeof(payload));
 
 		assert_int_equal(
-			fake_stdio_write_call_count(fake_stdio_stdout()),
+			fake_stdio_write_call_count(fake_get_stdio_stdout()),
 			1u
 		);
 		assert_int_equal(
-			fake_stdio_buffered_len(fake_stdio_stdout()),
+			fake_stdio_buffered_len(fake_get_stdio_stdout()),
 			sizeof(payload)
 		);
 		assert_memory_equal(
-			fake_stdio_buffered_backing(fake_stdio_stdout()),
+			fake_stdio_buffered_backing(fake_get_stdio_stdout()),
 			payload,
 			sizeof(payload)
 		);

@@ -1,0 +1,17 @@
+/**
+ * @defgroup logger_default_api logger_default API
+ * @ingroup logger_family_group
+ *
+ * @brief Default adapter for the `logger` port.
+ *
+ * @details
+ * The `logger_default` adapter implements the `logger` port using a borrowed
+ * target stream and external borrowed dependencies.
+ *
+ * This module belongs to the `logger` adapter family and provides the
+ * functionality required to expose stream-backed logging through the
+ * `logger` port.
+ *
+ * Sub-APIs:
+ * - @ref logger_default_cr_api
+ */

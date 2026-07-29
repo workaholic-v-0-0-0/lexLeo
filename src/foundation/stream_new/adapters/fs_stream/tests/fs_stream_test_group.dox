@@ -1,0 +1,6 @@
+/**
+ * @defgroup fs_stream_tests_group fs_stream tests
+ * @ingroup stream_family_tests_group
+ *
+ * @brief Tests for the fs_stream adapter.
+ */

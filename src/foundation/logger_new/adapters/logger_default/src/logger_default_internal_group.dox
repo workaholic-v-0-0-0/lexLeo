@@ -1,0 +1,7 @@
+/**
+ * @defgroup logger_default_internal_group logger_default private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation details of the logger_default adapter.
+ *
+ */

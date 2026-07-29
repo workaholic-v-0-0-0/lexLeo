@@ -13,7 +13,7 @@
 #include "osal/str/osal_str_types.h"
 #include "osal/time/osal_time_types.h"
 
-#include "stream/borrowers/stream_borrowers_types.h"
+#include "stream/borrowers/stream_borrowers_api.h"
 
 #include "logger/borrowers/logger_borrowers_types.h"
 
