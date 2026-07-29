@@ -27,15 +27,19 @@
 #include "osal/str/osal_str_types.h"
 #include "osal/time/osal_time_types.h"
 
-#include "stream/borrowers/stream_borrowers_types.h"
-#include "stream/owners/stream_owners_types.h"
-#include "stream/owners/stream_creators_api.h"
+#include "stream/common/stream_opaque_type.h"
 
-#include "logger/borrowers/logger_borrowers_types.h"
+#include "logger/common/logger_opaque_type.h"
+
+#define LEXLEO_VM_ROM_SIZE 1024
+#define LEXLEO_VM_RAM_SIZE 1048576
+#define LEXLEO_VM_DISK_SIZE 1048576
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct lexleo_vm_owned_resources_t lexleo_vm_owned_resources_t;
 
 /**
  * @brief Private LexLeo VM handle structure.
@@ -46,8 +50,6 @@ extern "C" {
  * `lexleo_vm_complete_default_init()`.
  */
 struct lexleo_vm_t {
-
-	/* Borrowed dependencies. */
 
 	/** Borrowed memory operations. */
 	const osal_mem_ops_t *mem_ops;
@@ -70,27 +72,72 @@ struct lexleo_vm_t {
 	/** Borrowed output stream. */
 	stream_t *out;
 
-	/** Borrowed error stream. */
-	stream_t *err;
-
 	/** Borrowed logger. */
 	logger_t *logger;
 
-
 	/* Owned runtime resources. */
+	lexleo_vm_owned_resources_t *lexleo_vm_owned_resources;
 
-	/** Owned stream factory. */
-	stream_factory_t *stream_factory;
-
-	/** Owned stdio stream creator. */
-	stream_io_creator_t *stream_io_creator;
-
-	/** Owned file stream creator. */
-	stream_file_creator_t *stream_file_creator;
-
-	/** Owned buffer stream creator. */
-	stream_buffer_creator_t *stream_buffer_creator;
+	/* Physical slots */
+	uint8_t rom[LEXLEO_VM_ROM_SIZE];
+	uint8_t keyboard_control_register;
+	uint8_t keyboard_data_register;
+	uint8_t screen_control_register;
+	uint8_t screen_data_register;
+	uint8_t ram[LEXLEO_VM_RAM_SIZE];
+	uint8_t disk[LEXLEO_VM_DISK_SIZE];
 };
+
+#define LEXLEO_VM_RESET_ADDRESS 0xFFFFFFE0
+#define LEXLEO_VM_ISR_ADDRESS 0xFFFFFFE0
+
+// write a driver for vm_in and vm_out
+// decoding rules must be established since the beginning
+
+/*
+Material specifications:
+LEXLEO_VM_RAM_BASE_ADDRESS
+LEXLEO_VM_RAM_SIZE
+LEXLEO_VM_ROM_BASE_ADDRESS
+LEXLEO_VM_ROM_SIZE
+LEXLEO_VM_DISK_BASE_ADDRESS
+LEXLEO_VM_DISK_SIZE
+LEXLEO_VM_RESET_ADDRESS (among ROM addresses)
+LEXLEO_VM_ISR_ADDRESS (among ROM addresses)
+initial states of the CPU registers
+<here>bbbhow to save and restore when interruption?
+ISR atomicity?
+bbbeffets des lectures et écritures des registres d’entrée-sortie
+bbbtraitement des accès invalides, notamment une écriture en ROM.
+*/
+
+/* draft:
+rom will contain:
+firmware.lexleo_bare_metal_exe
+disk will contain:
+b) bootloader.lexleo_bare_metal_efi
+c) kernel.lexleo_bare_metal_efi
+and in src in static:
+static lexleo_vm_status_t physical_read_u8(
+	lexleo_vm_t *vm,
+	lexleo_vm_address_t address,
+	uint8_t *value);
+static lexleo_vm_status_t physical_write_u8(
+	lexleo_vm_t *vm,
+	lexleo_vm_address_t address,
+	uint8_t value);
+static void lexleo_vm_update_device(lexleo_vm_t *vm);
+static lexleo_vm_cpu_run
+in kernel space write meta data of the user process such as:
+a) mapping process_id -> (mapping virtual_address -> physical_address)
+b) ...
+at boot, pc contains physical address of the first octet of firmware.lexleo_bare_metal_exe
+a default material cfg
+a reset mechanism look at 0xFFFFFFF0 for the first instruction of the firmware ; hence it must be a jump
+ISR
+registers of CPU has a register where to write the ISR address (in AMD64 it is IDTR (Interrupt Descriptor Table Register))
+ISR can write in system input buffer and this buffer corresponds to physical addresses
+*/
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,13 @@
+/** @defgroup stream_adapters_api Stream adapters API
+ * @ingroup stream_api
+ *
+ * @brief Adapter-facing contracts for the `stream` port.
+ *
+ * @details
+ * Exposes the contracts required to implement `stream` adapters.
+ *
+ * This group aggregates the callback, provider, and common types shared
+ * between the `stream` port implementation and adapter modules, including
+ * status codes, backend operation callback types, dispatch-table types,
+ * adapter provider types, and stream creation argument structures.
+ */

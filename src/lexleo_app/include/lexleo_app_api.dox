@@ -1,0 +1,15 @@
+/**
+ * @defgroup lexleo_app_api lexleo_app API
+ * @ingroup api_reference
+ *
+ * @brief Public API for LexLeo application configuration, lifecycle,
+ * and runtime use.
+ *
+ * @details
+ * Provides services to configure, create, initialize, run, and destroy
+ * LexLeo application instances.
+ *
+ * Sub-APIs:
+ * - @ref lexleo_app_borrowers_api
+ * - @ref lexleo_app_cr_opaque_api
+ */

@@ -1,0 +1,19 @@
+/** @defgroup logger_family_group logger family
+ *  @ingroup foundation_group
+ *
+ *  @brief The `logger` port and related modules.
+ *
+ *  @details
+ *  This family gathers the `logger` port together with the modules that
+ *  implement, extend, or support it.
+ */
+
+/** @defgroup logger_family_tests_group logger family tests
+ *  @ingroup foundation_tests_group
+ *
+ *  @brief Tests for the `logger` port and related modules.
+ *
+ *  @details
+ *  This group gathers the unit and integration tests covering the `logger`
+ *  port and its related modules.
+ */

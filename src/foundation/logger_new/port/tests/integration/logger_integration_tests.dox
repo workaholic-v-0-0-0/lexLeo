@@ -1,0 +1,10 @@
+/**
+ * @defgroup logger_integration_tests Logger integration tests
+ * @ingroup logger_tests_group
+ *
+ * @brief Integration tests for the `logger` port.
+ *
+ * @details
+ * This group gathers the integration tests validating the public and internal
+ * contracts of the `logger` port.
+ */

@@ -1,0 +1,11 @@
+/**
+ * @defgroup fs_stream_white_box_tests_access_group fs_stream white-box test access
+ * @ingroup fs_stream_tests_group
+ *
+ * @brief Privileged white-box test access to the `fs_stream` adapter.
+ *
+ * @details
+ * Exposes test-only helpers used to inspect and modify the private
+ * `fs_stream_t` external borrowed dependencies and owned resources without
+ * exposing private implementation headers to test translation units.
+ */

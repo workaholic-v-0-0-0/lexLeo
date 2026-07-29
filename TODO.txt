@@ -43,3 +43,191 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
+<here> continue migration "port-adapter decoupling" ;
+       already done:
+         - src/foundation/stream_new/*
+         - src/foundation/logger_new/*
+         - src/lexleo_vm/*
+         - src/lexleo_app/*  <here> not yet done ; need to be refactored with usages and digression considerations
+         <here> hence adjust test/support/, src/cr/lexleo_app_cr.c in regards with new fields in handle
+
+        WIP: <here> migrate lexleo_app with stream_new ; in lexleo_app.c
+        I stopped that by desactivating lexleo_app and frontend compilation via "#add_subdirectory(lexleo_app)" and "#add_subdirectory(frontend)"
+        because it depends on logger that in turn depends on stream ; hence I
+        must migrate logger before. -> This is done now! -> So I go back to lexleo_app by "reactivating add_subdirectory(lexleo_app)"" ; it consists of make it depend on *_new rather than stream and logger old versions
+        <here> I've changed my mind because of usages considerations at the bottom of this page ; so I've changed lexleo_app_cfg_t and then I've gotta refact lexleo_app
+
+        refact lexleo_vm_t in order to avoid a dep of the kind lexleo_vm_borrower -> stream_owner due to the presence of stream creators -> done
+        <here>refact lexleo_app in order to make it depend on new versions and split it into scopes stack! -> done!
+        <here> do an integration test to test lexleo_app_create_init, maybe with a smoke test -> done!
+
+remove err from vm
+add in vm_t:
+    /** Offset of the next instruction in RAM. */
+    size_t pc;
+    /** Memory visible to programs executed by the VM. */
+    uint8_t ram[LEXLEO_VM_RAM_SIZE]; -> bad idea: too difficult!
+typedef enum lexleo_vm_opcode_t {
+    LEXLEO_VM_OP_STORE         = 0x01,
+    LEXLEO_VM_OP_LOAD          = 0x02,
+    LEXLEO_VM_OP_PUSH          = 0x03,
+    LEXLEO_VM_OP_ADD           = 0x04,
+    LEXLEO_VM_OP_SUB           = 0x05,
+    LEXLEO_VM_OP_MUL           = 0x06,
+    LEXLEO_VM_OP_JUMP          = 0x07,
+    LEXLEO_VM_OP_JUMP_IF_FALSE = 0x08,
+    LEXLEO_VM_OP_HALT          = 0x09
+} lexleo_vm_opcode_t;
+
+Notes:
+    Think!: What is to be opaque in handle is simultaneously "external dep" and owned?
+    Think!: Do not port/adapters architecture for all module! Hence how to double the ones that are note like that ? -> Maybe with symbol substitution at linkage!
+    port/adapters architecture is justified because it makes possible to test without the wrap mechanism of ld
+    compiler in not in vm -> Finaly I don't know because vm need to understand ast...
+
+
+draft:
+
+usages:
+a) lexleo
+-> contrôle la vm
+b) lexleo file_1.lexleo file_2.lexleo static_lib.lexleo_a -dynamic_link dyn_lib_1.lexleo_so -dynamic_link dyn_lib_2.lexleo_so
+-> On exécute les exécutables ELF construit avec yacc et bison et compilé linké via gcc (donc pas de vm) ou juste les fct c lexleo_to_asm, lexleo_to_object et lexleo_link
+Et ça donne en sortie out.lexleo_exe
+c) lexleo -until_compilation file_1.lexleo
+-> idem et ça donne out.lexleo_o
+d) lexleo -until_asm file_1.lexleo
+-> idem et ça donne out.lexleo_asm
+e) lexleo -assemble out.lexleo_asm
+-> idem et ça donne out.lexleo_o
+f) lexleo -link file_1.lexleo_o file_2.lexleo_o static_lib.lexleo_a -dynamic_link dyn_lib_1.lexleo_so -dynamic_link dyn_lib_2.lexleo_so
+-> idem et ça donne out.lexleo_exe
+g) lexleo -execute out.lexleo_exe
+-> cette fois ça démarre la vm, ça met le fichier dans son système de fichiers
+en utilisant une fct de l'API de lexleo_vm (et non en exécutant load_file.lexleo_exe sur la vm)
+puis sur la vm on fait
+exec out.lexleo_exe
+(vm_in est toujours en prod le stream_t qui abstrait stdin)
+h) lexleo -help
+i) lexleo -version
+j) lexleo -execute out.lexleo_exe < inputs.txt
+k1) lexleo -archive a.lexleo_o b.lexleo_o -o lib.lexleo_a
+-> lib.lexleo_a
+k2) lexleo -make_dynamic_lib a.lexleo_o b.lexleo_o -o lib.lexleo_so
+k3) .lexleo_so
+l) not sure:
+lexleo -interpret prog.lexleo
+lexleo interpret
+lexleo interpret <<'EOF'
+instruction1
+42
+instruction2
+EOF
+lexleo interpret prog.lexleo < responses.txt
+lexleo execute prog.bytecode < responses.txt
+lexleo execute prog.bytecode > results.txt 2> errors.txt
+lexleo interpret < prog.lexleo
+
+
+lexleo disk format:
+    meta_data
+    data
+meta_data:
+    size
+
+.lexleo_elf format:
+    elf_header
+    ...
+elf_header:
+    elf_kind
+    ...
+elf_kind values:
+    RELOCATABLE_OBJECT
+    EXECUTABLE
+    SHARED_LIBRARY"
+
+.lexleo_a format:
+    signature : "!<arch>\n" — 8 bytes
+    member_table
+but one entry of member_table is the special_member
+special_member:
+    special_member_header
+    data
+special_member_header:
+    name = <"//" completed by space characters>
+    size
+    ...(In Ubuntu, each name finishes by "/\n")
+the not special member are like that:
+member_table_header:
+    name
+    size
+    <finished by a format control sequence ; in Ubuntu it is 60 0A>
+member_table:
+    name = "/" then the offset in the special member only if name is too long
+    , offset, size)
+
+format:
+.header
+.sections
+
+header:
+    format (lexleo_elf ou lexleo_lib)
+    sections_address
+    starting_point_address
+
+
+sections:
+.sections
+.symbol_table
+.scope_table
+.relocation_table
+.rodata
+.data
+.text
+.dynamic_module_table
+
+symbol table:
+(name, scope, resolution, storage, location, size)
+with
+resolution:
+	DEFINED
+	IMPORT_REQUIRED
+	LOOKUP_OR_DEFINE
+storage :
+	NONE
+	SECTION_RELATIVE
+	FRAME_RELATIVE
+	VM_ADDRESS
+location:
+	<nothing>
+	(section_id, offset)
+	(frame_owner_id, offset)
+	address
+
+scope table:
+(parent_scope_address, kind)
+with
+kind:
+	global
+	function
+	bloc
+
+relocation table:
+(patch_section, patch_offset, target_section, target_offset, kind, size)
+with
+kind:
+	LOCATION_ADDRESS
+	SYMBOL_STORAGE_ADDRESS
+
+dynamic_module_table:
+(module_address)
+
+disk format:
+    files_table
+    data
+
+files_table:
+    name
+    data_offset
+    size
+with a file of name "lexleo_boot.lexleo_exe"

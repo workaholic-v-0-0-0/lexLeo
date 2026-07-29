@@ -1,0 +1,6 @@
+/**
+ * @defgroup lexleo_app_internal_group lexleo_app private
+ * @ingroup internal_reference
+ *
+ * @brief Private implementation details of lexleo_app module.
+ */

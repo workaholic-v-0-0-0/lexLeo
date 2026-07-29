@@ -1,0 +1,10 @@
+/**
+ * @defgroup lexleo_app_borrowers_api lexleo_app borrowers API
+ * @ingroup lexleo_app_api
+ *
+ * @brief Borrower-facing API for the `lexleo_app` module.
+ *
+ * @details
+ * Provides runtime operations for code that borrows a fully initialized
+ * LexLeo application handle.
+ */

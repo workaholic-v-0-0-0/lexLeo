@@ -12,7 +12,8 @@ echo "=== TREE: $DIR ==="
 echo
 
 if command -v tree >/dev/null 2>&1; then
-  tree -I "build|.git|*drawio*|*png*|*legacy*" "$DIR"
+  tree -I "build|.git|*drawio*|*png*" "$DIR"
+#  tree -I "build|.git|*drawio*|*png*|*legacy*" "$DIR"
 else
   find "$DIR" -print | sed -e 's;[^/]*/;|   ;g'
 fi
@@ -25,11 +26,10 @@ find "$DIR" -type f \
   ! -path "*/.git/*" \
   ! -path "*/png/*" \
   ! -path "*/drawio/*" \
-  ! -path "*/legacy/*" \
   ! -name "*.png" \
   ! -name "*.drawio" \
+  ! -path "*/legacy/*" \
   | sort | while read -r f; do
-
   echo
   echo "----- $f -----"
 

@@ -1,0 +1,7 @@
+/**
+ * @details
+ * This group contains test-only helpers that provide controlled access to
+ * selected internal `stream` fields through accessors and injectors.
+ *
+ * These helpers are not part of the production API.
+ */

@@ -2,22 +2,21 @@
 
 # Signature
 
-~~~c
+```c
 size_t stream_write(
     stream_t *s,
     const void *buf,
     size_t n,
     stream_status_t *st);
-~~~
+```
 
 # Purpose
 
-Write up to `n` bytes from `buf` to the `stream` port.
+Write up to `n` bytes from `buf` to the stream `s`.
 
 # Preconditions
 
-- If `s != NULL`, `s` must denote a valid `stream_t` handle created by
-  `stream_create()`.
+- If `s != NULL`, `s` must denote a valid `stream_t`.
 
 # Special cases
 
@@ -34,30 +33,25 @@ For `n > 0`:
 
 # Success
 
-For `n > 0`, when `s != NULL`, `buf != NULL`, and a backend is bound to the
-stream:
+For `n > 0` and valid arguments:
 
-- Delegates the write operation to the backend write operation bound to the
-  stream.
-- Returns the value produced by the backend write operation.
-- If `st != NULL`, stores in `*st` the status produced by the backend write
-  operation.
+- Delegates the write operation to the backend bound to the stream.
+- If the backend write operation produces `STREAM_STATUS_OK`:
+    - Returns the value produced by the backend write operation.
+    - If `st != NULL`, sets `*st = STREAM_STATUS_OK`.
+
+For `n == 0`:
+
+- Returns `0`.
+- If `st != NULL`, sets `*st = STREAM_STATUS_OK`.
 
 # Failure
 
-For `n > 0`:
-
-- If `s == NULL`, returns `0`.
+- For invalid arguments:
+    - Returns `0`.
     - If `st != NULL`, sets `*st = STREAM_STATUS_INVALID`.
-- If `buf == NULL`, returns `0`.
-    - If `st != NULL`, sets `*st = STREAM_STATUS_INVALID`.
-- If `s != NULL` but no backend is bound to the stream, returns `0`.
-    - If `st != NULL`, sets `*st = STREAM_STATUS_NO_BACKEND`.
-
-# Notes
-
-- If `st == NULL`, status reporting is omitted.
-- `stream_write()` does not call the backend read, flush, or close operations.
-- This function performs no backend operation when `n == 0`.
-- This function assumes that the stream backend bindings were validated at
-  creation time by `stream_create()`.
+- Otherwise, if the backend write operation produces a status other than
+  `STREAM_STATUS_OK`:
+    - Returns the value produced by the backend write operation.
+    - If `st != NULL`, stores in `*st` the status produced by the backend write
+      operation.

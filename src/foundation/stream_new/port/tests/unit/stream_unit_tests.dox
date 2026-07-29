@@ -1,0 +1,13 @@
+/**
+ * @defgroup stream_unit_tests Stream unit tests
+ * @ingroup stream_tests_group
+ *
+ * @brief Unit tests for the `stream` port.
+ *
+ * @details
+ * This group gathers the unit tests validating the public and internal
+ * contracts of the `stream` port.
+ *
+ * See also:
+ * - @ref testing_foundation_stream_family_page
+ */
