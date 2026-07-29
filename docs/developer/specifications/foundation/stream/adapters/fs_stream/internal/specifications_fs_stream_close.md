@@ -8,9 +8,8 @@ static stream_status_t fs_stream_close(void *backend);
 
 # Purpose
 
-Implement the `stream` port close callback for the `fs_stream` adapter.
-
-This callback closes the OSAL file handle owned by the `fs_stream` backend.
+This callback closes, if present, the OSAL file handle owned by the
+`fs_stream_t` backend and releases the `fs_stream_t`.
 
 # Relationship to the public port contract
 
@@ -23,41 +22,47 @@ See:
 
 # Preconditions
 
-- `backend` must designate a valid `fs_stream_t`.
-- `backend->state.file` must designate a valid open `OSAL_FILE`.
-- `backend->file_ops` must designate a valid OSAL file operations table.
-- `backend->file_ops->close` must not be `NULL`.
-
-# Invalid arguments
-
-- None.
+- `backend` must designate an `fs_stream_t` created by `fs_stream_create()`.
+- `backend->file_ops` must designate a valid file operations table.
+- `backend->mem_ops` must designate valid memory operations.
+- If `backend->file != NULL`, it must designate a valid `OSAL_FILE`.
 
 # Success
 
-- Delegates the close operation to the injected OSAL file close operation.
-- Returns the mapped `stream_status_t` corresponding to the
-  `osal_file_status_t` reported by the underlying OSAL file close operation.
-- Releases the adapter-owned backend resources.
+- If `fs_stream->file == NULL`:
+    - Releases the `fs_stream_t`.
+    - Returns `STREAM_STATUS_OK`.
+- Otherwise:
+    - Delegates the close operation to the injected OSAL file close operation.
+    - The underlying OSAL file close operation returns `OSAL_FILE_STATUS_OK`.
+    - Sets `fs_stream->file` to `NULL`.
+    - Releases the `fs_stream_t`.
+    - Returns `STREAM_STATUS_OK`.
 
 # Failure
 
-- None handled directly by this callback.
-- Any failure status reported by the underlying OSAL file close operation is
-  mapped to `stream_status_t` and returned.
-- Adapter-owned backend resources are still released before returning.
+- If `fs_stream->file == NULL`, no failure occurs and the function returns
+  `STREAM_STATUS_OK`.
+- Otherwise, the close operation is delegated to the injected OSAL file close
+  operation.
+- If the underlying OSAL file close operation returns a status other than
+  `OSAL_FILE_STATUS_OK`:
+    - The returned status is mapped to the corresponding `stream_status_t`.
+    - `fs_stream->file` is set to `NULL`.
+    - The `fs_stream_t` is released.
+    - The mapped status is returned.
 
 # Ownership
 
-- `backend` is borrowed.
-- This function releases the adapter-owned backend resources before returning.
-- The underlying OSAL file handle is released only through the injected OSAL
+- `backend` designates an `fs_stream_t` owned by the caller and consumed by
+  this operation.
+- The `OSAL_FILE` owned by the `fs_stream_t` is passed to the injected OSAL
   file close operation.
+- The `fs_stream_t` is released before returning.
 
 # Notes
 
-- This callback is intended to be invoked through `stream_destroy()`.
-- Public argument validation is performed by `stream_destroy()` before dispatch.
-- Therefore, this callback treats the listed preconditions as internal
-  invariants.
-- Backend cleanup is completed even if the underlying OSAL file close operation
+- It is normally invoked through `stream_destroy()`, and may also be used for
+  cleanup during backend construction failure paths.
+- The `fs_stream_t` is released even if the underlying OSAL file close operation
   reports a failure. The mapped status is still returned to the caller.

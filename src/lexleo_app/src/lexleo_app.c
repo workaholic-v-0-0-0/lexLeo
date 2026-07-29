@@ -129,11 +129,14 @@ lexleo_app_status_t lexleo_app_create(
 
 static bool lexleo_app_try_init_default_stdio_stream(
 	lexleo_app_t *app,
-	stream_io_kind_t kind
+	stream_t **stream,
+	stream_standard_stream_kind_t kind
 );
 static bool lexleo_app_try_init_default_fs_stream(
 	lexleo_app_t *app,
-	stream_io_kind_t kind
+	stream_t **stream,
+	const char *path,
+	const char *mode
 );
 
 static bool lexleo_app_is_initialized(lexleo_app_t *app);
@@ -184,91 +187,118 @@ static lexleo_app_io_cfg_t lexleo_app_default_stdio_io_cfg(void)
 
 static bool lexleo_app_try_init_default_stdio_stream(
 	lexleo_app_t *app,
-	stream_io_kind_t kind
+	stream_t **stream,
+	stream_standard_stream_kind_t kind
 ) {
 	LEXLEO_ASSERT(app);
 
-	stream_t **slot = NULL;
-	switch (kind) {
-		case STREAM_IO_INPUT: slot = &app->in; break;
-		case STREAM_IO_OUTPUT: slot = &app->out; break;
-		case STREAM_IO_ERR: slot = &app->err; break;
-		default: return false;
-	}
 	stdio_stream_env_t stdio_stream_env =
 		stdio_stream_default_env(
 			app->stdio_ops,
-			app->mem_ops,
 			app->mem_ops
 		);
-	stream_status_t stream_status =
-		stdio_stream_create_stream(
-			slot,
-			&(stream_io_creator_args_t)
-			{
-				.kind = kind
-			},
-			&(stdio_stream_cfg_t)
-			{
-				.reserved = 0
-			},
+	stdio_stream_t *stdio_stream = NULL;
+	stdio_stream_status_t stdio_stream_status =
+		stdio_stream_create(
+			&stdio_stream,
 			&stdio_stream_env
 		);
-	return (stream_status == STREAM_STATUS_OK) ? true : false;
+	if (stdio_stream_status != STDIO_STREAM_STATUS_OK) {
+		return false;
+	}
+
+	stdio_stream_cfg_t stdio_stream_cfg = stdio_stream_default_cfg();
+	const stream_standard_stream_creator_args_t args = {
+		.kind = kind
+	};
+	stdio_stream_status =
+		stdio_stream_complete_default_init(
+			stdio_stream,
+			&stdio_stream_cfg,
+			&args
+		);
+	if (stdio_stream_status != STDIO_STREAM_STATUS_OK) {
+		stdio_stream_vtbl()->close(stdio_stream);
+		return false;
+	}
+
+	stream_env_t stream_env =
+		stream_default_env(
+			stdio_stream_vtbl(),
+			app->mem_ops
+		);
+	stream_status_t stream_status = stream_create(stream, &stream_env);
+	if (stream_status != STREAM_STATUS_OK) {
+		stdio_stream_vtbl()->close(stdio_stream);
+		return false;
+	}
+
+	stream_status = stream_complete_default_init(*stream, stdio_stream);
+	if (stream_status != STREAM_STATUS_OK) {
+		stream_destroy(stream);
+		return false;
+	}
+
+	return true;
 }
 
 static bool lexleo_app_try_init_default_fs_stream(
 	lexleo_app_t *app,
-	stream_io_kind_t kind
+	stream_t **stream,
+	const char *path,
+	const char *mode
 ) {
 	LEXLEO_ASSERT(app);
 
-	const char *path = NULL;
-	const char *mode = NULL;
-
-	stream_t **slot = NULL;
-	switch (kind) {
-		case STREAM_IO_INPUT:
-			LEXLEO_ASSERT(app->cfg.in.kind == LEXLEO_APP_IO_FILE);
-			slot = &app->in;
-			path = app->cfg.in.path;
-			mode = app->cfg.in.mode;
-			break;
-		case STREAM_IO_OUTPUT:
-			LEXLEO_ASSERT(app->cfg.out.kind == LEXLEO_APP_IO_FILE);
-			slot = &app->out;
-			path = app->cfg.out.path;
-			mode = app->cfg.out.mode;
-			break;
-		case STREAM_IO_ERR:
-			LEXLEO_ASSERT(app->cfg.err.kind == LEXLEO_APP_IO_FILE);
-			slot = &app->err;
-			path = app->cfg.err.path;
-			mode = app->cfg.err.mode;
-			break;
-		default: return false;
-	}
 	fs_stream_env_t fs_stream_env =
 		fs_stream_default_env(
 			app->file_ops,
-			app->mem_ops,
 			app->mem_ops
 		);
-	stream_status_t stream_status =
-		fs_stream_create_stream(
-			slot,
-			&(stream_file_creator_args_t)
-			{
-				.path = path,
-				.mode = mode
-			},
-			&(fs_stream_cfg_t)
-			{
-				.reserved = 0
-			},
+	fss_stream_t *fs_stream = NULL;
+	fs_stream_status_t fs_stream_status =
+		fs_stream_create(
+			&fs_stream,
 			&fs_stream_env
 		);
-	return (stream_status == STREAM_STATUS_OK) ? true : false;
+	if (fs_stream_status != FS_STREAM_STATUS_OK) {
+		return false;
+	}
+
+	fs_stream_cfg_t fs_stream_cfg = fs_stream_default_cfg();
+	const stream_regular_file_creator_args_t args = {
+		.path = path,
+		.mode = mode
+	};
+	fs_stream_status =
+		fs_stream_complete_default_init(
+			fs_stream,
+			&fs_stream_cfg,
+			&args
+		);
+	if (fs_stream_status != FS_STREAM_STATUS_OK) {
+		fs_stream_vtbl()->close(fs_stream);
+		return false;
+	}
+
+	stream_env_t stream_env =
+		stream_default_env(
+			fs_stream_vtbl(),
+			app->mem_ops
+		);
+	stream_status_t stream_status = stream_create(stream, &stream_env);
+	if (stream_status != STREAM_STATUS_OK) {
+		fs_stream_vtbl()->close(fs_stream);
+		return false;
+	}
+
+	stream_status = stream_complete_default_init(*stream, fs_stream);
+	if (stream_status != STREAM_STATUS_OK) {
+		stream_destroy(stream);
+		return false;
+	}
+
+	return true;
 }
 
 static lexleo_app_status_t lexleo_app_init_default_in(lexleo_app_t *app)
@@ -278,14 +308,23 @@ static lexleo_app_status_t lexleo_app_init_default_in(lexleo_app_t *app)
 	switch (app->cfg.in.kind) {
 		case LEXLEO_APP_IO_STDIO:
 			return
-				lexleo_app_try_init_default_stdio_stream(app, STREAM_IO_INPUT)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_INPUT_INIT_ERROR;
+				lexleo_app_try_init_default_stdio_stream(
+					app,
+					&app->in,
+					STREAM_STANDARD_STREAM_KIND_STDIN
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_INPUT_INIT_ERROR;
 		case LEXLEO_APP_IO_FILE:
 			return
-				lexleo_app_try_init_default_fs_stream(app, STREAM_IO_INPUT)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_INPUT_INIT_ERROR;
+				lexleo_app_try_init_default_fs_stream(
+					app,
+					&app->in,
+					app->cfg.in.path,
+					app->cfg.in.mode
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_INPUT_INIT_ERROR;
 		default:
 			return LEXLEO_APP_STATUS_INPUT_INIT_ERROR;
 	}
@@ -298,14 +337,23 @@ static lexleo_app_status_t lexleo_app_init_default_out(lexleo_app_t *app)
 	switch (app->cfg.out.kind) {
 		case LEXLEO_APP_IO_STDIO:
 			return
-				lexleo_app_try_init_default_stdio_stream(app, STREAM_IO_OUTPUT)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_OUTPUT_INIT_ERROR;
+				lexleo_app_try_init_default_stdio_stream(
+					app,
+					&app->out,
+					STREAM_STANDARD_STREAM_KIND_STDOUT
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_OUTPUT_INIT_ERROR;
 		case LEXLEO_APP_IO_FILE:
 			return
-				lexleo_app_try_init_default_fs_stream(app, STREAM_IO_OUTPUT)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_OUTPUT_INIT_ERROR;
+				lexleo_app_try_init_default_fs_stream(
+					app,
+					&app->out,
+					app->cfg.in.path,
+					app->cfg.in.mode
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_OUTPUT_INIT_ERROR;
 		default:
 			return LEXLEO_APP_STATUS_OUTPUT_INIT_ERROR;
 	}
@@ -318,14 +366,23 @@ static lexleo_app_status_t lexleo_app_init_default_err(lexleo_app_t *app)
 	switch (app->cfg.err.kind) {
 		case LEXLEO_APP_IO_STDIO:
 			return
-				lexleo_app_try_init_default_stdio_stream(app, STREAM_IO_ERR)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_ERR_INIT_ERROR;
+				lexleo_app_try_init_default_stdio_stream(
+					app,
+					&app->err,
+					STREAM_STANDARD_STREAM_KIND_STDERR
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_ERR_INIT_ERROR;
 		case LEXLEO_APP_IO_FILE:
 			return
-				lexleo_app_try_init_default_fs_stream(app, STREAM_IO_ERR)
-				? LEXLEO_APP_STATUS_OK
-				: LEXLEO_APP_STATUS_ERR_INIT_ERROR;
+				lexleo_app_try_init_default_fs_stream(
+					app,
+					&app->err,
+					app->cfg.in.path,
+					app->cfg.in.mode
+				) ?
+					  LEXLEO_APP_STATUS_OK
+					: LEXLEO_APP_STATUS_ERR_INIT_ERROR;
 		default:
 			return LEXLEO_APP_STATUS_ERR_INIT_ERROR;
 	}

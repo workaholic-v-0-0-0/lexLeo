@@ -32,26 +32,16 @@ typedef struct lexleo_vm_t lexleo_vm_t;
  * @brief Status codes returned by the LexLeo VM API.
  */
 typedef enum {
+
 	/** Operation completed successfully. */
 	LEXLEO_VM_STATUS_OK,
 
 	/** Memory allocation failed. */
 	LEXLEO_VM_STATUS_OOM,
 
-	/** Memory allocation failed while creating the default stream factory. */
-	LEXLEO_VM_STATUS_STREAM_FACTORY_INIT_OOM,
+	/** Runtime initialization failed. */
+	LEXLEO_VM_STATUS_INIT_FAIL
 
-	/** Memory allocation failed while creating the default stdio stream
-	 * creator. */
-	LEXLEO_VM_STATUS_STREAM_IO_CREATOR_INIT_OOM,
-
-	/** Memory allocation failed while creating the default file stream
-	 * creator. */
-	LEXLEO_VM_STATUS_STREAM_FILE_CREATOR_INIT_OOM,
-
-	/** Memory allocation failed while creating the default buffer stream
-	 * creator. */
-	LEXLEO_VM_STATUS_STREAM_BUFFER_CREATOR_INIT_OOM
 } lexleo_vm_status_t;
 
 #ifdef __cplusplus

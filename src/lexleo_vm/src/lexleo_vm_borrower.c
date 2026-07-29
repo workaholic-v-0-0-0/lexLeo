@@ -14,7 +14,7 @@
 
 #include "internal/lexleo_vm_handle.h"
 
-#include "lexleo_vm/borrowers/lexleo_vm.h"
+#include "lexleo_vm/borrowers/lexleo_vm_borrowers_api.h"
 
 #include "policy/lexleo_assert.h"
 

@@ -1,0 +1,10 @@
+/**
+ * @defgroup logger_tests_group Logger tests
+ * @ingroup logger_family_tests_group
+ *
+ * @brief Tests for the `logger` port.
+ *
+ * @details
+ * This group gathers the test support code and test suites for the
+ * `logger` port.
+ */

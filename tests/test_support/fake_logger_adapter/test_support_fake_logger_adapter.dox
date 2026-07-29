@@ -1,0 +1,10 @@
+/**
+ * @defgroup test_support_fake_logger_adapter Fake logger adapter
+ * @ingroup test_support_reference
+ *
+ * @brief Test double for the logger adapter.
+ *
+ * @details
+ * Records log calls and returns a configurable status.
+ * The recorded message is borrowed, not copied.
+ */

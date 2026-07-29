@@ -1,0 +1,12 @@
+/**
+ * @defgroup lexleo_vm_white_box_tests_access_group lexleo_vm white-box test access
+ * @ingroup lexleo_vm_tests_group
+ *
+ * @brief White-box test access helpers for the `lexleo_vm` module.
+ *
+ * @details
+ * This group contains test-only helpers that provide controlled access to
+ * selected internal `lexleo_vm` fields through accessors and injectors.
+ *
+ * These helpers are not part of the production API.
+ */

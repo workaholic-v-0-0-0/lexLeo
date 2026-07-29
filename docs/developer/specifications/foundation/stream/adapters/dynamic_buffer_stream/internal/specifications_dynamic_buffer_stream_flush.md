@@ -3,7 +3,7 @@
 # Signature
 
 ```c
-static stream_status_t dynamic_buffer_stream_flush(void *backend)
+static stream_status_t dynamic_buffer_stream_flush(void *backend);
 ```
 
 # Purpose
@@ -35,6 +35,7 @@ See:
 # Success
 
 - Returns `STREAM_STATUS_OK`.
+- Leaves `backend` unchanged.
 
 # Failure
 
@@ -47,7 +48,8 @@ See:
 
 # Notes
 
-- This callback does not validate `backend`.
+- This callback does not validate or access `backend`.
+- Calling this callback with `backend == NULL` is valid.
 - This callback does not modify the adapter-managed dynamic buffer.
 - This callback performs no I/O and no synchronization with any external
   resource.

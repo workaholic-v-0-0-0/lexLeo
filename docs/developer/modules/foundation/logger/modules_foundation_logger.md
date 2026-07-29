@@ -7,8 +7,8 @@ foundation layer.
 
 It provides:
 - a borrower-facing runtime API for emitting log messages,
-- lifecycle services for destroying `logger_t` handles,
-- Composition Root services for preparing injected runtime dependencies,
+- Composition Root services for constructing, completing, and destroying
+  `logger_t` handles,
 - adapter-facing contracts used to bind concrete logging backends to the
   generic `logger` port.
 
@@ -23,7 +23,6 @@ The module is designed to separate:
 
 Sub-APIs:
 - @ref logger_borrowers_api "borrowers API"
-- @ref logger_lifecycle_api "lifecycle API"
 - @ref logger_cr_api "CR API"
 - @ref logger_adapters_api "adapters API"
 
@@ -34,11 +33,12 @@ It defines the public logging boundary used by runtime code, while concrete
 adapter modules provide backend-specific implementations.
 
 Typical responsibilities:
-- expose the public `logger_t` handle and status model,
+- expose the common `logger_t` handle and status model,
 - route borrower-facing logging operations through adapter-bound dispatch
   tables,
-- manage logger handle destruction,
-- provide the public environment contract used to inject runtime dependencies.
+- provide Composition Root services for constructing and destroying logger
+  handles,
+- provide the environment contract used to inject runtime dependencies.
 
 # Main concepts
 
@@ -52,13 +52,19 @@ borrower API:
 
 Concrete adapters bind backend logic to the generic logger port through:
 - `logger_vtbl_t`
-- `logger_create()`
 
-## Runtime dependency injection
+## Logger construction
 
-The Composition Root can prepare the runtime environment of the port through:
+The Composition Root constructs and completes `logger_t` handles through:
 - `logger_env_t`
 - `logger_default_env()`
+- `logger_create()`
+- `logger_complete_default_init()`
+
+## Logger destruction
+
+The Composition Root destroys `logger_t` handles through:
+- `logger_destroy()`
 
 # Related modules
 

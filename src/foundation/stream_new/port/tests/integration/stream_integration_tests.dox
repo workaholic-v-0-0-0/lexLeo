@@ -1,0 +1,10 @@
+/**
+ * @defgroup stream_integration_tests Stream integration tests
+ * @ingroup stream_tests_group
+ *
+ * @brief Integration tests for the `stream` port.
+ *
+ * @details
+ * This group gathers the integration tests validating the public and internal
+ * contracts of the `stream` port.
+ */

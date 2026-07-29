@@ -17,6 +17,7 @@
  */
 
 #include "internal/lexleo_vm_handle.h"
+#include "internal/lexleo_vm_owned_resources_type.h"
 
 #include "lexleo_vm/cr/lexleo_vm_cr_api.h"
 
@@ -32,11 +33,6 @@
 #define LEXLEO_VM_STDIO_CREATOR_DEFAULT_KEY "stdio"
 #define LEXLEO_VM_BUFFER_CREATOR_DEFAULT_KEY "dbs"
 
-lexleo_vm_cfg_t lexleo_vm_default_cfg(void)
-{
-	return (lexleo_vm_cfg_t) { .reserved = 0 };
-}
-
 lexleo_vm_env_t lexleo_vm_default_env(
 	const osal_mem_ops_t *mem_ops,
 	const osal_stdio_ops_t *stdio_ops,
@@ -48,14 +44,6 @@ lexleo_vm_env_t lexleo_vm_default_env(
 	stream_t *err,
 	logger_t *logger
 ) {
-	LEXLEO_ASSERT(
-		   mem_ops
-		&& stdio_ops
-		&& file_ops
-		&& str_ops
-		&& time_ops
-	);
-
 	return (lexleo_vm_env_t){
 		.mem_ops = mem_ops,
 		.stdio_ops = stdio_ops,
@@ -69,25 +57,34 @@ lexleo_vm_env_t lexleo_vm_default_env(
 	};
 }
 
+lexleo_vm_cfg_t lexleo_vm_default_cfg(void)
+{
+	return (lexleo_vm_cfg_t){
+		.reserved = 0
+	};
+}
+
 lexleo_vm_status_t lexleo_vm_create(
 	lexleo_vm_t **out,
-	const lexleo_vm_cfg_t *cfg,
 	const lexleo_vm_env_t *env
 ) {
-	(void)cfg;
-
 	LEXLEO_ASSERT(
 		   out
-		&& cfg
 		&& env
 		&& env->mem_ops
 		&& env->mem_ops->calloc
+		&& env->mem_ops->free
 	);
-
-	*out = NULL;
 
 	lexleo_vm_t *tmp = env->mem_ops->calloc(1, sizeof(*tmp));
 	if (!tmp) {
+		return LEXLEO_VM_STATUS_OOM;
+	}
+
+	tmp->lexleo_vm_owned_resources =
+		env->mem_ops->calloc(1, sizeof(*tmp->lexleo_vm_owned_resources));
+	if (!tmp->lexleo_vm_owned_resources) {
+		env->mem_ops->free(tmp);
 		return LEXLEO_VM_STATUS_OOM;
 	}
 
@@ -101,10 +98,7 @@ lexleo_vm_status_t lexleo_vm_create(
 	tmp->err = env->err;
 	tmp->logger = env->logger;
 
-	/* ... */
-
 	*out = tmp;
-
 	return LEXLEO_VM_STATUS_OK;
 }
 
@@ -114,255 +108,220 @@ void lexleo_vm_destroy(lexleo_vm_t **vm)
 		return;
 	}
 
-	LEXLEO_ASSERT((*vm)->mem_ops && (*vm)->mem_ops->free);
+	LEXLEO_ASSERT(
+		   (*vm)->mem_ops
+		&& (*vm)->mem_ops->free
+		&& (*vm)->lexleo_vm_owned_resources
+	);
 
-	stream_destroy_io_creator(&(*vm)->stream_io_creator);
-	stream_destroy_file_creator(&(*vm)->stream_file_creator);
-	stream_destroy_buffer_creator(&(*vm)->stream_buffer_creator);
-	stream_destroy_factory(&(*vm)->stream_factory);
-
+	stream_destroy_standard_stream_creator(
+		&(*vm)->lexleo_vm_owned_resources->stream_standard_stream_creator
+	);
+	stream_destroy_regular_file_creator(
+		&(*vm)->lexleo_vm_owned_resources->stream_regular_file_creator
+	);
+	stream_destroy_dynamic_buffer_creator(
+		&(*vm)->lexleo_vm_owned_resources->stream_dynamic_buffer_creator
+	);
+	stream_destroy_factory(&(*vm)->lexleo_vm_owned_resources->stream_factory);
+	(*vm)->mem_ops->free((*vm)->lexleo_vm_owned_resources);
 	(*vm)->mem_ops->free(*vm);
 	*vm = NULL;
 }
 
-static lexleo_vm_status_t lexleo_vm_init_default_stream_factory(
-	lexleo_vm_t *vm
-);
-static lexleo_vm_status_t lexleo_vm_init_default_stream_io_creator(
-	lexleo_vm_t *vm
-);
-static lexleo_vm_status_t lexleo_vm_init_default_stream_file_creator(
-	lexleo_vm_t *vm
-);
-static lexleo_vm_status_t lexleo_vm_init_default_stream_buffer_creator(
-	lexleo_vm_t *vm
-);
-
-lexleo_vm_status_t lexleo_vm_complete_default_init(lexleo_vm_t *vm)
-{
-	LEXLEO_ASSERT(vm);
-
-	lexleo_vm_status_t st = LEXLEO_VM_STATUS_OK;
-
-	st = lexleo_vm_init_default_stream_factory(vm);
-	if (st == LEXLEO_VM_STATUS_OOM)
-	{
-		return LEXLEO_VM_STATUS_STREAM_FACTORY_INIT_OOM;
-	}
-	LEXLEO_ASSERT(st == LEXLEO_VM_STATUS_OK);
-
-	st = lexleo_vm_init_default_stream_io_creator(vm);
-	if (st != LEXLEO_VM_STATUS_OK)
-	{
-		return LEXLEO_VM_STATUS_STREAM_IO_CREATOR_INIT_OOM;
-	}
-	LEXLEO_ASSERT(st == LEXLEO_VM_STATUS_OK);
-
-	st = lexleo_vm_init_default_stream_file_creator(vm);
-	if (st != LEXLEO_VM_STATUS_OK)
-	{
-		return LEXLEO_VM_STATUS_STREAM_FILE_CREATOR_INIT_OOM;
-	}
-	LEXLEO_ASSERT(st == LEXLEO_VM_STATUS_OK);
-
-	st = lexleo_vm_init_default_stream_buffer_creator(vm);
-	if (st != LEXLEO_VM_STATUS_OK)
-	{
-		return LEXLEO_VM_STATUS_STREAM_BUFFER_CREATOR_INIT_OOM;
-	}
-	LEXLEO_ASSERT(st == LEXLEO_VM_STATUS_OK);
-
-	return LEXLEO_VM_STATUS_OK;
-}
-
-static lexleo_vm_status_t lexleo_vm_init_default_stream_factory(
-	lexleo_vm_t *vm
+lexleo_vm_status_t lexleo_vm_complete_default_init(
+	lexleo_vm_t *vm,
+	const lexleo_vm_cfg_t *cfg
 ) {
-	LEXLEO_ASSERT(vm && vm->mem_ops);
+	LEXLEO_ASSERT(
+		   vm
+		&& vm->lexleo_vm_owned_resources
+		&& cfg
+	);
 
-	if (vm->stream_factory != NULL) {
+	if (vm->lexleo_vm_owned_resources->stream_factory) {
+		LEXLEO_ASSERT(
+			   vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+			&& vm->lexleo_vm_owned_resources->stream_regular_file_creator
+			&& vm->lexleo_vm_owned_resources->stream_dynamic_buffer_creator
+		);
 		return LEXLEO_VM_STATUS_OK;
 	}
 
-	stream_status_t stream_status = STREAM_STATUS_OK;
+	LEXLEO_ASSERT(
+		   !vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		&& !vm->lexleo_vm_owned_resources->stream_regular_file_creator
+		&& !vm->lexleo_vm_owned_resources->stream_dynamic_buffer_creator
+	);
+
+	stream_factory_status_t stream_factory_status = STREAM_FACTORY_STATUS_OK;
+	stdio_stream_status_t stdio_stream_status = STDIO_STREAM_STATUS_OK;
+	fs_stream_status_t fs_stream_status = FS_STREAM_STATUS_OK;
+	dynamic_buffer_stream_status_t dynamic_buffer_stream_status = DYNAMIC_BUFFER_STREAM_STATUS_OK;
 
 	stream_factory_cfg_t stream_factory_cfg = stream_default_factory_cfg();
-
-	stream_status =
+	stream_factory_status =
 		stream_create_factory(
-			&vm->stream_factory,
+			&vm->lexleo_vm_owned_resources->stream_factory,
 			&stream_factory_cfg,
 			vm->mem_ops
 		);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
-	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
-
-	return LEXLEO_VM_STATUS_OK;
-}
-
-static lexleo_vm_status_t lexleo_vm_init_default_stream_io_creator(
-	lexleo_vm_t *vm
-) {
-	LEXLEO_ASSERT(vm && vm->stream_factory && vm->mem_ops && vm->stdio_ops);
-
-	if (vm->stream_io_creator != NULL) {
-		return LEXLEO_VM_STATUS_OK;
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
 
-	stream_adapter_desc_t stdio_stream_adapter_desc = {0};
 	stdio_stream_cfg_t stdio_stream_cfg = stdio_stream_default_cfg();
 	stdio_stream_env_t stdio_stream_env =
 		stdio_stream_default_env(
 			vm->stdio_ops,
-			vm->mem_ops,
 			vm->mem_ops
 		);
-	stream_status_t stream_status =
-		stdio_stream_create_desc(
-			&stdio_stream_adapter_desc,
-			LEXLEO_VM_STDIO_CREATOR_DEFAULT_KEY,
+	stream_adapter_provider_t *stream_adapter_provider_standard_stream = NULL;
+	stdio_stream_status =
+		stdio_stream_create_adapter_provider(
+			&stream_adapter_provider_standard_stream,
 			&stdio_stream_cfg,
-			&stdio_stream_env,
-			vm->mem_ops
+			&stdio_stream_env
 		);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
+	if (stdio_stream_status != STDIO_STREAM_STATUS_OK) {
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
 
-	stream_status =
+	stream_factory_status =
 		stream_factory_add_adapter(
-			vm->stream_factory,
-			&stdio_stream_adapter_desc
+			vm->lexleo_vm_owned_resources->stream_factory,
+			LEXLEO_VM_STDIO_CREATOR_DEFAULT_KEY,
+			stream_adapter_provider_standard_stream
 		);
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_adapter_provider(stream_adapter_provider_standard_stream);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
+	}
 
-	stream_status =
-		stream_create_io_creator(
-			&vm->stream_io_creator,
-			vm->stream_factory,
+	stream_factory_status =
+		stream_create_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator,
+			vm->lexleo_vm_owned_resources->stream_factory,
 			LEXLEO_VM_STDIO_CREATOR_DEFAULT_KEY,
 			vm->mem_ops
-	);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
-	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
-
-	return LEXLEO_VM_STATUS_OK;
-}
-
-static lexleo_vm_status_t lexleo_vm_init_default_stream_file_creator(
-	lexleo_vm_t *vm
-) {
-	LEXLEO_ASSERT(vm && vm->stream_factory && vm->mem_ops && vm->file_ops);
-
-	if (vm->stream_file_creator != NULL) {
-		return LEXLEO_VM_STATUS_OK;
+		);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
 
-	stream_adapter_desc_t fs_stream_adapter_desc = {0};
 	fs_stream_cfg_t fs_stream_cfg = fs_stream_default_cfg();
 	fs_stream_env_t fs_stream_env =
 		fs_stream_default_env(
 			vm->file_ops,
-			vm->mem_ops,
 			vm->mem_ops
 		);
-	stream_status_t stream_status =
-		fs_stream_create_desc(
-			&fs_stream_adapter_desc,
-			LEXLEO_VM_FILE_CREATOR_DEFAULT_KEY,
+	stream_adapter_provider_t *stream_adapter_provider_regular_file = NULL;
+	fs_stream_status =
+		fs_stream_create_adapter_provider(
+			&stream_adapter_provider_regular_file,
 			&fs_stream_cfg,
-			&fs_stream_env,
-			vm->mem_ops
+			&fs_stream_env
 		);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
+	if (fs_stream_status != FS_STREAM_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
 
-	stream_status =
+	stream_factory_status =
 		stream_factory_add_adapter(
-			vm->stream_factory,
-			&fs_stream_adapter_desc
+			vm->lexleo_vm_owned_resources->stream_factory,
+			LEXLEO_VM_FILE_CREATOR_DEFAULT_KEY,
+			stream_adapter_provider_regular_file
 		);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_adapter_provider(stream_adapter_provider_regular_file);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
+	}
 
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
-
-	stream_status =
-		stream_create_file_creator(
-			&vm->stream_file_creator,
-			vm->stream_factory,
+	stream_factory_status =
+		stream_create_regular_file_creator(
+			&vm->lexleo_vm_owned_resources->stream_regular_file_creator,
+			vm->lexleo_vm_owned_resources->stream_factory,
 			LEXLEO_VM_FILE_CREATOR_DEFAULT_KEY,
 			vm->mem_ops
-	);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
-	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
-
-	return LEXLEO_VM_STATUS_OK;
-}
-
-static lexleo_vm_status_t lexleo_vm_init_default_stream_buffer_creator(
-	lexleo_vm_t *vm
-) {
-	LEXLEO_ASSERT(vm && vm->stream_factory && vm->mem_ops);
-
-	if (vm->stream_buffer_creator != NULL) {
-		return LEXLEO_VM_STATUS_OK;
+		);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
 
-	stream_adapter_desc_t buffer_stream_adapter_desc = {0};
-	dynamic_buffer_stream_cfg_t dbs_stream_cfg =
+	dynamic_buffer_stream_cfg_t dynamic_buffer_stream_cfg =
 		dynamic_buffer_stream_default_cfg();
-	dynamic_buffer_stream_env_t dbs_stream_env =
+	dynamic_buffer_stream_env_t dynamic_buffer_stream_env =
 		dynamic_buffer_stream_default_env(
-			vm->mem_ops,
 			vm->mem_ops
 		);
-	stream_status_t stream_status =
-		dynamic_buffer_stream_create_desc(
-			&buffer_stream_adapter_desc,
-			LEXLEO_VM_BUFFER_CREATOR_DEFAULT_KEY,
-			&dbs_stream_cfg,
-			&dbs_stream_env,
-			vm->mem_ops
+	stream_adapter_provider_t *stream_adapter_provider_dynamic_buffer = NULL;
+	dynamic_buffer_stream_status =
+		dynamic_buffer_stream_create_adapter_provider(
+			&stream_adapter_provider_dynamic_buffer,
+			&dynamic_buffer_stream_cfg,
+			&dynamic_buffer_stream_env
 		);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
+	if (dynamic_buffer_stream_status != DYNAMIC_BUFFER_STREAM_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_regular_file_creator(
+			&vm->lexleo_vm_owned_resources->stream_regular_file_creator
+		);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
 
-	stream_status =
+	stream_factory_status =
 		stream_factory_add_adapter(
-			vm->stream_factory,
-			&buffer_stream_adapter_desc
+			vm->lexleo_vm_owned_resources->stream_factory,
+			LEXLEO_VM_BUFFER_CREATOR_DEFAULT_KEY,
+			stream_adapter_provider_dynamic_buffer
 		);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_regular_file_creator(
+			&vm->lexleo_vm_owned_resources->stream_regular_file_creator
+		);
+		stream_destroy_adapter_provider(stream_adapter_provider_dynamic_buffer);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
+	}
 
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
-
-	stream_status =
-		stream_create_buffer_creator(
-			&vm->stream_buffer_creator,
-			vm->stream_factory,
+	stream_factory_status =
+		stream_create_dynamic_buffer_creator(
+			&vm->lexleo_vm_owned_resources->stream_dynamic_buffer_creator,
+			vm->lexleo_vm_owned_resources->stream_factory,
 			LEXLEO_VM_BUFFER_CREATOR_DEFAULT_KEY,
 			vm->mem_ops
-	);
-
-	if (stream_status == STREAM_STATUS_OOM) {
-		return LEXLEO_VM_STATUS_OOM;
+		);
+	if (stream_factory_status != STREAM_FACTORY_STATUS_OK) {
+		stream_destroy_standard_stream_creator(
+			&vm->lexleo_vm_owned_resources->stream_standard_stream_creator
+		);
+		stream_destroy_regular_file_creator(
+			&vm->lexleo_vm_owned_resources->stream_regular_file_creator
+		);
+		stream_destroy_factory(&vm->lexleo_vm_owned_resources->stream_factory);
+		return LEXLEO_VM_STATUS_INIT_FAIL;
 	}
-	LEXLEO_ASSERT(stream_status == STREAM_STATUS_OK);
 
 	return LEXLEO_VM_STATUS_OK;
 }

@@ -1,0 +1,13 @@
+/**
+ * @defgroup logger_common_api Logger common API
+ * @ingroup logger_api
+ * @brief Common types shared by the `logger` port interfaces.
+ *
+ * @details
+ * Exposes the opaque logger handle, status, and backend dispatch-table types
+ * shared across the `logger` port interfaces.
+ *
+ * These types define the common vocabulary used by borrower-facing,
+ * adapter-facing, and Composition Root interfaces without introducing
+ * ownership or lifecycle capabilities.
+ */

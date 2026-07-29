@@ -1,0 +1,18 @@
+/**
+ * @defgroup stdio_stream_api stdio_stream API
+ * @ingroup stream_family_group
+ *
+ * @brief Standard-stream-backed adapter for the `stream` port.
+ *
+ * @details
+ * The `stdio_stream` adapter implements the `stream` port using the process
+ * standard I/O streams (`stdin`, `stdout`, and `stderr`) as internal borrowed
+ * dependencies.
+ *
+ * This module belongs to the `stream` adapter family and provides the
+ * functionality required to expose standard I/O streams through the
+ * `stream` port without taking ownership of them.
+ *
+ * Sub-APIs:
+ * - @ref stdio_stream_cr_api
+ */

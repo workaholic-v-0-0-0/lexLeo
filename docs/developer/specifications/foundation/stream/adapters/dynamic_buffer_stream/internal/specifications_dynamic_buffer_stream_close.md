@@ -3,12 +3,12 @@
 # Signature
 
 ```c
-static void dynamic_buffer_stream_close(void *backend);
+static stream_status_t dynamic_buffer_stream_close(void *backend);
 ```
 
 # Purpose
 
-Release the backend resources owned by the `dynamic_buffer_stream` adapter.
+Release the `dynamic_buffer_stream` backend and the resources it owns.
 
 # Relationship to public port contract
 
@@ -26,10 +26,12 @@ Release the backend resources owned by the `dynamic_buffer_stream` adapter.
 
 # Success
 
-- Releases any resource owned by the designated
-  `dynamic_buffer_stream_t` backend state.
-- Releases the internal dynamic buffer storage owned by the backend, if any.
-- Leaves no backend-owned dynamic-buffer storage live after the call returns.
+- If `backend == NULL`:
+    - Returns `STREAM_STATUS_OK`.
+- Otherwise:
+    - Releases the internal dynamic buffer storage owned by the backend, if any.
+    - Releases the `dynamic_buffer_stream_t` backend itself.
+    - Returns `STREAM_STATUS_OK`.
 
 # Failure
 
@@ -37,9 +39,10 @@ Release the backend resources owned by the `dynamic_buffer_stream` adapter.
 
 # Ownership
 
-- `backend` is borrowed by the callback.
-- The callback releases only the resources owned by the backend state.
-- The callback does not release the public `stream_t` handle itself.
+- Ownership of `backend` is consumed by this callback when `backend != NULL`.
+- The callback releases the resources owned by the backend and the backend
+  itself.
+- The callback does not release the public `stream_t` handle.
 - Destruction of the public `stream_t` handle remains the responsibility of the
   surrounding stream lifecycle logic.
 
@@ -47,8 +50,6 @@ Release the backend resources owned by the `dynamic_buffer_stream` adapter.
 
 - This callback is intended to be invoked by `stream_destroy()`, not by
   borrower-facing read/write/flush operations.
-- This callback performs backend cleanup only.
-- It does not return a status code.
-- This callback is not required to validate `backend`.
-- The exact cleanup is limited to resources owned by the
-  `dynamic_buffer_stream` backend implementation.
+- Calling this callback with `backend == NULL` is a successful no-op.
+- The exact cleanup is limited to the backend and resources owned by the
+  `dynamic_buffer_stream` adapter implementation.
