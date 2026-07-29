@@ -1,0 +1,12 @@
+/**
+ * @defgroup fs_stream_cr_api fs_stream CR API
+ * @ingroup fs_stream_api
+ *
+ * @brief Composition Root API for the `fs_stream` adapter.
+ *
+ * @details
+ * Exposes the CR-facing types and services used to configure and construct
+ * `fs_stream` backends from their external borrowed dependencies, complete
+ * their initialization with owned resources, and register the adapter with a
+ * `stream` factory.
+ */

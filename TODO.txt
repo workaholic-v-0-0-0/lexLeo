@@ -43,3 +43,16 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
+<here> continue migration "port-adapter decoupling" ;
+       already done:
+         - src/foundation/stream_new/*
+         - src/foundation/logger_new/*
+
+        WIP: <here> migrate lexleo_app with stream_new ; in lexleo_app.c
+        I stopped that by desactivating lexleo_app and frontend compilation via "#add_subdirectory(lexleo_app)" and "#add_subdirectory(frontend)"
+        because it depends on logger that in turn depends on stream ; hence I
+        must migrate logger before. -> This is done now! -> So I go back to lexleo_app by "reactivating add_subdirectory(lexleo_app)"" ; it consists of make it depend on *_new rather than stream and logger old versions
+
+        <here>refact lexleo_vm_t in order to avoid a dep of the kind lexleo_vm_borrower -> stream_owner due to the presence of stream creators
+
+    Think!: What is to be opaque in handle is simultaneously "external dep" and owned

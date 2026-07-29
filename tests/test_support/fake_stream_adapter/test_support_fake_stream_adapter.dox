@@ -1,0 +1,23 @@
+/**
+* @defgroup fake_stream_adapter fake stream adapter
+* @ingroup test_support_reference
+*
+* @brief Test double for `stream` adapter.
+*
+* @details
+* Provides reusable test support for constructing `stream` instances backed
+* by configurable fake adapters.
+*
+* The module exposes fake adapter providers for dynamic-buffer, regular-file,
+* and standard-stream creators. Each provider uses a common fake backend
+* implementation whose read, write, flush, close, and construction behavior
+* can be configured and observed by tests.
+*
+* Sequential constructor controls allow successive backend creations to use
+* independent configurations and expose the arguments received from the
+* corresponding `stream` creator.
+*
+* The fake backend also maintains bounded input, buffered-output, and sink
+* state so tests can exercise and inspect stream I/O behavior without relying
+* on concrete production adapters.
+*/

@@ -1,0 +1,25 @@
+/**
+ * @defgroup fake_stream fake stream
+ * @ingroup test_support_reference
+ *
+ * @brief Test double support for `stream`.
+ *
+ * @details
+ * Provides reusable test support for constructing and configuring `stream`
+ * instances backed by fake stream adapters.
+ *
+ * The module exposes fake dynamic-buffer, regular-file, and standard-stream
+ * creators built on a real `stream_factory_t` and the fake adapter providers
+ * supplied by the `fake_stream_adapter` module.
+ *
+ * Tests can therefore exercise production creator and factory paths while
+ * replacing only the concrete adapter implementations with controllable fake
+ * backends.
+ *
+ * The module also provides direct construction of `stream` instances backed
+ * by caller-supplied fake adapters, allowing tests that only require a
+ * `stream_t` dependency to avoid going through the factory and creator layers.
+ *
+ * Internal fake stream allocation storage is reset through the module reset
+ * facilities so tests can start from a deterministic configuration.
+ */

@@ -1,0 +1,11 @@
+/**
+ * @defgroup logger_internal_group Logger private
+ * @ingroup foundation_internal_group
+ *
+ * @brief Private implementation of the `logger` port.
+ *
+ * @details
+ * This group gathers the non-public implementation units and internal
+ * structures used by the `logger` port, including borrower and
+ * Composition Root implementation units.
+ */

@@ -45,26 +45,13 @@ fs_stream_env_t fs_stream_default_env(
 static stream_status_t map_osal_file_status(osal_file_status_t st)
 {
 	switch (st) {
-		case OSAL_FILE_STATUS_OK:
-			return STREAM_STATUS_OK;
-
-		case OSAL_FILE_STATUS_EOF:
-			return STREAM_STATUS_EOF;
-
-		case OSAL_FILE_STATUS_INVALID:
-			return STREAM_STATUS_INVALID;
-
-		case OSAL_FILE_STATUS_OOM:
-			return STREAM_STATUS_OOM;
-
-		case OSAL_FILE_STATUS_NOENT:
-			return STREAM_STATUS_NOT_FOUND;
-
-		case OSAL_FILE_STATUS_EXISTS:
-			return STREAM_STATUS_ALREADY_EXISTS;
-
-		default:
-			return STREAM_STATUS_IO_ERROR;
+		case OSAL_FILE_STATUS_OK: return STREAM_STATUS_OK;
+		case OSAL_FILE_STATUS_EOF: return STREAM_STATUS_EOF;
+		case OSAL_FILE_STATUS_INVALID: return STREAM_STATUS_INVALID;
+		case OSAL_FILE_STATUS_OOM: return STREAM_STATUS_OOM;
+		case OSAL_FILE_STATUS_NOENT: return STREAM_STATUS_NOT_FOUND;
+		case OSAL_FILE_STATUS_EXISTS: return STREAM_STATUS_ALREADY_EXISTS;
+		default: return STREAM_STATUS_IO_ERROR;
 	}
 }
 

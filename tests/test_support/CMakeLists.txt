@@ -7,3 +7,7 @@ add_subdirectory(fake_file)
 add_subdirectory(fake_stream)
 add_subdirectory(fake_time)
 add_subdirectory(fake_stdio)
+
+add_subdirectory(fake_stream_adapter)
+add_subdirectory(fake_stream_new)
+add_subdirectory(fake_logger_adapter)

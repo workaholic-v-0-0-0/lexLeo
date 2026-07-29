@@ -1,0 +1,9 @@
+/**
+ * @defgroup fs_stream_unit_tests fs_stream unit tests
+ * @ingroup fs_stream_tests_group
+ *
+ * @brief Unit tests for the `fs_stream` adapter.
+ *
+ * See test description:
+ * - @ref testing_foundation_fs_stream_unit "fs_stream unit tests page"
+ */

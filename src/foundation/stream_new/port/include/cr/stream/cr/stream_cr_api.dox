@@ -1,0 +1,11 @@
+/**
+ * @defgroup stream_cr_api Stream CR API
+ * @ingroup stream_api
+ *
+ * @brief Composition Root API for the `stream` port.
+ *
+ * @details
+ * Exposes the CR-facing operations used to configure the `stream` port,
+ * register adapter providers, and construct `stream_t` handles and
+ * specialized stream creator objects.
+ */

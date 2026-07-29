@@ -1,0 +1,18 @@
+/**
+ * @defgroup dynamic_buffer_stream_api dynamic_buffer_stream API
+ * @ingroup stream_family_group
+ *
+ * @brief Dynamic-buffer-backed adapter for the `stream` port.
+ *
+ * @details
+ * The `dynamic_buffer_stream` adapter implements the `stream` port using an
+ * owned in-memory dynamic buffer constructed from external borrowed
+ * dependencies.
+ *
+ * This module belongs to the `stream` adapter family and provides the
+ * functionality required to expose dynamic-buffer-backed streams through the
+ * `stream` port.
+ *
+ * Sub-APIs:
+ * - @ref dynamic_buffer_stream_cr_api
+ */

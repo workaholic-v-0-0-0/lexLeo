@@ -97,7 +97,7 @@ stream_status_t stream_destroy(stream_t **stream);
 See:
 - @ref specifications_lexleo_vm_create "lexleo_vm_create() specifications"
 - @ref specifications_lexleo_vm_complete_default_init "lexleo_vm_complete_default_init() specifications"
-- @ref specifications_stream_file_creator_create "stream_file_creator_create() specifications"
+- @ref specifications_stream_regular_file_creator_create "stream_file_creator_create() specifications"
 - @ref specifications_stream_write "stream_write() specifications"
 - @ref specifications_stream_read "stream_read() specifications"
 - @ref specifications_stream_destroy "stream_destroy() specifications"
