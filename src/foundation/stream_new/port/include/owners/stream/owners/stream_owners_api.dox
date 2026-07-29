@@ -1,0 +1,9 @@
+/** @defgroup stream_owners_api Stream owners API
+ * @ingroup stream_api
+ *
+ * @brief Owner-facing API for the `stream` port.
+ *
+ * @details
+ * Exposes the owner-facing operations and creator contracts used to manage
+ * owned `stream` objects.
+ */

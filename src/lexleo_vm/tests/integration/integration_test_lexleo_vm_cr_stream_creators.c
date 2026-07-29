@@ -188,7 +188,7 @@ static void test_stream_creators_smoke_stdio_stream(void **state) {
  * See contracts:
  * - @ref specifications_lexleo_vm_create
  * - @ref specifications_lexleo_vm_complete_default_init
- * - @ref specifications_stream_file_creator_create
+ * - @ref specifications_stream_regular_file_creator_create
  * - @ref specifications_stream_write
  * - @ref specifications_stream_read
  * - @ref specifications_stream_destroy

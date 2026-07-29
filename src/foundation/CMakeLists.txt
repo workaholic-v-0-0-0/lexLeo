@@ -4,3 +4,5 @@
 add_subdirectory(osal)
 add_subdirectory(logger)
 add_subdirectory(stream)
+
+add_subdirectory(stream_new)

@@ -1,0 +1,12 @@
+/**
+ * @defgroup stdio_stream_white_box_tests_access_group stdio_stream white-box test access
+ * @ingroup stdio_stream_tests_group
+ *
+ * @brief Privileged white-box test access to the `stdio_stream` adapter.
+ *
+ * @details
+ * Exposes test-only helpers used to inspect and modify the private
+ * `stdio_stream_t` external borrowed dependencies and internal borrowed
+ * dependency without exposing private implementation headers to test
+ * translation units.
+ */

@@ -1,0 +1,15 @@
+/**
+ * @defgroup fs_stream_api fs_stream API
+ * @ingroup stream_family_group
+ *
+ * @brief File-backed adapter for the `stream` port.
+ *
+ * @details
+ * Implements the `stream` port using a file-backed runtime backend.
+ *
+ * This module belongs to the `stream` adapter family and exposes file I/O
+ * through the `stream` port.
+ *
+ * Sub-APIs:
+ * - @ref fs_stream_cr_api
+ */

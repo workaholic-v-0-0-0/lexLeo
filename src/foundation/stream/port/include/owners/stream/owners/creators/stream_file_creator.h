@@ -59,7 +59,7 @@ typedef struct stream_file_creator_args_t {
  * @return Creation status.
  *
  * See contract:
- * - @ref specifications_stream_file_creator_create
+ * - @ref specifications_stream_regular_file_creator_create
  */
 stream_status_t stream_file_creator_create(
 	const stream_file_creator_t *creator,

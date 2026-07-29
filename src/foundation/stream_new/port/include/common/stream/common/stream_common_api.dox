@@ -1,0 +1,13 @@
+/** @defgroup stream_common_api Stream common API
+ * @ingroup stream_api
+ *
+ * @brief Common contracts shared across the `stream` port APIs.
+ *
+ * @details
+ * Declares the common contracts shared by multiple `stream` port APIs,
+ * independently of ownership or composition.
+ *
+ * This group contains shared opaque handle types, identifier types,
+ * status codes, backend operation callback types, dispatch-table types,
+ * and stream creation argument types.
+ */

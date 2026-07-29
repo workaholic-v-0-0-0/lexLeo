@@ -3,6 +3,7 @@
 
 add_subdirectory(support)
 
+#[[
 add_executable(
     unit_test_fs_stream
     "${CMAKE_CURRENT_SOURCE_DIR}/unit/unit_test_fs_stream.c"
@@ -42,4 +43,4 @@ if(VALGRIND_EXECUTABLE)
         PROPERTIES LABELS "memory"
     )
 endif()
-
+#]]

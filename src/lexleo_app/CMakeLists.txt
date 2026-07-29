@@ -44,7 +44,7 @@ target_link_libraries(
         stdio_stream
         fs_stream
 
-        logger
+        logger_adapter
         logger_default
 
         lexleo_vm_cr

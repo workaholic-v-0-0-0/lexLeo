@@ -43,3 +43,11 @@
 - refactor module API layering and CMake architecture with authority stack
   as in stream and lexleo_vm
 
+<here> continue migration "port-adapter decoupling" ;
+       already done: stream_new/port/ and stream_new/adapters/fs_stream/
+
+       WIP: stream_new/adapters/stdio_stream <here> integration tests of stream/stdio_stream with doubling osal_stdio
+
+       check fake_file
+       test of stream_destroy_adapter_provider
+

@@ -8,12 +8,11 @@ stream_status_t stream_flush(stream_t *s);
 
 # Purpose
 
-Flush pending output associated with the stream.
+Flush pending output associated with the stream `s`.
 
 # Preconditions
 
-- If `s != NULL`, `s` must denote a valid, possibly partially initialized
-  `stream_t` handle created by `stream_create()`.
+- If `s != NULL`, `s` must denote a valid `stream_t`.
 
 # Invalid arguments
 
@@ -21,20 +20,17 @@ Flush pending output associated with the stream.
 
 # Success
 
-When `s != NULL` and a backend is bound to the stream:
+For a valid argument:
 
-- Delegates the flush operation to the backend flush operation bound to the
-  stream.
-- Returns the status produced by the backend flush operation.
+- Delegates the flush operation to the backend bound to the stream.
+- If the backend flush operation produces `STREAM_STATUS_OK`:
+  - Returns `STREAM_STATUS_OK`.
 
 # Failure
 
-- If `s == NULL`, returns `STREAM_STATUS_INVALID`.
-- If `s != NULL` but no backend is bound to the stream, returns
-  `STREAM_STATUS_NO_BACKEND`.
+- For an invalid argument:
+  - Returns `STREAM_STATUS_INVALID`.
+- Otherwise, if the backend flush operation produces a status other than
+  `STREAM_STATUS_OK`:
+  - Returns the status produced by the backend flush operation.
 
-# Notes
-
-- `stream_flush()` does not call the backend read, write, or close operations.
-- When a backend is bound to the stream, it must be compatible with the stream
-  vtable installed by `stream_create()`.

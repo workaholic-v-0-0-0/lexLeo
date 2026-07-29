@@ -29,11 +29,10 @@ See:
 # Preconditions
 
 - `backend` must designate a valid `fs_stream_t`.
-- `backend->state.file` must designate a valid open `OSAL_FILE`.
-- `backend->file_ops` must designate a valid OSAL file operations table.
-- `backend->file_ops->write` must not be `NULL`.
 - `buf` must designate at least `n` readable bytes.
 - `n` must be greater than `0`.
+- The `fs_stream_t` designated by `backend` must contain a valid OSAL file
+  operations table and must own a valid open `OSAL_FILE`.
 
 # Invalid arguments
 
@@ -41,29 +40,22 @@ See:
 
 # Success
 
-- Delegates the write operation to `osal_file_ops_t::write`.
-- Calls `osal_file_ops_t::write` with:
-    - `ptr == buf`,
-    - `size == 1`,
-    - `nmemb == n`,
-    - `stream == backend->state.file`.
-- Returns the number of bytes written, as reported by
-  `osal_file_ops_t::write`.
+- Delegates the write operation to the injected OSAL file write operation.
+- Returns the number of bytes reported by the underlying OSAL file write
+  operation.
 - If `st != NULL`, stores the mapped `stream_status_t` corresponding to the
-  OSAL file status reported by the underlying write operation.
+  `osal_file_status_t` reported by the underlying OSAL file write operation.
 
 # Failure
 
-- Returns the value reported by `osal_file_ops_t::write`.
-- If `st != NULL`, stores the mapped `stream_status_t` corresponding to the
-  OSAL file failure status.
+- None handled directly by this callback.
+- Any failure status reported by the underlying OSAL file write operation is
+  mapped to `stream_status_t` and exposed through `st` when `st != NULL`.
 
 # Ownership
 
-- `backend` is borrowed.
+- The `fs_stream_t` designated by `backend` is borrowed.
 - `buf` is borrowed.
-- This function does not take ownership of either pointer.
-- This function does not release the underlying OSAL file handle.
 
 # Notes
 
@@ -71,3 +63,4 @@ See:
 - Public argument validation is performed by `stream_write()` before dispatch.
 - Therefore, this callback treats the listed preconditions as internal
   invariants.
+- The returned value is expressed in bytes.

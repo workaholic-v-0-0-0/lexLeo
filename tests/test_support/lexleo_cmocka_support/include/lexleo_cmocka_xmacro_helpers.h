@@ -54,4 +54,21 @@
         LEXLEO_TEARDOWN_FN(suite)                                              \
     ),
 
+#define LEXLEO_TEST_CASE_TYPE(suite) \
+	LEXLEO_PP_CAT(LEXLEO_PP_CAT(test_, suite), _case_t)
+
+#define LEXLEO_TEST_FIXTURE_TYPE(suite) \
+	LEXLEO_PP_CAT(LEXLEO_PP_CAT(test_, suite), _fixture_t)
+
+#define LEXLEO_CMOCKA_INIT_SETUP(suite, state, tc_var, fx_var)             \
+	const LEXLEO_TEST_CASE_TYPE(suite) *tc_var =                            \
+		(const LEXLEO_TEST_CASE_TYPE(suite) *)(*(state));                    \
+	LEXLEO_TEST_FIXTURE_TYPE(suite) *fx_var =                               \
+		osal_malloc(sizeof(*(fx_var)));                                      \
+	if (!(fx_var)) {                                                        \
+		return -1;                                                          \
+	}                                                                       \
+	osal_memset((fx_var), 0, sizeof(*(fx_var)));                            \
+	(fx_var)->tc = (tc_var)
+
 #endif /* LEXLEO_CMOCKA_XMACRO_HELPERS_H */

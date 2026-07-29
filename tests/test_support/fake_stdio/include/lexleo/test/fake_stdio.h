@@ -28,7 +28,69 @@
 extern "C" {
 #endif
 
-// FAKE API
+/* spy */
+extern size_t get_stdin_call_count;
+extern size_t get_stdout_call_count;
+extern size_t get_stderr_call_count;
+
+typedef struct fake_stdio_t
+{
+	/* state */
+	uint8_t buffered_backing[FAKE_STDIO_BUF_SIZE];
+	uint8_t sink_backing[FAKE_STDIO_BUF_SIZE];
+	size_t buffered_len;
+	size_t sink_len;
+	size_t read_pos;
+
+	/* spy */
+
+	size_t read_call_count;
+	void *last_read_ptr;
+	size_t last_read_size;
+	size_t last_read_nmemb;
+	OSAL_STDIO *last_read_stream;
+
+	size_t write_call_count;
+	const void *last_write_ptr;
+	size_t last_write_size;
+	size_t last_write_nmemb;
+	OSAL_STDIO *last_write_stream;
+
+	size_t flush_call_count;
+	OSAL_STDIO *last_flush_stream;
+
+} fake_stdio_t;
+
+extern fake_stdio_t g_fake_stdio_stdin;
+extern fake_stdio_t g_fake_stdio_stdout;
+extern fake_stdio_t g_fake_stdio_stderr;
+
+static inline fake_stdio_t *
+osal_stdio_stream_to_fake_stdio(OSAL_STDIO *stdio)
+{
+	return (fake_stdio_t *)stdio;
+}
+
+static inline OSAL_STDIO *
+fake_stdio_to_osal_stdio_stream(fake_stdio_t *fake)
+{
+	return (OSAL_STDIO *)fake;
+}
+
+/* CFG */
+
+void fake_stdio_reset(void);
+
+void fake_stdio_set_buffered_backing(
+	fake_stdio_t *fake_stdio,
+	const uint8_t *backing,
+	size_t len);
+void fake_stdio_set_sink_backing(
+	fake_stdio_t *fake_stdio,
+	const uint8_t *backing,
+	size_t len);
+
+/* FAKE API */
 
 OSAL_STDIO *fake_stdio_stdin(void);
 OSAL_STDIO *fake_stdio_stdout(void);
@@ -49,31 +111,6 @@ size_t fake_stdio_write(
 int fake_stdio_flush(OSAL_STDIO *stdio);
 int fake_stdio_error(OSAL_STDIO *stdio);
 int fake_stdio_eof(OSAL_STDIO *stdio);
-
-// CFG
-
-void fake_stdio_reset(void);
-
-void fake_stdio_set_buffered_backing(
-	OSAL_STDIO *stdio,
-	const uint8_t *backing,
-	size_t len);
-void fake_stdio_set_sink_backing(
-	OSAL_STDIO *stdio,
-	const uint8_t *backing,
-	size_t len);
-void fake_stdio_set_read_pos(OSAL_STDIO *stdio, size_t n);
-
-// SPY
-
-size_t fake_stdio_read_call_count(OSAL_STDIO *stdio);
-size_t fake_stdio_write_call_count(OSAL_STDIO *stdio);
-size_t fake_stdio_flush_call_count(OSAL_STDIO *stdio);
-const uint8_t *fake_stdio_buffered_backing(OSAL_STDIO *stdio);
-const uint8_t *fake_stdio_sink_backing(OSAL_STDIO *stdio);
-size_t fake_stdio_buffered_len(OSAL_STDIO *stdio);
-size_t fake_stdio_sink_len(OSAL_STDIO *stdio);
-size_t fake_stdio_read_pos(OSAL_STDIO *stdio);
 
 #ifdef __cplusplus
 }

@@ -23,11 +23,106 @@
 
 #include "policy/lexleo_cstd_types.h"
 
+#define FAKE_FILE_MAX_SEQ_LEN 256
 #define FAKE_FILE_BUF_SIZE 1024
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct fake_file_t fake_file_t;
+
+static inline fake_file_t *
+osal_file_to_fake_file(OSAL_FILE *file) { return (fake_file_t *)file; }
+
+static inline OSAL_FILE *
+fake_file_to_osal_file(fake_file_t *fake) { return (OSAL_FILE *)fake; }
+
+typedef struct fake_file_ctrl_t
+{
+	/* cfg */
+	osal_file_status_t next_open_status;
+	fake_file_t *next_open_out;
+	osal_file_status_t next_mkdir_status;
+
+	/* spy */
+	size_t open_call_count;
+	OSAL_FILE **last_open_out;
+	const char *last_open_pathname;
+	const char *last_open_mode;
+	const osal_mem_ops_t *last_open_mem_ops;
+	size_t mkdir_call_count;
+	const char *last_mkdir_pathname;
+
+} fake_file_ctrl_t;
+
+extern fake_file_ctrl_t g_fake_file_ctrl_seq[FAKE_FILE_MAX_SEQ_LEN];
+
+typedef struct fake_file_t
+{
+	/* state */
+	bool is_open;
+	const char *pathname;
+	const char *mode;
+	uint8_t buffered_backing[FAKE_FILE_BUF_SIZE];
+	uint8_t sink_backing[FAKE_FILE_BUF_SIZE];
+	size_t buffered_len;
+	size_t sink_len;
+	size_t pos;
+
+	/* cfg */
+	osal_file_status_t next_read_status;
+	osal_file_status_t next_write_status;
+	osal_file_status_t next_flush_status;
+	osal_file_status_t next_close_status;
+	osal_file_status_t next_gets_status;
+
+	/* spy */
+
+	size_t read_call_count;
+	void *last_read_ptr;
+	size_t last_read_size;
+	size_t last_read_nmemb;
+	OSAL_FILE *last_read_stream;
+	osal_file_status_t *last_read_st;
+
+	size_t write_call_count;
+	const void *last_write_ptr;
+	size_t last_write_size;
+	size_t last_write_nmemb;
+	OSAL_FILE *last_write_stream;
+	osal_file_status_t *last_write_st;
+
+	size_t flush_call_count;
+	OSAL_FILE *last_flush_stream;
+
+	size_t close_call_count;
+	OSAL_FILE *last_close_stream;
+
+	size_t gets_call_count;
+	char *last_gets_out;
+	size_t last_gets_out_size;
+	OSAL_FILE *last_gets_stream;
+	osal_file_status_t *last_gets_st;
+
+} fake_file_t;
+
+// CFG
+
+void fake_file_reset(void);
+void fake_file_init_instance(fake_file_t *fake);
+
+void fake_file_set_buffered_backing(
+	fake_file_t *fake,
+	const uint8_t *data,
+	size_t len);
+void fake_file_set_sink_backing(
+	fake_file_t *fake,
+	const uint8_t *data,
+	size_t len);
+void fake_file_set_pos(
+	fake_file_t *fake,
+	size_t n);
 
 // FAKE API
 
@@ -62,75 +157,6 @@ char *fake_file_gets(
 	osal_file_status_t *st);
 
 osal_file_status_t fake_file_mkdir(const char *pathname);
-
-// CFG
-
-void fake_file_reset(void);
-void fake_file_prepare_next_open_file(OSAL_FILE *fake);
-void fake_file_prepare_next_open_status(osal_file_status_t st);
-void fake_file_prepare_next_mkdir_status(osal_file_status_t st);
-
-OSAL_FILE *fake_file_create_fake(const osal_mem_ops_t *mem_ops);
-void fake_file_destroy_fake(OSAL_FILE *fake);
-void fake_file_reset_fake(OSAL_FILE *fake);
-
-void fake_file_set_buffered_backing(
-	OSAL_FILE *fake,
-	const uint8_t *data,
-	size_t len);
-void fake_file_set_sink_backing(
-	OSAL_FILE *fake,
-	const uint8_t *data,
-	size_t len);
-void fake_file_set_pos(OSAL_FILE *fake, size_t n);
-void fake_file_set_read_status(OSAL_FILE *fake, osal_file_status_t st);
-void fake_file_set_write_status(OSAL_FILE *fake, osal_file_status_t st);
-void fake_file_set_flush_status(OSAL_FILE *fake, osal_file_status_t st);
-void fake_file_set_close_status(OSAL_FILE *fake, osal_file_status_t st);
-void fake_file_set_gets_status(OSAL_FILE *fake, osal_file_status_t st);
-
-// SPY
-
-size_t fake_file_open_call_count(void);
-OSAL_FILE **fake_file_last_open_out(void);
-const char *fake_file_last_open_pathname(void);
-const char *fake_file_last_open_mode(void);
-const osal_mem_ops_t *fake_file_last_open_mem_ops(void);
-
-size_t fake_file_read_call_count(OSAL_FILE *fake);
-void *fake_file_last_read_ptr(OSAL_FILE *fake);
-size_t fake_file_last_read_size(OSAL_FILE *fake);
-size_t fake_file_last_read_nmemb(OSAL_FILE *fake);
-OSAL_FILE *fake_file_last_read_stream(OSAL_FILE *fake);
-osal_file_status_t *fake_file_last_read_status_ptr(OSAL_FILE *fake);
-
-size_t fake_file_write_call_count(OSAL_FILE *fake);
-const void *fake_file_last_write_ptr(OSAL_FILE *fake);
-size_t fake_file_last_write_size(OSAL_FILE *fake);
-size_t fake_file_last_write_nmemb(OSAL_FILE *fake);
-OSAL_FILE *fake_file_last_write_stream(OSAL_FILE *fake);
-osal_file_status_t *fake_file_last_write_status_ptr(OSAL_FILE *fake);
-
-size_t fake_file_flush_call_count(OSAL_FILE *fake);
-OSAL_FILE *fake_file_last_flush_stream(OSAL_FILE *fake);
-
-size_t fake_file_close_call_count(OSAL_FILE *fake);
-OSAL_FILE *fake_file_last_close_stream(OSAL_FILE *fake);
-
-size_t fake_file_gets_call_count(OSAL_FILE *fake);
-char *fake_file_last_gets_out(OSAL_FILE *fake);
-size_t fake_file_last_gets_out_size(OSAL_FILE *fake);
-OSAL_FILE *fake_file_last_gets_stream(OSAL_FILE *fake);
-osal_file_status_t *fake_file_last_gets_status_ptr(OSAL_FILE *fake);
-
-size_t fake_file_mkdir_call_count(void);
-const char *fake_file_last_mkdir_pathname(void);
-
-const uint8_t *fake_file_buffered_backing(OSAL_FILE *fake);
-const uint8_t *fake_file_sink_backing(OSAL_FILE *fake);
-size_t fake_file_buffered_len(OSAL_FILE *fake);
-size_t fake_file_sink_len(OSAL_FILE *fake);
-size_t fake_file_pos(OSAL_FILE *fake);
 
 #ifdef __cplusplus
 }
