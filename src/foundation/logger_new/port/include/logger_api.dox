@@ -1,0 +1,12 @@
+/**
+ * @defgroup logger_api Logger API
+ * @brief Public API of the `logger` port.
+ *
+ * @details
+ * Provides the interfaces required to use, implement, and compose the
+ * `logger` port.
+ *
+ * The API is organized into borrower-facing, adapter-facing, common, and
+ * Composition Root interfaces, each exposing the capabilities required by
+ * its respective role.
+ */

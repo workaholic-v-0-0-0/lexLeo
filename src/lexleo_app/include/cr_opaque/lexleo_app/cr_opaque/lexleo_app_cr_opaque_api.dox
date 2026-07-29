@@ -1,0 +1,10 @@
+/**
+ * @defgroup lexleo_app_cr_opaque_api lexleo_app CR opaque API
+ * @ingroup lexleo_app_api
+ *
+ * @brief Public Composition Root API for lexleo_app.
+ *
+ * @details
+ * Provides application configuration, construction, initialization,
+ * and destruction while keeping runtime environment composition internal.
+ */

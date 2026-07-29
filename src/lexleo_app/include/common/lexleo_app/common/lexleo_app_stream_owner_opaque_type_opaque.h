@@ -1,0 +1,9 @@
+
+
+#ifndef LEXLEO_LEXLEO_APP_STREAM_OWNER_OPAQUE_TYPE_OPAQUE_H
+#define LEXLEO_LEXLEO_APP_STREAM_OWNER_OPAQUE_TYPE_OPAQUE_H
+
+typedef struct lexleo_app_stream_owner_opaque_t
+lexleo_app_stream_owner_opaque_t;
+
+#endif /* LEXLEO_LEXLEO_APP_STREAM_OWNER_OPAQUE_TYPE_OPAQUE_H */

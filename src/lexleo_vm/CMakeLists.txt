@@ -21,8 +21,8 @@ target_link_libraries(
         osal_stdio
         osal_str
         osal_time
-        stream_owner
-        logger_borrower
+        stream_new_borrower
+        logger_new_borrower
         lexleo_assert
 )
 
@@ -47,12 +47,12 @@ target_link_libraries(
         osal_stdio
         osal_str
         osal_time
-        stream_cr
-        logger_borrower
+        stream_new_cr
+        logger_new_borrower
     PRIVATE
-        dynamic_buffer_stream
-        stdio_stream
-        fs_stream
+        dynamic_buffer_stream_new_cr
+        stdio_stream_new_cr
+        fs_stream_new_cr
         lexleo_assert
 )
 

@@ -1,0 +1,6 @@
+/**
+ * @defgroup test_support_fake_str Fake string operations
+ * @ingroup test_support_reference
+ *
+ * @brief Test doubles for injectable OSAL string operations.
+ */

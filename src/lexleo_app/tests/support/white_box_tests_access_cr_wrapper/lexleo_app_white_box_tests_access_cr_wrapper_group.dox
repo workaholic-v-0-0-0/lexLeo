@@ -1,0 +1,10 @@
+/**
+ * @defgroup lexleo_app_white_box_tests_access_cr_wrapper_group lexleo_app white-box CR wrapper
+ * @ingroup lexleo_app_tests_group
+ *
+ * @brief Test-only wrappers for internal LexLeo application CR services.
+ *
+ * @details
+ * Provides environment preparation and wrappers for application creation
+ * and default initialization, with status translation for tests.
+ */

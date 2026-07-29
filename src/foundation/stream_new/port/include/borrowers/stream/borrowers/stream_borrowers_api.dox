@@ -1,0 +1,9 @@
+/** @defgroup stream_borrowers_api Stream borrowers API
+ * @ingroup stream_api
+ *
+ * @brief Borrower-facing API for the `stream` port.
+ *
+ * @details
+ * Exposes the borrower-facing operations used to interact with borrowed
+ * `stream_t` handles.
+ */

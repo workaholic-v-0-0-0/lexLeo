@@ -1,0 +1,6 @@
+/**
+ * @defgroup lexleo_app_tests_group lexleo_app tests
+ * @ingroup tests_reference
+ *
+ * @brief Tests for lexleo_app module.
+ */

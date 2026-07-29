@@ -11,7 +11,6 @@ lexleo_vm_env_t lexleo_vm_default_env(
     const osal_time_ops_t *time_ops,
     stream_t *in,
     stream_t *out,
-    stream_t *err,
     logger_t *logger
 );
 ```
@@ -29,7 +28,6 @@ Return the default runtime environment used to create a LexLeo VM handle.
 - `time_ops != NULL`.
 - `in != NULL`.
 - `out != NULL`.
-- `err != NULL`.
 - `logger != NULL`.
 - Each OSAL operations table must be well-formed.
 

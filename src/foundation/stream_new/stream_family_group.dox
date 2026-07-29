@@ -1,0 +1,20 @@
+/** @defgroup stream_family_group stream family
+ *  @ingroup foundation_group
+ *
+ *  @brief The `stream` port and related modules.
+ *
+ *  @details
+ *  This family gathers the `stream` port together with the modules that
+ *  implement, extend, or support it.
+ */
+
+/** @defgroup stream_family_tests_group stream family tests
+ *  @ingroup foundation_tests_group
+ *
+ *  @brief Tests for the `stream` port and related modules.
+ *
+ *  @details
+ *  This group gathers the unit and integration tests covering the `stream`
+ *  port and its related modules.
+ *
+ */

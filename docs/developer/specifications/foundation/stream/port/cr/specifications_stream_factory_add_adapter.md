@@ -2,73 +2,51 @@
 
 # Signature
 
-~~~c
-stream_status_t stream_factory_add_adapter(
-    stream_factory_t *fact,
-    const stream_adapter_desc_t *desc);
-~~~
+```c
+stream_factory_status_t stream_factory_add_adapter(
+	stream_factory_t *fact,
+	stream_adapter_id_t adapter_id,
+	stream_adapter_provider_t *adapter_provider);
+```
 
 # Purpose
 
-Register a stream adapter descriptor into a stream factory.
+Register `adapter_provider` with `fact` under `adapter_id`.
 
 # Preconditions
 
-- If `fact != NULL`, `fact` must point to a valid factory instance created by
+- `fact` must point to a valid `stream_factory_t` created by
   `stream_create_factory()`.
-- The internal registry state of `fact` must not have been corrupted.
-
-# Invalid arguments and state
-
-- `fact` must not be `NULL`.
-- `desc` must not be `NULL`.
-- `desc->key` must not be `NULL`.
-- `desc->key` must not point to an empty string.
-- `desc->ctor` must not be `NULL`.
-- If `desc->ud != NULL`, `desc->ud_dtor` must not be `NULL`.
-- The factory registry storage must be initialized.
-- The factory registry capacity must be greater than zero.
+- `adapter_id` must be a valid adapter identifier.
+- `adapter_provider` must point to a valid `stream_adapter_provider_t` created
+  by an adapter-specific Composition Root service.
 
 # Success
 
-- Returns `STREAM_STATUS_OK`.
-- Registers the descriptor under `desc->key`.
-- Stores the descriptor key, constructor, user data, and user-data destructor
-  in the next available registry entry.
-- Increments the factory registry count by one.
-- A later call to `stream_factory_create_stream()` with the registered key can
-  resolve the descriptor.
+- Returns `STREAM_FACTORY_STATUS_OK`.
+- Registers `adapter_provider` with `fact` under `adapter_id`.
+- Transfers ownership of `adapter_provider` to `fact`.
+- A specialized creator can subsequently be constructed by passing `fact` and
+  `adapter_id` to the corresponding `stream_create_*_creator()`
+  function.
+- A client of the owner-facing `stream` API can subsequently use that creator
+  and the corresponding creation arguments, described by the fields of the
+  associated `stream_*_creator_args_t`, to construct `stream_t` handles at
+  runtime using the associated `stream_*_creator_create()` function.
 
 # Failure
 
-- Returns `STREAM_STATUS_INVALID` for invalid arguments or invalid registry
-  state.
-- Returns `STREAM_STATUS_FULL` if the registry count has reached its capacity.
-- Returns `STREAM_STATUS_ALREADY_EXISTS` if the registry is not full and the
-  key is already registered.
-- Leaves the factory registry unchanged on failure.
+- Returns `STREAM_FACTORY_STATUS_FULL` if `fact` has reached its registration
+  capacity.
+- Returns `STREAM_FACTORY_STATUS_ALREADY_EXISTS` if an adapter provider is
+  already registered under `adapter_id`.
+- Leaves `fact` unchanged.
+- Does not transfer ownership of `adapter_provider`.
 
 # Ownership
 
 - Ownership of `fact` is not transferred.
-- Ownership of `desc` itself is not transferred.
-- The descriptor structure is not retained.
-- The factory stores a borrowed reference to `desc->key`; the referenced string
-  must remain valid and unchanged until the factory is destroyed.
-- On successful registration, ownership of non-NULL `desc->ud` is transferred
-  to the factory registry.
-- Successfully transferred user data is later released by
-  `stream_destroy_factory()` through `desc->ud_dtor`.
-- On failure, ownership of `desc->ud` remains with the caller and
-  `desc->ud_dtor` is not called.
-
-# Notes
-
-- Registration does not copy the key string or allocate registry storage.
-- If registration fails because the key already exists, the previously
-  registered descriptor remains associated with that key.
-- If registration fails because the registry is full, the new descriptor is
-  not registered.
-- Capacity exhaustion is checked before duplicate-key detection. Therefore, a
-  call made on a full registry returns `STREAM_STATUS_FULL`, even if the
-  supplied key is already registered.
+- On success, ownership of `adapter_provider` is transferred to `fact`.
+- On failure, ownership of `adapter_provider` remains with the caller.
+- `adapter_id` is borrowed by `fact` and must remain valid for as long as the
+  adapter provider remains registered.

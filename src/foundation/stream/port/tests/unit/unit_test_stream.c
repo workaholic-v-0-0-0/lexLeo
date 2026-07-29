@@ -22,7 +22,7 @@
  * - spy/fake backend verification through `fake_stream_backend_t`
  *
  * See also:
- * - @ref testing_foundation_stream_unit "stream unit tests page"
+ * - @ref testing_foundation_stream_cr_unit "stream unit tests page"
  * - @ref specifications_stream "stream specifications"
  */
 

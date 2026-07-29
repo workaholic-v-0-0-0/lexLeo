@@ -3,7 +3,9 @@
 # Signature
 
 ```c
-lexleo_vm_status_t lexleo_vm_complete_default_init(lexleo_vm_t *vm);
+lexleo_vm_status_t lexleo_vm_complete_default_init(
+    lexleo_vm_t *vm,
+	const lexleo_vm_cfg_t *cfg);
 ```
 
 # Purpose
@@ -16,6 +18,7 @@ internal owned runtime resources.
 - `vm != NULL`.
 - `vm` must be a valid handle created successfully by `lexleo_vm_create()`.
 - Each internal owned field initialized by this function must be `NULL`.
+- `cfg != NULL`.
 
 # Success
 
