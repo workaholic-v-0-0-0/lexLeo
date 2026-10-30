@@ -9,21 +9,22 @@
  * descriptors.
  *
  * @details
- * This header defines the private user data object allocated by
- * `fs_stream_create_desc()` and later consumed by `fs_stream_ctor()`.
+ * Defines the private data used to bind an `fs_stream` adapter configuration
+ * and its external borrowed dependencies to a factory constructor.
  */
 
 #ifndef LEXLEO_FS_STREAM_CTOR_UD_H
 #define LEXLEO_FS_STREAM_CTOR_UD_H
 
-#include "fs_stream/cr/fs_stream_types.h"
+#include "fs_stream/cr/fs_stream_cr_types.h"
 
 /**
  * @brief Private constructor user data for `fs_stream` registration.
  *
  * @details
- * Stores the configuration and environment captured when building the adapter
- * descriptor.
+ * Captures the adapter configuration and environment required by the factory
+ * constructor. The environment provides the external borrowed dependencies
+ * used to create and complete the initialization of `fs_stream` backends.
  */
 typedef struct fs_stream_ctor_ud_t {
 

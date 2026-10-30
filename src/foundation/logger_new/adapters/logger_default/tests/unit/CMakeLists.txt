@@ -13,7 +13,7 @@ target_link_libraries(
         logger_new_cr
         logger_default_cr
         logger_default_white_box_tests_access
-        fake_stream_new
+        fake_stream
         osal_time_fake_provider
         osal_mem_fake_provider
         lexleo_policy_headers

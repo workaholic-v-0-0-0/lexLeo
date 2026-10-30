@@ -10,6 +10,7 @@ target_include_directories(
     stream_borrower
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/borrowers"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
@@ -20,7 +21,6 @@ target_link_libraries(
         lexleo_policy_headers
     PRIVATE
         osal_mem
-        lexleo_policy_headers
         lexleo_assert
 )
 
@@ -38,6 +38,7 @@ target_include_directories(
     stream_owner
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/owners"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
@@ -51,27 +52,6 @@ target_link_libraries(
         osal_str
         lexleo_policy_headers
         lexleo_assert
-)
-
-add_library(
-    stream_adapter
-    STATIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/adapters/stream_adapter.c"
-)
-target_include_directories(
-    stream_adapter
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
-    PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(
-    stream_adapter
-    PUBLIC
-        stream_owner
-    PRIVATE
-        osal_mem
-        lexleo_policy_headers
 )
 
 file(
@@ -89,17 +69,34 @@ target_include_directories(
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
     PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 target_link_libraries(
     stream_cr
     PUBLIC
-        stream_adapter
-    PRIVATE
+        stream_owner
         osal_mem
-        osal_str
         lexleo_policy_headers
+    PRIVATE
+        osal_str
         lexleo_assert
+)
+
+add_library(
+    stream_adapter
+    INTERFACE
+)
+target_include_directories(
+    stream_adapter
+    INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
+)
+target_link_libraries(
+    stream_adapter
+    INTERFACE
+        osal_mem
 )
 
 if (BUILD_TESTING)

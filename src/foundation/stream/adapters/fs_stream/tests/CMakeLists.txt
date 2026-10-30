@@ -2,45 +2,4 @@
 # Copyright (C) 2026 Sylvain Labopin
 
 add_subdirectory(support)
-
-#[[
-add_executable(
-    unit_test_fs_stream
-    "${CMAKE_CURRENT_SOURCE_DIR}/unit/unit_test_fs_stream.c"
-)
-
-target_link_libraries(
-    unit_test_fs_stream
-    PRIVATE
-        stream_cr
-        fs_stream
-        stream_white_box_tests_access
-        osal_mem_fake_provider
-        osal_file
-        osal_file_fake_provider
-        lexleo_policy_headers
-        lexleo_cmocka_support
-)
-
-add_test(
-    NAME unit_test_fs_stream
-    COMMAND unit_test_fs_stream
-)
-
-find_program(VALGRIND_EXECUTABLE valgrind)
-
-if(VALGRIND_EXECUTABLE)
-    add_test(
-        NAME unit_test_fs_stream_memory
-        COMMAND
-            ${VALGRIND_EXECUTABLE}
-            --leak-check=full
-            --error-exitcode=1
-            $<TARGET_FILE:unit_test_fs_stream>
-    )
-    set_tests_properties(
-        unit_test_fs_stream_memory
-        PROPERTIES LABELS "memory"
-    )
-endif()
-#]]
+add_subdirectory(unit)

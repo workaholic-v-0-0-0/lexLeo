@@ -8,15 +8,15 @@
  * @brief Owner-facing API for the `stream` port.
  *
  * @details
- * This header aggregates the owner-facing `stream` API: borrower operations,
- * owner-visible types, creator contracts, factory creation, and destruction.
+ * This header aggregates the owner-facing `stream` API, including borrower
+ * operations, creator contracts, and ownership operations.
  */
 
 #ifndef LEXLEO_STREAM_OWNERS_API_H
 #define LEXLEO_STREAM_OWNERS_API_H
 
+#include "stream/common/stream_status_type.h"
 #include "stream/borrowers/stream_borrowers_api.h"
-#include "stream/owners/stream_owners_types.h"
 #include "stream/owners/stream_creators_api.h"
 
 #ifdef __cplusplus
@@ -31,7 +31,7 @@ extern "C" {
  * See contract:
  * - @ref specifications_stream_destroy
  */
-stream_status_t stream_destroy(stream_t **s);
+void stream_destroy(stream_t **s);
 
 #ifdef __cplusplus
 }

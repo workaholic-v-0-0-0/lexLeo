@@ -5,7 +5,7 @@
 /**
  * @file stream_creators_api.h
  * @ingroup stream_owners_api
- * @brief Aggregated owner-facing creator API for the `stream` port.
+ * @brief Aggregated owner-facing API for stream creators.
  *
  * @details
  * This header gathers the owner-facing creator contracts used to create
@@ -15,8 +15,8 @@
 #ifndef LEXLEO_STREAM_CREATORS_API_H
 #define LEXLEO_STREAM_CREATORS_API_H
 
-#include "stream/owners/creators/stream_file_creator.h"
-#include "stream/owners/creators/stream_buffer_creator.h"
-#include "stream/owners/creators/stream_io_creator.h"
+#include "stream/owners/creators/stream_regular_file_creator.h"
+#include "stream/owners/creators/stream_standard_stream_creator.h"
+#include "stream/owners/creators/stream_dynamic_buffer_creator.h"
 
 #endif /* LEXLEO_STREAM_CREATORS_API_H */

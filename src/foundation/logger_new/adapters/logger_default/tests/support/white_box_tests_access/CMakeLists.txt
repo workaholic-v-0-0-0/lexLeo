@@ -19,7 +19,7 @@ target_link_libraries(
     logger_default_white_box_tests_access
     PUBLIC
         logger_default_cr
-        stream_new_borrower
+        stream_borrower
         osal_time
         osal_mem
 )

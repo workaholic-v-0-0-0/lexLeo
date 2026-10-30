@@ -1,13 +1,9 @@
-/** @defgroup stream_borrowers_api stream borrowers API
- *  @ingroup stream_api
+/** @defgroup stream_borrowers_api Stream borrowers API
+ * @ingroup stream_api
  *
- *  @brief Borrower-facing API for the `stream` port.
+ * @brief Borrower-facing API for the `stream` port.
  *
- *  @details
- *  This API exposes the public operations and types used to interact with
- *  borrowed `stream_t` handles.
- *
- *  Main headers:
- *  - `stream_borrowers_api.h`
- *  - `stream_borrowers_types.h`
+ * @details
+ * Exposes the borrower-facing operations used to interact with borrowed
+ * `stream_t` handles.
  */

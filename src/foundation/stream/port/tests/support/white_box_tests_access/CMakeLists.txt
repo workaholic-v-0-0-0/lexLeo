@@ -19,6 +19,6 @@ target_link_libraries(
     stream_white_box_tests_access
     PUBLIC
         stream_cr
-    PRIVATE
+        stream_adapter
         osal_mem
 )

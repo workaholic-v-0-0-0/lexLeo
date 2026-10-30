@@ -2,8 +2,6 @@
 # Copyright (C) 2026 Sylvain Labopin
 
 add_subdirectory(osal)
-add_subdirectory(logger)
-add_subdirectory(stream)
 
-add_subdirectory(stream_new)
+add_subdirectory(stream)
 add_subdirectory(logger_new)

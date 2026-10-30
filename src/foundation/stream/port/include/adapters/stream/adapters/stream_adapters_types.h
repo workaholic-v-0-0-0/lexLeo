@@ -8,24 +8,15 @@
  * @brief Adapter-facing types for the `stream` port.
  *
  * @details
- * This header defines the types used by `stream` adapter implementations.
- *
- * It provides:
- * - the adapter environment @ref stream_env_t,
- * - adapter constructor and user-data callback types,
- * - the @ref stream_adapter_desc_t registration descriptor.
- *
- * Backend operation types and the dispatch table are declared in
- * @ref stream_adapters_vtbl.h.
+ * Declares the callback and provider types used to construct stream adapters
+ * and bind them to the `stream` port.
  */
 
 #ifndef LEXLEO_STREAM_ADAPTERS_TYPES_H
 #define LEXLEO_STREAM_ADAPTERS_TYPES_H
 
-#include "stream_adapters_vtbl.h"
-#include "stream/borrowers/stream_borrowers_types.h"
-#include "stream/owners/stream_owners_types.h"
-#include "stream/adapters/stream_adapters_vtbl.h"
+#include "stream/common/stream_status_type.h"
+#include "stream/common/stream_vtbl_type.h"
 
 #include "osal/mem/osal_mem_types.h"
 
@@ -34,65 +25,55 @@ extern "C" {
 #endif
 
 /**
- * @struct stream_env_t
+ * @brief Construct a stream adapter backend.
  *
- * @brief Borrowed dependencies required by the `stream` port.
- *
- * @details
- * The Composition Root provides these dependencies when creating a `stream`
- * handle. Pointer fields remain borrowed and must outlive the stream handles
- * using this environment.
- */
-typedef struct stream_env_t {
-
-	/** Borrowed memory operations. */
-	const osal_mem_ops_t *mem;
-
-	/** Borrowed backend virtual table. */
-	const stream_vtbl_t *vtbl;
-
-} stream_env_t;
-
-/**
- * @brief Destructor for descriptor-owned user data.
- *
- * @param[in] ud Opaque user data to destroy.
- * @param[in] mem Memory operations used for destruction.
- */
-typedef void (*ud_dtor_fn_t)(const void *ud, const osal_mem_ops_t *mem);
-
-/**
- * @brief Adapter constructor used by stream factory services.
- *
- * @param[in] ud Opaque constructor user data.
- * @param[in] args Adapter-specific creation arguments.
- * @param[out] out Receives the created stream handle.
+ * @param[in] ud Adapter-specific constructor user data.
+ * @param[in] args Adapter-specific construction arguments.
+ * @param[out] out_backend Receives the created backend.
  *
  * @return Construction status.
  */
-typedef stream_status_t (*stream_ctor_fn_t)(
+typedef stream_status_t (*stream_backend_ctor_fn_t)(
 	const void *ud,
 	const void *args,
-	stream_t **out);
+	void **out_backend);
 
 /**
- * @brief Descriptor used to register a stream adapter.
+ * @brief Destroy provider-owned user data.
+ *
+ * @param[in] ud Provider-owned user data to destroy.
+ * @param[in] mem Memory operations used for destruction.
  */
-typedef struct stream_adapter_desc_t {
+typedef void (*stream_ctor_ud_dtor_fn_t)(
+	void *ud,
+	const osal_mem_ops_t *mem);
 
-	/** Adapter registration key. */
-	stream_key_t key;
+/**
+ * @brief Adapter provider.
+ *
+ * @details
+ * Groups the operations and context required to construct stream adapter.
+ */
+typedef struct stream_adapter_provider_t {
 
-	/** Adapter constructor. */
-	stream_ctor_fn_t ctor;
+	/** Stream adapter backend constructor. */
+	stream_backend_ctor_fn_t backend_ctor;
 
-	/** Optional constructor user data. */
-	const void *ud;
+	/** Dispatch table associated with constructed backends. */
+	const stream_vtbl_t *vtbl;
 
-	/** Optional destructor for `ud`. */
-	ud_dtor_fn_t ud_dtor;
+	/** Owned stream adapter backend constructor user data. */
+	void *ud;
 
-} stream_adapter_desc_t;
+	/** Optional destructor for stream adapter backend constructor user
+	 * data. */
+	stream_ctor_ud_dtor_fn_t ud_dtor;
+
+	/** Memory operations used to destroy the provider and by the stream
+	 * adapter backend constructor. */
+	const osal_mem_ops_t *mem;
+
+} stream_adapter_provider_t;
 
 #ifdef __cplusplus
 }

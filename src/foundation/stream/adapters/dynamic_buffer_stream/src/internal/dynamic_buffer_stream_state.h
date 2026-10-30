@@ -37,9 +37,6 @@ typedef struct dynamic_buffer_t {
 	/** Current read cursor inside the buffer. */
 	size_t read_pos;
 
-	/** Whether the buffer storage is released when the backend closes. */
-	bool autoclose;
-
 } dynamic_buffer_t;
 
 /**

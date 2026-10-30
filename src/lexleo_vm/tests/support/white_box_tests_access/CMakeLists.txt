@@ -19,6 +19,6 @@ target_link_libraries(
     lexleo_vm_white_box_tests_access
     PRIVATE
         lexleo_vm_cr
-        stream_new_cr
+        stream_cr
         logger_new_cr
 )

@@ -12,7 +12,7 @@ target_link_libraries(
         logger_new_borrower
         logger_new_adapter
         logger_default_cr
-        fake_stream_new
+        fake_stream
         osal_time_fake_provider
         osal_mem
         osal_str

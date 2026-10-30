@@ -5,11 +5,11 @@
  * @brief File-backed adapter for the `stream` port.
  *
  * @details
- * The `fs_stream` adapter implements the `stream` port using a file-backed
- * runtime backend.
+ * Implements the `stream` port using an owned file resource constructed from
+ * external borrowed dependencies.
  *
- * This module belongs to the `stream` adapter family and provides the
- * functionality required to expose file I/O through the `stream` port.
+ * This module belongs to the `stream` adapter family and exposes file I/O
+ * through the `stream` port.
  *
  * Sub-APIs:
  * - @ref fs_stream_cr_api

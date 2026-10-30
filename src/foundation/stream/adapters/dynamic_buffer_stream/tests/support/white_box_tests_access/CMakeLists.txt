@@ -3,11 +3,20 @@
 
 add_library(
     dynamic_buffer_stream_white_box_tests_access
-    INTERFACE
+    STATIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dynamic_buffer_stream_white_box_tests_access.c"
 )
 
 target_include_directories(
     dynamic_buffer_stream_white_box_tests_access
-    INTERFACE
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../../src"
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../src/"
+)
+
+target_link_libraries(
+    dynamic_buffer_stream_white_box_tests_access
+    PUBLIC
+        dynamic_buffer_stream_cr
+        osal_mem
 )

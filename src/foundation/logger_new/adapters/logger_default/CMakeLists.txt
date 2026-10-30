@@ -22,7 +22,7 @@ target_link_libraries(
         lexleo_policy_headers
     PRIVATE
         logger_new_adapter
-        stream_new_borrower
+        stream_borrower
         osal_time
         osal_str
         lexleo_assert

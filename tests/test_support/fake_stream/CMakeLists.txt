@@ -15,9 +15,11 @@ target_include_directories(
 
 target_link_libraries(
     fake_stream
+    PUBLIC
+        fake_stream_adapter
+        stream_owner
     PRIVATE
-        stream_adapter
         osal_mem
-        osal_str
-        lexleo_assert
+        stream_white_box_tests_access
+        lexleo_cmocka_support
 )
