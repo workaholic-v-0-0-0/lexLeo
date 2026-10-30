@@ -15,7 +15,8 @@
 #ifndef LEXLEO_STREAM_BORROWERS_API_H
 #define LEXLEO_STREAM_BORROWERS_API_H
 
-#include "stream/borrowers/stream_borrowers_types.h"
+#include "stream/common/stream_opaque_type.h"
+#include "stream/common/stream_status_type.h"
 
 #include "policy/lexleo_cstd_types.h"
 

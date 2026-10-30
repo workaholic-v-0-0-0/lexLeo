@@ -5,11 +5,12 @@
 /**
  * @file logger_white_box_tests_access.c
  * @ingroup logger_white_box_tests_access_group
- * @brief White-box test access helper implementation for the logger module.
+ * @brief White-box test access implementation for the `logger` module.
  *
  * @details
- * This file implements the test-only helpers used to inject and observe
- * selected internal owned-resource fields of logger handles.
+ * Implements test-only helpers used to inspect and modify private logger
+ * state and to expose selected internal operations through the white-box
+ * test API.
  */
 
 #include "logger/tests/logger_white_box_tests_access.h"
@@ -22,6 +23,18 @@ void logger_inject_backend(logger_t *logger, void *backend)
 {
 	LEXLEO_ASSERT(logger);
 	logger->backend = backend;
+}
+
+const logger_vtbl_t *logger_get_vtbl(const logger_t *logger)
+{
+	LEXLEO_ASSERT(logger);
+	return logger->vtbl;
+}
+
+const osal_mem_ops_t *logger_get_mem_ops(const logger_t *logger)
+{
+	LEXLEO_ASSERT(logger);
+	return logger->mem_ops;
 }
 
 void *logger_get_backend(const logger_t *logger)

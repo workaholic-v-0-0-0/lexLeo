@@ -19,8 +19,8 @@ target_link_libraries(
     lexleo_app_white_box_tests_access
     PUBLIC
         lexleo_app_cr_opaque
-        stream_new_owner
-        logger_new_borrower
+        stream_owner
+        logger_borrower
         lexleo_vm_borrower
         osal_mem
         osal_stdio

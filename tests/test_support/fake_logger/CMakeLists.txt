@@ -16,11 +16,11 @@ target_include_directories(
 target_link_libraries(
     fake_logger
     PUBLIC
-        logger_new_cr
-        logger_new_borrower
+        logger_cr
+        logger_borrower
         fake_logger_adapter
     PRIVATE
         osal_mem
-        logger_new_white_box_tests_access
+        logger_white_box_tests_access
         lexleo_cmocka_support
 )

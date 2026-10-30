@@ -2,25 +2,26 @@
 # Copyright (C) 2026 Sylvain Labopin
 
 add_library(
-    dynamic_buffer_stream
+    dynamic_buffer_stream_cr
     STATIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/dynamic_buffer_stream.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/dynamic_buffer_stream_cr.c"
 )
+
 target_include_directories(
-    dynamic_buffer_stream
+    dynamic_buffer_stream_cr
     PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
+
 target_link_libraries(
-    dynamic_buffer_stream
+    dynamic_buffer_stream_cr
     PUBLIC
         stream_adapter
         osal_mem
         lexleo_policy_headers
     PRIVATE
-        osal_str
         lexleo_assert
 )
 

@@ -2,21 +2,21 @@
 # Copyright (C) 2026 Sylvain Labopin
 
 add_library(
-    stdio_stream
+    stdio_stream_cr
     STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/stdio_stream.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/stdio_stream_cr.c"
 )
 
 target_include_directories(
-    stdio_stream
+    stdio_stream_cr
     PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_link_libraries(
-    stdio_stream
+    stdio_stream_cr
     PUBLIC
         stream_adapter
         osal_stdio
@@ -25,8 +25,6 @@ target_link_libraries(
         lexleo_assert
 )
 
-#[[
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()
-#]]

@@ -4,8 +4,15 @@
 
 /**
  * @file logger_borrower.c
- * @ingroup logger_internal_group
- * @brief Borrower-facing runtime operation implementation for the `logger` port.
+ * @ingroup logger_borrowers_api
+ * @brief Borrower-facing logger operations.
+ *
+ * @details
+ * Implements the runtime operations available to modules that borrow a
+ * `logger` handle.
+ *
+ * See also:
+ * - @ref specifications_logger_log "logger_log() specifications"
  */
 
 #include "logger/borrowers/logger_borrowers_api.h"
@@ -14,15 +21,13 @@
 
 #include "policy/lexleo_assert.h"
 
-logger_status_t logger_log(logger_t *l, const char *message)
+logger_status_t logger_log(logger_t *logger, const char *message)
 {
-	if (!l || !message) return LOGGER_STATUS_INVALID;
+	if (!logger || !message) {
+		return LOGGER_STATUS_INVALID;
+	}
 
-	LEXLEO_ASSERT(
-		   l->backend
-		&& l->vtbl
-		&& l->vtbl->log
-	);
+	LEXLEO_ASSERT(logger->vtbl && logger->vtbl->log && logger->backend);
 
-	return l->vtbl->log(l->backend, message);
+	return logger->vtbl->log(logger->backend, message);
 }

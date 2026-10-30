@@ -3,11 +3,21 @@
 
 add_library(
     fs_stream_white_box_tests_access
-    INTERFACE
+    STATIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/fs_stream_white_box_tests_access.c"
 )
 
 target_include_directories(
     fs_stream_white_box_tests_access
-    INTERFACE
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../../src"
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../src/"
+)
+
+target_link_libraries(
+    fs_stream_white_box_tests_access
+    PUBLIC
+        fs_stream_cr
+        osal_mem
 )

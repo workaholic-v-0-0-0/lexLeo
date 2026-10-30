@@ -27,7 +27,7 @@ target_link_libraries(
         lexleo_app_white_box_tests_access
         fake_vm
         fake_stream_adapter
-        fake_stream_new
+        fake_stream
         fake_logger_adapter
         fake_logger
         osal_mem_fake_provider

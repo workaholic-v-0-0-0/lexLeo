@@ -15,9 +15,13 @@
 #ifndef LEXLEO_STREAM_HANDLE_H
 #define LEXLEO_STREAM_HANDLE_H
 
-#include "stream/adapters/stream_adapters_vtbl.h"
+#include "stream/common/stream_vtbl_type.h"
 
 #include "osal/mem/osal_mem_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Private handle structure for a `stream_t`.
@@ -38,5 +42,9 @@ struct stream_t {
 	void *backend;
 
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LEXLEO_STREAM_HANDLE_H */

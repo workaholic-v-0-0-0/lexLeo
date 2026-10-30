@@ -5,16 +5,18 @@
 /**
  * @file stream_factory_handle.h
  * @ingroup stream_internal_group
- * @brief Private factory handle definition for the `stream` port.
+ * @brief Private stream factory handle definition.
  *
  * @details
- * This header defines the private registry entries and factory handle
- * structure used by the `stream` factory implementation.
+ * Defines the private adapter provider registry, stream provider, and factory
+ * state used by the `stream` factory implementation.
  */
 
 #ifndef LEXLEO_STREAM_FACTORY_HANDLE_H
 #define LEXLEO_STREAM_FACTORY_HANDLE_H
 
+#include "stream/common/stream_adapter_id_type.h"
+#include "stream/common/stream_opaque_type.h"
 #include "stream/adapters/stream_adapters_types.h"
 
 #include "osal/mem/osal_mem_types.h"
@@ -22,39 +24,32 @@
 #include "policy/lexleo_cstd_types.h"
 
 /**
- * @brief Private registered adapter entry.
+ * @brief Adapter provider entry registered in a stream factory.
  *
  * @details
- * A `stream_branch_t` is the private stored form of one
- * `stream_adapter_desc_t` inside the factory registry.
+ * Associates an adapter identifier with the corresponding adapter provider.
  */
-typedef struct stream_branch_t {
+typedef struct stream_adapter_provider_entry_t {
 
-	/** Registered adapter key. */
-	stream_key_t key;
+	/** Borrowed adapter identifier. */
+	stream_adapter_id_t key;
 
-	/** Registered adapter constructor. */
-	stream_ctor_fn_t ctor;
+	/** Owned adapter provider. */
+	stream_adapter_provider_t *value;
 
-	/** Optional constructor user data. */
-	const void *ud;
-
-	/** Optional destructor for `ud`. */
-	ud_dtor_fn_t ud_dtor;
-
-} stream_branch_t;
+} stream_adapter_provider_entry_t;
 
 /**
- * @brief Private adapter registry used by `stream_factory_t`.
+ * @brief Private adapter provider registry used by `stream_factory_t`.
  *
  * @details
- * This registry stores the currently registered adapter entries in a bounded
- * linear array.
+ * Stores the adapter provider entries registered with the factory in a
+ * bounded linear array.
  */
 typedef struct stream_registry_t {
 
-	/** Storage for registered entries. */
-	stream_branch_t *entries;
+	/** Storage for registered adapter provider entries. */
+	stream_adapter_provider_entry_t *entries;
 
 	/** Number of valid registered entries. */
 	size_t count;
@@ -65,20 +60,56 @@ typedef struct stream_registry_t {
 } stream_registry_t;
 
 /**
+ * @brief Construct a complete stream handle.
+ *
+ * @param[in] ud Constructor-specific user data.
+ * @param[in] vtbl Stream adapter dispatch table.
+ * @param[in,out] backend Adapter backend whose ownership is transferred to
+ * the created stream on success.
+ * @param[out] out Receives the created stream handle.
+ *
+ * @return Stream construction status.
+ */
+typedef stream_status_t (*stream_ctor_fn_t)(
+	const void *ud,
+	const stream_vtbl_t *vtbl,
+	void *backend,
+	stream_t **out
+);
+
+/**
+ * @brief Private stream provider.
+ *
+ * @details
+ * Groups the constructor and constructor-specific context required by the
+ * factory to construct complete `stream_t` handles.
+ */
+typedef struct stream_provider_t {
+
+	/** Constructs a complete stream handle. */
+	stream_ctor_fn_t ctor;
+
+	/** Constructor-specific user data. */
+	void *ud;
+
+	/** Optional destructor for provider-owned user data. */
+	stream_ctor_ud_dtor_fn_t ud_dtor;
+
+} stream_provider_t;
+
+/**
  * @brief Private handle structure for a `stream_factory_t`.
  *
  * @details
- * This structure is the private in-memory handle bound to a public
- * `stream_factory_t` object.
- *
- * It stores:
- * - the internal adapter registry,
- * - the memory operations used for teardown,
+ * Defines the private in-memory representation of a `stream_factory_t`.
  */
 struct stream_factory_t {
 
-	/** Internal adapter registry. */
+	/** Adapter provider registry. */
 	stream_registry_t reg;
+
+	/** Stream provider used to construct complete stream handles. */
+	stream_provider_t stream_provider;
 
 	/** Memory operations used to destroy the factory handle. */
 	const osal_mem_ops_t *mem;

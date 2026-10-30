@@ -8,10 +8,8 @@
  * @brief Private backend handle definition for the `stdio_stream` adapter.
  *
  * @details
- * This header exposes the private backend handle used internally by the
- * `stdio_stream` adapter implementation to bind a standard stream, its
- * injected stdio operations, and the memory operations required for
- * destruction.
+ * This header defines the private standard-stream-backed backend handle used
+ * by the `stdio_stream` implementation.
  */
 
 #ifndef LEXLEO_STDIO_STREAM_HANDLE_H
@@ -25,20 +23,20 @@
  * @brief Private backend handle for the `stdio_stream` adapter.
  *
  * @details
- * This structure stores:
- * - the borrowed OSAL stdio operations table used by the backend,
- * - the borrowed bound standard stream handle selected at creation time,
- * - the memory operations used for backend destruction.
+ * Groups the external borrowed dependencies and internal borrowed dependency
+ * required by the backend.
  */
 typedef struct stdio_stream_t {
-	/** Borrowed OSAL stdio operations table used by the backend. */
+
+	/** External borrowed OSAL stdio operations table used by the backend. */
 	const osal_stdio_ops_t *stdio_ops;
 
-	/** Borrowed bound standard stream handle wrapped by this backend. */
+	/** External borrowed memory operations used to destroy the backend handle. */
+	const osal_mem_ops_t *mem_ops;
+
+	/** Internal borrowed standard stream handle wrapped by this backend. */
 	OSAL_STDIO *stdio;
 
-	/** Memory operations used to destroy the backend handle. */
-	const osal_mem_ops_t *mem_ops;
 } stdio_stream_t;
 
-#endif // LEXLEO_STDIO_STREAM_HANDLE_H
+#endif /* LEXLEO_STDIO_STREAM_HANDLE_H */

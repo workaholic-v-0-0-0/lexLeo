@@ -23,8 +23,8 @@ target_link_libraries(
         osal_file
         osal_str
         osal_time
-        stream_new_owner # Can create stream_t during runtime.
-        logger_new_borrower
+        stream_owner # Can create stream_t during runtime.
+        logger_borrower
         lexleo_vm_borrower
         lexleo_assert
 )
@@ -75,13 +75,13 @@ target_link_libraries(
         osal_time
         osal_env
 
-        stream_new_cr
-        stdio_stream_new_cr
-        fs_stream_new_cr
-        dynamic_buffer_stream_new_cr
+        stream_cr
+        stdio_stream_cr
+        fs_stream_cr
+        dynamic_buffer_stream_cr
 
-        logger_new_cr
-        logger_new_adapter
+        logger_cr
+        logger_adapter
         logger_default_cr
 
         lexleo_vm_cr

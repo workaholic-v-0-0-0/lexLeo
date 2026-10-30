@@ -15,7 +15,7 @@
 #ifndef LEXLEO_LOGGER_HANDLE_H
 #define LEXLEO_LOGGER_HANDLE_H
 
-#include "logger/adapters/logger_adapters_vtbl.h"
+#include "logger/common/logger_vtbl_type.h"
 
 #include "osal/mem/osal_mem_ops.h"
 
@@ -32,7 +32,7 @@ struct logger_t {
 	const logger_vtbl_t *vtbl;
 
 	/** Borrowed memory operations used to destroy the handle. */
-	const osal_mem_ops_t *mem;
+	const osal_mem_ops_t *mem_ops;
 
 	/** Owned opaque backend instance destroyed through `vtbl->destroy`. */
 	void *backend;

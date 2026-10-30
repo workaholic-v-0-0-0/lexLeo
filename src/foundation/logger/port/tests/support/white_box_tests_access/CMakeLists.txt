@@ -11,6 +11,7 @@ target_include_directories(
     logger_white_box_tests_access
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../include/common/"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/../../../src/"
 )
@@ -18,7 +19,5 @@ target_include_directories(
 target_link_libraries(
     logger_white_box_tests_access
     PUBLIC
-        logger_adapter
-    PRIVATE
         osal_mem
 )

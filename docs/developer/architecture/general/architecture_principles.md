@@ -34,7 +34,19 @@ White-box test access sits above these production authorities:
 white_box_tests_access -> cr -> owner -> borrower
 ```
 
-The arrows indicate access from a higher authority to lower authorities.
+This stack describes the authorities exposed by each module over its own
+handles. The arrows indicate access from a higher authority to lower
+authorities within that module.
+
+It does not impose a global ordering on dependencies between different
+modules. The implementation of a borrower operation may privately use
+another module's owner API to create and destroy resources needed for
+its work.
+
+For example, `compiler_borrower` may depend privately on `ast_owner`.
+This grants its implementation access to AST lifecycle operations without
+exposing those operations to compiler borrowers or granting them authority
+to create or destroy `compiler_t` handles.
 
 Adapter-facing contracts are outside this stack. They do not introduce an
 additional authority between `owner` and `cr`.
@@ -42,9 +54,11 @@ additional authority between `owner` and `cr`.
 | Authority | Role |
 | --- | --- |
 | White-box test access | Exposes selected internal operations and handle fields through test-only wrappers, accessors, and injectors. |
-| Composition Root | Builds configurations and environments, constructs handles, completes initialization, and assembles dependencies. |
-| Owner | Creates handles through configured creators and destroys resources it owns. |
+| Composition Root | 	Builds configurations and environments, constructs and initializes handles during composition, and injects dependencies, including creators for later runtime use. |
+| Owner | Creates handles at runtime through injected creators and destroys handles under its ownership. |
 | Borrower | Uses existing handles without acquiring authority to construct or destroy those handles. |
+
+Creators injected during composition also support substitution of objects created later at runtime. Tests can supply creators configured to produce test doubles, without requiring those objects to exist during Composition Root initialization.
 
 ## Borrower authority
 
@@ -58,21 +72,47 @@ mod_status_t mod_read(mod_t *mod, void *buf, size_t len);
 mod_status_t mod_write(mod_t *mod, const void *buf, size_t len);
 ```
 
-A caller receiving `mod_t *` through a borrower API does not acquire ownership
-of that handle.
+Using a borrower API does not grant the caller ownership of the handle or
+authority to create or destroy it.
 
 This restriction concerns the caller's authority over `mod_t`. It does not
 prevent the implementation of a borrower operation from creating and destroying
 other resources needed to perform its work.
 
-Such implementation details may depend privately on another module's owner API.
+For example, a compiler borrower API may expose:
+
+```c
+compiler_status_t compiler_compile(compiler_t *compiler, ...);
+```
+
+The caller borrows an existing `compiler_t` to request a compilation. This API
+does not grant authority to create or destroy that compiler handle.
+
+However, the implementation of `compiler_compile()` may create temporary
+`ast_t` handles through an injected AST creator and destroy them when they are
+no longer needed. It borrows the compiler handle while owning the temporary
+AST handles.
+
+This implementation can therefore depend privately on the AST owner API:
+
+```cmake
+target_link_libraries(
+    compiler_borrower
+    PRIVATE
+        ast_owner
+)
+```
+
+The AST owner API remains an implementation dependency. It is not exposed
+through the compiler borrower API and does not grant compiler borrowers
+authority over AST creation or destruction.
 
 ## Owner authority
 
 Owner APIs are used by code responsible for resource lifetimes.
 
-They provide destruction operations and, when needed, creation through
-previously configured creator objects.
+They provide destruction operations and, when needed, runtime creation
+through creator objects previously configured and injected during composition.
 
 For example:
 
@@ -83,8 +123,15 @@ mod_status_t mod_feature_creator_create(
     mod_t **out);
 ```
 
-An owner-facing creator uses dependencies assembled by Composition Root code.
-Its caller does not need access to concrete adapter construction.
+During composition, Composition Root code assembles the creator's dependencies
+and injects the configured creator into its consumer.
+
+At runtime, that consumer uses the owner API to create instances as needed
+and destroy them when their lifetime ends. The consumer uses the configured 
+creator without having to assemble its construction dependencies itself.
+
+Destruction operations may also be used by Composition Root code, notably
+to release resources after an initialization failure.
 
 ## Composition Root authority
 
@@ -228,41 +275,41 @@ the environment before creating the handle.
 
 ## Handle creation
 
-The first phase allocates the handle and establishes its initial state.
+`create()` allocates the handle, stores the borrowed dependencies supplied
+through `env`, and initializes each resource field to its documented empty
+state. Configuration is supplied later to `complete_init()`.
 
-It:
-
-- stores borrowed dependencies;
-- initializes resource fields to their documented empty state;
-- stores configuration values when required by the module's API;
-- allocates structural containers needed to represent or inject later resources.
-
-It does not perform default construction of the owned runtime resources
-intended to be injectable between the two phases.
-
-Allocating the handle or an empty ownership container is therefore compatible
-with this rule. For example, `lexleo_app_create()` allocates
-`stream_owner_opaque` while leaving its factory and creator fields NULL.
+When necessary, `create()` also allocates an empty container for resources
+that will be injected or created later. For example, `lexleo_app_create()`
+allocates `stream_owner_opaque` and leaves its stream factory and creator
+pointers set to `NULL`. The container is then available for injection before
+initialization is complete.
 
 ## Completion of initialization
 
-The second phase creates and initializes missing owned runtime resources.
+`complete_init()` applies the supplied configuration, preserves resources
+already initialized or injected, and creates and initializes any missing
+owned resources required by the module's contract.
 
-It preserves resources already initialized or injected according to the
-module's contract.
+Applying a configuration does not require retaining every configuration
+value. For example, `dynamic_buffer_stream` can use `cfg->default_cap` to
+determine the buffer's initial capacity. By contrast, `lexleo_app` retains
+`cfg->action` because `lexleo_app_run()` needs it after initialization.
 
-Some modules may also accept externally constructed resources at this stage.
-Any ownership transfer must be explicit in the API contract.
+`create()` receives borrowed dependencies through `env`. `complete_init()`
+applies `cfg`, preserves resources already owned by the handle, and creates
+any missing owned resources required by the configuration.
 
-This separation allows a test to:
+For example, a white-box test of `fs_stream` can:
 
-1. create the handle;
-2. inject selected owned resources;
-3. complete the remaining initialization.
+1. Create the backend with fake file operations.
+2. Inject a fake file handle into the backend with `fs_stream_inject_file()`.
+3. Complete initialization and verify that the backend keeps the injected
+   handle without opening a file.
+4. Close the backend and verify that it closes the injected handle exactly once.
 
-For example, the owned runtime resource of `fs_stream` is its `OSAL_FILE`
-handle. White-box test access can inject that file between creation and
-completion of initialization.
+The backend closes the injected file on destruction, just as it would a
+file opened during initialization.
 
 ## Failure cleanup
 
@@ -433,15 +480,16 @@ Tests use the construction phases to control resource creation.
 
 A typical unit test can:
 
-1. construct the required configuration and environment;
-2. substitute borrowed dependencies with test doubles;
-3. create the handle;
-4. inspect its initial state;
-5. inject selected owned resources through white-box helpers;
-6. complete initialization;
-7. verify that injected resources were preserved;
-8. exercise the required behavior;
-9. destroy the handle and verify ownership and cleanup.
+1. build `env` with test doubles for the borrowed dependencies it wants to replace;
+2. pass `env` to `create()` to create the handle with those dependencies;
+3. verify that `create()` stored the borrowed dependencies and left the
+   fields for resources to be initialized later in their documented state;
+4. use white-box helpers to inject doubles for selected owned resources;
+5. call `complete_init()` with the configuration required by the test case;
+6. verify that initialization preserved the injected resources;
+7. exercise the behavior under test;
+8. destroy the handle and verify that it released its owned resources
+   without destroying its borrowed dependencies.
 
 For `lexleo_app`, internal construction is accessed through the CR wrapper
 library rather than through its production `cr_opaque` API.

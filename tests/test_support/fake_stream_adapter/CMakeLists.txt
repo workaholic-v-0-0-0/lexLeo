@@ -16,7 +16,7 @@ target_include_directories(
 target_link_libraries(
     fake_stream_adapter
     PUBLIC
-        stream_new_adapter
+        stream_adapter
     PRIVATE
         osal_mem
         lexleo_cmocka_support

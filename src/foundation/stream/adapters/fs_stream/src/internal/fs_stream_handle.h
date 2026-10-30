@@ -15,7 +15,7 @@
 #ifndef LEXLEO_FS_STREAM_HANDLE_H
 #define LEXLEO_FS_STREAM_HANDLE_H
 
-#include "internal/fs_stream_state.h"
+#include "internal/fs_stream_handle.h"
 
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/file/osal_file_ops.h"
@@ -28,14 +28,15 @@
  * backend.
  */
 typedef struct fs_stream_t {
-	/** Backend runtime state. */
-	fs_stream_state_t state;
 
 	/** OSAL file operations used by the backend. */
 	const osal_file_ops_t *file_ops;
 
 	/** Memory operations used to destroy the backend handle. */
 	const osal_mem_ops_t *mem_ops;
+
+	/** OSAL file handle backing the stream. */
+	OSAL_FILE *file;
 
 } fs_stream_t;
 

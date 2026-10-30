@@ -16,7 +16,7 @@ target_include_directories(
 target_link_libraries(
     fake_logger_adapter
     PUBLIC
-        logger_new_adapter
+        logger_adapter
     PRIVATE
         osal_mem
         lexleo_cmocka_support

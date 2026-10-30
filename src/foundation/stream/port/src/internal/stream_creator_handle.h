@@ -8,15 +8,15 @@
  * @brief Private base handle shared by `stream` creator implementations.
  *
  * @details
- * This header defines the common private state shared by specialized
- * `stream` creator objects, including their CR-managed lifetime code and
- * owner-facing creation operations.
+ * Defines the common private state shared by specialized `stream` creator
+ * implementations.
  */
 
 #ifndef LEXLEO_STREAM_CREATOR_HANDLE_H
 #define LEXLEO_STREAM_CREATOR_HANDLE_H
 
-#include "stream/owners/stream_owners_types.h"
+#include "stream/common/stream_factory_opaque_type.h"
+#include "stream/common/stream_adapter_id_type.h"
 
 #include "osal/mem/osal_mem_types.h"
 
@@ -28,8 +28,8 @@ typedef struct stream_creator_generic_t {
 	/** Borrowed stream factory. */
 	stream_factory_t *factory;
 
-	/** Adapter key used for stream creation. */
-	stream_key_t key;
+	/** Backend provider key used for stream creation. */
+	stream_adapter_id_t adapter_id;
 
 	/** Borrowed memory operations. */
 	const osal_mem_ops_t *mem;

@@ -46,7 +46,8 @@
 - lexleo_vm need to be finalized
 - lexleo_app need to be finalized
 
-<here>start what it is needed to implement lexleo_app_run() (maybe the lexer module)
+
+<here> finish the cleanup commit ; then start what it is needed to implement lexleo_app_run() (maybe the lexer module)
 
 remove err from vm
 add in vm_t:

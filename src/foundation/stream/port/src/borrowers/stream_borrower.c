@@ -16,6 +16,8 @@
 
 #include "internal/stream_handle.h"
 
+#include "policy/lexleo_assert.h"
+
 size_t stream_read(
 	stream_t *s,
 	void *buf,
@@ -32,10 +34,7 @@ size_t stream_read(
         return (size_t)0;
     }
 
-    if (!s->backend) {
-        if (st) *st = STREAM_STATUS_NO_BACKEND;
-        return (size_t)0;
-    }
+	LEXLEO_ASSERT(s->backend);
 
     return s->vtbl->read(s->backend, buf, n, st);
 }
@@ -56,10 +55,7 @@ size_t stream_write(
         return (size_t)0;
     }
 
-    if (!s->backend) {
-        if (st) *st = STREAM_STATUS_NO_BACKEND;
-        return (size_t)0;
-    }
+	LEXLEO_ASSERT(s->backend);
 
     return s->vtbl->write(s->backend, buf, n, st);
 }
@@ -67,7 +63,8 @@ size_t stream_write(
 stream_status_t stream_flush(stream_t *s)
 {
     if (!s || !s->vtbl->flush) return STREAM_STATUS_INVALID;
-    if (!s->backend) return STREAM_STATUS_NO_BACKEND;
+
+	LEXLEO_ASSERT(s->backend);
 
     return s->vtbl->flush(s->backend);
 }

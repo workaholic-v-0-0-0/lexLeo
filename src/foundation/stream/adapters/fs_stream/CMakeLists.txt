@@ -2,21 +2,21 @@
 # Copyright (C) 2026 Sylvain Labopin
 
 add_library(
-    fs_stream
+    fs_stream_cr
     STATIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/fs_stream.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/fs_stream_cr.c"
 )
 
 target_include_directories(
-    fs_stream
+    fs_stream_cr
     PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_link_libraries(
-    fs_stream
+    fs_stream_cr
     PUBLIC
         osal_file
         osal_mem

@@ -6,7 +6,8 @@
  *
  * @details
  * The `dynamic_buffer_stream` adapter implements the `stream` port using an
- * in-memory dynamic buffer.
+ * owned in-memory dynamic buffer constructed from external borrowed
+ * dependencies.
  *
  * This module belongs to the `stream` adapter family and provides the
  * functionality required to expose dynamic-buffer-backed streams through the

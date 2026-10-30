@@ -8,109 +8,158 @@
  * @brief Owner-facing stream operation implementation.
  *
  * @details
- * This file implements owner-facing destruction and factory-based stream
- * creation services.
+ * Implements stream destruction and the internal factory-based construction
+ * of complete `stream_t` handles.
  */
 
+#include "stream/common/stream_factory_opaque_type.h"
+#include "stream/common/stream_factory_status_type.h"
 #include "stream/owners/stream_owners_api.h"
-#include "internal/stream_factory_create_stream.h"
+#include "stream/adapters/stream_adapters_types.h"
 
 #include "internal/stream_handle.h"
 #include "internal/stream_factory_handle.h"
+#include "internal/stream_internal_api.h"
 
 #include "osal/mem/osal_mem_ops.h"
 #include "osal/str/osal_str.h"
 
 #include "policy/lexleo_assert.h"
 
-stream_status_t stream_destroy(stream_t **s)
+void stream_destroy(stream_t **s)
 {
 	if (!s || !*s) {
-		return STREAM_STATUS_OK;
+		return;
 	}
 
-	stream_t *tmp = *s;
+	stream_t *stream = *s;
 
 	LEXLEO_ASSERT(
-		   tmp->vtbl->close
-		&& tmp->mem
-		&& tmp->mem->free
+		   stream->vtbl
+		&& stream->vtbl->close
+		&& stream->mem
+		&& stream->mem->free
 	);
 
-	stream_status_t st = STREAM_STATUS_OK;
-
-	if (tmp->backend) {
-		st = tmp->vtbl->close(tmp->backend);
+	if (stream->backend) {
+		(void)stream->vtbl->close(stream->backend);
 	}
 
-	tmp->mem->free(tmp);
+	stream->mem->free(stream);
 	*s = NULL;
-
-	return st;
 }
 
-static const stream_branch_t *stream_registry_find(
-	const stream_registry_t *reg,
-	stream_key_t key
+static const stream_adapter_provider_t *stream_factory_get_adapter_provider(
+	const stream_factory_t *factory,
+	const stream_adapter_id_t key
 ) {
-	if (
-		   !reg
-		|| !reg->entries
-		|| !reg->count
-		|| !key
-	) {
-		return NULL;
-	}
+	LEXLEO_ASSERT(
+		   factory
+		&& factory->reg.entries
+		&& key
+		&& *key != '\0'
+	);
 
-	for (size_t i = 0; i < reg->count; i++) {
-		const stream_branch_t *e = &reg->entries[i];
-		if (e->key && osal_strcmp(e->key, key) == 0) {
-			return e;
+	for (size_t i = 0; i < factory->reg.count; i++) {
+		if (osal_strcmp(key, factory->reg.entries[i].key) == 0) {
+			return factory->reg.entries[i].value;
 		}
 	}
+
 	return NULL;
 }
 
-static stream_status_t stream_registry_create(
-	const stream_registry_t *reg,
-	stream_key_t key,
-	const void *args,
-	stream_t **out_stream
+stream_status_t stream_factory_status_to_stream_status(
+	stream_factory_status_t factory_status
 ) {
-	if (!out_stream) {
-		return STREAM_STATUS_INVALID;
+	switch (factory_status) {
+		case STREAM_FACTORY_STATUS_OK: return STREAM_STATUS_OK;
+		case STREAM_FACTORY_STATUS_EOF: return STREAM_STATUS_EOF;
+		case STREAM_FACTORY_STATUS_INVALID: return STREAM_STATUS_INVALID;
+		case STREAM_FACTORY_STATUS_NOT_FOUND: return STREAM_STATUS_NOT_FOUND;
+		case STREAM_FACTORY_STATUS_NO_BACKEND: return STREAM_STATUS_NO_BACKEND;
+		case STREAM_FACTORY_STATUS_IO_ERROR: return STREAM_STATUS_IO_ERROR;
+		case STREAM_FACTORY_STATUS_OOM: return STREAM_STATUS_OOM;
+		case STREAM_FACTORY_STATUS_ALREADY_EXISTS:
+		case STREAM_FACTORY_STATUS_FULL:
+		default:
+			LEXLEO_ASSERT(false);
+			return STREAM_STATUS_IO_ERROR;
 	}
-	*out_stream = NULL;
-
-	const stream_branch_t *e = stream_registry_find(reg, key);
-	if (!e || !e->ctor) return STREAM_STATUS_NO_BACKEND;
-
-	return e->ctor(e->ud, args, out_stream);
 }
 
-stream_status_t stream_factory_create_stream(
-	const stream_factory_t *f,
-	stream_key_t key,
-	const void *args,
-	stream_t **out )
-{
-	if (!out || !f || !key || *key == '\0')
-		return STREAM_STATUS_INVALID;
+stream_factory_status_t stream_status_to_stream_factory_status(
+	stream_status_t status
+) {
+	switch (status) {
+		case STREAM_STATUS_OK: return STREAM_FACTORY_STATUS_OK;
+		case STREAM_STATUS_EOF: return STREAM_FACTORY_STATUS_EOF;
+		case STREAM_STATUS_INVALID: return STREAM_FACTORY_STATUS_INVALID;
+		case STREAM_STATUS_NOT_FOUND: return STREAM_FACTORY_STATUS_NOT_FOUND;
+		case STREAM_STATUS_NO_BACKEND: return STREAM_FACTORY_STATUS_NO_BACKEND;
+		case STREAM_STATUS_IO_ERROR: return STREAM_FACTORY_STATUS_IO_ERROR;
+		case STREAM_STATUS_OOM: return STREAM_FACTORY_STATUS_OOM;
+		default: LEXLEO_ASSERT(false); return STREAM_FACTORY_STATUS_IO_ERROR;
+	}
+}
 
-	if (!stream_registry_find(&f->reg, key)) {
-		return STREAM_STATUS_NOT_FOUND;
+stream_factory_status_t stream_factory_create_stream(
+	const stream_factory_t *factory,
+	stream_adapter_id_t adapter_id,
+	const void *args,
+	stream_t **out
+) {
+	LEXLEO_ASSERT(
+		   factory
+		&& factory->reg.entries
+		&& factory->stream_provider.ctor
+		&& adapter_id
+		&& *adapter_id != '\0'
+		&& out
+	);
+
+	const stream_adapter_provider_t *adapter_provider =
+		stream_factory_get_adapter_provider(
+			factory,
+			adapter_id
+		);
+	if (!adapter_provider) {
+		return STREAM_FACTORY_STATUS_NOT_FOUND;
 	}
 
-	stream_t *tmp = NULL;
+	LEXLEO_ASSERT(
+		   adapter_provider->backend_ctor
+		&& adapter_provider->vtbl
+		&& adapter_provider->vtbl->close
+	);
+
+	void *backend = NULL;
 	stream_status_t st =
-		stream_registry_create(
-			&f->reg,
-			key,
+		adapter_provider->backend_ctor(
+			adapter_provider->ud,
 			args,
+			&backend
+		);
+	if (st != STREAM_STATUS_OK) {
+		return stream_status_to_stream_factory_status(st);
+	}
+	LEXLEO_ASSERT(backend);
+
+	stream_t *tmp = NULL;
+
+	st =
+		factory->stream_provider.ctor(
+			factory->stream_provider.ud,
+			adapter_provider->vtbl,
+			backend,
 			&tmp
 		);
+	if (st != STREAM_STATUS_OK) {
+		(void)adapter_provider->vtbl->close(backend);
+		return stream_status_to_stream_factory_status(st);
+	}
+	LEXLEO_ASSERT(tmp);
 
-	if (st == STREAM_STATUS_OK) *out = tmp;
-
-	return st;
+	*out = tmp;
+	return STREAM_FACTORY_STATUS_OK;
 }

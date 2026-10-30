@@ -5,17 +5,18 @@
 /**
  * @file logger_borrowers_api.h
  * @ingroup logger_borrowers_api
- * @brief Borrower-facing runtime operations for the `logger` port.
+ * @brief Borrower-facing API for the `logger` port.
  *
  * @details
- * This header exposes the public runtime operation used to emit messages
- * through a borrowed `logger_t` handle.
+ * Declares the runtime operations available to modules that borrow a `logger`
+ * instance through its opaque handle.
  */
 
 #ifndef LEXLEO_LOGGER_BORROWERS_API_H
 #define LEXLEO_LOGGER_BORROWERS_API_H
 
-#include "logger/borrowers/logger_borrowers_types.h"
+#include "logger/common/logger_opaque_type.h"
+#include "logger/common/logger_status_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,20 +25,15 @@ extern "C" {
 /**
  * @brief Emit a log message through a logger.
  *
- * @param[in] l
- * Logger handle used to emit the message.
+ * @param[in] logger Logger handle used to emit the message.
+ * @param[in] message Null-terminated message to log.
  *
- * @param[in] message
- * Null-terminated message to log.
+ * @return Operation status.
  *
- * @return
- * Operation status.
- *
- * @details
- * This function exposes the borrower-facing logging operation of the
- * `logger` port.
+ * See contract:
+ * - @ref specifications_logger_log
  */
-logger_status_t logger_log(logger_t *l, const char *message);
+logger_status_t logger_log(logger_t *logger, const char *message);
 
 #ifdef __cplusplus
 }

@@ -10,61 +10,57 @@ target_include_directories(
     logger_borrower
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/borrowers"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
 )
 target_link_libraries(
     logger_borrower
+    PUBLIC
+        lexleo_policy_headers
     PRIVATE
         osal_mem
         lexleo_assert
 )
 
 add_library(
-    logger_owner
+    logger_cr
     STATIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/logger_owner.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/logger_cr.c"
 )
 target_include_directories(
-    logger_owner
+    logger_cr
     PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/owners"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/cr"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
 )
 target_link_libraries(
-    logger_owner
+    logger_cr
     PUBLIC
-        logger_borrower
-    PRIVATE
         osal_mem
+        lexleo_policy_headers
+    PRIVATE
         lexleo_assert
 )
 
 add_library(
     logger_adapter
-    STATIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/logger_adapter.c"
+    INTERFACE
 )
 target_include_directories(
     logger_adapter
-    PUBLIC
+    INTERFACE
         "${CMAKE_CURRENT_SOURCE_DIR}/include/adapters"
-    PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/common"
 )
 target_link_libraries(
     logger_adapter
-    PUBLIC
-        logger_owner
-    PRIVATE
+    INTERFACE
         osal_mem
-        lexleo_assert
 )
-
-# No logger_cr as no logger creators are implemented.
 
 if (BUILD_TESTING)
     add_subdirectory(tests)

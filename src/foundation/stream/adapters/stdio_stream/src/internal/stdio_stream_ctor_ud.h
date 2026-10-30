@@ -9,30 +9,32 @@
  * factory descriptors.
  *
  * @details
- * This header exposes the private user data object allocated by
- * `stdio_stream_create_desc()` and later consumed by
- * `stdio_stream_ctor()`.
+ * Defines the private data used to bind a `stdio_stream` adapter
+ * configuration and its external borrowed dependencies to a factory
+ * constructor.
  */
 
 #ifndef LEXLEO_STDIO_STREAM_CTOR_UD_H
 #define LEXLEO_STDIO_STREAM_CTOR_UD_H
 
-#include "stdio_stream/cr/stdio_stream_types.h"
+#include "stdio_stream/cr/stdio_stream_cr_types.h"
 
 /**
- * @brief Private constructor user data for `stdio_stream` factory
- * registration.
+ * @brief Private constructor user data for `stdio_stream` registration.
  *
  * @details
- * This structure stores the configuration and environment snapshots bound into
- * the adapter descriptor and later reused by `stdio_stream_ctor()`.
+ * Captures the adapter configuration and environment required by the factory
+ * constructor. The environment provides the external borrowed dependencies
+ * used to create and complete the initialization of `stdio_stream` backends.
  */
 typedef struct stdio_stream_ctor_ud_t {
+
 	/** Bound adapter configuration. */
 	stdio_stream_cfg_t cfg;
 
 	/** Bound adapter environment. */
 	stdio_stream_env_t env;
+
 } stdio_stream_ctor_ud_t;
 
-#endif // LEXLEO_STDIO_STREAM_CTOR_UD_H
+#endif /* LEXLEO_STDIO_STREAM_CTOR_UD_H */

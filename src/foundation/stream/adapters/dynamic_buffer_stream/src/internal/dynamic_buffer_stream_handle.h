@@ -28,11 +28,11 @@
  */
 typedef struct dynamic_buffer_stream_t {
 
+	/** Borrowed memory operations used by the backend. */
+	const osal_mem_ops_t *mem_ops;
+
 	/** Backend runtime state. */
 	dynamic_buffer_stream_state_t state;
-
-	/** Borrowed memory operations used by the backend. */
-	const osal_mem_ops_t *mem;
 
 } dynamic_buffer_stream_t;
 

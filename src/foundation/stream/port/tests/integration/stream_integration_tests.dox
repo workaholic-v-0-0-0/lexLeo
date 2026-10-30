@@ -1,10 +1,10 @@
 /**
- * @defgroup stream_integration_tests stream integration tests
+ * @defgroup stream_integration_tests Stream integration tests
  * @ingroup stream_tests_group
  *
- * @brief Integration tests for the stream family.
+ * @brief Integration tests for the `stream` port.
  *
- * See also:
- * - @ref testing_foundation_stream_factory_integration
- * - @ref testing_foundation_stream_factory_fs_stream_integration
+ * @details
+ * This group gathers the integration tests validating the public and internal
+ * contracts of the `stream` port.
  */
