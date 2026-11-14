@@ -1,10 +1,9 @@
 @page testing_page Testing
 
-| Topic                                                         | Description                                                                                                 |
-|---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| @subpage testing_foundation_page "Foundation modules testing" | Tests related to foundation modules and their interactions.                                                 |
-| @subpage testing_core_page "Core modules testing"             | Tests related to core business modules and their interactions with one another and with foundation modules. |
-| @subpage testing_lexleo_vm_page "LexLeo VM testing" | Tests related to VM runtime environment creation and Composition Root wiring. |
-| @subpage testing_lexleo_app_page "LexLeo application testing" | Unit tests for application configuration and lifecycle, with access to internal Composition Root services. |
-| @subpage testing_fake_module_architecture "Fake module architecture" | Design conventions for deterministic fake backends used in unit tests. |
-| @subpage testing_fake_modules_page "Fake modules" | Fake module backends used to replace runtime dependencies in unit tests. |
+| Topic | Description |
+| --- | --- |
+| @subpage testing_foundation_page "Foundation module tests" | Unit and integration tests for foundation modules. |
+| @subpage testing_lexleo_vm_page "LexLeo VM tests" | Unit tests for the default VM configuration, the default runtime environment, and the VM handle lifecycle. |
+| @subpage testing_lexleo_app_page "LexLeo application tests" | Unit tests for application configuration and handle lifecycle, and an integration test for default application construction and destruction without test doubles. |
+| @subpage testing_fake_module_architecture "Fake module architecture" | Design conventions for deterministic fake backends used in tests. |
+| @subpage testing_fake_modules_page "Fake modules" | Fake backends available to replace runtime dependencies in tests. |

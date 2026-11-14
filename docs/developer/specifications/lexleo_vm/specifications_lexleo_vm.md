@@ -15,6 +15,7 @@
 
 - @subpage specifications_lexleo_vm_create
 - @subpage specifications_lexleo_vm_complete_default_init
+- @subpage specifications_lexleo_vm_create_init
 
 ## Destruction
 

@@ -9,7 +9,6 @@
 # Owner API
 
 - @subpage specifications_stream_destroy
-- @subpage specifications_stream_buffer_creator_create
 - @subpage specifications_stream_regular_file_creator_create
 - @subpage specifications_stream_standard_stream_creator_create
 - @subpage specifications_stream_dynamic_buffer_creator_create
@@ -21,6 +20,7 @@
 - @subpage specifications_stream_default_env
 - @subpage specifications_stream_create
 - @subpage specifications_stream_complete_default_init
+- @subpage specifications_stream_create_init
 
 ## Factory
 
@@ -35,8 +35,6 @@
 
 ## Creator construction
 
-- @subpage specifications_stream_create_buffer_creator
-- @subpage specifications_stream_destroy_buffer_creator
 - @subpage specifications_stream_create_regular_file_creator
 - @subpage specifications_stream_destroy_regular_file_creator
 - @subpage specifications_stream_create_standard_stream_creator

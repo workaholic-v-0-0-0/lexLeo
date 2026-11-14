@@ -7,6 +7,7 @@
 - @subpage specifications_dynamic_buffer_stream_vtbl
 - @subpage specifications_dynamic_buffer_stream_create
 - @subpage specifications_dynamic_buffer_stream_complete_default_init
+- @subpage specifications_dynamic_buffer_stream_create_init
 - @subpage specifications_dynamic_buffer_stream_create_adapter_provider
 
 ## Internal callbacks

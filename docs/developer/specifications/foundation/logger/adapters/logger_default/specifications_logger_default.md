@@ -7,6 +7,7 @@
 - @subpage specifications_logger_default_vtbl
 - @subpage specifications_logger_default_create
 - @subpage specifications_logger_default_complete_default_init
+- @subpage specifications_logger_default_create_init
 
 ## Internal callbacks
 

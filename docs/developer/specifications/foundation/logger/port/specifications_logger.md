@@ -11,6 +11,7 @@
 - @subpage specifications_logger_default_env
 - @subpage specifications_logger_create
 - @subpage specifications_logger_complete_default_init
+- @subpage specifications_logger_create_init
 
 ## Logger destruction
 
