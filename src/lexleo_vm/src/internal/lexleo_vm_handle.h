@@ -148,8 +148,8 @@ LEXLEO_VM_KEYBOARD_IRQ_PENDING_ADDRESS
 LEXLEO_VM_KEYBOARD_DATA_READY_ADDRESS
 LEXLEO_VM_KEYBOARD_DATA_ADDRESS
 LEXLEO_VM_SCREEN_DATA_ADDRESS
-LEXLEO_VM_SYSTEM_BUFFER (a circular buffer in RAM: read_index, write_index and then data)
-LEXLEO_VM_SYSTEM_BUFFER_CAPACITY
+LEXLEO_VM_SYSTEM_BUFFER (a circular buffer in RAM: read_index, write_index and then data) (maybe not material specification ; to be implemented by firmware, bootloader, kernel,...)
+LEXLEO_VM_SYSTEM_BUFFER_CAPACITY (maybe not material specification ; to be implemented by firmware, bootloader, kernel,...)
 LEXLEO_VM_INITIAL_STACK_BASE_ADDRESS
 LEXLEO_VM_INITIAL_STACK_CAPACITY
 LEXLEO_VM_INITIAL_HANDLER_STACK_BASE_ADDRESS
